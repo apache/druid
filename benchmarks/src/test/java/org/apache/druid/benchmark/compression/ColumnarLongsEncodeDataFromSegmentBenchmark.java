@@ -19,6 +19,17 @@
 
 package org.apache.druid.benchmark.compression;
 
+import com.google.api.client.util.Lists;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.LongsColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,10 +47,16 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -51,7 +68,27 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
   @Setup
   public void setup() throws Exception
   {
-    initializeValues();
+    initializeSegmentValueIntermediaryFile();
+    File dir = getTmpDir();
+    File dataFile = new File(dir, getColumnDataFileName(segmentName, columnName));
+
+    ArrayList<Long> values = Lists.newArrayList();
+    try (BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8)) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        long value = Long.parseLong(line);
+        if (value < minValue) {
+          minValue = value;
+        }
+        if (value > maxValue) {
+          maxValue = value;
+        }
+        values.add(value);
+        rows++;
+      }
+    }
+
+    vals = values.stream().mapToLong(i -> i).toArray();
   }
 
   @Benchmark
@@ -69,6 +106,48 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
     EncodingSizeProfiler.encodedSize = size;
     blackhole.consume(size);
     output.close();
+  }
+
+  /**
+   * writes column values to an intermediary text file, 1 per line, encoders read from this file as input to write
+   * encoded column files.
+   */
+  private void initializeSegmentValueIntermediaryFile() throws IOException
+  {
+    File dir = getTmpDir();
+    File dataFile = new File(dir, getColumnDataFileName(segmentName, columnName));
+
+    if (!dataFile.exists()) {
+      IndexIO INDEX_IO = new IndexIO(
+          new DefaultObjectMapper(),
+          () -> 0
+      );
+      try (final QueryableIndex index = INDEX_IO.loadIndex(new File(segmentPath))) {
+        final Set<String> columnNames = Sets.newLinkedHashSet();
+        columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
+        Iterables.addAll(columnNames, index.getColumnNames());
+        final ColumnHolder column = index.getColumnHolder(columnName);
+        final ColumnCapabilities capabilities = column.getCapabilities();
+        final ValueType columnType = capabilities.getType();
+        try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
+          if (columnType != ValueType.LONG) {
+            throw new RuntimeException("Invalid column type, expected 'Long'");
+          }
+          LongsColumn theColumn = (LongsColumn) column.getColumn();
+
+
+          for (int i = 0; i < theColumn.length(); i++) {
+            long value = theColumn.getLongSingleValueRow(i);
+            writer.write(value + "\n");
+          }
+        }
+      }
+    }
+  }
+
+  private String getColumnDataFileName(String segmentName, String columnName)
+  {
+    return StringUtils.format("%s-longs-%s.txt", segmentName, columnName);
   }
 
   public static void main(String[] args) throws RunnerException

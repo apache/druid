@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark.compression;
 
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
@@ -50,6 +51,10 @@ public class BaseColumnarLongsBenchmark
 {
   static final int VECTOR_SIZE = 512;
 
+  /**
+   * Name of the long encoding strategy. For longs, this is a composite of both byte level block compression and
+   * encoding of values within the block.
+   */
   @Param({
       "lz4-longs",
       "lz4-auto"
@@ -166,7 +171,8 @@ public class BaseColumnarLongsBenchmark
   }
 
 
-  // for debugging: validate that all encoders read the same values
+  // for testing encodings: validate that all encoders read the same values
+  // noinspection unused
   static void checkSanity(Map<String, ColumnarLongs> encoders, List<String> encodings, int rows)
       throws Exception
   {
@@ -176,7 +182,6 @@ public class BaseColumnarLongsBenchmark
   }
 
   static void checkRowSanity(Map<String, ColumnarLongs> encoders, List<String> encodings, int row)
-      throws Exception
   {
     if (encodings.size() > 1) {
       for (int i = 0; i < encodings.size() - 1; i++) {
@@ -187,16 +192,14 @@ public class BaseColumnarLongsBenchmark
         long vCurrent = current.get(row);
         long vNext = next.get(row);
         if (vCurrent != vNext) {
-          throw new Exception("values do not match at row "
-                              + row
-                              + " - "
-                              + currentKey
-                              + ":"
-                              + vCurrent
-                              + " "
-                              + nextKey
-                              + ":"
-                              + vNext);
+          throw new RE(
+              "values do not match at row %s - %s:%s %s:%s",
+              row,
+              currentKey,
+              vCurrent,
+              nextKey,
+              vNext
+          );
         }
       }
     }

@@ -28,12 +28,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.List;
 
 @State(Scope.Benchmark)
@@ -41,25 +36,37 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
 {
   static int SEED = 1;
 
+  /**
+   * Controls the probability that any generated value will be a zero, to simulate sparely populated columns
+   */
   @Param({
       "0.0",
-//      "0.5",
-//      "0.95"
+      "0.25",
+      "0.5",
+      "0.75",
+      "0.95"
   })
   double zeroProbability;
 
+  /**
+   * Number of rows generated for the value distribution
+   */
   @Param({"5000000"})
   int rows;
 
+  /**
+   * Value distributions to simulate various patterns of long column
+   */
   @Param({
-//      "enumerated-0-1",
-//      "enumerated-full",
-//      "normal",
-//      "sequential-1000",
-//      "sequential-unique",
+      "enumerated-0-1",
+      "enumerated-full",
+      "normal-1-32",
+      "normal-40-1000",
+      "sequential-1000",
+      "sequential-unique",
       "uniform-1",
       "uniform-2",
-//      "uniform-3",
+      "uniform-3",
       "uniform-4",
       "uniform-8",
       "uniform-12",
@@ -71,58 +78,15 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
       "uniform-48",
       "uniform-56",
       "uniform-64",
-//      "zipf-low-100",
-//      "zipf-low-100000",
-//      "zipf-low-32-bit",
-//      "zipf-high-100",
-//      "zipf-high-100000",
-//      "zipf-high-32-bit"
+      "zipf-low-100",
+      "zipf-low-100000",
+      "zipf-low-32-bit",
+      "zipf-high-100",
+      "zipf-high-100000",
+      "zipf-high-32-bit"
   })
   String distribution;
 
-  void initializeValues() throws IOException
-  {
-    vals = new long[rows];
-    final String filename = getGeneratorValueFilename(distribution, rows, zeroProbability);
-    File dir = getTmpDir();
-    File dataFile = new File(dir, filename);
-
-    if (dataFile.exists()) {
-      System.out.println("Data files already exist, re-using");
-      try (BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8)) {
-        int lineNum = 0;
-        String line;
-        while ((line = br.readLine()) != null) {
-          vals[lineNum] = Long.parseLong(line);
-          if (vals[lineNum] < minValue) {
-            minValue = vals[lineNum];
-          }
-          if (vals[lineNum] > maxValue) {
-            maxValue = vals[lineNum];
-          }
-          lineNum++;
-        }
-      }
-    } else {
-      try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
-        ColumnValueGenerator valueGenerator = makeGenerator(distribution, rows, zeroProbability);
-
-        for (int i = 0; i < rows; i++) {
-          long value;
-          Object rowValue = valueGenerator.generateRowValue();
-          value = rowValue != null ? (long) rowValue : 0;
-          vals[i] = value;
-          if (vals[i] < minValue) {
-            minValue = vals[i];
-          }
-          if (vals[i] > maxValue) {
-            maxValue = vals[i];
-          }
-          writer.write(vals[i] + "\n");
-        }
-      }
-    }
-  }
 
   static ColumnValueGenerator makeGenerator(
       String distribution,
@@ -164,7 +128,7 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
             enumerated,
             probability
         ).makeGenerator(SEED);
-      case "normal":
+      case "normal-1-32":
         return GeneratorColumnSchema.makeNormal(
             distribution,
             ValueType.LONG,
@@ -172,7 +136,18 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
             1,
             zeroProbability,
             1.0,
-            (double) Integer.MAX_VALUE,
+            (double) (1L << 32),
+            true
+        ).makeGenerator(SEED);
+      case "normal-40-1000":
+        return GeneratorColumnSchema.makeNormal(
+            distribution,
+            ValueType.LONG,
+            true,
+            1,
+            zeroProbability,
+            (double) (1L << 40),
+            1000.0,
             true
         ).makeGenerator(SEED);
       case "sequential-1000":
@@ -403,11 +378,6 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
         ).makeGenerator(SEED);
     }
     throw new IllegalArgumentException("unknown distribution");
-  }
-
-  static String getGeneratorValueFilename(String distribution, int rows, double nullProbability)
-  {
-    return StringUtils.format("values-%s-%s-%s.bin", distribution, rows, nullProbability);
   }
 
   static String getGeneratorEncodedFilename(String encoding, String distribution, int rows, double nullProbability)

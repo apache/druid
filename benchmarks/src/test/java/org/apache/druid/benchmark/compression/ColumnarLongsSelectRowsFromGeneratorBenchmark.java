@@ -56,12 +56,16 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
   private Map<String, ColumnarLongs> decoders;
   private Map<String, Integer> encodedSize;
 
-  // Number of rows to read, the test will read random rows
-//  @Param({"0.1", "0.05", "0.95", "1.0"})
+  /**
+   * Number of rows to read, the test will randomly set positions in a simulated offset of the specified density in
+   * {@link #setupFilters(int, double)}
+   */
   @Param({
-//      "0.1",
-//      "0.5",
-//      "0.95",
+      "0.1",
+      "0.25",
+      "0.5",
+      "0.75",
+      "0.95",
       "1.0"
   })
   private double filteredRowCountPercentage;
@@ -75,7 +79,7 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
     setupFromFile(encoding);
     setupFilters(rows, filteredRowCountPercentage);
 
-    // uncomment me to load multiple encoded files for sanity check
+    // uncomment this block to run sanity check to ensure all specified encodings produce the same set of results
     //CHECKSTYLE.OFF: Regexp
 //    ImmutableList<String> all = ImmutableList.of("lz4-longs", "lz4-auto");
 //    for (String _enc : all) {
@@ -108,23 +112,23 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
     decoders.put(encoding, data);
   }
 
-//  @Benchmark
-//  @BenchmarkMode(Mode.AverageTime)
-//  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-//  public void selectRows(Blackhole blackhole)
-//  {
-//    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
-//    ColumnarLongs encoder = decoders.get(encoding);
-//    if (filter == null) {
-//      for (int i = 0; i < rows; i++) {
-//        blackhole.consume(encoder.get(i));
-//      }
-//    } else {
-//      for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-//        blackhole.consume(encoder.get(i));
-//      }
-//    }
-//  }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void selectRows(Blackhole blackhole)
+  {
+    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
+    ColumnarLongs encoder = decoders.get(encoding);
+    if (filter == null) {
+      for (int i = 0; i < rows; i++) {
+        blackhole.consume(encoder.get(i));
+      }
+    } else {
+      for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
+        blackhole.consume(encoder.get(i));
+      }
+    }
+  }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
@@ -150,24 +154,6 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
     vectorOffset.reset();
     columnDecoder.close();
   }
-
-//  @Benchmark
-//  @BenchmarkMode(Mode.AverageTime)
-//  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-//  public void readVectorizedSequential(Blackhole bh)
-//  {
-//    long[] vector = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-//    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
-//    ColumnarLongs columnDecoder = decoders.get(encoding);
-//    int count = columnDecoder.size();
-//    for (int i = 0; i < count; i++) {
-//      if (i % vector.length == 0) {
-//        columnDecoder.get(vector, i, Math.min(vector.length, count - i));
-//      }
-//      bh.consume(vector[i % vector.length]);
-//    }
-//    columnDecoder.close();
-//  }
 
   public static void main(String[] args) throws RunnerException
   {

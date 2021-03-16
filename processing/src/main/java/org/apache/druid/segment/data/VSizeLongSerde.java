@@ -557,13 +557,6 @@ public class VSizeLongSerde
       while ((index & 0x3) != 0 && i < length) {
         out[outPosition + i++] = delta + get(index++);
       }
-//      for ( ; i + 4 < length; index += 4) {
-//        final byte unpack = buffer.get(offset + (index >> 2));
-//        out[outPosition + i++] = delta + (unpack >> 6) & 3;
-//        out[outPosition + i++] = delta + (unpack >> 4) & 3;
-//        out[outPosition + i++] = delta + (unpack >> 2) & 3;
-//        out[outPosition + i++] = delta + unpack & 3;
-//      }
       for ( ; i + 8 < length; index += 8) {
         final short unpack = buffer.getShort(offset + (index >> 2));
         out[outPosition + i++] = delta + (unpack >> 14) & 3;
@@ -590,13 +583,6 @@ public class VSizeLongSerde
       while ((index & 0x3) != 0 && i < length) {
         out[outPosition + i++] = table[(int) get(index++)];
       }
-//      for ( ; i + 4 < length; index += 4) {
-//        final byte unpack = buffer.get(offset + (index >> 2));
-//        out[outPosition + i++] = table[(unpack >> 6) & 3];
-//        out[outPosition + i++] = table[(unpack >> 4) & 3];
-//        out[outPosition + i++] = table[(unpack >> 2) & 3];
-//        out[outPosition + i++] = table[unpack & 3];
-//      }
       for ( ; i + 8 < length; index += 8) {
         final short unpack = buffer.getShort(offset + (index >> 2));
         out[outPosition + i++] = table[(unpack >> 14) & 3];
@@ -642,11 +628,6 @@ public class VSizeLongSerde
       while ((index & 0x1) != 0 && i < length) {
         out[outPosition + i++] = delta + get(index++) & 0xF;
       }
-//      for ( ; i + 2 < length; index += 2) {
-//        final byte unpack = buffer.get(offset + (index >> 1));
-//        out[outPosition + i++] = delta + (unpack >> 4) & 0xF;
-//        out[outPosition + i++] = delta + unpack & 0xF;
-//      }
       for ( ; i + 8 < length; index += 8) {
         final int unpack = buffer.getInt(offset + (index >> 1));
         out[outPosition + i++] = delta + (unpack >> 28) & 0xF;
@@ -673,11 +654,6 @@ public class VSizeLongSerde
       while ((index & 0x1) != 0 && i < length) {
         out[outPosition + i++] = table[(int) get(index++)];
       }
-//      for ( ; i + 2 < length; index += 2) {
-//        final byte unpack = buffer.get(offset + (index >> 1));
-//        out[outPosition + i++] = table[(unpack >> 4) & 0xF];
-//        out[outPosition + i++] = table[unpack & 0xF];
-//      }
       for ( ; i + 8 < length; index += 8) {
         final int unpack = buffer.getInt(offset + (index >> 1));
         out[outPosition + i++] = table[(unpack >> 28) & 0xF];
@@ -718,22 +694,6 @@ public class VSizeLongSerde
       for (int i = 0, indexOffset = startIndex; i < length; i++, indexOffset++) {
         out[outPosition + i] = delta + buffer.get(offset + indexOffset) & 0xFF;
       }
-//      int i = 0;
-//      for (int indexOffset = startIndex; i + 8 < length; indexOffset += 8) {
-//        final long unpack = buffer.getLong(indexOffset);
-//        out[outPosition + i++] = delta + ((unpack >>> 56) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 48) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 40) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 32) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 24) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 16) & 0xFF);
-//        out[outPosition + i++] = delta + ((unpack >>> 8) & 0xFF);
-//        out[outPosition + i++] = delta + (unpack & 0xFF);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
     }
 
     @Override
@@ -757,21 +717,6 @@ public class VSizeLongSerde
       for (int i = 0, indexOffset = startIndex; i < length; i++, indexOffset++) {
         out[outPosition + i] = table[buffer.get(offset + indexOffset) & 0xFF];
       }
-//      int i = 0;
-//      for (int indexOffset = startIndex; i + 8 < length; indexOffset += 8) {
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 1) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 2) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 3) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 4) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 5) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 6) & 0xFF];
-//        out[outPosition + i++] = table[buffer.getByte(indexOffset + 7) & 0xFF];
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = table[(int) get(startIndex + i)];
-//        i++;
-//      }
     }
 
     @Override
@@ -828,7 +773,7 @@ public class VSizeLongSerde
         out[outPosition + i++] = delta + ((unpack >> 28) & 0xFFF);
         out[outPosition + i++] = delta + ((unpack >> 16) & 0xFFF);
         out[outPosition + i++] = delta + ((unpack >> 4) & 0xFFF);
-        out[outPosition + i++] = delta + (((unpack & 0xF) << 8) | ((unpack2 >> 24) & 0xFF));
+        out[outPosition + i++] = delta + (((unpack & 0xF) << 8) | ((unpack2 >>> 24) & 0xFF));
         out[outPosition + i++] = delta + ((unpack2 >> 12) & 0xFFF);
         out[outPosition + i++] = delta + (unpack2 & 0xFFF);
       }
@@ -862,32 +807,6 @@ public class VSizeLongSerde
       for (int i = 0, indexOffset = (startIndex << 1); i < length; i++, indexOffset += Short.BYTES) {
         out[outPosition + i] = delta + buffer.getShort(offset + indexOffset) & 0xFFFF;
       }
-//      int i = 0;
-//      final int unpackSize = 8 * Short.BYTES;
-//      for (int indexOffset = startIndex << 1; i + 8 < length; indexOffset += unpackSize) {
-////        final long unpack = buffer.getLong(indexOffset);
-////        final long unpack2 = buffer.getLong(indexOffset + Long.BYTES);
-////        out[outPosition + i++] = delta + ((unpack >> 48) & 0xFFFF);
-////        out[outPosition + i++] = delta + ((unpack >> 32) & 0xFFFF);
-////        out[outPosition + i++] = delta + ((unpack >> 16) & 0xFFFF);
-////        out[outPosition + i++] = delta + (unpack & 0xFFFF);
-////        out[outPosition + i++] = delta + ((unpack2 >> 48) & 0xFFFF);
-////        out[outPosition + i++] = delta + ((unpack2 >> 32) & 0xFFFF);
-////        out[outPosition + i++] = delta + ((unpack2 >> 16) & 0xFFFF);
-////        out[outPosition + i++] = delta + (unpack2 & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 2) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 4) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 6) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 8) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 10) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 12) & 0xFFFF);
-//        out[outPosition + i++] = delta + (buffer.getShort(indexOffset + 14) & 0xFFFF);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
     }
 
     @Override
@@ -962,12 +881,12 @@ public class VSizeLongSerde
         final long unpack = buffer.getLong(offset + indexOffset);
         final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
         final int unpack3 = buffer.getInt(offset + indexOffset + Long.BYTES + Long.BYTES);
-        out[outPosition + i++] = delta + ((unpack >>> 44) & 0xFFFFF);
-        out[outPosition + i++] = delta + ((unpack >>> 24) & 0xFFFFF);
-        out[outPosition + i++] = delta + ((unpack >>> 4) & 0xFFFFF);
+        out[outPosition + i++] = delta + ((unpack >> 44) & 0xFFFFF);
+        out[outPosition + i++] = delta + ((unpack >> 24) & 0xFFFFF);
+        out[outPosition + i++] = delta + ((unpack >> 4) & 0xFFFFF);
         out[outPosition + i++] = delta + (((unpack & 0xF) << 16) | ((unpack2 >>> 48) & 0xFFFF));
-        out[outPosition + i++] = delta + ((unpack2 >>> 28) & 0xFFFFF);
-        out[outPosition + i++] = delta + ((unpack2 >>> 8) & 0xFFFFF);
+        out[outPosition + i++] = delta + ((unpack2 >> 28) & 0xFFFFF);
+        out[outPosition + i++] = delta + ((unpack2 >> 8) & 0xFFFFF);
         out[outPosition + i++] = delta + (((unpack2 & 0xFF) << 12) | ((unpack3 >>> 20) & 0xFFF));
         out[outPosition + i++] = delta + (unpack3 & 0xFFFFF);
       }
@@ -1004,13 +923,13 @@ public class VSizeLongSerde
         final long unpack = buffer.getLong(offset + indexOffset);
         final long unpack2 = buffer.getLong(offset +indexOffset + Long.BYTES);
         final long unpack3 = buffer.getLong(offset + indexOffset + Long.BYTES + Long.BYTES);
-        out[outPosition + i++] = delta + ((unpack >>> 40) & 0xFFFFFF);
-        out[outPosition + i++] = delta + ((unpack >>> 16) & 0xFFFFFF);
+        out[outPosition + i++] = delta + ((unpack >> 40) & 0xFFFFFF);
+        out[outPosition + i++] = delta + ((unpack >> 16) & 0xFFFFFF);
         out[outPosition + i++] = delta + (((unpack & 0xFFFF) << 8) | ((unpack2 >>> 56) & 0xFF));
-        out[outPosition + i++] = delta + ((unpack2 >>> 32) & 0xFFFFFF);
-        out[outPosition + i++] = delta + ((unpack2 >>> 8) & 0xFFFFFF);
+        out[outPosition + i++] = delta + ((unpack2 >> 32) & 0xFFFFFF);
+        out[outPosition + i++] = delta + ((unpack2 >> 8) & 0xFFFFFF);
         out[outPosition + i++] = delta + (((unpack2 & 0xFF) << 16) | ((unpack3 >>> 48) & 0xFFFF));
-        out[outPosition + i++] = delta + ((unpack3 >>> 24) & 0xFFFFFF);
+        out[outPosition + i++] = delta + ((unpack3 >> 24) & 0xFFFFFF);
         out[outPosition + i++] = delta + (unpack3 & 0xFFFFFF);
       }
       while (i < length) {
@@ -1043,22 +962,6 @@ public class VSizeLongSerde
       for (int i = 0, indexOffset = (startIndex << 2); i < length; i++, indexOffset += Integer.BYTES) {
         out[outPosition + i] = delta + buffer.getInt(offset + indexOffset) & 0xFFFFFFFFL;
       }
-//      int i = 0;
-//      final int unpackSize = 8 * Integer.BYTES;
-//      for (int indexOffset = startIndex << 2; i + 8 < length; indexOffset += unpackSize) {
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 4) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 8) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 12) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 16) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 20) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 24) & 0xFFFFFFFFL);
-//        out[outPosition + i++] = delta + (buffer.getInt(offset + indexOffset + 28) & 0xFFFFFFFFL);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
     }
   }
 
@@ -1079,31 +982,31 @@ public class VSizeLongSerde
       return buffer.getLong(offset + (index * 5)) >>> 24;
     }
 
-//    @Override
-//    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
-//    {
-//      int i = 0;
-//      final int unpackSize = 5 * Long.BYTES;
-//      for (int indexOffset = startIndex * 5; i + 8 < length; indexOffset += unpackSize) {
-//        final long unpack = buffer.getLong(offset + indexOffset);
-//        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
-//        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
-//        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
-//        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
-//        out[outPosition + i++] = delta + ((unpack >>> 24) & 0xFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack & 0xFFFFFFL) << 16) | ((unpack2 >>> 48) & 0xFFFFL));
-//        out[outPosition + i++] = delta + ((unpack2 >>> 8) & 0xFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack2 & 0xFF) << 32) | ((unpack3 >>> 32) & 0xFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack3 & 0xFFFFFFFFL) << 32) | ((unpack4 >>> 56 ) & 0xFF));
-//        out[outPosition + i++] = delta + ((unpack4 >>> 16) & 0xFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack4 & 0xFFFF) << 24) | ((unpack5 >>> 40) & 0xFFFFFF));
-//        out[outPosition + i++] = delta + (unpack5 & 0xFFFFFFFFFFL);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
-//    }
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
+    {
+      int i = 0;
+      final int unpackSize = 5 * Long.BYTES;
+      for (int indexOffset = startIndex * 5; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        out[outPosition + i++] = delta + ((unpack >>> 24) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack & 0xFFFFFFL) << 16) | ((unpack2 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = delta + ((unpack2 >>> 8) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack2 & 0xFFL) << 32) | ((unpack3 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack3 & 0xFFFFFFFFL) << 8) | ((unpack4 >>> 56 ) & 0xFFL));
+        out[outPosition + i++] = delta + ((unpack4 >>> 16) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack4 & 0xFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
+        out[outPosition + i++] = delta + (unpack5 & 0xFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = delta + get(startIndex + i);
+        i++;
+      }
+    }
   }
 
   private static final class Size48Des implements LongDeserializer
@@ -1123,32 +1026,32 @@ public class VSizeLongSerde
       return buffer.getLong(offset + (index * 6)) >>> 16;
     }
 
-//    @Override
-//    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
-//    {
-//      int i = 0;
-//      final int unpackSize = 6 * Long.BYTES;
-//      for (int indexOffset = startIndex * 6; i + 8 < length; indexOffset += unpackSize) {
-//        final long unpack = buffer.getLong(offset + indexOffset);
-//        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
-//        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
-//        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
-//        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
-//        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
-//        out[outPosition + i++] = delta + ((unpack >>> 16) & 0xFFFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack & 0xFFFFL) << 32) | ((unpack2 >>> 32) & 0xFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack2 & 0xFFFFFFFFL) << 32) | ((unpack3 >>> 48) & 0xFFFFL));
-//        out[outPosition + i++] = delta + (unpack3 & 0xFFFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + ((unpack4 >>> 16) & 0xFFFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack4 & 0xFFFFL) << 32) | ((unpack5 >>> 32) & 0xFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack5 & 0xFFFFFFFFL) << 32) | ((unpack6 >>> 48) & 0xFFFFL));
-//        out[outPosition + i++] = delta + (unpack6 & 0xFFFFFFFFFFFFL);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
-//    }
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
+    {
+      int i = 0;
+      final int unpackSize = 6 * Long.BYTES;
+      for (int indexOffset = startIndex * 6; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
+        out[outPosition + i++] = delta + ((unpack >>> 16) & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack & 0xFFFFL) << 32) | ((unpack2 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack2 & 0xFFFFFFFFL) << 16) | ((unpack3 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = delta + (unpack3 & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = delta + ((unpack4 >>> 16) & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack4 & 0xFFFFL) << 32) | ((unpack5 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack5 & 0xFFFFFFFFL) << 16) | ((unpack6 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = delta + (unpack6 & 0xFFFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = delta + get(startIndex + i);
+        i++;
+      }
+    }
   }
 
   private static final class Size56Des implements LongDeserializer
@@ -1168,33 +1071,33 @@ public class VSizeLongSerde
       return buffer.getLong(offset + (index * 7)) >>> 8;
     }
 
-//    @Override
-//    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
-//    {
-//      int i = 0;
-//      final int unpackSize = 7 * Long.BYTES;
-//      for (int indexOffset = startIndex * 7; i + 8 < length; indexOffset += unpackSize) {
-//        final long unpack = buffer.getLong(offset + indexOffset);
-//        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
-//        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
-//        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
-//        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
-//        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
-//        final long unpack7 = buffer.getLong(offset + indexOffset + (6 * Long.BYTES));
-//        out[outPosition + i++] = delta + ((unpack >>> 8) & 0xFFFFFFFFFFFFFFL);
-//        out[outPosition + i++] = delta + (((unpack & 0xFFL) << 48) | ((unpack2 >>> 16) & 0xFFFFFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack2 & 0xFFFFL) << 40) | ((unpack3 >>> 24) & 0xFFFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack3 & 0xFFFFFFL) << 32) | ((unpack4 >>> 32) & 0xFFFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack4 & 0xFFFFFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
-//        out[outPosition + i++] = delta + (((unpack5 & 0xFFFFFFFFFFL) << 16) | ((unpack6 >>> 48) & 0xFFFFL));
-//        out[outPosition + i++] = delta + (((unpack6 & 0xFFFFFFFFFFFFL) << 8) | ((unpack7 >>> 56) & 0xFFL));
-//        out[outPosition + i++] = delta + (unpack7 & 0xFFFFFFFFFFFFFFL);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
-//    }
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long delta)
+    {
+      int i = 0;
+      final int unpackSize = 7 * Long.BYTES;
+      for (int indexOffset = startIndex * 7; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
+        final long unpack7 = buffer.getLong(offset + indexOffset + (6 * Long.BYTES));
+        out[outPosition + i++] = delta + ((unpack >>> 8) & 0xFFFFFFFFFFFFFFL);
+        out[outPosition + i++] = delta + (((unpack & 0xFFL) << 48) | ((unpack2 >>> 16) & 0xFFFFFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack2 & 0xFFFFL) << 40) | ((unpack3 >>> 24) & 0xFFFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack3 & 0xFFFFFFL) << 32) | ((unpack4 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack4 & 0xFFFFFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
+        out[outPosition + i++] = delta + (((unpack5 & 0xFFFFFFFFFFL) << 16) | ((unpack6 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = delta + (((unpack6 & 0xFFFFFFFFFFFFL) << 8) | ((unpack7 >>> 56) & 0xFFL));
+        out[outPosition + i++] = delta + (unpack7 & 0xFFFFFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = delta + get(startIndex + i);
+        i++;
+      }
+    }
   }
 
   private static final class Size64Des implements LongDeserializer
@@ -1220,22 +1123,6 @@ public class VSizeLongSerde
       for (int i = 0, indexOffset = (startIndex << 3); i < length; i++, indexOffset += Long.BYTES) {
         out[outPosition + i] = delta + buffer.getLong(offset + indexOffset);
       }
-//      int i = 0;
-//      final int unpackSize = 8 * Long.BYTES;
-//      for (int indexOffset = (startIndex << 3); i + 8 < length; indexOffset += unpackSize) {
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 8);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 16);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 24);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 32);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 40);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 48);
-//        out[outPosition + i++] = delta + buffer.getLong(offset + indexOffset + 56);
-//      }
-//      while (i < length) {
-//        out[outPosition + i] = delta + (int) get(startIndex + i);
-//        i++;
-//      }
     }
 
     @Override
@@ -1246,10 +1133,8 @@ public class VSizeLongSerde
         if (index >= limit) {
           return i;
         }
-
         out[outPosition + i] = base + buffer.getLong(offset + (index << 3));
       }
-
       return length;
     }
   }

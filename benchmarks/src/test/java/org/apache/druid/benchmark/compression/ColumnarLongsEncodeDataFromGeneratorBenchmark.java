@@ -19,6 +19,8 @@
 
 package org.apache.druid.benchmark.compression;
 
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.generator.ColumnValueGenerator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,9 +38,13 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
@@ -51,7 +57,46 @@ public class ColumnarLongsEncodeDataFromGeneratorBenchmark extends BaseColumnarL
   @Setup
   public void setup() throws Exception
   {
-    initializeValues();
+    vals = new long[rows];
+    final String filename = getGeneratorValueFilename(distribution, rows, zeroProbability);
+    File dir = getTmpDir();
+    File dataFile = new File(dir, filename);
+
+    if (dataFile.exists()) {
+      System.out.println("Data files already exist, re-using");
+      try (BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8)) {
+        int lineNum = 0;
+        String line;
+        while ((line = br.readLine()) != null) {
+          vals[lineNum] = Long.parseLong(line);
+          if (vals[lineNum] < minValue) {
+            minValue = vals[lineNum];
+          }
+          if (vals[lineNum] > maxValue) {
+            maxValue = vals[lineNum];
+          }
+          lineNum++;
+        }
+      }
+    } else {
+      try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
+        ColumnValueGenerator valueGenerator = makeGenerator(distribution, rows, zeroProbability);
+
+        for (int i = 0; i < rows; i++) {
+          long value;
+          Object rowValue = valueGenerator.generateRowValue();
+          value = rowValue != null ? (long) rowValue : 0;
+          vals[i] = value;
+          if (vals[i] < minValue) {
+            minValue = vals[i];
+          }
+          if (vals[i] > maxValue) {
+            maxValue = vals[i];
+          }
+          writer.write(vals[i] + "\n");
+        }
+      }
+    }
   }
 
   @Benchmark
@@ -81,5 +126,10 @@ public class ColumnarLongsEncodeDataFromGeneratorBenchmark extends BaseColumnarL
         .build();
 
     new Runner(opt).run();
+  }
+
+  private static String getGeneratorValueFilename(String distribution, int rows, double nullProbability)
+  {
+    return StringUtils.format("values-%s-%s-%s.bin", distribution, rows, nullProbability);
   }
 }

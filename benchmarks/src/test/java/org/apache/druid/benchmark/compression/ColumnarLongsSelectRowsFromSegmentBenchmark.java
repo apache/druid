@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.compression;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.segment.data.ColumnarLongs;
@@ -45,7 +44,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -58,9 +56,11 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
   private Map<String, ColumnarLongs> decoders;
   private Map<String, Integer> encodedSize;
 
-  // Number of rows to read, the test will read random rows
-//  @Param({"0.01", "0.1", "0.33", "0.66", "0.95", "1.0"})
-  @Param({"1.0"})
+  /**
+   * Number of rows to read, the test will randomly set positions in a simulated offset of the specified density in
+   * {@link #setupFilters(int, double)}
+   */
+  @Param({"0.01", "0.1", "0.33", "0.66", "0.95", "1.0"})
   private double filteredRowCountPercentage;
 
   @Setup
@@ -73,16 +73,17 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
     setupFromFile(encoding);
 
 
-    // uncomment me to load some encoding files to cross reference values for sanity check
+    // uncomment this block to run sanity check to ensure all specified encodings produce the same set of results
     //CHECKSTYLE.OFF: Regexp
-    List<String> all = ImmutableList.of("lz4-longs", "lz4-auto");
-    for (String _enc : all) {
-      if (!_enc.equals(encoding)) {
-        setupFromFile(_enc);
-      }
-    }
-
-    checkSanity(decoders, all, rows);
+//    List<String> all = ImmutableList.of("lz4-longs", "lz4-auto");
+//    for (String _enc : all) {
+//      if (!_enc.equals(encoding)) {
+//        setupFromFile(_enc);
+//      }
+//    }
+//
+//    checkSanity(decoders, all, rows);
+    //CHECKSTYLE.ON: Regexp
   }
 
   @TearDown
@@ -105,23 +106,23 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
     decoders.put(encoding, data);
   }
 
-//  @Benchmark
-//  @BenchmarkMode(Mode.AverageTime)
-//  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-//  public void selectRows(Blackhole blackhole)
-//  {
-//    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
-//    ColumnarLongs encoder = decoders.get(encoding);
-//    if (filter == null) {
-//      for (int i = 0; i < rows; i++) {
-//        blackhole.consume(encoder.get(i));
-//      }
-//    } else {
-//      for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-//        blackhole.consume(encoder.get(i));
-//      }
-//    }
-//  }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void selectRows(Blackhole blackhole)
+  {
+    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
+    ColumnarLongs encoder = decoders.get(encoding);
+    if (filter == null) {
+      for (int i = 0; i < rows; i++) {
+        blackhole.consume(encoder.get(i));
+      }
+    } else {
+      for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
+        blackhole.consume(encoder.get(i));
+      }
+    }
+  }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
@@ -151,7 +152,6 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
 
   public static void main(String[] args) throws RunnerException
   {
-    System.out.println("main happened");
     Options opt = new OptionsBuilder()
         .include(ColumnarLongsSelectRowsFromSegmentBenchmark.class.getSimpleName())
         .addProfiler(EncodingSizeProfiler.class)
