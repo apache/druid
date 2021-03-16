@@ -116,8 +116,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public GroupByQueryResource prepareResource(GroupByQuery query)
   {
-    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1) +
-                                       numMergeBuffersNeededForSubtotalsSpec(query);
+    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query);
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
@@ -146,7 +145,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  private static int countRequiredMergeBufferNum(Query query, int foundNum)
+  public static int countRequiredMergeBufferNum(GroupByQuery query)
+  {
+    return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
+  }
+
+  private static int countRequiredMergeBufferNumWithoutSubtotal(Query query, int foundNum)
   {
     // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
     // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
@@ -159,7 +163,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     if (foundNum == MAX_MERGE_BUFFER_NUM + 1 || !(dataSource instanceof QueryDataSource)) {
       return foundNum - 1;
     } else {
-      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
+      return countRequiredMergeBufferNumWithoutSubtotal(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
     }
   }
 
@@ -522,11 +526,20 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return aggsAndPostAggs;
   }
 
-  private int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
+  private static int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
   {
     List<List<String>> subtotalSpecs = query.getSubtotalsSpec();
+    final DataSource dataSource = query.getDataSource();
+    int numMergeBuffersNeededForSubQuerySubtotal = 0;
+    if (dataSource instanceof QueryDataSource) {
+      Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+      if (subQuery instanceof GroupByQuery) {
+        numMergeBuffersNeededForSubQuerySubtotal = numMergeBuffersNeededForSubtotalsSpec((GroupByQuery) subQuery);
+      }
+
+    }
     if (subtotalSpecs == null || subtotalSpecs.size() == 0) {
-      return 0;
+      return numMergeBuffersNeededForSubQuerySubtotal;
     }
 
     List<String> queryDimOutputNames = query.getDimensions().stream().map(DimensionSpec::getOutputName).collect(
@@ -537,7 +550,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       }
     }
 
-    return 1;
+    return Math.max(1, numMergeBuffersNeededForSubQuerySubtotal);
   }
 
   @Override

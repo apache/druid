@@ -180,7 +180,10 @@ public class QueryStackTests
     );
   }
 
-  public static DruidProcessingConfig getProcessingConfig(boolean useParallelMergePoolConfigured)
+  public static DruidProcessingConfig getProcessingConfig(
+      boolean useParallelMergePoolConfigured,
+      final int mergeBuffers
+  )
   {
     return new DruidProcessingConfig()
     {
@@ -206,9 +209,10 @@ public class QueryStackTests
       @Override
       public int getNumMergeBuffers()
       {
-        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-        // Two buffers for the broker and one for the queryable.
-        return 3;
+        if (mergeBuffers == DEFAULT_NUM_MERGE_BUFFERS) {
+          return 2;
+        }
+        return mergeBuffers;
       }
 
       @Override
@@ -230,9 +234,15 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final boolean useParallelMergePoolConfigured
+
   )
   {
-    return createQueryRunnerFactoryConglomerate(closer, getProcessingConfig(useParallelMergePoolConfigured));
+    return createQueryRunnerFactoryConglomerate(closer,
+                                                getProcessingConfig(
+                                                    useParallelMergePoolConfigured,
+                                                    DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+                                                )
+    );
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(

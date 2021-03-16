@@ -35,6 +35,7 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -160,6 +161,7 @@ public class CalciteTests
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
+  public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
   public static final String SYSTEM_SCHEMA_NAME = "sys";
@@ -363,6 +365,15 @@ public class CalciteTests
       )
       .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
       .withRollup(false)
+      .build();
+
+  private static final List<String> USER_VISIT_DIMS = ImmutableList.of("user", "country", "city");
+  private static final IncrementalIndexSchema INDEX_SCHEMA_USER_VISIT = new IncrementalIndexSchema.Builder()
+      .withMetrics(
+          new CountAggregatorFactory("cnt")
+      )
+      .withRollup(false)
+      .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
       .build();
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
@@ -647,6 +658,33 @@ public class CalciteTests
       )
   );
 
+  private static List<InputRow> USER_VISIT_ROWS = ImmutableList.of(
+      toRow(
+          "2021-01-01T01:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "A")
+      ),
+      toRow(
+          "2021-01-01T02:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "B")
+      ),
+      toRow("2021-01-01T03:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
+      toRow("2021-01-01T04:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "alice", "country", "India", "city", "Y")),
+      toRow(
+          "2021-01-02T01:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "A")
+      ),
+      toRow("2021-01-02T02:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
+      toRow("2021-01-02T03:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "canada", "city", "B")),
+      toRow("2021-01-02T04:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bar", "country", "canada", "city", "B")),
+      toRow("2021-01-02T05:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "alice", "country", "India", "city", "X")),
+      toRow("2021-01-02T06:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "India", "city", "X")),
+      toRow("2021-01-02T07:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "India", "city", "X")),
+      toRow("2021-01-03T01:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "USA", "city", "M"))
+  );
+
   private static final InlineDataSource JOINABLE_BACKING_DATA = InlineDataSource.fromIterable(
       RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(x -> new Object[]{
           x.get("dim1"),
@@ -856,6 +894,14 @@ public class CalciteTests
         .rows(RAW_ROWS1_X)
         .buildMMappedIndex();
 
+    final QueryableIndex userVisitIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "8"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(USER_VISIT_ROWS)
+        .buildMMappedIndex();
+
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
@@ -943,7 +989,21 @@ public class CalciteTests
                    .size(0)
                    .build(),
         indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(USERVISITDATASOURCE)
+                   .interval(userVisitIndex.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        userVisitIndex
     );
+  }
+
+  private static MapBasedInputRow toRow(String time, List<String> dimensions, Map<String, Object> event)
+  {
+    return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), dimensions, event);
   }
 
   public static ExprMacroTable createExprMacroTable()
