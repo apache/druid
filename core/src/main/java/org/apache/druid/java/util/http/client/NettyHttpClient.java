@@ -113,7 +113,7 @@ public class NettyHttpClient extends AbstractHttpClient
     final URL url = request.getUrl();
     final Multimap<String, String> headers = request.getHeaders();
 
-    final String requestDesc = StringUtils.format("%s %s", method, url);
+    final String requestDesc = method + " " + url;
     if (log.isDebugEnabled()) {
       log.debug("[%s] starting", requestDesc);
     }
