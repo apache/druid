@@ -165,8 +165,8 @@ public class Request
 
   public Request setBasicAuthentication(String username, String password)
   {
-    final String base64Value = base64Encode(StringUtils.format("%s:%s", username, password));
-    setHeader(HttpHeaders.Names.AUTHORIZATION, StringUtils.format("Basic %s", base64Value));
+    final String base64Value = base64Encode(username + ":" + password);
+    setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + base64Value);
     return this;
   }
 
