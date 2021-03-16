@@ -853,7 +853,7 @@ public class DruidCoordinator
       startPeonsForNewServers(currentServers);
 
       final DruidCluster cluster = prepareCluster(params, currentServers);
-      segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+      segmentReplicantLookup = SegmentReplicantLookup.make(cluster, getDynamicConfigs().getReplicateAfterLoadTimeout());
 
       stopPeonsForDisappearedServers(currentServers);
 

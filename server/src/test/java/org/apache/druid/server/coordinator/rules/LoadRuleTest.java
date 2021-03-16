@@ -179,7 +179,22 @@ public class LoadRuleTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withUsedSegmentsInTest(usedSegments)
+        .build();
+  }
+
+  private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(
+      DruidCluster druidCluster,
+      DataSegment... usedSegments
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, true))
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
@@ -277,7 +292,7 @@ public class LoadRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        makeCoordinatorRuntimeParams(druidCluster, segment),
+        makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment),
         segment
     );
 
@@ -295,11 +310,71 @@ public class LoadRuleTest
 
     CoordinatorStats statsAfterLoadPrimary = rule.run(
         null,
-        makeCoordinatorRuntimeParams(withLoadTimeout, segment),
+        makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(withLoadTimeout, segment),
         segment
     );
 
     Assert.assertEquals(1L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
+  }
+
+  @Test
+  public void testSkipReplicationForTimedOutSegments()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
+
+    final LoadQueuePeon emptyPeon = createEmptyPeon();
+    emptyPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "hot", 1
+    ));
+
+    final DataSegment segment = createDataSegment("foo");
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .anyTimes();
+
+    EasyMock.replay(throttler, emptyPeon, mockBalancerStrategy);
+
+    ImmutableDruidServer server1 =
+        new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    ImmutableDruidServer server2 =
+        new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, emptyPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    CoordinatorStats stats = rule.run(
+        null,
+        makeCoordinatorRuntimeParams(druidCluster, segment),
+        segment
+    );
+
+    // Ensure that the segment is assigned to one of the historicals
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    // Add the segment to the timed out list to simulate peon timeout on loading the segment
+    final LoadQueuePeon slowLoadingPeon = createLoadingPeon(ImmutableList.of(segment), true);
+    EasyMock.replay(slowLoadingPeon);
+
+    DruidCluster withLoadTimeout = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, slowLoadingPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    // Default behavior is to not replicate the timed out segments on other servers
+    CoordinatorStats statsAfterLoadPrimary = rule.run(
+        null,
+        makeCoordinatorRuntimeParams(withLoadTimeout, segment),
+        segment
+    );
+
+    Assert.assertEquals(0L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
   }
@@ -449,7 +524,7 @@ public class LoadRuleTest
         CoordinatorRuntimeParamsTestHelpers
             .newBuilder()
             .withDruidCluster(druidCluster)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
             .withUsedSegmentsInTest(segment)
@@ -530,7 +605,7 @@ public class LoadRuleTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
