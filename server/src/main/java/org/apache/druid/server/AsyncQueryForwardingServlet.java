@@ -376,7 +376,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   static String makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     return JettyUtils.concatenateForRewrite(
-        StringUtils.format("%s://%s", scheme, host),
+        scheme + "://" + host,
         requestURI,
         rawQueryString
     );
