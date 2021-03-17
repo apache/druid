@@ -809,7 +809,7 @@ public class VSizeLongSerde
         out[outPosition + i++] = base + (unpack2 & 0xFFF);
       }
       while (i < length) {
-        out[outPosition + i] = base + (int) get(startIndex + i);
+        out[outPosition + i] = base + get(startIndex + i);
         i++;
       }
     }
@@ -899,7 +899,7 @@ public class VSizeLongSerde
         out[outPosition + i++] = base + (unpack3 & 0xFFFFF);
       }
       while (i < length) {
-        out[outPosition + i] = base + (int) get(startIndex + i);
+        out[outPosition + i] = base + get(startIndex + i);
         i++;
       }
     }
@@ -941,7 +941,7 @@ public class VSizeLongSerde
         out[outPosition + i++] = base + (unpack3 & 0xFFFFFF);
       }
       while (i < length) {
-        out[outPosition + i] = base + (int) get(startIndex + i);
+        out[outPosition + i] = base + get(startIndex + i);
         i++;
       }
     }
