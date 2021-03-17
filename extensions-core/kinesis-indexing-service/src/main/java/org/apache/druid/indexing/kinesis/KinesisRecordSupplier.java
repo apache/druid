@@ -864,21 +864,21 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         offsetToUse = offset;
       }
 
-      GetRecordsResult recordsResult = getRecords(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
+      GetRecordsResult recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
 
       // If no more new data after offsetToUse, it means there is no lag for now.
       // So report lag points as 0L.
       if (recordsResult.getRecords().size() == 0) {
         return 0L;
       } else {
-        recordsResult = getRecords(iteratorType, offsetToUse, partition);
+        recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
       }
 
       return recordsResult.getMillisBehindLatest();
     });
   }
 
-  private GetRecordsResult getRecords(String iteratorType, String offsetToUse, StreamPartition<String> partition)
+  private GetRecordsResult getRecordsForLag(String iteratorType, String offsetToUse, StreamPartition<String> partition)
   {
     String shardIterator = kinesis.getShardIterator(
             partition.getStream(),
