@@ -34,7 +34,6 @@ import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.common.utils.IntArrayUtils;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -448,7 +447,7 @@ public class RowBasedGrouperHelper
         if (query.getGranularity() instanceof AllGranularity) {
           return row -> query.getIntervals().get(0).getStartMillis();
         } else {
-          return row -> query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
+          return row -> query.getGranularity().bucketStart(row.getLong(0));
         }
       }
     } else {

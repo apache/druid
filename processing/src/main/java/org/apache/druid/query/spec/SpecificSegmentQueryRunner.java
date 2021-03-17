@@ -20,7 +20,6 @@
 package org.apache.druid.query.spec;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
@@ -69,7 +68,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
     final Thread currThread = Thread.currentThread();
     final String currThreadName = currThread.getName();
-    final String newName = StringUtils.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
+    final String newName = query.getType() + "_" + query.getDataSource() + "_" + query.getIntervals();
 
     final Sequence<T> baseSequence = doNamed(
         currThread,

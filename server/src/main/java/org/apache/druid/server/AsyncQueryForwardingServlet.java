@@ -32,7 +32,6 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -376,7 +375,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   static String makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     return JettyUtils.concatenateForRewrite(
-        StringUtils.format("%s://%s", scheme, host),
+        scheme + "://" + host,
         requestURI,
         rawQueryString
     );

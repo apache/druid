@@ -318,6 +318,14 @@ public class ColumnProcessors
 
     switch (capabilities.getType()) {
       case STRING:
+        // if column is not uniquely dictionary encoded, use an object selector
+        if (capabilities.isDictionaryEncoded().isFalse() || capabilities.areDictionaryValuesUnique().isFalse()) {
+          return processorFactory.makeObjectProcessor(
+              capabilities,
+              objectSelectorFn.apply(selectorFactory)
+          );
+        }
+
         if (mayBeMultiValue(capabilities)) {
           return processorFactory.makeMultiValueDimensionProcessor(
               capabilities,

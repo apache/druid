@@ -27,7 +27,6 @@ import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -73,7 +72,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
         List<IClassListener> classListeners
     )
     {
-      super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, methodListeners, classListeners, Systematiser.getComparator(), Collections.emptyMap());
+      super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, methodListeners, classListeners, Systematiser.getComparator(), new DataProviderHolder());
     }
 
     @Override

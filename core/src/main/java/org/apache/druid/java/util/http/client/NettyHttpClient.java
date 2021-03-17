@@ -113,7 +113,7 @@ public class NettyHttpClient extends AbstractHttpClient
     final URL url = request.getUrl();
     final Multimap<String, String> headers = request.getHeaders();
 
-    final String requestDesc = StringUtils.format("%s %s", method, url);
+    final String requestDesc = method + " " + url;
     if (log.isDebugEnabled()) {
       log.debug("[%s] starting", requestDesc);
     }
@@ -422,13 +422,12 @@ public class NettyHttpClient extends AbstractHttpClient
       }
     }
 
-    return StringUtils.format("%s:%s", url.getHost(), port);
+    return url.getHost() + ":" + port;
   }
 
   private String getPoolKey(URL url)
   {
-    return StringUtils.format(
-        "%s://%s:%s", url.getProtocol(), url.getHost(), url.getPort() == -1 ? url.getDefaultPort() : url.getPort()
-    );
+    return url.getProtocol() + "://" + url.getHost() + ":"
+           + (url.getPort() == -1 ? url.getDefaultPort() : url.getPort());
   }
 }

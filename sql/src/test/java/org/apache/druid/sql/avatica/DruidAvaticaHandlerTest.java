@@ -918,6 +918,107 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testMinRowsPerFrame() throws Exception
+  {
+    final int minFetchSize = 1000;
+    final AvaticaServerConfig smallFrameConfig = new AvaticaServerConfig()
+    {
+      @Override
+      public int getMaxConnections()
+      {
+        return 2;
+      }
+
+      @Override
+      public int getMaxStatementsPerConnection()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getMinRowsPerFrame()
+      {
+        return minFetchSize;
+      }
+    };
+
+    final PlannerConfig plannerConfig = new PlannerConfig();
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final List<Meta.Frame> frames = new ArrayList<>();
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    DruidMeta smallFrameDruidMeta = new DruidMeta(
+        CalciteTests.createSqlLifecycleFactory(
+            new PlannerFactory(
+                rootSchema,
+                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                operatorTable,
+                macroTable,
+                plannerConfig,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                CalciteTests.getJsonMapper(),
+                CalciteTests.DRUID_SCHEMA_NAME
+            )
+        ),
+        smallFrameConfig,
+        injector
+    )
+    {
+      @Override
+      public Frame fetch(
+          final StatementHandle statement,
+          final long offset,
+          final int fetchMaxRowCount
+      ) throws NoSuchStatementException, MissingResultsException
+      {
+        // overriding fetch allows us to track how many frames are processed after the first frame, and also fetch size
+        Assert.assertEquals(minFetchSize, fetchMaxRowCount);
+        Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
+        frames.add(frame);
+        return frame;
+      }
+    };
+
+    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
+        smallFrameDruidMeta,
+        new DruidNode("dummy", "dummy", false, 1, null, true, false),
+        new AvaticaMonitor()
+    );
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
+    Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
+    smallFrameServer.setHandler(handler);
+    smallFrameServer.start();
+    String smallFrameUrl = StringUtils.format(
+        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
+        port,
+        DruidAvaticaHandler.AVATICA_PATH
+    );
+    Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
+
+    // use a prepared statement because avatica currently ignores fetchSize on the initial fetch of a Statement
+    PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
+    // set a fetch size below the minimum configured threshold
+    statement.setFetchSize(2);
+    final ResultSet resultSet = statement.executeQuery();
+    List<Map<String, Object>> rows = getRows(resultSet);
+    // expect minimum threshold to be used, which should be enough to do this all in first fetch
+    Assert.assertEquals(0, frames.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("dim1", ""),
+            ImmutableMap.of("dim1", "10.1"),
+            ImmutableMap.of("dim1", "2"),
+            ImmutableMap.of("dim1", "1"),
+            ImmutableMap.of("dim1", "def"),
+            ImmutableMap.of("dim1", "abc")
+        ),
+        rows
+    );
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testSqlRequestLog() throws Exception

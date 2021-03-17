@@ -43,6 +43,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager.BasicState;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -58,6 +59,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamExceptionEvent;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamState;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -82,9 +84,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -765,6 +769,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new Period("PT30M"),
         null,
         null,
+        null,
         null
     )
     {
@@ -825,10 +830,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null
+        null, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class), null
     )
     {
     };
+  }
+
+  private static Map<String, Object> getProperties()
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 5000000);
+    autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.3);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 8);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    return autoScalerConfig;
   }
 
   private static SeekableStreamSupervisorTuningConfig getTuningConfig()
@@ -1177,6 +1202,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       // do nothing
     }
+
+    @Override
+    public LagStats computeLagStats()
+    {
+      return null;
+    }
   }
 
   private class TestEmittingTestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -1217,6 +1248,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       if (stateManager.isSteadyState()) {
         latch.countDown();
       }
+    }
+
+    @Override
+    public LagStats computeLagStats()
+    {
+      return null;
     }
 
     @Override

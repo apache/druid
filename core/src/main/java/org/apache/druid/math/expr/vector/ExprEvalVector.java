@@ -69,11 +69,5 @@ public abstract class ExprEvalVector<T>
 
   public abstract double[] getDoubleVector();
 
-  public <E> E getObjectVector()
-  {
-    // non-primitives should implement this
-    throw new IllegalArgumentException("Object vector not available");
-  }
-
-  public abstract <E> E asObjectVector(ExprType type);
+  public abstract Object[] getObjectVector();
 }

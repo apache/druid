@@ -46,6 +46,7 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -64,6 +65,8 @@ import java.util.Set;
 
 public class InformationSchema extends AbstractSchema
 {
+  private static final EmittingLogger log = new EmittingLogger(InformationSchema.class);
+
   private static final String CATALOG_NAME = "druid";
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
@@ -110,6 +113,9 @@ public class InformationSchema extends AbstractSchema
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
   private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
     return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+  };
+  private static final Function<String, Iterable<ResourceAction>> VIEW_TABLE_RA_GENERATOR = viewName -> {
+    return Collections.singletonList(AuthorizationUtils.VIEW_READ_RA_GENERATOR.apply(viewName));
   };
 
   private static final String INFO_TRUE = "YES";
@@ -354,12 +360,18 @@ public class InformationSchema extends AbstractSchema
                                         return null;
                                       }
 
-                                      return generateColumnMetadata(
-                                          schemaName,
-                                          functionName,
-                                          viewMacro.apply(ImmutableList.of()),
-                                          typeFactory
-                                      );
+                                      try {
+                                        return generateColumnMetadata(
+                                            schemaName,
+                                            functionName,
+                                            viewMacro.apply(ImmutableList.of()),
+                                            typeFactory
+                                        );
+                                      }
+                                      catch (Exception e) {
+                                        log.error(e, "Encountered exception while handling view[%s].", functionName);
+                                        return null;
+                                      }
                                     }
                                   }
                               )
@@ -492,14 +504,13 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (druidSchemaName.equals(subSchema.getName())) {
-      // The "druid" schema's functions represent views on Druid datasources, authorize them as if they were
-      // datasources for now
+    if (NamedViewSchema.NAME.equals(subSchema.getName())) {
+      // The "view" subschema functions represent views on Druid datasources
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               subSchema.getFunctionNames(),
-              DRUID_TABLE_RA_GENERATOR,
+              VIEW_TABLE_RA_GENERATOR,
               authorizerMapper
           )
       );

@@ -253,7 +253,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new ProducerRecord<byte[], byte[]>(topic, 0, null, jbb("2011", "e", "y", "10", "20.0", "1.0"), SAMPLE_HEADERS),
         new ProducerRecord<>(topic, 0, null, jbb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
         new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable")),
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable2")),
+        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("")),
         new ProducerRecord<>(topic, 0, null, null),
         new ProducerRecord<>(topic, 0, null, jbb("2013", "f", "y", "10", "20.0", "1.0")),
         new ProducerRecord<>(topic, 0, null, jbb("2049", "f", "y", "notanumber", "20.0", "1.0")),
@@ -1491,7 +1491,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1]]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
-            "Unable to parse row [unparseable2]",
+            "Unable to parse [] as the intermediateRow resulted in empty input row",
             "Unable to parse row [unparseable]",
             "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
         )
@@ -1560,7 +1560,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unable to parse row [unparseable2]",
+            "Unable to parse [] as the intermediateRow resulted in empty input row",
             "Unable to parse row [unparseable]"
         )
     );

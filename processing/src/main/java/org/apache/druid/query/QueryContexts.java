@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @PublicApi
@@ -54,6 +55,10 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
+  // This flag control whether a sql join query with left scan should be attempted to be run as direct table access
+  // instead of being wrapped inside a query. With direct table access enabled, druid can push down the join operation to
+  // data servers.
+  public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
@@ -76,6 +81,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
+  public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
 
@@ -292,6 +298,11 @@ public class QueryContexts
     return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
+  public static <T> boolean getEnableJoinLeftScanDirect(Map<String, Object> context)
+  {
+    return parseBoolean(context, SQL_JOIN_LEFT_SCAN_DIRECT, DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT);
+  }
+
   public static <T> boolean isSecondaryPartitionPruningEnabled(Query<T> query)
   {
     return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
@@ -401,6 +412,12 @@ public class QueryContexts
   static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
   {
     final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseBoolean(val);
+  }
+
+  static boolean parseBoolean(Map<String, Object> context, String key, boolean defaultValue)
+  {
+    final Object val = context.get(key);
     return val == null ? defaultValue : Numbers.parseBoolean(val);
   }
 
