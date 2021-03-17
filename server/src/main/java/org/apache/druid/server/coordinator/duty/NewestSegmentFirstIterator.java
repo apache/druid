@@ -111,7 +111,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
         Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs = new HashMap<>();
+        Map<Pair<Interval, SegmentId>, String> originalVersion = new HashMap<>();
         if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+          String temporaryVersion = DateTimes.nowUtc().toString();
           Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
           // Create a new timeline to hold segments in the new configured segment granularity
@@ -141,9 +143,13 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               // there is no duplicate partitionNum across all segments of each new Interval. We will have to save the
               // original ShardSpec to convert the segment back when returning from the iterator.
               originalShardSpecs.put(new Pair<>(interval, segmentsForCompact.getId()), segment.getShardSpec());
+              // Segment versions may be mixed in the same time chunk based on new segment granularity
+              // Hence we stored the original version and create the new timeline with a temporary version,
+              // setting the fake version to all be the same for the same new time bucket
+              originalVersion.put(new Pair<>(interval, segmentsForCompact.getId()), segment.getVersion());
               timelineWithConfiguredSegmentGranularity.add(
                   interval,
-                  segmentsForCompact.getVersion(),
+                  temporaryVersion,
                   NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
               );
               partitionNum += 1;
@@ -154,7 +160,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         final List<Interval> searchIntervals =
             findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalShardSpecs));
+          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalShardSpecs, originalVersion));
         }
       }
     });
@@ -244,11 +250,13 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     private final List<TimelineObjectHolder<String, DataSegment>> holders;
     private final Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs;
+    private final Map<Pair<Interval, SegmentId>, String> originalVersion;
 
     CompactibleTimelineObjectHolderCursor(
         VersionedIntervalTimeline<String, DataSegment> timeline,
         List<Interval> totalIntervalsToSearch,
-        Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs
+        Map<Pair<Interval, SegmentId>, ShardSpec> originalShardSpecs,
+        Map<Pair<Interval, SegmentId>, String> originalVersion
     )
     {
       this.holders = totalIntervalsToSearch
@@ -260,6 +268,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           )
           .collect(Collectors.toList());
       this.originalShardSpecs = originalShardSpecs;
+      this.originalVersion = originalVersion;
     }
 
     private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
@@ -279,12 +288,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return partitionBytes > 0;
     }
 
-    private DataSegment transformShardSpecIfNeeded(DataSegment dataSegment, Interval interval)
+    private DataSegment transformDataSegmentIfNeeded(DataSegment dataSegment, Interval interval)
     {
-      if (originalShardSpecs != null && !originalShardSpecs.isEmpty()) {
-        return dataSegment.withShardSpec(originalShardSpecs.get(new Pair<>(interval, dataSegment.getId())));
+      if (originalShardSpecs != null && originalVersion != null && !originalShardSpecs.isEmpty() && !originalVersion.isEmpty()) {
+        DataSegment.Builder transformedSegmentBuilder = DataSegment.builder(dataSegment);
+        transformedSegmentBuilder.shardSpec(originalShardSpecs.get(new Pair<>(interval, dataSegment.getId())));
+        transformedSegmentBuilder.version(originalVersion.get(new Pair<>(interval, dataSegment.getId())));
+        return transformedSegmentBuilder.build();
+      } else {
+        return dataSegment;
       }
-      return dataSegment;
     }
 
     @Override
@@ -302,7 +315,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       TimelineObjectHolder<String, DataSegment> timelineObjectHolder = holders.remove(holders.size() - 1);
       return Streams.sequentialStreamFrom(timelineObjectHolder.getObject())
                     .map(PartitionChunk::getObject)
-                    .map(dataSegment -> transformShardSpecIfNeeded(dataSegment, timelineObjectHolder.getTrueInterval()))
+                    .map(dataSegment -> transformDataSegmentIfNeeded(dataSegment, timelineObjectHolder.getTrueInterval()))
                     .collect(Collectors.toList());
     }
   }

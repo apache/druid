@@ -38,7 +38,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final String dataSource;
   private final ClientCompactionIOConfig ioConfig;
   private final ClientCompactionTaskQueryTuningConfig tuningConfig;
-  private final ClientCompactionTaskQueryGranularitySpec granularitySpec;
+  private final ClientCompactionTaskGranularitySpec granularitySpec;
   private final Map<String, Object> context;
 
   @JsonCreator
@@ -47,7 +47,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
-      @JsonProperty("granularitySpec") ClientCompactionTaskQueryGranularitySpec granularitySpec,
+      @JsonProperty("granularitySpec") ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -93,7 +93,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
-  public ClientCompactionTaskQueryGranularitySpec getGranularitySpec()
+  public ClientCompactionTaskGranularitySpec getGranularitySpec()
   {
     return granularitySpec;
   }

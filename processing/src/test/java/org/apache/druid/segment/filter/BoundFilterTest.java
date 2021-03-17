@@ -80,9 +80,13 @@ public class BoundFilterTest extends BaseFilterTest
   {
     final List<BoundDimFilter> filters = ImmutableList.of(
         new BoundDimFilter("dim0", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter("vdim0", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         new BoundDimFilter("dim1", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter("vdim1", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         new BoundDimFilter("dim2", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
-        new BoundDimFilter("dim3", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        new BoundDimFilter("vdim2", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter("dim3", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter("vdim3", null, "z", false, false, false, null, StringComparators.LEXICOGRAPHIC)
     );
 
     for (BoundDimFilter filter : filters) {
@@ -424,12 +428,12 @@ public class BoundFilterTest extends BaseFilterTest
   @Test
   public void testNumericMatchVirtualColumn()
   {
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new BoundDimFilter("expr", "1", "2", false, false, false, null, StringComparators.NUMERIC),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
 
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new BoundDimFilter("expr", "2", "3", false, false, false, null, StringComparators.NUMERIC),
         ImmutableList.of()
     );
@@ -676,6 +680,54 @@ public class BoundFilterTest extends BaseFilterTest
     assertFilterMatches(
         new BoundDimFilter(
             "l0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+        ? ImmutableList.of("0", "3", "7")
+        : ImmutableList.of("0")
+    );
+  }
+
+  @Test
+  public void testVirtualNumericNullsAndZeros()
+  {
+    assertFilterMatches(
+        new BoundDimFilter(
+            "vd0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2", "7") : ImmutableList.of("0")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(
+            "vf0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "4", "6") : ImmutableList.of("0")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(
+            "vl0",
             "0.0",
             "1.0",
             false,

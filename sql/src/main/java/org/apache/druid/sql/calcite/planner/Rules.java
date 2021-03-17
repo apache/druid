@@ -242,7 +242,7 @@ public class Rules
         .addAll(baseRuleSet(plannerContext))
         .add(DruidRelToDruidRule.instance())
         .add(new DruidTableScanRule(queryMaker))
-        .addAll(DruidRules.rules());
+        .addAll(DruidRules.rules(plannerContext));
 
     return retVal.build();
   }

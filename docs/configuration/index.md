@@ -515,6 +515,28 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
 
+### Ingestion Security Configuration
+
+#### HDFS input source
+
+You can set the following property to specify permissible protocols for
+the [HDFS input source](../ingestion/native-batch.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch.md#hdfsfirehose).
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols for the HDFS input source and HDFS firehose.|["hdfs"]|
+
+
+#### HTTP input source
+
+You can set the following property to specify permissible protocols for
+the [HTTP input source](../ingestion/native-batch.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch.md#httpfirehose).
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
+
+
 ### Task Logging
 
 If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
@@ -1354,6 +1376,7 @@ The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
+
 
 #### Query Configurations
 

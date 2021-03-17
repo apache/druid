@@ -29,6 +29,7 @@ import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -101,9 +102,9 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
-    return baseFilter.canVectorizeMatcher();
+    return baseFilter.canVectorizeMatcher(inspector);
   }
 
   @Override

@@ -44,6 +44,11 @@ public class Exprs
     return new UOE("Unable to vectorize expression");
   }
 
+  public static UnsupportedOperationException cannotVectorize(String msg)
+  {
+    return new UOE("Unable to vectorize expression: %s", msg);
+  }
+
   /**
    * Decomposes any expr into a list of exprs that, if ANDed together, are equivalent to the input expr.
    *

@@ -583,6 +583,11 @@ com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
  - ../docs/development/extensions-contrib/statsd.md
 convertRange
+- ../docs/development/extensions-contrib/prometheus.md
+HTTPServer
+conversionFactor
+prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -1422,6 +1427,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary

@@ -148,12 +148,28 @@ source_paths:
 ---
 
 name: AWS RDS SDK for Java
-license_category: source
+license_category: binary
 module: extensions/druid-aws-rds-extensions
 license_name: Apache License version 2.0
 version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-rds
+
+---
+
+name: Code adopted from org.apache.commons.dbcp2.BasicDataSource
+license_category: source
+module: server
+license_name: Apache License version 2.0
+version: 2.0.1
+source_paths:
+  - server/src/main/java/org/apache/druid/metadata/BasicDataSourceExt.java
+notice: |
+  Apache Commons DBCP
+  Copyright 2001-2020 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -1041,7 +1057,7 @@ name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.66
+version: 1.68
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
 
@@ -1962,7 +1978,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.34.v20201102
+version: 9.4.38.v20210224
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -1975,6 +1991,7 @@ libraries:
   - org.eclipse.jetty: jetty-servlet
   - org.eclipse.jetty: jetty-servlets
   - org.eclipse.jetty: jetty-util
+  - org.eclipse.jetty: jetty-util-ajax
 notice: |
   ==============================================================
    Jetty Web Container
@@ -3473,6 +3490,27 @@ libraries:
         
 ---
 
+name: Kafka Schema Registry Client 6.0.1
+version: 6.0.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+  - io.confluent: common-utils
+
+---
+
+name: Confluent Kafka Client
+version: 6.0.1-ccs
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+
+---
+
 name: Apache Velocity Engine
 version: 2.2
 license_category: binary
@@ -3669,7 +3707,7 @@ version: 1.11.884
 libraries:
   - com.amazonaws: aws-java-sdk-kinesis
   - com.amazonaws: aws-java-sdk-sts
-  - com.amazonaws: jmespath-java  
+  - com.amazonaws: jmespath-java
 
 ---
 
