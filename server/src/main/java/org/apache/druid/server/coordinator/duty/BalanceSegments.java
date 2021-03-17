@@ -286,7 +286,7 @@ public class BalanceSegments implements CoordinatorDuty
           final Set<String> usedGuildSet =
               params.getSegmentReplicantLookup().getGuildSetForSegment(segmentToMove.getId());
 
-          // The replication factor for this segment on the guild that the segment we are moving lives on.
+          // The replication factor on the guild that the segment we are moving lives on.
           final int guildReplicationFactor =
               params
                   .getSegmentReplicantLookup()

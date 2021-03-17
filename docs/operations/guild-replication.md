@@ -1,3 +1,26 @@
+---
+id: guild-replication
+title: "Guild Replication Documentation"
+---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 # Guild Replication
 
 ## The Basics 
@@ -25,13 +48,13 @@ If Guild replication is enabled, the Coordinator will try its best to load repli
 `guildReplicationMaxPercentOfMaxSegmentsToMove`
 
 * This is a floating-point value that an operator can utilize to control prioritization for balancing segments who are not located on more than one Guild. The default value is `0`, meaning that the Coordinator will not do any prioritization for such segments when performing balancing.
-* The highter it is set, the more segments who are on a single Guild will be prioritized for moving during balancing.
-* Note that `decommissioningMaxPercentOfMaxSegmentsToMove` takes precedence so if you are decommissioning servers, those segments will be treated with a higher prioritiy if you are using that configuration.
+* The higher it is set, the more segments who are on a single Guild will be prioritized for moving during balancing.
+* Note that `decommissioningMaxPercentOfMaxSegmentsToMove` takes precedence so if you are decommissioning servers, those segments will be treated with a higher priority if you are using that configuration.
 * If all of your segments live on more than one Guild, balancing will happen without concern for Guild replication state.
 
 `emitGuildReplicationMetrics`
 
-* This is aboolean flag that controls if the Coordinator will periodically emit metrics with Guild replication information. Enabling this will come with compute cost as the Coordinator will have to perform calculations for these metrics.
+* This is a boolean flag that controls if the Coordinator will periodically emit metrics with Guild replication information. Enabling this will come with compute cost as the Coordinator will have to perform calculations for these metrics.
 
 ## FAQ
 
@@ -43,7 +66,7 @@ Notice that the word "Guild" has been used in lieu of "Rack". That is because th
 
 ### Can I enable this on a cluster with existing data?
 
-Yes! However, you will almost certainly start off with a number of segments who are violating the goal of Guild replication by being located on a single Guild. Segment balancing will eventually rectify these violations. You should use `guildReplicationMaxPercentOfMaxSegmentsToMove` when possible to prioritize moving these segments to multiple Guilds. Enabling `emitGuildReplicationMetrics` can help you track the status of your cluster's Giuld replication compliance.
+Yes! However, you will almost certainly start off with a number of segments who are violating the goal of Guild replication by being located on a single Guild. Segment balancing will eventually rectify these violations. You should use `guildReplicationMaxPercentOfMaxSegmentsToMove` when possible to prioritize moving these segments to multiple Guilds. Enabling `emitGuildReplicationMetrics` can help you track the status of your cluster's Guild replication compliance.
 
 ### Can I disable this on a cluster with existing data?
 

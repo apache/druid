@@ -1302,6 +1302,9 @@ i3.8xlarge
  - ../docs/operations/tls-support.md
 CN
 subjectAltNames
+ - ../docs/operations/guild_replication.md
+replicants
+replicant
  - ../docs/querying/aggregations.md
 HyperUnique
 hyperUnique
