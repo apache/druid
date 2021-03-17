@@ -71,7 +71,7 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
   private double filteredRowCountPercentage;
 
   @Setup
-  public void setup() throws Exception
+  public void setup() throws IOException
   {
     decoders = Maps.newHashMap();
     encodedSize = Maps.newHashMap();
@@ -93,7 +93,7 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
   }
 
   @TearDown
-  public void teardown() throws Exception
+  public void teardown()
   {
     for (ColumnarLongs longs : decoders.values()) {
       longs.close();

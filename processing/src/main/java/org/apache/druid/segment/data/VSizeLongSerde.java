@@ -929,7 +929,7 @@ public class VSizeLongSerde
       final int unpackSize = 3 * Long.BYTES;
       for (int indexOffset = startIndex * 3; i + 8 < length; indexOffset += unpackSize) {
         final long unpack = buffer.getLong(offset + indexOffset);
-        final long unpack2 = buffer.getLong(offset +indexOffset + Long.BYTES);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
         final long unpack3 = buffer.getLong(offset + indexOffset + Long.BYTES + Long.BYTES);
         out[outPosition + i++] = base + ((unpack >> 40) & 0xFFFFFF);
         out[outPosition + i++] = base + ((unpack >> 16) & 0xFFFFFF);
@@ -1005,7 +1005,7 @@ public class VSizeLongSerde
         out[outPosition + i++] = base + (((unpack & 0xFFFFFFL) << 16) | ((unpack2 >>> 48) & 0xFFFFL));
         out[outPosition + i++] = base + ((unpack2 >>> 8) & 0xFFFFFFFFFFL);
         out[outPosition + i++] = base + (((unpack2 & 0xFFL) << 32) | ((unpack3 >>> 32) & 0xFFFFFFFFL));
-        out[outPosition + i++] = base + (((unpack3 & 0xFFFFFFFFL) << 8) | ((unpack4 >>> 56 ) & 0xFFL));
+        out[outPosition + i++] = base + (((unpack3 & 0xFFFFFFFFL) << 8) | ((unpack4 >>> 56) & 0xFFL));
         out[outPosition + i++] = base + ((unpack4 >>> 16) & 0xFFFFFFFFFFL);
         out[outPosition + i++] = base + (((unpack4 & 0xFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
         out[outPosition + i++] = base + (unpack5 & 0xFFFFFFFFFFL);

@@ -19,8 +19,8 @@
 
 package org.apache.druid.benchmark.compression;
 
-import com.google.api.client.util.Lists;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;

@@ -93,7 +93,12 @@ public class BaseColumnarLongsBenchmark
         filter.set(rowToAccess);
         bitmap.add(rowToAccess);
       }
-      vectorOffset = new BitmapVectorOffset(VECTOR_SIZE, new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()), 0, rows);
+      vectorOffset = new BitmapVectorOffset(
+          VECTOR_SIZE,
+          new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+          0,
+          rows
+      );
     } else {
       vectorOffset = new NoFilterVectorOffset(VECTOR_SIZE, 0, rows);
     }
@@ -174,7 +179,6 @@ public class BaseColumnarLongsBenchmark
   // for testing encodings: validate that all encoders read the same values
   // noinspection unused
   static void checkSanity(Map<String, ColumnarLongs> encoders, List<String> encodings, int rows)
-      throws Exception
   {
     for (int i = 0; i < rows; i++) {
       checkRowSanity(encoders, encodings, i);
