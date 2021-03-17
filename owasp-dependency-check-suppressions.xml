@@ -307,4 +307,12 @@
      ]]></notes>
     <cve>CVE-2017-15288</cve>
   </suppress>
+
+  <suppress>
+    <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
+    <notes><![CDATA[
+     file name: velocity-engine-core-2.2.jar:
+     ]]></notes>
+    <cve>CVE-2020-13936</cve>
+  </suppress>
 </suppressions>
