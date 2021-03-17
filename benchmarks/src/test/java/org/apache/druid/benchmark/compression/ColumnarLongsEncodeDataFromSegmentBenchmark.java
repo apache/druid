@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.compression;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
@@ -56,6 +55,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -72,7 +72,7 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
     File dir = getTmpDir();
     File dataFile = new File(dir, getColumnDataFileName(segmentName, columnName));
 
-    ArrayList<Long> values = Lists.newArrayList();
+    List<Long> values = new ArrayList<>();
     try (BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8)) {
       String line;
       while ((line = br.readLine()) != null) {
@@ -118,11 +118,11 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
     File dataFile = new File(dir, getColumnDataFileName(segmentName, columnName));
 
     if (!dataFile.exists()) {
-      IndexIO INDEX_IO = new IndexIO(
+      final IndexIO indexIO = new IndexIO(
           new DefaultObjectMapper(),
           () -> 0
       );
-      try (final QueryableIndex index = INDEX_IO.loadIndex(new File(segmentPath))) {
+      try (final QueryableIndex index = indexIO.loadIndex(new File(segmentPath))) {
         final Set<String> columnNames = new LinkedHashSet<>();
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         Iterables.addAll(columnNames, index.getColumnNames());

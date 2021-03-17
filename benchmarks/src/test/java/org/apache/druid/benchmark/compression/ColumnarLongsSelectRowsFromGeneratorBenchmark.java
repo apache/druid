@@ -144,7 +144,7 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
       } else {
         columnDecoder.get(vector, vectorOffset.getOffsets(), vectorOffset.getCurrentVectorSize());
       }
-      for (int i = 0 ; i < vectorOffset.getCurrentVectorSize(); i++) {
+      for (int i = 0; i < vectorOffset.getCurrentVectorSize(); i++) {
         blackhole.consume(vector[i]);
       }
       vectorOffset.advance();
