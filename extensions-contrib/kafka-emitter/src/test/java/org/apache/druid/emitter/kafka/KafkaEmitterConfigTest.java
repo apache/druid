@@ -44,7 +44,7 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
                                                                    "alertTest", "clusterNameTest",
-                                                                   ImmutableMap.<String, String>builder()
+                                                                   null, ImmutableMap.<String, String>builder()
                                                                        .put("testKey", "testValue").build()
     );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
@@ -58,7 +58,7 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
                                                                    "alertTest", "clusterNameTest",
-                                                                   null
+                                                                   null, null
     );
     try {
       @SuppressWarnings("unused")
