@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.compression;
 
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -44,6 +43,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -73,8 +73,8 @@ public class ColumnarLongsSelectRowsFromGeneratorBenchmark extends BaseColumnarL
   @Setup
   public void setup() throws IOException
   {
-    decoders = Maps.newHashMap();
-    encodedSize = Maps.newHashMap();
+    decoders = new HashMap<>();
+    encodedSize = new HashMap<>();
 
     setupFromFile(encoding);
     setupFilters(rows, filteredRowCountPercentage);

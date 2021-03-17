@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.compression;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
@@ -56,6 +55,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -123,7 +123,7 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
           () -> 0
       );
       try (final QueryableIndex index = INDEX_IO.loadIndex(new File(segmentPath))) {
-        final Set<String> columnNames = Sets.newLinkedHashSet();
+        final Set<String> columnNames = new LinkedHashSet<>();
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         Iterables.addAll(columnNames, index.getColumnNames());
         final ColumnHolder column = index.getColumnHolder(columnName);
