@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark.compression;
 
 import org.openjdk.jmh.infra.BenchmarkParams;
+import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.InternalProfiler;
 import org.openjdk.jmh.results.AggregationPolicy;
@@ -30,6 +31,19 @@ import org.openjdk.jmh.results.ScalarResult;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * Crude jmh 'profiler' that allows calling benchmark methods to set this static value in a benchmark run, and if
+ * this profiler to the run and have this additional measurement show up in the results.
+ *
+ * This allows 2 measurements to be collected for the result set, timing of the test, and size in bytes set here.
+ *
+ * @see ColumnarLongsSelectRowsFromGeneratorBenchmark#selectRows(Blackhole)
+ * @see ColumnarLongsSelectRowsFromGeneratorBenchmark#selectRowsVectorized(Blackhole)
+ * @see ColumnarLongsEncodeDataFromGeneratorBenchmark#encodeColumn(Blackhole)
+ * @see ColumnarLongsSelectRowsFromSegmentBenchmark#selectRows(Blackhole)
+ * @see ColumnarLongsSelectRowsFromSegmentBenchmark#selectRowsVectorized(Blackhole)
+ * @see ColumnarLongsEncodeDataFromSegmentBenchmark#encodeColumn(Blackhole)
+ */
 public class EncodingSizeProfiler implements InternalProfiler
 {
   public static int encodedSize;

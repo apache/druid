@@ -59,6 +59,9 @@ public class BaseColumnarLongsFromSegmentsBenchmark extends BaseColumnarLongsBen
   /**
    * Path to a segment file to read long columns from. This shouldn't really be used as a parameter, but is nice to
    * be included in the output measurements.
+   *
+   * This is BYO segment, as this file doesn't probably exist for you, replace it and other parameters with the segment
+   * to test.
    */
   @Param({"tmp/segments/twitter-ticker-1/"})
   String segmentPath;

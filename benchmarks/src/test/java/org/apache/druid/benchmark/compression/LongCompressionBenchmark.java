@@ -43,6 +43,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -92,19 +93,30 @@ public class LongCompressionBenchmark
     bufferHandler.close();
   }
 
-//  @Benchmark
-//  public void readContinuous(Blackhole bh)
-//  {
-//    ColumnarLongs columnarLongs = supplier.get();
-//    int count = columnarLongs.size();
-//    for (int i = 0; i < count; i++) {
-//      bh.consume(columnarLongs.get(i));
-//    }
-//    columnarLongs.close();
-//  }
+  @Benchmark
+  public void readContinuous(Blackhole bh)
+  {
+    ColumnarLongs columnarLongs = supplier.get();
+    int count = columnarLongs.size();
+    for (int i = 0; i < count; i++) {
+      bh.consume(columnarLongs.get(i));
+    }
+    columnarLongs.close();
+  }
 
   @Benchmark
-  public void readVectorizedSequential(Blackhole bh)
+  public void readSkipping(Blackhole bh)
+  {
+    ColumnarLongs columnarLongs = supplier.get();
+    int count = columnarLongs.size();
+    for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
+      bh.consume(columnarLongs.get(i));
+    }
+    columnarLongs.close();
+  }
+
+  @Benchmark
+  public void readVectorizedContinuous(Blackhole bh)
   {
     long[] vector = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
     ColumnarLongs columnarLongs = supplier.get();
@@ -117,16 +129,4 @@ public class LongCompressionBenchmark
     }
     columnarLongs.close();
   }
-
-//  @Benchmark
-//  public void readSkipping(Blackhole bh)
-//  {
-//    ColumnarLongs columnarLongs = supplier.get();
-//    int count = columnarLongs.size();
-//    for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
-//      bh.consume(columnarLongs.get(i));
-//    }
-//    columnarLongs.close();
-//  }
-
 }
