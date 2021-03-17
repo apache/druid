@@ -179,7 +179,22 @@ public class LoadRuleTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withUsedSegmentsInTest(usedSegments)
+        .build();
+  }
+
+  private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(
+      DruidCluster druidCluster,
+      DataSegment... usedSegments
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, true))
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
@@ -226,7 +241,7 @@ public class LoadRuleTest
     Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
 
     // ensure multiple runs don't assign primary segment again if at replication count
-    final LoadQueuePeon loadingPeon = createLoadingPeon(ImmutableList.of(segment));
+    final LoadQueuePeon loadingPeon = createLoadingPeon(ImmutableList.of(segment), false);
     EasyMock.replay(loadingPeon);
 
     DruidCluster afterLoad = DruidClusterBuilder
@@ -243,6 +258,125 @@ public class LoadRuleTest
     Assert.assertEquals(0, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(throttler, mockPeon, mockBalancerStrategy);
+  }
+
+  @Test
+  public void testOverAssignForTimedOutSegments()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
+
+    final LoadQueuePeon emptyPeon = createEmptyPeon();
+    emptyPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "hot", 1
+    ));
+
+    final DataSegment segment = createDataSegment("foo");
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .anyTimes();
+
+    EasyMock.replay(throttler, emptyPeon, mockBalancerStrategy);
+
+    ImmutableDruidServer server1 =
+        new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    ImmutableDruidServer server2 =
+        new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, emptyPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    CoordinatorStats stats = rule.run(
+        null,
+        makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment),
+        segment
+    );
+
+    // Ensure that the segment is assigned to one of the historicals
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    // Ensure that the primary segment is assigned again in case the peon timed out on loading the segment
+    final LoadQueuePeon slowLoadingPeon = createLoadingPeon(ImmutableList.of(segment), true);
+    EasyMock.replay(slowLoadingPeon);
+
+    DruidCluster withLoadTimeout = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, slowLoadingPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    CoordinatorStats statsAfterLoadPrimary = rule.run(
+        null,
+        makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(withLoadTimeout, segment),
+        segment
+    );
+
+    Assert.assertEquals(1L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
+  }
+
+  @Test
+  public void testSkipReplicationForTimedOutSegments()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
+
+    final LoadQueuePeon emptyPeon = createEmptyPeon();
+    emptyPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "hot", 1
+    ));
+
+    final DataSegment segment = createDataSegment("foo");
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .anyTimes();
+
+    EasyMock.replay(throttler, emptyPeon, mockBalancerStrategy);
+
+    ImmutableDruidServer server1 =
+        new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    ImmutableDruidServer server2 =
+        new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, emptyPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    CoordinatorStats stats = rule.run(
+        null,
+        makeCoordinatorRuntimeParams(druidCluster, segment),
+        segment
+    );
+
+    // Ensure that the segment is assigned to one of the historicals
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    // Add the segment to the timed out list to simulate peon timeout on loading the segment
+    final LoadQueuePeon slowLoadingPeon = createLoadingPeon(ImmutableList.of(segment), true);
+    EasyMock.replay(slowLoadingPeon);
+
+    DruidCluster withLoadTimeout = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1, slowLoadingPeon), new ServerHolder(server2, emptyPeon))
+        .build();
+
+    // Default behavior is to not replicate the timed out segments on other servers
+    CoordinatorStats statsAfterLoadPrimary = rule.run(
+        null,
+        makeCoordinatorRuntimeParams(withLoadTimeout, segment),
+        segment
+    );
+
+    Assert.assertEquals(0L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+
+    EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
   }
 
   @Test
@@ -390,7 +524,7 @@ public class LoadRuleTest
         CoordinatorRuntimeParamsTestHelpers
             .newBuilder()
             .withDruidCluster(druidCluster)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
             .withUsedSegmentsInTest(segment)
@@ -471,7 +605,7 @@ public class LoadRuleTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
@@ -723,7 +857,7 @@ public class LoadRuleTest
     return mockPeon;
   }
 
-  private static LoadQueuePeon createLoadingPeon(List<DataSegment> segments)
+  private static LoadQueuePeon createLoadingPeon(List<DataSegment> segments, boolean slowLoading)
   {
     final Set<DataSegment> segs = ImmutableSet.copyOf(segments);
     final long loadingSize = segs.stream().mapToLong(DataSegment::getSize).sum();
@@ -733,6 +867,12 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(new HashSet<>()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(loadingSize).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(segs.size()).anyTimes();
+
+    if (slowLoading) {
+      EasyMock.expect(mockPeon.getTimedOutSegments()).andReturn(new HashSet<>(segments)).anyTimes();
+    } else {
+      EasyMock.expect(mockPeon.getTimedOutSegments()).andReturn(new HashSet<>()).anyTimes();
+    }
 
     return mockPeon;
   }
