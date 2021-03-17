@@ -335,7 +335,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
 
     if (segmentAvailabilityConfirmationPair.lhs != null && segmentAvailabilityConfirmationPair.lhs) {
-      TaskReport reportRaw = indexer.getTaskReport(taskID);
+      TaskReport reportRaw = indexer.getTaskReport(taskID).get("ingestionStatsAndErrors");
       IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
       IngestionStatsAndErrorsTaskReportData reportData = (IngestionStatsAndErrorsTaskReportData) report.getPayload();
       if (segmentAvailabilityConfirmationPair.rhs != null) {
