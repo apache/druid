@@ -890,12 +890,14 @@ The below is a list of the supported configurations for auto compaction.
 
 ###### Automatic compaction TuningConfig
 You can optionally use the `granularitySpec` object to configure the segment granularity of the compacted segments.
-> Automatic compaction does not support query granularity.
+
 `granularitySpec` takes the following keys:
 
 |Field|Description|Required|
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null'. Accepts all [Query granularity](../querying/granularities.md) values.|No|
+
+> Unlike manual compaction, automatic compaction does not support query granularity.
 
 ### Overlord
 
