@@ -187,8 +187,8 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null'. Accepts all [Query granularities](../querying/granularities.md).|No|
-|`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null'. Accepts all [Query granularities](../querying/granularities.md). Not supported for automatic compaction.|No|
+|`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
+|`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values. Not supported for automatic compaction.|No|
 
 For example, to set the segment granularity to "day" and the query granularity to "hour":
 ```json
