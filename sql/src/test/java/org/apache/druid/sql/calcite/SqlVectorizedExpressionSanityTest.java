@@ -83,7 +83,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT TIME_FLOOR(__time, 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1",
       "SELECT (long1 * long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
-      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT string1 + string2, COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT CONCAT(string1, '-', string2), string3, COUNT(*) FROM foo GROUP BY 1,2 ORDER BY 3",
+      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;

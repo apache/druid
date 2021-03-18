@@ -46,7 +46,6 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -108,12 +107,7 @@ public class VectorGroupByEngine
               if (columnCapabilities == null) {
                 return true;
               }
-              // strings must be single valued, dictionary encoded, and have unique dictionary entries
-              if (ValueType.STRING.equals(columnCapabilities.getType())) {
-                return columnCapabilities.hasMultipleValues().isFalse() &&
-                       columnCapabilities.isDictionaryEncoded().isTrue() &&
-                       columnCapabilities.areDictionaryValuesUnique().isTrue();
-              }
+              // must be single valued
               return columnCapabilities.hasMultipleValues().isFalse();
             });
   }

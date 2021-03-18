@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorStringProcessors;
 
 import javax.annotation.Nullable;
 
@@ -63,12 +64,19 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.areScalar(left, right) && inspector.canVectorize(left, right);
   }
 
   @Override
   public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
+    ExprType type = ExprTypeConversion.operator(
+        left.getOutputType(inspector),
+        right.getOutputType(inspector)
+    );
+    if (ExprType.STRING.equals(type)) {
+      return VectorStringProcessors.concat(inspector, left, right);
+    }
     return VectorMathProcessors.plus(inspector, left, right);
   }
 }

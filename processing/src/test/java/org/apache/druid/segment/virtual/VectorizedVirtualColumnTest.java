@@ -155,8 +155,6 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testGroupBySingleValueStringNotDictionaryEncoded()
   {
-    // cannot currently group by string columns that are not dictionary encoded
-    cannotVectorize();
     testGroupBy(new ColumnCapabilitiesImpl()
                     .setType(ValueType.STRING)
                     .setDictionaryEncoded(false)

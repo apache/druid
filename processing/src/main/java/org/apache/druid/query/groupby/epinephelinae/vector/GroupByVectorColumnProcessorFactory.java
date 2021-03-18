@@ -113,9 +113,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   )
   {
     if (ValueType.STRING.equals(capabilities.getType())) {
-      throw new UnsupportedOperationException(
-          "Vectorized groupBys on non-dictionary encoded string columns with object selectors are not yet implemented"
-      );
+      return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
     }
     return NilGroupByVectorColumnSelector.INSTANCE;
   }
