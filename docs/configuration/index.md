@@ -863,7 +863,7 @@ An example of compaction config is:
 Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
 You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
 
-###### Compaction TuningConfig
+###### Automatic compaction TuningConfig
 
 Auto compaction supports a subset of the [tuningConfig for Parallel task](../ingestion/native-batch.md#tuningconfig).
 The below is a list of the supported configurations for auto compaction.
@@ -887,6 +887,15 @@ The below is a list of the supported configurations for auto compaction.
 |`taskStatusCheckPeriodMs`|Polling period in milliseconds to check running task statuses.|no (default = 1000)|
 |`chatHandlerTimeout`|Timeout for reporting the pushed segments in worker tasks.|no (default = PT10S)|
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|no (default = 5)|
+
+###### Automatic compaction TuningConfig
+You can optionally use the `granularitySpec` object to configure the segment granularity of the compacted segments.
+> Automatic compaction does not support query granularity.
+`granularitySpec` takes the following keys:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null'. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 
 ### Overlord
 

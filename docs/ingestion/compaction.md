@@ -58,7 +58,9 @@ If an ingestion task needs to write data to a segment for a time interval locked
 
 ### Segment granularity handling
 
-Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment. If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment.
+Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
+
+If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment. For example consider two overlapping segments: segment "A" for the interval 01/01/2021-01/02/2021 with day granularity and segment "B" for the interval 01/01/2021-02/01/2021. Druid attempts to combine and compacted the overlapped segments. In this example, the earliest start time for the two segments above is 01/01/2020 and the latest end time of the two segments above is 02/01/2020. Druid compactes the segments together even though they have different segment granularity. Druid uses month segment granularity for the newly compacted segment even though segment A's original segment granularity was DAY.
 
 ### Query granularity handling
 
