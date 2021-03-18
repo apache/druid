@@ -177,9 +177,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Test
   public void testBloomFilterVirtualColumn() throws Exception
   {
-    // Cannot vectorize due to expression virtual columns.
-    cannotVectorize();
-
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def-foo");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
