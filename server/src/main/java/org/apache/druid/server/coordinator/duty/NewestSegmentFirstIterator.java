@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
@@ -397,20 +398,29 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       needsCompaction = true;
     }
 
-    // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
-    final Granularity segmentGranularity = lastCompactionState.getGranularitySpec() != null ?
-                                           objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
-                                           null;
-
-    if (config.getGranularitySpec() != null &&
-        config.getGranularitySpec().getSegmentGranularity() != null &&
-        !config.getGranularitySpec().getSegmentGranularity().equals(segmentGranularity)) {
-      log.info(
-          "Configured granularitySpec[%s] is different from the one[%s] of segments. Needs compaction",
-          config.getGranularitySpec(),
-          segmentGranularity
-      );
-      needsCompaction = true;
+    if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+      // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
+      final Granularity existingSegmentGranularity = lastCompactionState.getGranularitySpec() != null ?
+                                                     objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
+                                                     null;
+      if (existingSegmentGranularity == null) {
+        // Candidate segments were all compacted without segment granularity set.
+        // We need to check if all segments have the same segment granularity and if it is the same
+        // as the configured segment granularity.
+        Set<Granularity> segmentGranularities = candidates.segments.stream()
+                                                                   .map(segment -> GranularityType.fromPeriod(segment.getInterval().toPeriod()).getDefaultGranularity())
+                                                                   .collect(Collectors.toSet());
+        if (segmentGranularities.size() != 1 || !segmentGranularities.contains(config.getGranularitySpec().getSegmentGranularity())) {
+          needsCompaction = true;
+        }
+      } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
+        log.info(
+            "Configured granularitySpec[%s] is different from the one[%s] of segments. Needs compaction",
+            config.getGranularitySpec(),
+            existingSegmentGranularity
+        );
+        needsCompaction = true;
+      }
     }
 
     return needsCompaction;
