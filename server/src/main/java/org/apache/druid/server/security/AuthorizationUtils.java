@@ -263,10 +263,6 @@ public class AuthorizationUtils
       throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
-    if (authorizer instanceof AllowAllAuthorizer) {
-      return resources;
-    }
-
     final Map<ResourceAction, Access> resultCache = new HashMap<>();
     final Iterable<ResType> filteredResources = Iterables.filter(
         resources,
