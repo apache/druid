@@ -401,7 +401,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       // should be no new compaction task as segmentGranularity is already DAY
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
-      Assert.assertEquals(compactTasksAfter, compactTasksBefore);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
   }
 

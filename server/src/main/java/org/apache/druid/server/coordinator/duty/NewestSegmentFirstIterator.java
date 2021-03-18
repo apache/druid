@@ -411,12 +411,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                                    .map(segment -> GranularityType.fromPeriod(segment.getInterval().toPeriod()).getDefaultGranularity())
                                                                    .collect(Collectors.toSet());
         if (segmentGranularities.size() != 1 || !segmentGranularities.contains(config.getGranularitySpec().getSegmentGranularity())) {
+          log.info(
+              "Configured segmentGranularity[%s] is different from the segmentGranularitySet[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getSegmentGranularity(),
+              segmentGranularities
+          );
           needsCompaction = true;
         }
       } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
         log.info(
-            "Configured granularitySpec[%s] is different from the one[%s] of segments. Needs compaction",
-            config.getGranularitySpec(),
+            "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
+            config.getGranularitySpec().getSegmentGranularity(),
             existingSegmentGranularity
         );
         needsCompaction = true;
