@@ -127,7 +127,7 @@ public interface IndexMerger
         log.info("Cannot fall back on dimension ordering from ingestionSpec as it does not exist");
         return null;
       }
-      List<String> candidate = dimensionsSpec.getDimensionNames();
+      List<String> candidate = new ArrayList<>(dimensionsSpec.getDimensionNames());
       // Remove all dimensions that does not exist within the indexes from the candidate
       Set<String> allValidDimensions = indexes.stream()
                                          .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames().stream())

@@ -82,7 +82,20 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           "Segment Compaction"
       );
       // Verify compacted data
-      verifyCompactedData();
+      // Compacted data only have one segments. First segment have the following rows:
+      // The ordering of the columns will be "dimB", "dimA", "dimC" (This is the same as the ordering in the initial
+      // ingestion task)
+      List<List<Object>> segmentRows = ImmutableList.of(
+          Arrays.asList(1442016000000L, "F", null, "C", 1, 1),
+          Arrays.asList(1442016000000L, "J", null, "C", 1, 1),
+          Arrays.asList(1442016000000L, "R", null, "J", 1, 1),
+          Arrays.asList(1442016000000L, "S", null, "Z", 1, 1),
+          Arrays.asList(1442016000000L, "T", null, "H", 1, 1),
+          Arrays.asList(1442016000000L, "X", null, "H", 3, 3),
+          Arrays.asList(1442016000000L, "X", "A", null, 1, 1),
+          Arrays.asList(1442016000000L, "Z", null, "H", 1, 1)
+      );
+      verifyCompactedData(segmentRows);
     }
   }
 
@@ -109,7 +122,19 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           "Segment Compaction"
       );
       // Verify compacted data
-      verifyCompactedData();
+      // Compacted data only have one segments. First segment have the following rows:
+      // The ordering of the columns will be "dimA", "dimB", "dimC"
+      List<List<Object>> segmentRows = ImmutableList.of(
+          Arrays.asList(1442016000000L, null, "X", "A", 1, 1),
+          Arrays.asList(1442016000000L, "C", "F", null, 1, 1),
+          Arrays.asList(1442016000000L, "C", "J", null, 1, 1),
+          Arrays.asList(1442016000000L, "H", "T", null, 1, 1),
+          Arrays.asList(1442016000000L, "H", "X", null, 3, 3),
+          Arrays.asList(1442016000000L, "H", "Z", null, 1, 1),
+          Arrays.asList(1442016000000L, "J", "R", null, 1, 1),
+          Arrays.asList(1442016000000L, "Z", "S", null, 1, 1)
+      );
+      verifyCompactedData(segmentRows);
     }
   }
 
@@ -136,7 +161,19 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           "Segment Compaction"
       );
       // Verify compacted data
-      verifyCompactedData();
+      // Compacted data only have one segments. First segment have the following rows:
+      // The ordering of the columns will be "dimC", "dimB", "dimA"
+      List<List<Object>> segment1Rows = ImmutableList.of(
+          Arrays.asList(1442016000000L, null, "F", "C", 1, 1),
+          Arrays.asList(1442016000000L, null, "J", "C", 1, 1),
+          Arrays.asList(1442016000000L, null, "R", "J", 1, 1),
+          Arrays.asList(1442016000000L, null, "S", "Z", 1, 1),
+          Arrays.asList(1442016000000L, null, "T", "H", 1, 1),
+          Arrays.asList(1442016000000L, null, "X", "H", 3, 3),
+          Arrays.asList(1442016000000L, null, "Z", "H", 1, 1),
+          Arrays.asList(1442016000000L, "A", "X", null, 1, 1)
+      );
+      verifyCompactedData(segment1Rows);
     }
   }
 
@@ -173,21 +210,10 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
     verifyQueryResult(expectedResultBeforeCompaction, 10, 10, 1);
   }
 
-  private void verifyCompactedData() throws Exception
+  private void verifyCompactedData(List<List<Object>> segmentRows) throws Exception
   {
     List<Map<String, List<List<Object>>>> expectedResultAfterCompaction = new ArrayList<>();
-    // Compacted data only have one segments. First segment have the following rows:
-    List<List<Object>> segment1Rows = ImmutableList.of(
-        Arrays.asList(1442016000000L, null, "X", "A", 1, 1),
-        Arrays.asList(1442016000000L, "C", "F", null, 1, 1),
-        Arrays.asList(1442016000000L, "C", "J", null, 1, 1),
-        Arrays.asList(1442016000000L, "H", "T", null, 1, 1),
-        Arrays.asList(1442016000000L, "H", "X", null, 3, 3),
-        Arrays.asList(1442016000000L, "H", "Z", null, 1, 1),
-        Arrays.asList(1442016000000L, "J", "R", null, 1, 1),
-        Arrays.asList(1442016000000L, "Z", "S", null, 1, 1)
-    );
-    expectedResultAfterCompaction.add(ImmutableMap.of("events", segment1Rows));
+    expectedResultAfterCompaction.add(ImmutableMap.of("events", segmentRows));
     verifyQueryResult(expectedResultAfterCompaction, 8, 10, 0.8);
   }
 
