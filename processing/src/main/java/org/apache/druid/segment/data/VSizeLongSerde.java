@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.UOE;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -329,7 +330,7 @@ public class VSizeLongSerde
         curByte = (byte) value;
         first = false;
       } else {
-        curByte = (byte) ((curByte << 4) | ((value >>> (numBytes << 3)) & 0xF));
+        curByte = (byte) ((curByte << 4) | ((value >> (numBytes << 3)) & 0xF));
         buffer.put(curByte);
         first = true;
       }
@@ -426,12 +427,7 @@ public class VSizeLongSerde
      * Unpack a contiguous vector of long values at the specified start index of length and adjust them by the supplied
      * delta base value.
      */
-    default void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
-    {
-      for (int i = 0; i < length; i++) {
-        out[outPosition + i] = base + get(startIndex + i);
-      }
-    }
+    void getDelta(long[] out, int outPosition, int startIndex, int length, long base);
 
     /**
      * Unpack a non-contiguous vector of long values at the specified indexes and adjust them by the supplied delta base
@@ -457,9 +453,7 @@ public class VSizeLongSerde
      */
     default void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
     {
-      for (int i = 0; i < length; i++) {
-        out[outPosition + i] = table[(int) get(startIndex + i)];
-      }
+      throw new UOE("Table decoding not supported for %s", this.getClass().getSimpleName());
     }
 
     /**
