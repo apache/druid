@@ -25,18 +25,18 @@ description: "Defines compaction and automatic compaction (auto-compaction or au
 Query performance in Apache Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. In some cases the compacted segments are larger, but there are fewer of them. In other cases the compacted segments may be smaller. Compaction tends to increase performance because optimized segments require less per-segment processing and less memory overhead for ingestion and for querying paths.
 
 ## Compaction strategies
-There are serveral cases to consider compaction for segment optimization:
+There are several cases to consider compaction for segment optimization:
 - With streaming ingestion, data can arrive out of chronological order creating lots of small segments.
-- If you append data using `appendToExisting` for [native batch](./native_batch.md) ingestion creating suboptimal segments.
+- If you append data using `appendToExisting` for [native batch](native-batch.md) ingestion creating suboptimal segments.
 - When you use `index_parallel` for parallel batch indexing and the parallel ingestion tasks create many small segments.
 - When a misconfigured ingestion task creates oversized segments.
 
-By default, compaction does not modify the undlerlying data of the segments. However, there are cases when you may want to modify data during compaction to improve query performance:
+By default, compaction does not modify the underlying data of the segments. However, there are cases when you may want to modify data during compaction to improve query performance:
 - If, after ingestion, you realize realize that data for the time interval is sparse, you can use compaction to increase the segment granularity.
-- Over time you don't need fine-grained granularity for older data so you use compaction to change onlder segments to a coarser query granularity. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
+- Over time you don't need fine-grained granularity for older data so you use compaction to change older segments to a coarser query granularity. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
-- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rullup, see (../index.md#perfect-rollup-vs-best-effort-rollup).
+- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](../index.md#perfect-rollup-vs-best-effort-rollup).
 
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
@@ -46,7 +46,7 @@ You can configure the Druid Coordinator to perform automatic compaction, also ca
 Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#compacting-segments).
 
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
-- Automatic compaction is running into the limit of task slots available to it, so tasks are waiting for previous automatic compaction tasks to cmplete. Manual compaction can use all available task slots, therefore you can complete compaction more quckly by submitting more concurrent tasks for more intervals.
+- Automatic compaction is running into the limit of task slots available to it, so tasks are waiting for previous automatic compaction tasks to complete. Manual compaction can use all available task slots, therefore you can complete compaction more quickly by submitting more concurrent tasks for more intervals.
 - You want to force compaction for a specific time range or you want to compact data out of chronological order.
 
 See [Setting up a manual compaction task](#setting-up-manual-compaction) for more about manual compaction tasks.
@@ -60,7 +60,7 @@ If an ingestion task needs to write data to a segment for a time interval locked
 
 Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
 
-If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment. For example consider two overlapping segments: segment "A" for the interval 01/01/2021-01/02/2021 with day granularity and segment "B" for the interval 01/01/2021-02/01/2021. Druid attempts to combine and compacted the overlapped segments. In this example, the earliest start time for the two segments above is 01/01/2020 and the latest end time of the two segments above is 02/01/2020. Druid compactes the segments together even though they have different segment granularity. Druid uses month segment granularity for the newly compacted segment even though segment A's original segment granularity was DAY.
+If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment. For example consider two overlapping segments: segment "A" for the interval 01/01/2021-01/02/2021 with day granularity and segment "B" for the interval 01/01/2021-02/01/2021. Druid attempts to combine and compacted the overlapped segments. In this example, the earliest start time for the two segments above is 01/01/2020 and the latest end time of the two segments above is 02/01/2020. Druid compacts the segments together even though they have different segment granularity. Druid uses month segment granularity for the newly compacted segment even though segment A's original segment granularity was DAY.
 
 ### Query granularity handling
 
@@ -103,7 +103,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one.|No|
 |`metricsSpec`|Custom metrics spec. The compaction task uses the specified metrics spec rather than generating one.|No|
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
-|`tuningConfig`|[Parallel indexing task tuningConfig](./native-batch.md#tuningconfig)|No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig)|No|
 |`context`|[Task context](./tasks.md#context)|No|
 |`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` and `queryGranularity` for the compacted segments. See [Compaction granularitySpec](#compaction-granularity-spec).|No|
 
@@ -113,7 +113,7 @@ To control the number of result segments per time chunk, you can set [maxRowsPer
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
-A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [DruidInputSource](../native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
+A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [DruidInputSource](native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
 Compaction tasks would exit without doing anything and issue a failure status code:
 - if the interval you specify has no data segments loaded<br>
