@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
@@ -51,7 +53,9 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.Streams;
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -405,18 +409,51 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                      null;
       if (existingSegmentGranularity == null) {
         // Candidate segments were all compacted without segment granularity set.
-        // We need to check if all segments have the same segment granularity and if it is the same
-        // as the configured segment granularity.
-        Set<Granularity> segmentGranularities = candidates.segments.stream()
-                                                                   .map(segment -> GranularityType.fromPeriod(segment.getInterval().toPeriod()).getDefaultGranularity())
-                                                                   .collect(Collectors.toSet());
-        if (segmentGranularities.size() != 1 || !segmentGranularities.contains(config.getGranularitySpec().getSegmentGranularity())) {
+        // We need to check if all segments have the same segment granularity as the configured segment granularity.
+        Set<Long> segmentIntervalDurations = candidates.segments.stream()
+                                                                .map(dataSegment -> dataSegment.getInterval().toDurationMillis())
+                                                                .collect(Collectors.toSet());
+        if (segmentIntervalDurations.size() != 1) {
           log.info(
-              "Configured segmentGranularity[%s] is different from the segmentGranularitySet[%s] of segments. Needs compaction",
-              config.getGranularitySpec().getSegmentGranularity(),
-              segmentGranularities
+              "Existing segments have different segment granularity. segmentIntervalDurationsSize[%s]",
+              segmentIntervalDurations.size()
           );
           needsCompaction = true;
+        }
+
+        Long segmentIntervalDuration = Iterables.getFirst(segmentIntervalDurations, null);
+        if (segmentIntervalDuration == null ||
+            !segmentIntervalDuration.equals(config.getGranularitySpec().getSegmentGranularity().bucket(DateTimes.EPOCH).toDurationMillis())) {
+          log.info(
+              "Configured segmentGranularity[%s] is different from the segmentGranularityDuration[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getSegmentGranularity(),
+              segmentIntervalDuration
+          );
+          needsCompaction = true;
+        }
+
+        if (config.getGranularitySpec().getSegmentGranularity() instanceof PeriodGranularity) {
+          PeriodGranularity periodGranularity = (PeriodGranularity) config.getGranularitySpec().getSegmentGranularity();
+          DateTimeZone configuredTimezone = periodGranularity.getTimeZone();
+          Set<DateTimeZone> segmentIntervalTimeZones = candidates.segments.stream()
+                                                                          .map(dataSegment -> dataSegment.getInterval().getChronology().getZone())
+                                                                          .collect(Collectors.toSet());
+          if (segmentIntervalTimeZones.size() != 1) {
+            log.info(
+                "Existing segments have different timezones. segmentIntervalTimeZonesSize[%s]",
+                segmentIntervalTimeZones.size()
+            );
+            needsCompaction = true;
+          }
+          DateTimeZone existingTimezone = Iterables.getFirst(segmentIntervalTimeZones, null);
+          if (existingTimezone == null || !existingTimezone.equals(configuredTimezone)) {
+            log.info(
+                "Configured segmentGranularity[%s] is different from the timezone[%s] of segments. Needs compaction",
+                config.getGranularitySpec().getSegmentGranularity(),
+                existingTimezone
+            );
+            needsCompaction = true;
+          }
         }
       } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
         log.info(
