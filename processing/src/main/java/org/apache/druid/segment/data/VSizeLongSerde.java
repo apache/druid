@@ -392,7 +392,10 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
-      Preconditions.checkArgument(value >= 0);
+      if (numBytes != 8) {
+        // if the value is not stored in a full long, ensure it is zero or positive
+        Preconditions.checkArgument(value >= 0);
+      }
       for (int i = numBytes - 1; i >= 0; i--) {
         buffer.put((byte) (value >>> (i * 8)));
         if (output != null) {
