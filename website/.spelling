@@ -125,6 +125,7 @@ JsonProperty
 KMS
 Kerberized
 Kerberos
+KeyStores
 Kinesis
 Kubernetes
 LRU
@@ -283,7 +284,7 @@ javadoc
 joinable
 kerberos
 keystore
-KeyStores
+keytool
 keytab
 kubernetes
 laning
