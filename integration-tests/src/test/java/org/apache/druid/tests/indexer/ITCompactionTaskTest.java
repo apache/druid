@@ -101,7 +101,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   public void testCompactionWithQueryGranularityInGranularitySpec() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      loadData(INDEX_TASK);
+      loadData(INDEX_TASK, fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
       List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -140,7 +140,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   public void testCompactionWithSegmentGranularityAndQueryGranularityInGranularitySpec() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      loadData(INDEX_TASK);
+      loadData(INDEX_TASK, fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
       List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -182,7 +182,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   ) throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      loadData(indexTask);
+      loadData(indexTask, fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
       List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -209,20 +209,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       }
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
-  }
-
-  private void loadData(String indexTask) throws Exception
-  {
-    String taskSpec = getResourceAsString(indexTask);
-    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
-
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
-    );
   }
 
   private void compactData(String compactionResource, GranularityType newSegmentGranularity, GranularityType newQueryGranularity) throws Exception
