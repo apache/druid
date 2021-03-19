@@ -851,7 +851,8 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
-    // Duration of new segmentGranularity is the same as before (P1D), but we changed the timezone from UTC to Bangkok
+    // Duration of new segmentGranularity is the same as before (P1D),
+    // but we changed the timezone from UTC to Bangkok in the auto compaction spec
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE,
                         createCompactionConfig(
@@ -862,6 +863,56 @@ public class NewestSegmentFirstPolicyTest
                                     new Period("P1D"),
                                     null,
                                     DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Bangkok"))
+                                ),
+                                null
+                            )
+                        )
+        ),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+    // We should get all segments in timeline back since skip offset is P0D.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentOrigin()
+  {
+    // Same indexSpec as what is set in the auto compaction config
+    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    // Same partitionsSpec as what is set in the auto compaction config
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+
+    // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, null)
+        )
+    );
+
+    // Duration of new segmentGranularity is the same as before (P1D), but we changed the origin in the autocompaction spec
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(
+                            130000,
+                            new Period("P0D"),
+                            new UserCompactionTaskGranularityConfig(
+                                new PeriodGranularity(
+                                    new Period("P1D"),
+                                    DateTimes.of("2012-01-02T00:05:00.000Z"),
+                                    DateTimeZone.UTC
                                 ),
                                 null
                             )
