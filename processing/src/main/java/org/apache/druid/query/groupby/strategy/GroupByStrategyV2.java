@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -85,8 +86,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
-  // see countRequiredMergeBufferNum() for explanation
-  private static final int MAX_MERGE_BUFFER_NUM = 2;
+  // see countRequiredMergeBufferNumWithoutSubtotal() for explanation
+  private static final int MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL = 2;
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
@@ -145,6 +146,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
+  @VisibleForTesting
   public static int countRequiredMergeBufferNum(GroupByQuery query)
   {
     return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
@@ -160,7 +162,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
 
     final DataSource dataSource = query.getDataSource();
-    if (foundNum == MAX_MERGE_BUFFER_NUM + 1 || !(dataSource instanceof QueryDataSource)) {
+    if (foundNum == MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL + 1 || !(dataSource instanceof QueryDataSource)) {
       return foundNum - 1;
     } else {
       return countRequiredMergeBufferNumWithoutSubtotal(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
