@@ -27,6 +27,7 @@ export type CapabilitiesModeExtended =
   | 'no-sql'
   | 'no-proxy'
   | 'no-sql-no-proxy'
+  | 'coordinator-overlord'
   | 'coordinator'
   | 'overlord';
 
@@ -41,6 +42,7 @@ export interface CapabilitiesOptions {
 export class Capabilities {
   static STATUS_TIMEOUT = 2000;
   static FULL: Capabilities;
+  static COORDINATOR_OVERLORD: Capabilities;
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
 
@@ -154,6 +156,9 @@ export class Capabilities {
         return 'no-sql-no-proxy';
       }
     } else {
+      if (coordinator && overlord) {
+        return 'coordinator-overlord';
+      }
       if (coordinator) {
         return 'coordinator';
       }
@@ -195,6 +200,11 @@ export class Capabilities {
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
+  coordinator: true,
+  overlord: true,
+});
+Capabilities.COORDINATOR_OVERLORD = new Capabilities({
+  queryType: 'none',
   coordinator: true,
   overlord: true,
 });

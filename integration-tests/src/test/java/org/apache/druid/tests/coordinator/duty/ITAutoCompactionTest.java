@@ -31,11 +31,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
@@ -298,7 +297,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -314,7 +313,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
       newGranularity = Granularities.DAY;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UniformGranularitySpec(newGranularity, null, null));
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
@@ -331,6 +330,44 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(3, 1000);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularityAndMixedVersion() throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
+      //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (3 total)
+      forceTriggerAutoCompaction(3);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      Granularity newGranularity = Granularities.YEAR;
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+
+      LOG.info("Auto compaction test with YEAR segment granularity");
+
+      List<String> expectedIntervalAfterCompaction = new ArrayList<>();
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
+      // Since the new segmentGranularity is YEAR, it will have mixed versions inside the same time chunk
+      // There will be an old version (for the first day interval) from the initial ingestion and
+      // a newer version (for the second day interval) from the first compaction
+      forceTriggerAutoCompaction(1);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
@@ -374,7 +411,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, GranularitySpec granularitySpec) throws Exception
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec) throws Exception
   {
     submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec);
   }
@@ -383,7 +420,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       PartitionsSpec partitionsSpec,
       Period skipOffsetFromLatest,
       int maxNumConcurrentSubTasks,
-      GranularitySpec granularitySpec
+      UserCompactionTaskGranularityConfig granularitySpec
   ) throws Exception
   {
     DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
 

@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -149,13 +150,17 @@ class IdentifierExpr implements Expr
     ExprType inputType = inspector.getType(binding);
 
     if (inputType == null) {
-      // nil column, we can be anything, why not be a double
-      return new IdentifierVectorProcessor<double[]>(ExprType.DOUBLE)
+      // nil column, we can be anything, so be a string because it's the most flexible
+      // (numbers will be populated with default values in default mode and non-null)
+      return new IdentifierVectorProcessor<String[]>(ExprType.STRING)
       {
         @Override
-        public ExprEvalVector<double[]> evalVector(VectorInputBinding bindings)
+        public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
         {
-          return new ExprEvalDoubleVector(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
+          // need to cast to string[] because null columns come out as object[]
+          return new ExprEvalStringVector(
+              Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new)
+          );
         }
       };
     }

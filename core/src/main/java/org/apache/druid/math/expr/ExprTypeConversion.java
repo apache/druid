@@ -26,18 +26,14 @@ import java.util.List;
 
 public class ExprTypeConversion
 {
-
   /**
    * Infer the output type of a list of possible 'conditional' expression outputs (where any of these could be the
    * output expression if the corresponding case matching expression evaluates to true)
    */
-  static ExprType conditional(Expr.InputBindingInspector inspector, List<Expr> args)
+  public static ExprType conditional(Expr.InputBindingInspector inspector, List<Expr> args)
   {
     ExprType type = null;
     for (Expr arg : args) {
-      if (arg.isNullLiteral()) {
-        continue;
-      }
       if (type == null) {
         type = arg.getOutputType(inspector);
       } else {

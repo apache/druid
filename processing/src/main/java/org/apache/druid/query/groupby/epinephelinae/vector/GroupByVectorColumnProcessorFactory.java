@@ -65,7 +65,9 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
         ValueType.STRING == capabilities.getType(),
         "groupBy dimension processors must be STRING typed"
     );
-    throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
+    throw new UnsupportedOperationException(
+        "Vectorized groupBys on multi-value dictionary-encoded dimensions are not yet implemented"
+    );
   }
 
   @Override
@@ -110,6 +112,11 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final VectorObjectSelector selector
   )
   {
+    if (ValueType.STRING.equals(capabilities.getType())) {
+      throw new UnsupportedOperationException(
+          "Vectorized groupBys on non-dictionary encoded string columns with object selectors are not yet implemented"
+      );
+    }
     return NilGroupByVectorColumnSelector.INSTANCE;
   }
 }

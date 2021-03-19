@@ -10,20 +10,7 @@
         "%%INTERVALS%%"
       ]
     },
-    "expectedResults": [
-      {
-        "queryGranularity": "SECOND"
-      },
-      {
-        "queryGranularity": "SECOND"
-      },
-      {
-        "queryGranularity": "SECOND"
-      },
-      {
-        "queryGranularity": "SECOND"
-      }
-     ],
+    "expectedResults": %%EXPECTED_QUERY_GRANULARITY%%,
     "fieldsToTest": ["queryGranularity"]
   }
 ]

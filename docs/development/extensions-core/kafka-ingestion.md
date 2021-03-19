@@ -146,6 +146,115 @@ A sample supervisor spec is shown below:
 |`lateMessageRejectionStartDateTime`|ISO8601 DateTime|Configure tasks to reject messages with timestamps earlier than this date time; for example if this is set to `2016-01-01T11:00Z` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline). Please note that only one of `lateMessageRejectionPeriod` or `lateMessageRejectionStartDateTime` can be specified.|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
+|`autoScalerConfig`|Object|`autoScalerConfig` to specify how to auto scale the number of Kafka ingest tasks. ONLY supported for Kafka indexing as of now. See [Tasks Autoscaler Properties](#Task Autoscaler Properties) for details.|no (default == null)|
+
+### Task Autoscaler Properties
+
+> Note that Task AutoScaler is currently designated as experimental.
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `enableTaskAutoScaler` | Whether enable this feature or not. Set false or ignored here will disable `autoScaler` even though `autoScalerConfig` is not null| no (default == false) |
+| `taskCountMax` | Maximum value of task count. Make Sure `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, the maximum number of reading tasks would be equal to `{numKafkaPartitions}` and `taskCountMax` would be ignored.  | yes |
+| `taskCountMin` | Minimum value of task count. When enable autoscaler, the value of taskCount in `IOConfig` will be ignored, and `taskCountMin` will be the number of tasks that ingestion starts going up to `taskCountMax`| yes |
+| `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. See [Lag Based AutoScaler Strategy Related Properties](#Lag Based AutoScaler Strategy Related Properties) for details.| no (default == `lagBased`) |
+
+### Lag Based AutoScaler Strategy Related Properties
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `lagCollectionIntervalMillis` | Period of lag points collection.  | no (default == 30000) |
+| `lagCollectionRangeMillis` | The total time window of lag collection, Use with `lagCollectionIntervalMillis`，it means that in the recent `lagCollectionRangeMillis`, collect lag metric points every `lagCollectionIntervalMillis`. | no (default == 600000) |
+| `scaleOutThreshold` | The Threshold of scale out action | no (default == 6000000) |
+| `triggerScaleOutFractionThreshold` | If `triggerScaleOutFractionThreshold` percent of lag points are higher than `scaleOutThreshold`, then do scale out action. | no (default == 0.3) |
+| `scaleInThreshold` | The Threshold of scale in action | no (default == 1000000) |
+| `triggerScaleInFractionThreshold` | If `triggerScaleInFractionThreshold` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | no (default == 0.9) |
+| `scaleActionStartDelayMillis` | Number of milliseconds after supervisor starts when first check scale logic. | no (default == 300000) |
+| `scaleActionPeriodMillis` | The frequency of checking whether to do scale action in millis | no (default == 60000) |
+| `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
+| `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
+
+A sample supervisor spec with `lagBased` autoScaler enabled is shown below:
+```json
+{
+    "type": "kafka",
+    "dataSchema": {
+        "dataSource": "metrics-kafka",
+        "timestampSpec": {
+            "column": "timestamp",
+            "format": "auto"
+        },
+        "dimensionsSpec": {
+            "dimensions": [
+
+            ],
+            "dimensionExclusions": [
+                "timestamp",
+                "value"
+            ]
+        },
+        "metricsSpec": [
+            {
+                "name": "count",
+                "type": "count"
+            },
+            {
+                "name": "value_sum",
+                "fieldName": "value",
+                "type": "doubleSum"
+            },
+            {
+                "name": "value_min",
+                "fieldName": "value",
+                "type": "doubleMin"
+            },
+            {
+                "name": "value_max",
+                "fieldName": "value",
+                "type": "doubleMax"
+            }
+        ],
+        "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "HOUR",
+            "queryGranularity": "NONE"
+        }
+    },
+    "ioConfig": {
+        "topic": "metrics",
+        "inputFormat": {
+            "type": "json"
+        },
+        "consumerProperties": {
+            "bootstrap.servers": "localhost:9092"
+        },
+        "autoScalerConfig": {
+            "enableTaskAutoScaler": true,
+            "taskCountMax": 6,
+            "taskCountMin": 2,
+            "minTriggerScaleActionFrequencyMillis": 600000,
+            "autoScalerStrategy": "lagBased",
+            "lagCollectionIntervalMillis": 30000,
+            "lagCollectionRangeMillis": 600000,
+            "scaleOutThreshold": 6000000,
+            "triggerScaleOutFractionThreshold": 0.3,
+            "scaleInThreshold": 1000000,
+            "triggerScaleInFractionThreshold": 0.9,
+            "scaleActionStartDelayMillis": 300000,
+            "scaleActionPeriodMillis": 60000,
+            "scaleInStep": 1,
+            "scaleOutStep": 2
+        },
+        "taskCount":1,
+        "replicas":1,
+        "taskDuration":"PT1H"
+    },
+    "tuningConfig":{
+        "type":"kafka",
+        "maxRowsPerSegment":5000000
+    }
+}
+```
 
 #### More on consumerProperties
 

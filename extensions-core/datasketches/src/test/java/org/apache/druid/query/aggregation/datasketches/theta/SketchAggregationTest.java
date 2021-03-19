@@ -123,7 +123,7 @@ public class SketchAggregationTest
         groupByQuery
     );
 
-    final String expectedSummary = "\n### HeapCompactOrderedSketch SUMMARY: \n"
+    final String expectedSummary = "\n### HeapCompactSketch SUMMARY: \n"
                                    + "   Estimate                : 50.0\n"
                                    + "   Upper Bound, 95% conf   : 50.0\n"
                                    + "   Lower Bound, 95% conf   : 50.0\n"

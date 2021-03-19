@@ -20,8 +20,9 @@
 package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -68,8 +69,9 @@ import java.util.stream.IntStream;
 @RunWith(Enclosed.class)
 public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
-  private static final String PATH = "/foo/bar";
+  private static final String PATH = "hdfs://localhost:7020/foo/bar";
   private static final Configuration CONFIGURATION = new Configuration();
+  private static final HdfsInputSourceConfig DEFAULT_INPUT_SOURCE_CONFIG = new HdfsInputSourceConfig(null);
   private static final String COLUMN = "value";
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec(null, null, null),
@@ -83,6 +85,80 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       null,
       0
   );
+
+  public static class ConstructorTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testConstructorAllowsOnlyDefaultProtocol()
+    {
+      HdfsInputSource.builder()
+                     .paths(PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Only [hdfs] protocols are allowed");
+      HdfsInputSource.builder()
+                     .paths("file:/foo/bar*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+    }
+
+    @Test
+    public void testConstructorAllowsOnlyCustomProtocol()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.ftp.impl", "org.apache.hadoop.fs.ftp.FTPFileSystem");
+      HdfsInputSource.builder()
+                     .paths("ftp://localhost:21/foo/bar")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("ftp")))
+                     .build();
+
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Only [druid] protocols are allowed");
+      HdfsInputSource.builder()
+                     .paths(PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("druid")))
+                     .build();
+    }
+
+    @Test
+    public void testConstructorWithDefaultHdfs()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.default.name", "hdfs://localhost:7020");
+      HdfsInputSource.builder()
+                     .paths("/foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("hdfs:///foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("hdfs://localhost:10020/foo/bar*") // different hdfs
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+    }
+  }
 
   public static class SerializeDeserializeTest
   {
@@ -98,7 +174,8 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       hdfsInputSourceBuilder = HdfsInputSource.builder()
                                               .paths(PATH)
-                                              .configuration(CONFIGURATION);
+                                              .configuration(CONFIGURATION)
+                                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG);
     }
 
     @Test
@@ -139,7 +216,11 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     private static ObjectMapper createObjectMapper()
     {
       final ObjectMapper mapper = new ObjectMapper();
-      mapper.setInjectableValues(new InjectableValues.Std().addValue(Configuration.class, new Configuration()));
+      mapper.setInjectableValues(
+          new Std()
+              .addValue(Configuration.class, new Configuration())
+              .addValue(HdfsInputSourceConfig.class, DEFAULT_INPUT_SOURCE_CONFIG)
+      );
       new HdfsStorageDruidModule().getJacksonModules().forEach(mapper::registerModule);
       return mapper;
     }
@@ -204,6 +285,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       target = HdfsInputSource.builder()
                               .paths(dfsCluster.getURI() + PATH + "*")
                               .configuration(CONFIGURATION)
+                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                               .build();
     }
 
@@ -304,6 +386,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       target = HdfsInputSource.builder()
                               .paths(Collections.emptyList())
                               .configuration(CONFIGURATION)
+                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                               .build();
     }
 
