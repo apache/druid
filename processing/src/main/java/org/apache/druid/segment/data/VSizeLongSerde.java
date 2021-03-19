@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
@@ -213,6 +214,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -267,6 +269,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -324,6 +327,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       int shift = 0;
       if (first) {
         shift = 4;
@@ -388,6 +392,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       for (int i = numBytes - 1; i >= 0; i--) {
         buffer.put((byte) (value >>> (i * 8)));
         if (output != null) {
