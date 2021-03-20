@@ -397,20 +397,29 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       needsCompaction = true;
     }
 
-    // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
-    final Granularity segmentGranularity = lastCompactionState.getGranularitySpec() != null ?
-                                           objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
-                                           null;
-
-    if (config.getGranularitySpec() != null &&
-        config.getGranularitySpec().getSegmentGranularity() != null &&
-        !config.getGranularitySpec().getSegmentGranularity().equals(segmentGranularity)) {
-      log.info(
-          "Configured granularitySpec[%s] is different from the one[%s] of segments. Needs compaction",
-          config.getGranularitySpec(),
-          segmentGranularity
-      );
-      needsCompaction = true;
+    if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+      // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
+      final Granularity existingSegmentGranularity = lastCompactionState.getGranularitySpec() != null ?
+                                                     objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
+                                                     null;
+      if (existingSegmentGranularity == null) {
+        // Candidate segments were all compacted without segment granularity set.
+        // We need to check if all segments have the same segment granularity as the configured segment granularity.
+        needsCompaction = candidates.segments.stream()
+                                             .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
+        log.info(
+            "Segments were previously compacted but without segmentGranularity in auto compaction."
+            + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
+            config.getGranularitySpec().getSegmentGranularity()
+        );
+      } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
+        log.info(
+            "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
+            config.getGranularitySpec().getSegmentGranularity(),
+            existingSegmentGranularity
+        );
+        needsCompaction = true;
+      }
     }
 
     return needsCompaction;
