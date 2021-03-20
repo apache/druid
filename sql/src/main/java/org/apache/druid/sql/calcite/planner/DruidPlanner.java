@@ -134,11 +134,12 @@ public class DruidPlanner implements Closeable
       explain = (SqlExplain) parsed;
       parsed = explain.getExplicandum();
     }
-    final Pair<SqlNode, RelDataType> validated = planner.validateAndGetType(parsed);
-    RelRoot root = planner.rel(validated.getKey());
+    final SqlNode validated = planner.validate(parsed);
+    RelRoot root = planner.rel(validated);
     RelDataType rowType = root.validatedRowType;
 
-    RelDataType parameterTypes = validated.getValue();
+    SqlValidator validator = getValidator();
+    RelDataType parameterTypes = validator.getParameterRowType(validator.validate(validated));
 
     if (explain != null) {
       final RelDataTypeFactory typeFactory = root.rel.getCluster().getTypeFactory();
