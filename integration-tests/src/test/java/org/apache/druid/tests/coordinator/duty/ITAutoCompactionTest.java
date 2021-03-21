@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
