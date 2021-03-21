@@ -140,21 +140,19 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               partitionNum += 1;
             }
           }
-          if (!timeline.equals(timelineWithConfiguredSegmentGranularity)) {
-            // PartitionHolder can only holds chunks of one partition space
-            // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
-            // partitions of the original timeline (when the new segmentGranularity is larger than the original
-            // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
-            // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
-            // there is no duplicate partitionNum across all segments of each new Interval.
-            // Similarly, segment versions may be mixed in the same time chunk based on new segment granularity
-            // Hence we create the new timeline with a temporary version, setting the fake version to all be the same
-            // for the same new time bucket.
-            // We need to save and store the originalTimeline so that we can use it
-            // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
-            originalTimeline = timeline;
-            timeline = timelineWithConfiguredSegmentGranularity;
-          }
+          // PartitionHolder can only holds chunks of one partition space
+          // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
+          // partitions of the original timeline (when the new segmentGranularity is larger than the original
+          // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
+          // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
+          // there is no duplicate partitionNum across all segments of each new Interval.
+          // Similarly, segment versions may be mixed in the same time chunk based on new segment granularity
+          // Hence we create the new timeline with a temporary version, setting the fake version to all be the same
+          // for the same new time bucket.
+          // We need to save and store the originalTimeline so that we can use it
+          // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
+          originalTimeline = timeline;
+          timeline = timelineWithConfiguredSegmentGranularity;
         }
         final List<Interval> searchIntervals =
             findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
