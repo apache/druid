@@ -77,6 +77,11 @@ Even when the input segments have the same set of dimensions, the dimension orde
 
 If you want to control dimension ordering or ensure specific values for dimension types, you can configure a custom `dimensionsSpec` in the compaction task spec.
 
+### Rollup
+Druid only rolls up the output segment when `rollup` is set for all input segments.
+See [Roll-up](../ingestion/index.md#rollup) for more details.
+You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
+
 ## Setting up manual compaction
 
 To perform a manual compaction, you submit a compaction task. Compaction tasks merge all segments for the defined interval according to the following syntax:
