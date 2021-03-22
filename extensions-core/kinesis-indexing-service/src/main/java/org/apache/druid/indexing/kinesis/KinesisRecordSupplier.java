@@ -863,19 +863,34 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
         offsetToUse = offset;
       }
-      String shardIterator = kinesis.getShardIterator(
-          partition.getStream(),
-          partition.getPartitionId(),
-          iteratorType,
-          offsetToUse
-      ).getShardIterator();
 
-      GetRecordsResult recordsResult = kinesis.getRecords(
-          new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
-      );
+      GetRecordsResult recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
+
+      // If no more new data after offsetToUse, it means there is no lag for now.
+      // So report lag points as 0L.
+      if (recordsResult.getRecords().size() == 0) {
+        return 0L;
+      } else {
+        recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
+      }
 
       return recordsResult.getMillisBehindLatest();
     });
+  }
+
+  private GetRecordsResult getRecordsForLag(String iteratorType, String offsetToUse, StreamPartition<String> partition)
+  {
+    String shardIterator = kinesis.getShardIterator(
+            partition.getStream(),
+            partition.getPartitionId(),
+            iteratorType,
+            offsetToUse
+    ).getShardIterator();
+
+    GetRecordsResult recordsResult = kinesis.getRecords(
+            new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+    );
+    return recordsResult;
   }
 
   /**

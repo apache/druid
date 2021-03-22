@@ -22,6 +22,7 @@ import {
   Button,
   Intent,
   Menu,
+  MenuDivider,
   MenuItem,
   Navbar,
   NavbarDivider,
@@ -39,11 +40,19 @@ import {
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
 import { getLink } from '../../links';
-import { Capabilities } from '../../utils';
+import {
+  Capabilities,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageRemove,
+  localStorageSetJson,
+} from '../../utils';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
 
 import './header-bar.scss';
+
+const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
   | null
@@ -117,6 +126,17 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
         <p>
           It appears that the SQL endpoint and management proxy are disabled. The console can only
           be used to make queries.
+        </p>
+      );
+      break;
+
+    case 'coordinator-overlord':
+      label = 'Coordinator/Overlord mode';
+      message = (
+        <p>
+          It appears that you are accessing the console on the Coordinator/Overlord shared service.
+          Due to the lack of access to some APIs on this service the console will operate in a
+          limited mode. The full version of the console can be accessed on the Router service.
         </p>
       );
       break;
@@ -216,6 +236,16 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
+  function setForcedMode(capabilities: Capabilities | undefined): void {
+    if (capabilities) {
+      localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, capabilities);
+    } else {
+      localStorageRemove(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    }
+    location.reload();
+  }
+
+  const capabilitiesMode = capabilities.getModeExtended();
   const configMenu = (
     <Menu>
       <MenuItem
@@ -243,6 +273,33 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         href="#lookups"
         disabled={!capabilities.hasCoordinatorAccess()}
       />
+      <MenuDivider />
+      <MenuItem icon={IconNames.COG} text="Console options">
+        {capabilitiesOverride ? (
+          <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
+        ) : (
+          <>
+            {capabilitiesMode !== 'coordinator-overlord' && (
+              <MenuItem
+                text="Force Coordinator/Overlord mode"
+                onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
+              />
+            )}
+            {capabilitiesMode !== 'coordinator' && (
+              <MenuItem
+                text="Force Coordinator mode"
+                onClick={() => setForcedMode(Capabilities.COORDINATOR)}
+              />
+            )}
+            {capabilitiesMode !== 'overlord' && (
+              <MenuItem
+                text="Force Overlord mode"
+                onClick={() => setForcedMode(Capabilities.OVERLORD)}
+              />
+            )}
+          </>
+        )}
+      </MenuItem>
     </Menu>
   );
 

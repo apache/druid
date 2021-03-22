@@ -59,6 +59,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
@@ -67,7 +68,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -200,6 +200,7 @@ public class ServerManager implements QuerySegmentWalker
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
@@ -249,16 +250,12 @@ public class ServerManager implements QuerySegmentWalker
       Optional<byte[]> cacheKeyPrefix
   )
   {
-    final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+    final PartitionChunk<ReferenceCountingSegment> chunk = timeline.findChunk(
         descriptor.getInterval(),
-        descriptor.getVersion()
+        descriptor.getVersion(),
+        descriptor.getPartitionNumber()
     );
 
-    if (entry == null) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-    }
-
-    final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
     if (chunk == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
     }

@@ -22,26 +22,33 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.Objects;
 
-public class ClientCompactionTaskQueryGranularitySpec
+/**
+ * Spec containing Granularity configs for Compaction Task.
+ * This class mimics JSON field names for fields supported in compaction task with
+ * the corresponding fields in {@link GranularitySpec}.
+ * This is done for end-user ease of use. Basically, end-user will use the same syntax / JSON structure to set
+ * Granularity configs for Compaction task as they would for any other ingestion task.
+ * Note that this class is not the same as {@link GranularitySpec}. This class simply holds Granularity configs
+ * and use it to generate index task specs (Compaction task internally creates index task).
+ * This class does not do bucketing, group events or knows how to partition data.
+ */
+public class ClientCompactionTaskGranularitySpec
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
-  private final boolean rollup;
 
   @JsonCreator
-  public ClientCompactionTaskQueryGranularitySpec(
+  public ClientCompactionTaskGranularitySpec(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("queryGranularity") Granularity queryGranularity,
-      @JsonProperty("rollup") Boolean rollup
+      @JsonProperty("queryGranularity") Granularity queryGranularity
   )
   {
-    this.queryGranularity = queryGranularity == null ? BaseGranularitySpec.DEFAULT_QUERY_GRANULARITY : queryGranularity;
-    this.rollup = rollup == null ? BaseGranularitySpec.DEFAULT_ROLLUP : rollup;
-    this.segmentGranularity = segmentGranularity == null ? BaseGranularitySpec.DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
+    this.queryGranularity = queryGranularity;
+    this.segmentGranularity = segmentGranularity;
   }
 
   @JsonProperty
@@ -56,20 +63,9 @@ public class ClientCompactionTaskQueryGranularitySpec
     return queryGranularity;
   }
 
-  @JsonProperty
-  public boolean isRollup()
+  public ClientCompactionTaskGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
   {
-    return rollup;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ClientCompactionTaskQueryGranularitySpec{" +
-           "segmentGranularity=" + segmentGranularity +
-           ", queryGranularity=" + queryGranularity +
-           ", rollup=" + rollup +
-           '}';
+    return new ClientCompactionTaskGranularitySpec(segmentGranularity, queryGranularity);
   }
 
   @Override
@@ -81,15 +77,23 @@ public class ClientCompactionTaskQueryGranularitySpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ClientCompactionTaskQueryGranularitySpec that = (ClientCompactionTaskQueryGranularitySpec) o;
+    ClientCompactionTaskGranularitySpec that = (ClientCompactionTaskGranularitySpec) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
-           Objects.equals(queryGranularity, that.queryGranularity) &&
-           Objects.equals(rollup, that.rollup);
+           Objects.equals(queryGranularity, that.queryGranularity);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentGranularity, queryGranularity, rollup);
+    return Objects.hash(segmentGranularity, queryGranularity);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ClientCompactionTaskGranularitySpec{" +
+           "segmentGranularity=" + segmentGranularity +
+           ", queryGranularity=" + queryGranularity +
+           '}';
   }
 }

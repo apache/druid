@@ -74,20 +74,6 @@ public class ExprMacroTest
   }
 
   @Test
-  public void testLookup()
-  {
-    assertExpr("lookup(x, 'lookyloo')", "xfoo");
-  }
-
-  @Test
-  public void testLookupNotFound()
-  {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Lookup [lookylook] not found");
-    assertExpr("lookup(x, 'lookylook')", null);
-  }
-
-  @Test
   public void testRegexpExtract()
   {
     assertExpr("regexp_extract(x, 'f(.)')", "fo");
@@ -98,6 +84,7 @@ public class ExprMacroTest
   @Test
   public void testTimestampCeil()
   {
+    assertExpr("timestamp_ceil(null, 'P1M')", null);
     assertExpr("timestamp_ceil(t, 'P1M')", DateTimes.of("2000-03-01").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
@@ -108,6 +95,7 @@ public class ExprMacroTest
   @Test
   public void testTimestampFloor()
   {
+    assertExpr("timestamp_floor(null, 'P1M')", null);
     assertExpr("timestamp_floor(t, 'P1M')", DateTimes.of("2000-02-01").getMillis());
     assertExpr("timestamp_floor(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-02T08").getMillis());
     assertExpr("timestamp_floor(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-02T08").getMillis());
@@ -231,15 +219,15 @@ public class ExprMacroTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
+    final Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
 
-    final Expr exprNotFlattened = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE, false);
+    final Expr exprNotFlattened = Parser.parse(expression, TestExprMacroTable.INSTANCE, false);
     final Expr roundTripNotFlattened =
-        Parser.parse(exprNotFlattened.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+        Parser.parse(exprNotFlattened.stringify(), TestExprMacroTable.INSTANCE);
     Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
 
-    final Expr roundTrip = Parser.parse(expr.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    final Expr roundTrip = Parser.parse(expr.stringify(), TestExprMacroTable.INSTANCE);
     Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
   }
 }

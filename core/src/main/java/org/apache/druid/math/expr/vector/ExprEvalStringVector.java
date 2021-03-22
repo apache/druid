@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 
@@ -91,19 +90,8 @@ public final class ExprEvalStringVector extends ExprEvalVector<String[]>
   }
 
   @Override
-  public <E> E getObjectVector()
+  public Object[] getObjectVector()
   {
-    return (E) values;
-  }
-
-  @Override
-  public <E> E asObjectVector(ExprType type)
-  {
-    switch (type) {
-      case STRING:
-        return (E) values;
-      default:
-        throw new IAE("Cannot convert %s to %s object vector", getType(), type);
-    }
+    return values;
   }
 }

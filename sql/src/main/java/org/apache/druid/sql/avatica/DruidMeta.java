@@ -627,17 +627,40 @@ public class DruidMeta extends MetaImpl
     }
   }
 
+  /**
+   * Determine JDBC 'frame' size, that is the number of results which will be returned to a single
+   * {@link java.sql.ResultSet}. This value corresponds to {@link java.sql.Statement#setFetchSize(int)} (which is a user
+   * hint, we don't have to honor it), and this method modifies it, ensuring the actual chosen value falls within
+   * {@link AvaticaServerConfig#minRowsPerFrame} and {@link AvaticaServerConfig#maxRowsPerFrame}.
+   *
+   * A value of -1 supplied as input indicates that the client has no preference for fetch size, and can handle
+   * unlimited results (at our discretion). Similarly, a value of -1 for {@link AvaticaServerConfig#maxRowsPerFrame}
+   * also indicates that there is no upper limit on fetch size on the server side.
+   *
+   * {@link AvaticaServerConfig#minRowsPerFrame} must be configured to a value greater than 0, because it will be
+   * checked against if any additional frames are required (which means one of the input or maximum was set to a value
+   * other than -1).
+   */
   private int getEffectiveMaxRowsPerFrame(int clientMaxRowsPerFrame)
   {
     // no configured row limit, use the client provided limit
     if (config.getMaxRowsPerFrame() < 0) {
-      return clientMaxRowsPerFrame;
+      return adjustForMinumumRowsPerFrame(clientMaxRowsPerFrame);
     }
     // client provided no row limit, use the configured row limit
     if (clientMaxRowsPerFrame < 0) {
-      return config.getMaxRowsPerFrame();
+      return adjustForMinumumRowsPerFrame(config.getMaxRowsPerFrame());
     }
-    return Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame());
+    return adjustForMinumumRowsPerFrame(Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame()));
+  }
+
+  /**
+   * coerce fetch size to be, at minimum, {@link AvaticaServerConfig#minRowsPerFrame}
+   */
+  private int adjustForMinumumRowsPerFrame(int rowsPerFrame)
+  {
+    final int adjustedRowsPerFrame = Math.max(config.getMinRowsPerFrame(), rowsPerFrame);
+    return adjustedRowsPerFrame;
   }
 
   private static String withEscapeClause(String toEscape)

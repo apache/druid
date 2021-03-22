@@ -36,9 +36,15 @@ import java.util.SortedSet;
  */
 public class SegmentReplicantLookup
 {
-  public static SegmentReplicantLookup make(DruidCluster cluster)
+  public static SegmentReplicantLookup make(DruidCluster cluster, boolean replicateAfterLoadTimeout)
   {
     final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
+
+    /**
+     * For each tier, this stores the number of replicants for all the segments presently queued to load in {@link cluster}.
+     * Segments that have failed to load due to the load timeout may not be present in this table if {@link replicateAfterLoadTimeout} is true.
+     * This is to enable additional replication of the timed out segments for improved availability.
+     */
     final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
 
     for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
@@ -59,7 +65,11 @@ public class SegmentReplicantLookup
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
+          // Timed out segments need to be replicated in another server for faster availability.
+          // Therefore we skip incrementing numReplicants for timed out segments if replicateAfterLoadTimeout is enabled.
+          if (!replicateAfterLoadTimeout || !serverHolder.getPeon().getTimedOutSegments().contains(segment)) {
+            loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
+          }
         }
       }
     }

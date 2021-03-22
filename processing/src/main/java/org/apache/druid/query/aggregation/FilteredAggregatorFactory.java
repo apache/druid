@@ -111,7 +111,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher();
+    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher(columnInspector);
   }
 
   @Override

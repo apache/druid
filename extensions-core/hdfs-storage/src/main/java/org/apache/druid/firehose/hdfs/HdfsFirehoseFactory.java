@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
+import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -44,21 +45,25 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
 {
   private final List<String> inputPaths;
   private final Configuration conf;
+  private final HdfsInputSourceConfig inputSourceConfig;
 
   @JsonCreator
   public HdfsFirehoseFactory(
-      @JacksonInject @Hdfs Configuration conf,
       @JsonProperty("paths") Object inputPaths,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
-      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
+      @JacksonInject @Hdfs Configuration conf,
+      @JacksonInject HdfsInputSourceConfig inputSourceConfig
   )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
-    this.inputPaths = HdfsInputSource.coerceInputPathsToList(inputPaths, "inputPaths");
+    this.inputPaths = HdfsInputSource.coerceInputPathsToList(inputPaths, "paths");
     this.conf = conf;
+    this.inputSourceConfig = inputSourceConfig;
+    this.inputPaths.forEach(p -> HdfsInputSource.verifyProtocol(conf, inputSourceConfig, p));
   }
 
   @JsonProperty("paths")
@@ -109,21 +114,14 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
   public FiniteFirehoseFactory<StringInputRowParser, Path> withSplit(InputSplit<Path> split)
   {
     return new HdfsFirehoseFactory(
-        conf,
         split.get().toString(),
         getMaxCacheCapacityBytes(),
         getMaxFetchCapacityBytes(),
         getPrefetchTriggerBytes(),
         getFetchTimeout(),
-        getMaxFetchRetry()
+        getMaxFetchRetry(),
+        conf,
+        inputSourceConfig
     );
-  }
-
-  @Override
-  public String toString()
-  {
-    return "HdfsFirehoseFactory{" +
-           "inputPaths=" + inputPaths +
-           '}';
   }
 }

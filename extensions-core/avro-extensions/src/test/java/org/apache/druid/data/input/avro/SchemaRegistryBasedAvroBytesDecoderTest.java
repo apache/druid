@@ -19,6 +19,9 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.confluent.kafka.schemaregistry.ParsedSchema;
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -27,6 +30,7 @@ import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,43 +53,105 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   }
 
   @Test
+  public void testMultipleUrls() throws Exception
+  {
+    String json = "{\"urls\":[\"http://localhost\"],\"type\": \"schema_registry\"}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedAvroBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
+        .readerFor(AvroBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
+  public void testUrl() throws Exception
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\"}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedAvroBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
+        .readerFor(AvroBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
+  public void testConfig() throws Exception
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\", \"config\":{}}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedAvroBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
+        .readerFor(AvroBytesDecoder.class)
+        .readValue(json);
+
+    // Then
+    Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
   public void testParse() throws Exception
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
+           .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     bb.rewind();
     // When
-    GenericRecord actual = new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
-    // Then
-    Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
-  public void testParseCorrupted() throws Exception
+  public void testParseCorruptedNotEnoughBytesToEvenGetSchemaInfo()
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
-    Schema schema = SomeAvroDatum.getClassSchema();
-    byte[] bytes = getAvroDatum(schema, someAvroDatum);
-    ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put((bytes), 5, 10);
+    ByteBuffer bb = ByteBuffer.allocate(2).put((byte) 0).put(1, (byte) 1);
+    bb.rewind();
     // When
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
-  public void testParseWrongId() throws Exception
+  public void testParseCorruptedPartial() throws Exception
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
+           .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
-    ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
+    ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
+    bb.rewind();
+    // When
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+  }
+
+  @Test(expected = RE.class)
+  public void testParseWrongSchemaType() throws Exception
+  {
+    // Given
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(Mockito.mock(ParsedSchema.class));
+    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
+    bb.rewind();
+    // When
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+  }
+
+  @Test(expected = RE.class)
+  public void testParseWrongId() throws Exception
+  {
+    // Given
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
+    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
+    bb.rewind();
     // When
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }

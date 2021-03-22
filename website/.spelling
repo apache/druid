@@ -417,6 +417,7 @@ untrusted
 useFilterCNF
 uptime
 uris
+urls
 useFieldDiscovery
 v1
 v2
@@ -582,6 +583,11 @@ com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
  - ../docs/development/extensions-contrib/statsd.md
 convertRange
+- ../docs/development/extensions-contrib/prometheus.md
+HTTPServer
+conversionFactor
+prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -938,6 +944,7 @@ ctrl
 jsonLowercase
 listDelimiter
 timestampSpec
+urls
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1420,6 +1427,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary

@@ -41,6 +41,7 @@ This document gives you an overview of security features in Druid and how to con
 ## Best practices
 
 * Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, allow list the specific APIs that your users need to access, and implements account lockout and throttling features.
+* You should only grant `WRITE` permissions to a `DATASOURCE` to trusted users. Druid assumes that these users have the same privileges as the operating system user that runs the Druid process. 
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.  
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 * Run Druid as an unprivileged Unix user on the installation machine (not root).

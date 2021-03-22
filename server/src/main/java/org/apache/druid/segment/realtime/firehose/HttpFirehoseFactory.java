@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -26,9 +27,10 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.HttpEntity;
+import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -43,12 +45,12 @@ import java.util.Objects;
 
 public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
-  private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
   @Nullable
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
+  private final HttpInputSourceConfig inputSourceConfig;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -59,14 +61,17 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
-      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
+      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
+      @JacksonInject HttpInputSourceConfig inputSourceConfig
   )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
+    HttpInputSource.throwIfInvalidProtocols(inputSourceConfig, uris);
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    this.inputSourceConfig = inputSourceConfig;
   }
 
   @Nullable
@@ -120,35 +125,20 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final HttpFirehoseFactory that = (HttpFirehoseFactory) o;
-    return Objects.equals(uris, that.uris) &&
-           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
-           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
-           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
-           getFetchTimeout() == that.getFetchTimeout() &&
-           getMaxFetchRetry() == that.getMaxFetchRetry() &&
-           Objects.equals(httpAuthenticationUsername, that.getHttpAuthenticationUsername()) &&
-           Objects.equals(httpAuthenticationPasswordProvider, that.getHttpAuthenticationPasswordProvider());
+    HttpFirehoseFactory that = (HttpFirehoseFactory) o;
+    return uris.equals(that.uris) &&
+           Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername) &&
+           Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider) &&
+           inputSourceConfig.equals(that.inputSourceConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        uris,
-        getMaxCacheCapacityBytes(),
-        getMaxFetchCapacityBytes(),
-        getPrefetchTriggerBytes(),
-        getFetchTimeout(),
-        getMaxFetchRetry(),
-        httpAuthenticationUsername,
-        httpAuthenticationPasswordProvider
-    );
+    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider, inputSourceConfig);
   }
 
   @Override
@@ -168,7 +158,8 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getFetchTimeout(),
         getMaxFetchRetry(),
         getHttpAuthenticationUsername(),
-        httpAuthenticationPasswordProvider
+        httpAuthenticationPasswordProvider,
+        inputSourceConfig
     );
   }
 }

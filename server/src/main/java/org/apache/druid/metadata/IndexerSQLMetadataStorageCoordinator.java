@@ -1278,9 +1278,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
+            int segmentSize = segments.size();
+            String dataSource = "";
             for (final DataSegment segment : segments) {
+              dataSource = segment.getDataSource();
               deleteSegment(handle, segment);
             }
+            log.debugSegments(segments, "Delete the metadata of segments");
+            log.info("Removed [%d] segments from metadata storage for dataSource [%s]!", segmentSize, dataSource);
 
             return null;
           }

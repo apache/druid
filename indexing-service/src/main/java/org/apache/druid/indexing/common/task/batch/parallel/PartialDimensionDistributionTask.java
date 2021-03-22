@@ -50,7 +50,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -369,8 +368,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     private long getBucketTimestamp(InputRow inputRow)
     {
-      DateTime timestamp = inputRow.getTimestamp();
-      return queryGranularity.bucketStart(timestamp).getMillis();
+      final long timestamp = inputRow.getTimestampFromEpoch();
+      return queryGranularity.bucketStart(timestamp);
     }
 
     @Override

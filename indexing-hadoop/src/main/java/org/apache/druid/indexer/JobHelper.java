@@ -370,10 +370,12 @@ public class JobHelper
   {
     if (hadoopJobId != null && hadoopJobIdFileName != null) {
       try (final OutputStream out = Files.newOutputStream(Paths.get(hadoopJobIdFileName))) {
-        HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
-            new OutputStreamWriter(out, StandardCharsets.UTF_8),
-            hadoopJobId
-        );
+        try (final OutputStreamWriter osw = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
+                  osw,
+                  hadoopJobId
+          );
+        }
         log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
       }
       catch (IOException e) {

@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -52,7 +52,6 @@ import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -116,7 +115,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         ImmutableMap.of("key", "value")
     );
 
@@ -191,16 +190,16 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getTuningConfig().getTotalNumMergeTasks()
     );
     Assert.assertEquals(
+        query.getGranularitySpec(),
+        task.getGranularitySpec()
+    );
+    Assert.assertEquals(
         query.getGranularitySpec().getQueryGranularity(),
         task.getGranularitySpec().getQueryGranularity()
     );
     Assert.assertEquals(
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
-    );
-    Assert.assertEquals(
-        query.getGranularitySpec().isRollup(),
-        task.getGranularitySpec().isRollup()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
@@ -259,7 +258,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -301,7 +300,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskQueryGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
         new HashMap<>()
     );
 
