@@ -14,14 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Creates pseudo distributed hadoop 2.8.3 with java 8
-#
-# Modified from the SequenceIQ Dockerfiles at https://github.com/sequenceiq/hadoop-docker
-#
-# docker build -t druid-hadoop-demo:2.8.3 .
 
-FROM sequenceiq/pam:centos-6.5
-MAINTAINER SequenceIQ
+
+FROM centos:7
 
 USER root
 
