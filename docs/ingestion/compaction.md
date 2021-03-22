@@ -32,8 +32,8 @@ There are several cases to consider compaction for segment optimization:
 - When a misconfigured ingestion task creates oversized segments.
 
 By default, compaction does not modify the underlying data of the segments. However, there are cases when you may want to modify data during compaction to improve query performance:
-- If, after ingestion, you realize realize that data for the time interval is sparse, you can use compaction to increase the segment granularity.
-- Over time you don't need fine-grained granularity for older data so you use compaction to change older segments to a coarser query granularity. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
+- If, after ingestion, you realize that data for the time interval is sparse, you can use compaction to increase the segment granularity.
+- Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
 - You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](../index.md#perfect-rollup-vs-best-effort-rollup).
@@ -54,7 +54,7 @@ See [Setting up a manual compaction task](#setting-up-manual-compaction) for mor
 ## Data handling with compaction
 During compaction, Druid overwrites the original set of segments with the compacted set. During compaction Druid locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
-If an ingestion task needs to write data to a segment for a time interval locked for compaction, the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information.
+If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingetion task.
 
 ### Segment granularity handling
 
@@ -75,7 +75,7 @@ Apache Druid supports schema changes. Therefore, dimensions can be different acr
 
 Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
-If you want to use your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
+If you want to control dimension ordering or ensure specific values for dimension types, you can configure a custom `dimensionsSpec` in the compaction task spec.
 
 ## Setting up manual compaction
 
@@ -134,9 +134,13 @@ The following JSON illustrates a compaction task to compact _all segments_ withi
     "type": "compact",
     "inputSpec": {
       "type": "interval",
-      "interval": "2017-01-01/2018-01-01",
+      "interval": "2020-01-01/2021-01-01",
     }
-  }
+  },
+  "granularitySpec": {
+      "segmentGranularity":"day",
+      "queryGranularity":"hour"
+    }
 }
 ```
 
