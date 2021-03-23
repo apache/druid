@@ -87,7 +87,7 @@ public class PostgresqlFirehoseDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
 
-    expectedException.expectMessage("The property [keyonly] is not in the allowed list");
+    expectedException.expectMessage("is not in the allowed list");
     expectedException.expect(IllegalArgumentException.class);
 
     new PostgresqlFirehoseDatabaseConnector(
@@ -132,7 +132,7 @@ public class PostgresqlFirehoseDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
 
-    expectedException.expectMessage("The property [keyonly] is not in the allowed list");
+    expectedException.expectMessage("is not in the allowed list");
     expectedException.expect(IllegalArgumentException.class);
 
     new PostgresqlFirehoseDatabaseConnector(
@@ -155,7 +155,7 @@ public class PostgresqlFirehoseDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage("The property [keyonly] is not in the allowed list");
+    expectedException.expectMessage("is not in the allowed list");
     expectedException.expect(IllegalArgumentException.class);
 
     new PostgresqlFirehoseDatabaseConnector(
