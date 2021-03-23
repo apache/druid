@@ -95,6 +95,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
     "dimensionsSpec" <custom dimensionsSpec>,
     "metricsSpec" <custom metricsSpec>,
     "tuningConfig" <parallel indexing task tuningConfig>,
+    "granularitySpec" <compaction task granularitySpec>,
     "context": <task context>
 }
 ```
