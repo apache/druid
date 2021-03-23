@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -142,8 +144,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final AggregatorFactory[] metricsSpec;
   @Nullable
-  private final Granularity segmentGranularity;
-  @Nullable
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
@@ -207,7 +207,6 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
-    this.segmentGranularity = segmentGranularity;
     // Prior to apache/druid#10843 users could specify segmentGranularity using `segmentGranularity`
     // Now users should prefer to use `granularitySpec`
     // In case users accidentally specify both, and they are conflicting, warn the user instead of proceeding
@@ -308,6 +307,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return metricsSpec;
   }
 
+  @JsonInclude(Include.NON_NULL)
   @JsonProperty
   @Nullable
   @Override

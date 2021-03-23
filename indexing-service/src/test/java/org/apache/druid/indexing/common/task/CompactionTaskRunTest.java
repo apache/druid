@@ -56,6 +56,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -796,6 +797,79 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     Assert.assertEquals(expectedSegments, usedSegments);
+  }
+
+  @Test
+  public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompact() throws Exception
+  {
+    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    runIndexTask();
+
+    final Set<DataSegment> expectedSegments = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+    final CompactionTask partialCompactionTask = builder
+        .interval(partialInterval)
+        .segmentGranularity(Granularities.MINUTE)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+    // All segments in the previous expectedSegments should still appear as they have larger segment granularity.
+    expectedSegments.addAll(partialCompactionResult.rhs);
+
+    final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+
+    final CompactionTask fullCompactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .segmentGranularity(null)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
+
+    final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    segmentsAfterFullCompaction.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
+    );
+
+    Assert.assertEquals(3, segmentsAfterFullCompaction.size());
+    for (int i = 0; i < segmentsAfterFullCompaction.size(); i++) {
+      Assert.assertEquals(
+          Intervals.of(StringUtils.format("2014-01-01T%02d/2014-01-01T%02d", i, i + 1)),
+          segmentsAfterFullCompaction.get(i).getInterval()
+      );
+    }
   }
 
   @Test
