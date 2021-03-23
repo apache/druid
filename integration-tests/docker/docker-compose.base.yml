@@ -60,7 +60,7 @@ services:
     image: druid/cluster
     container_name: druid-metadata-storage
     ports:
-      - 3306:3306
+      - 13306:3306
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.3
@@ -371,7 +371,7 @@ services:
       - 8636:636
     privileged: true
     volumes:
-      - ./ldap-configs/bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/bootstrap.ldif
+      - ./ldap-configs:/container/service/slapd/assets/config/bootstrap/ldif/custom
       - ${HOME}/shared:/shared
     env_file:
       - ./environment-configs/common
