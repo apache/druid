@@ -57,7 +57,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   private volatile Boolean canUpsert;
 
   private final String dbTableSchema;
-  
+
   @Inject
   public PostgreSQLConnector(
       Supplier<MetadataStorageConnectorConfig> config,

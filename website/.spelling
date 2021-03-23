@@ -356,6 +356,7 @@ reingest
 reingesting
 reingestion
 repo
+requireSSL
 rollup
 rollups
 rsync
@@ -371,6 +372,8 @@ sharding
 skipHeaderRows
 smooshed
 splittable
+ssl
+sslmode
 stdout
 storages
 stringified
@@ -404,6 +407,7 @@ unparseable
 unparsed
 unsetting
 useFilterCNF
+useSSL
 uptime
 uris
 useFieldDiscovery
