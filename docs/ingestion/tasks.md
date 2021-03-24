@@ -389,7 +389,7 @@ Submitted automatically, on your behalf, by [Tranquility](tranquility.md).
 ### `compact`
 
 Compaction tasks merge all segments of the given interval. See the documentation on
-[compaction](data-management.md#compaction-and-reindexing) for details.
+[compaction](compaction.md) for details.
 
 ### `kill`
 

@@ -270,6 +270,9 @@
       "development/versioning": {
         "title": "Versioning"
       },
+      "ingestion/compaction": {
+        "title": "Compaction"
+      },
       "ingestion/data-formats": {
         "title": "Data formats"
       },

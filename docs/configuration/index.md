@@ -844,26 +844,26 @@ A description of the compaction config is:
 |`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
 |`maxRowsPerSegment`|Max number of rows per segment after compaction.|no|
-|`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
-|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compaction-tuningconfig).|no|
+|`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction)|no (default = "P1D")|
+|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
+|`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` for the compacted segments. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
 
 An example of compaction config is:
 
 ```json
 {
-  "dataSource": "wikiticker"
+  "dataSource": "wikiticker",
+  "granularitySpec" : {
+    "segmentGranularity : "none"
+  }
 }
 ```
 
-Note that compaction tasks can fail if their locks are revoked by other tasks of higher priorities.
-Since realtime tasks have a higher priority than compaction task by default,
-it can be problematic if there are frequent conflicts between compaction tasks and realtime tasks.
-If this is the case, the coordinator's automatic compaction might get stuck because of frequent compaction task failures.
-This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
-If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compaction tasks and realtime tasks.
+Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
+You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
 
-###### Compaction TuningConfig
+###### Automatic compaction TuningConfig
 
 Auto compaction supports a subset of the [tuningConfig for Parallel task](../ingestion/native-batch.md#tuningconfig).
 The below is a list of the supported configurations for auto compaction.
@@ -887,6 +887,17 @@ The below is a list of the supported configurations for auto compaction.
 |`taskStatusCheckPeriodMs`|Polling period in milliseconds to check running task statuses.|no (default = 1000)|
 |`chatHandlerTimeout`|Timeout for reporting the pushed segments in worker tasks.|no (default = PT10S)|
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|no (default = 5)|
+
+###### Automatic compaction granularitySpec
+You can optionally use the `granularitySpec` object to configure the segment granularity of the compacted segments.
+
+`granularitySpec` takes the following keys:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
+
+> Unlike manual compaction, automatic compaction does not support query granularity.
 
 ### Overlord
 
