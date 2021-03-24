@@ -337,7 +337,7 @@ From the inner most layer:
 
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. It is the responsibility of system implementers to setup firewalls and other methods of protection.
-2. Druid supports TLS encryption for network traffic, including API calls and data transfers.
+Druid assumes network traffic within the cluster is encrypted, including API calls and data transfers. The default encryption implementation uses TLS.
 3. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
 
 Cluster to deep storage:
