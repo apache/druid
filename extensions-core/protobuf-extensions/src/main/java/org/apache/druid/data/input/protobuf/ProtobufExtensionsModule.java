@@ -38,7 +38,7 @@ public class ProtobufExtensionsModule implements DruidModule
         new SimpleModule("ProtobufInputRowParserModule")
             .registerSubtypes(
                 new NamedType(ProtobufInputRowParser.class, "protobuf"),
-                new NamedType(ProtobufInputFormat.class, "protobuf_format")
+                new NamedType(ProtobufInputFormat.class, "protobuf")
             )
     );
   }

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
+import com.google.protobuf.DynamicMessage;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
@@ -37,6 +39,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -44,10 +47,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ProtobufReader extends IntermediateRowParsingReader<String>
+public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
 {
   private final InputRowSchema inputRowSchema;
   private final InputEntity source;
+  private final JSONPathSpec flattenSpec;
   private final ObjectFlattener<JsonNode> recordFlattener;
   private final ProtobufBytesDecoder protobufBytesDecoder;
 
@@ -61,28 +65,47 @@ public class ProtobufReader extends IntermediateRowParsingReader<String>
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.protobufBytesDecoder = protobufBytesDecoder;
+    this.flattenSpec = flattenSpec;
     this.recordFlattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(true));
   }
 
   @Override
-  protected CloseableIterator<String> intermediateRowIterator() throws IOException
+  protected CloseableIterator<DynamicMessage> intermediateRowIterator() throws IOException
   {
     return CloseableIterators.withEmptyBaggage(
-        Iterators.singletonIterator(JsonFormat.printer().print(protobufBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open())))
-        )));
+        Iterators.singletonIterator(protobufBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open())
+        ))));
   }
 
   @Override
-  protected List<InputRow> parseInputRows(String intermediateRow) throws ParseException, JsonProcessingException
+  protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException, JsonProcessingException
   {
-    JsonNode document = new ObjectMapper().readValue(intermediateRow, JsonNode.class);
-    final Map<String, Object> flattened = recordFlattener.flatten(document);
-    return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, flattened));
+    Map<String, Object> record;
+
+    if (flattenSpec == null) {
+      try {
+        record = CollectionUtils.mapKeys(intermediateRow.getAllFields(), k -> k.getJsonName());
+      }
+      catch (Exception ex) {
+        throw new ParseException(ex, "Protobuf message could not be parsed");
+      }
+    } else {
+      try {
+        String json = JsonFormat.printer().print(intermediateRow);
+        JsonNode document = new ObjectMapper().readValue(json, JsonNode.class);
+        record = recordFlattener.flatten(document);
+      }
+      catch (InvalidProtocolBufferException e) {
+        throw new ParseException(e, "Protobuf message could not be parsed");
+      }
+    }
+
+    return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, record));
   }
 
   @Override
-  protected List<Map<String, Object>> toMap(String intermediateRow) throws JsonProcessingException
+  protected List<Map<String, Object>> toMap(DynamicMessage intermediateRow) throws JsonProcessingException, InvalidProtocolBufferException
   {
-    return Collections.singletonList(new ObjectMapper().readValue(intermediateRow, Map.class));
+    return Collections.singletonList(new ObjectMapper().readValue(JsonFormat.printer().print(intermediateRow), Map.class));
   }
 }
