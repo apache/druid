@@ -71,7 +71,8 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
         }
       }
       return latest;
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
