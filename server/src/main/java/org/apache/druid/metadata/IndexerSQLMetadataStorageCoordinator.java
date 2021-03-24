@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -430,7 +431,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
           },
           3,
-          SQLMetadataConnector.DEFAULT_MAX_TRIES
+          getSqlMetadataMaxRetry()
       );
     }
     catch (CallbackFailedException e) {
@@ -498,7 +499,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
           },
           3,
-          SQLMetadataConnector.DEFAULT_MAX_TRIES
+          getSqlMetadataMaxRetry()
       );
     }
     catch (CallbackFailedException e) {
@@ -509,6 +510,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         throw e;
       }
     }
+  }
+
+  @VisibleForTesting
+  int getSqlMetadataMaxRetry()
+  {
+    return SQLMetadataConnector.DEFAULT_MAX_TRIES;
   }
 
   @Override

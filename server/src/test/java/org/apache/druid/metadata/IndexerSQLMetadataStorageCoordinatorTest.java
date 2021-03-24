@@ -29,8 +29,10 @@ import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -54,11 +56,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -67,9 +71,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
+  private static final int MAX_SQL_MEATADATA_RETRY = 2;
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -187,13 +194,39 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment existingSegment1 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("1994-01-01T00Z/1994-01-02T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(1, 1),
+      9,
+      100
+  );
+
+  private final DataSegment existingSegment2 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("1994-01-02T00Z/1994-01-03T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(1, 1),
+      9,
+      100
+  );
+
   private final Set<DataSegment> SEGMENTS = ImmutableSet.of(defaultSegment, defaultSegment2);
   private final AtomicLong metadataUpdateCounter = new AtomicLong();
+  private final AtomicLong segmentTableDropUpdateCounter = new AtomicLong();
+
   private IndexerSQLMetadataStorageCoordinator coordinator;
   private TestDerbyConnector derbyConnector;
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
     derbyConnector = derbyConnectorRule.getConnector();
     mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
@@ -202,6 +235,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
     metadataUpdateCounter.set(0);
+    segmentTableDropUpdateCounter.set(0);
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -219,6 +253,24 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
         return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
+      }
+
+      @Override
+      protected DataSourceMetadataUpdateResult dropSegmentsWithHandle(
+          final Handle handle,
+          final Set<DataSegment> segmentsToDrop,
+          final String dataSource
+      )
+      {
+        // Count number of times this method is called.
+        segmentTableDropUpdateCounter.getAndIncrement();
+        return super.dropSegmentsWithHandle(handle, segmentsToDrop, dataSource);
+      }
+
+      @Override
+      int getSqlMetadataMaxRetry()
+      {
+        return MAX_SQL_MEATADATA_RETRY;
       }
     };
   }
@@ -258,6 +310,47 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             return handle.createQuery("SELECT id FROM " + table + " WHERE used = true ORDER BY id")
                          .map(StringMapper.FIRST)
                          .list();
+          }
+        }
+    );
+  }
+
+  private Boolean insertUsedSegments(Set<DataSegment> dataSegments)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                  table,
+                  derbyConnector.getQuoteString()
+              )
+            );
+            for (DataSegment segment : dataSegments) {
+              preparedBatch.add()
+                           .bind("id", segment.getId().toString())
+                           .bind("dataSource", segment.getDataSource())
+                           .bind("created_date", DateTimes.nowUtc().toString())
+                           .bind("start", segment.getInterval().getStart().toString())
+                           .bind("end", segment.getInterval().getEnd().toString())
+                           .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                           .bind("version", segment.getVersion())
+                           .bind("used", true)
+                           .bind("payload", mapper.writeValueAsBytes(segment));
+            }
+
+            final int[] affectedRows = preparedBatch.execute();
+            final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+            if (!succeeded) {
+              throw new ISE("Failed to publish segments to DB");
+            }
+            return true;
           }
         }
     );
@@ -497,6 +590,110 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailSegmentDropFailWithoutRetry() throws IOException
+  {
+    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+
+    Assert.assertEquals(
+        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+
+    DataSegment dataSegmentBar = DataSegment.builder()
+                                            .dataSource("bar")
+                                            .interval(Intervals.of("2001/P1D"))
+                                            .shardSpec(new LinearShardSpec(1))
+                                            .version("b")
+                                            .size(0)
+                                            .build();
+    Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, existingSegment2, dataSegmentBar);
+
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        SEGMENTS,
+        dropSegments,
+        null,
+        null
+    );
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result1);
+
+    // Should only be tried once. Since dropSegmentsWithHandle will return FAILURE (not TRY_AGAIN) as set of
+    // segments to drop contains more than one datasource.
+    Assert.assertEquals(1, segmentTableDropUpdateCounter.get());
+
+    Assert.assertEquals(
+        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceSucceedWithSegmentDrop() throws IOException
+  {
+    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+
+    Assert.assertEquals(
+        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        SEGMENTS,
+        ImmutableSet.of(existingSegment1, existingSegment2),
+        null,
+        null
+    );
+
+    Assert.assertEquals(SegmentPublishResult.ok(SEGMENTS), result1);
+
+    for (DataSegment segment : SEGMENTS) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getId().toString()
+          )
+      );
+    }
+
+    Assert.assertEquals(
+        ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailSegmentDropFailWithRetry() throws IOException
+  {
+    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+
+    Assert.assertEquals(
+        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
+
+    DataSegment nonExistingSegment = defaultSegment4;
+
+    Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, nonExistingSegment);
+
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        SEGMENTS,
+        dropSegments,
+        null,
+        null
+    );
+    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
+
+    Assert.assertEquals(MAX_SQL_MEATADATA_RETRY, segmentTableDropUpdateCounter.get());
+
+    Assert.assertEquals(
+        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
+        retrieveUsedSegmentIds()
+    );
   }
 
   @Test
