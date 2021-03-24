@@ -336,7 +336,7 @@ From the inner most layer:
 > Note: Only grant the permission to submit ingestion tasks to trusted users because they can read and write to local file system.
 
 Within the cluster:
-1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. It is the responsibility of system implementers to setup firewalls and other methods of protection.
+1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.
 Druid assumes network traffic within the cluster is encrypted, including API calls and data transfers. The default encryption implementation uses TLS.
 3. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
 
