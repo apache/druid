@@ -297,4 +297,12 @@
      ]]></notes>
     <cve>CVE-2020-13936</cve>
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: libthrift-0.13.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
 </suppressions>
