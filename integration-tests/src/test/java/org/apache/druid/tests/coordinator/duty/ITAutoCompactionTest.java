@@ -468,9 +468,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(5);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       // 5 segments. 1 compacted YEAR segment and 4 newly ingested DAY segments across 2 days
-      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) from the compaction
-      // two segments with interval of 2013-09-01/2013-10-01 (newly ingested with DAY)
-      // and two segments with interval of 2013-10-01/2013-11-01 (newly ingested with DAY)
+      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) from the compaction earlier
+      // two segments with interval of 2013-08-31/2013-09-01 (newly ingested with DAY)
+      // and two segments with interval of 2013-09-01/2013-09-02 (newly ingested with DAY)
       expectedIntervalAfterCompaction.addAll(intervalsBeforeCompaction);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 

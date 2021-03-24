@@ -246,6 +246,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
   {
     private final List<TimelineObjectHolder<String, DataSegment>> holders;
+    @Nullable
     private final VersionedIntervalTimeline<String, DataSegment> originalTimeline;
 
     CompactibleTimelineObjectHolderCursor(
