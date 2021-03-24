@@ -58,6 +58,7 @@ import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -405,7 +406,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
 
               if (segmentsToDrop != null && !segmentsToDrop.isEmpty()) {
+                final DataSourceMetadataUpdateResult result = dropSegmentsWithHandle(
+                    handle,
+                    segmentsToDrop,
+                    dataSource
+                );
+                if (result != DataSourceMetadataUpdateResult.SUCCESS) {
+                  // Metadata store was definitely not updated.
+                  transactionStatus.setRollbackOnly();
+                  definitelyNotUpdated.set(true);
 
+                  if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                    throw new RuntimeException("Aborting transaction!");
+                  } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                    throw new RetryTransactionException("Aborting transaction!");
+                  }
+                }
               }
 
               final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments);
@@ -1198,6 +1214,60 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return retVal;
+  }
+
+  /**
+   * Mark segments as unsed in a transaction. This method is idempotent in that if
+   * the segments was already marked unused, it will return true.
+   *
+   * @param handle         database handle
+   * @param segmentsToDrop segments to mark as unused
+   * @param dataSource     druid dataSource
+   *
+   * @return SUCCESS if segment was marked unused, FAILURE or
+   * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
+   * {@link #announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+   * achieve its own guarantee.
+   *
+   * @throws RuntimeException if state is unknown after this call
+   */
+  protected DataSourceMetadataUpdateResult dropSegmentsWithHandle(
+      final Handle handle,
+      final Set<DataSegment> segmentsToDrop,
+      final String dataSource
+  )
+  {
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(segmentsToDrop, "segmentsToDrop");
+
+    if (segmentsToDrop.isEmpty()) {
+      return DataSourceMetadataUpdateResult.SUCCESS;
+    }
+
+    if (segmentsToDrop.stream().anyMatch(segment -> !dataSource.equals(segment.getDataSource()))) {
+      // All segments to drop must belong to the same datasource
+      log.error(
+          "Not dropping segments, as not all segments belong to the datasource[%s].",
+          dataSource
+      );
+      return DataSourceMetadataUpdateResult.FAILURE;
+    }
+    final List<String> segmentIdList = segmentsToDrop.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList());
+    Batch batch = handle.createBatch();
+    segmentIdList.forEach(segmentId -> batch.add(
+        StringUtils.format(
+            "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s'",
+            dbTables.getSegmentsTable(),
+            dataSource,
+            segmentId
+        )
+    ));
+    final int[] segmentChanges = batch.execute();
+    int numChangedSegments = SqlSegmentsMetadataManager.computeNumChangedSegments(segmentIdList, segmentChanges);
+    if (numChangedSegments != segmentsToDrop.size()) {
+      return DataSourceMetadataUpdateResult.TRY_AGAIN;
+    }
+    return DataSourceMetadataUpdateResult.SUCCESS;
   }
 
   @Override

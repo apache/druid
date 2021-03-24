@@ -1973,7 +1973,8 @@ public class IndexTaskTest extends IngestionTestBase
               null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
-              appendToExisting
+              appendToExisting,
+              null
           ),
           tuningConfig
       );
