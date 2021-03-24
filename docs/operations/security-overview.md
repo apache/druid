@@ -34,10 +34,13 @@ By default, security features in Druid are disabled, which simplifies the initia
 
 * Run Druid as an unprivileged Unix user. Do not run Druid as the root user.
    > **WARNING!** \
-   Druid administrator users have the same OS permissions as the Unix user account running Druid. If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
+   Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
-* Do not expose the Druid Console without authentication on untrusted networks. Authenticated Druid Console users have the same permissions as the OS user running the Druid Console process.
-* Use an API gateway to restrict access from untrusted networks, create an allow list of specific APIs that your users need to access, and implement account lockout and throttling features.
+* Do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console will have the same permissions as the OS user running the Druid Console process.
+* Use an API gateway to
+  - Restrict access from untrusted networks
+  - Create an allow list of specific APIs that your users need to access
+  - Implement account lockout and throttling features.
 * When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
 * Only grant `STATE READ`, `STATE WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allows users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
@@ -58,15 +61,15 @@ The configuration settings mentioned below are primarily located in the `common.
 Enabling TLS encrypts the traffic between external clients and the Druid cluster and traffic between services within the cluster.
 
 ### Generating keys
-Before you enable TLS in Druid, generate the keystore and truststore. When one Druid process, e.g. Broker, contacts another Druid process , e.g. Historical, the first service is a client for the second service, considered the server.
+Before you enable TLS in Druid, generate the KeyStore and truststore. When one Druid process, e.g. Broker, contacts another Druid process , e.g. Historical, the first service is a client for the second service, considered the server.
 
 The client uses a trustStore that contains certificates trusted by the client. For example, the Broker.
 
-The server uses a keyStore that contains private keys and certificate chain used to securely identify itself.
+The server uses a KeyStore that contains private keys and certificate chain used to securely identify itself.
 
-The following example demonstrates how to use Java keytool to generate the keyStore for the server and then create a trustStore to trust the key for the client:
+The following example demonstrates how to use Java keytool to generate the KeyStore for the server and then create a trustStore to trust the key for the client:
 
-1. Generate the keyStore with Java keytool:
+1. Generate the KeyStore with the Java `keytool` command:
 ```
 $> keytool -keystore keystore.jks -alias druid -genkey -keyalg RSA
 ```
@@ -328,7 +331,7 @@ Based on this expectation, Druid operates according to the following principles:
 
 From the inner most layer:
 1. Druid processes run within the system user context. They have access to the local files granted to the specified system user.
-2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files that the Druid process has access to.
+2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
 > Note: Only grant the permission to submit ingestion tasks to trusted users because they can read and write to local file system.
 
@@ -343,4 +346,4 @@ Cluster to deep storage:
 
 Cluster to client:
 1. Druid authenticates with the client based on the configured authenticator.
-2. Druid only executes queries when an authorizer grants permission. The default configuration is `allowAll authorizer`.
+2. Druid only performs actions when an authorizer grants permission. The default configuration is `allowAll authorizer`.
