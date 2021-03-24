@@ -317,6 +317,7 @@
   </suppress>
 
   <suppress>
+     <!-- (ranger, ambari, and aliyun-oss) these vulnerabilities are legit, but their latest releases still use the vulnerable jackson version -->
      <notes><![CDATA[
      file name: jackson-xc-1.9.x.jar or jackson-jaxrs-1.9.x.jar
      ]]></notes>
