@@ -196,7 +196,7 @@ that datasource leads to much faster query times. This can often be done with ju
 footprint, since abbreviated datasources tend to be substantially smaller.
 - If you are using a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect
 rollup, you can potentially improve your rollup ratio by switching to a guaranteed perfect rollup option, or by
-[reindexing](data-management.md#compaction-and-reindexing) your data in the background after initial ingestion.
+[reindexing](data-management.md#reingesting-data) or [compacting](compaction.md) your data in the background after initial ingestion.
 
 ### Perfect rollup vs Best-effort rollup
 
@@ -258,7 +258,7 @@ storage size decreases - and it also tends to improve query performance as well.
 
 Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of
 flexibility. As of current Druid versions, If you are doing initial ingestion through a less-flexible method (like
-Kafka) then you can use [reindexing techniques](data-management.md#compaction-and-reindexing) to repartition your data after it
+Kafka) then you can use [reindexing](data-management.md#reingesting-data) or [compaction](compaction.md) to repartition your data after it
 is initially ingested. This is a powerful technique: you can use it to ensure that any data older than a certain
 threshold is optimally partitioned, even as you continuously add new data from a stream.
 
@@ -268,8 +268,8 @@ The following table shows how each ingestion method handles partitioning:
 |------|------------|
 |[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
 |[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
+|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
+|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
 
 > Note that, of course, one way to partition data is to load it into separate datasources. This is a perfectly viable
 > approach and works very well when the number of datasources does not lead to excessive per-datasource overheads. If
