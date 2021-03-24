@@ -360,6 +360,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert first segment.
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -378,6 +379,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert second segment.
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
+        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -434,6 +436,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert first segment.
     final SegmentPublishResult result1 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -455,6 +458,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert second segment.
     final SegmentPublishResult result2 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
+        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -485,6 +489,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -499,6 +504,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -506,6 +512,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -520,6 +527,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -527,6 +535,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
+        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -833,6 +842,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );

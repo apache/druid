@@ -159,6 +159,7 @@ public class SegmentTransactionalInsertActionTest
     final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
         null,
+        null,
         ImmutableSet.of(SEGMENT3)
     );
     actionTestKit.getTaskLockbox().add(task);

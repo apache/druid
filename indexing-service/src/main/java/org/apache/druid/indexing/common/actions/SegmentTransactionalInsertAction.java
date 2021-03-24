@@ -63,13 +63,16 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata endMetadata;
   @Nullable
   private final String dataSource;
+  @Nullable
+  private final Set<DataSegment> segmentsToBeDropped;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, segmentsToBeDropped);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -78,7 +81,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, null);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -87,7 +90,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource);
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource, null);
   }
 
   @JsonCreator
@@ -96,7 +99,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
-      @JsonProperty("dataSource") @Nullable String dataSource
+      @JsonProperty("dataSource") @Nullable String dataSource,
+      @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
@@ -104,6 +108,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
+    this.segmentsToBeDropped = segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -111,6 +116,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Set<DataSegment> getSegmentsToBeDropped()
+  {
+    return segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -194,6 +206,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
                       segments,
+                      segmentsToBeDropped,
                       startMetadata,
                       endMetadata
                   )
@@ -301,11 +314,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
-           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
-           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           "segmentsToBeOverwritten=" + segmentsToBeOverwritten +
+           ", segments=" + segments +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
-           ", dataSource=" + dataSource +
+           ", dataSource='" + dataSource + '\'' +
+           ", segmentsToBeDropped=" + segmentsToBeDropped +
            '}';
   }
 }

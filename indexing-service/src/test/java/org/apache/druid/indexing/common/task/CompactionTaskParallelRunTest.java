@@ -451,7 +451,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             false,
             0
         ),
-        appendToExisting
+        appendToExisting,
+        null
     );
     ParallelIndexTuningConfig tuningConfig = newTuningConfig(partitionsSpec, 2, !appendToExisting);
     ParallelIndexSupervisorTask indexTask = new ParallelIndexSupervisorTask(

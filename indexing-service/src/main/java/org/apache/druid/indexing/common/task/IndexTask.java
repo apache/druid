@@ -1028,18 +1028,21 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public static class IndexIOConfig implements BatchIOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
+    private static final boolean DEFAULT_DROP_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
+    private final boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1052,13 +1055,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     // old constructor for backward compatibility
     @Deprecated
     public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, null);
     }
 
     @Nullable
@@ -1112,6 +1116,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public boolean isAppendToExisting()
     {
       return appendToExisting;
+    }
+
+    @Override
+    @JsonProperty
+    public boolean isDropExisting()
+    {
+      return dropExisting;
     }
   }
 
