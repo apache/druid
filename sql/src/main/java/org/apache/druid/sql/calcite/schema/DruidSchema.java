@@ -702,13 +702,14 @@ public class DruidSchema extends AbstractSchema
 
   Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = new HashMap<>();
     synchronized (lock) {
+      final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(
+          segmentMetadataInfo.values().stream().mapToInt(v -> v.size()).sum());
       for (TreeMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
         segmentMetadata.putAll(val);
       }
+      return segmentMetadata;
     }
-    return segmentMetadata;
   }
 
   int getTotalSegments()

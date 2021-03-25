@@ -39,6 +39,7 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -111,7 +112,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
   private static final OssClientConfig CLOUD_CONFIG_PROPERTIES = new OssClientConfig(
       "test.oss-cn.aliyun.com",
       new DefaultPasswordProvider("myKey"),
-      new DefaultPasswordProvider("mySecret"));
+      new DefaultPasswordProvider("mySecret")
+  );
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
       ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
@@ -454,7 +456,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(
@@ -497,7 +499,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(

@@ -218,6 +218,7 @@ codec
 colocated
 colocation
 compactable
+compactionTask
 config
 configs
 consumerProperties
@@ -258,6 +259,7 @@ firehoses
 fromPigAvroStorage
 frontends
 granularities
+granularitySpec
 gzip
 gzipped
 hadoop
@@ -300,6 +302,7 @@ mergeable
 metadata
 millis
 misconfiguration
+misconfigured
 mostAvailableSize
 multitenancy
 multitenant
@@ -312,6 +315,7 @@ netflow
 non-nullable
 noop
 numerics
+numShards
 parameterized
 parseable
 partitioner
@@ -1035,6 +1039,7 @@ baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
+countryName
 dataSchema's
 foldCase
 forceGuaranteedRollup
@@ -1780,6 +1785,7 @@ successfulSending
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
+timestampSpec
 tmp
 tmpfs
 truststore

@@ -115,50 +115,50 @@ function validateConnectLocalData(preview: string) {
   expect(firstLine).toBe(
     'Druid row: {' +
       '"__time":1442018818771' +
-      ',"isRobot":"false"' +
-      ',"countryIsoCode":null' +
-      ',"added":"36"' +
-      ',"regionName":null' +
       ',"channel":"#en.wikipedia"' +
-      ',"delta":"36"' +
-      ',"isUnpatrolled":"false"' +
-      ',"isNew":"false"' +
-      ',"isMinor":"false"' +
-      ',"isAnonymous":"false"' +
-      ',"deleted":"0"' +
-      ',"cityName":null' +
-      ',"metroCode":null' +
-      ',"namespace":"Talk"' +
       ',"comment":"added project"' +
-      ',"countryName":null' +
+      ',"isAnonymous":"false"' +
+      ',"isMinor":"false"' +
+      ',"isNew":"false"' +
+      ',"isRobot":"false"' +
+      ',"isUnpatrolled":"false"' +
+      ',"namespace":"Talk"' +
       ',"page":"Talk:Oswald Tilghman"' +
       ',"user":"GELongstreet"' +
+      ',"added":"36"' +
+      ',"deleted":"0"' +
+      ',"delta":"36"' +
+      ',"cityName":null' +
+      ',"countryIsoCode":null' +
+      ',"countryName":null' +
       ',"regionIsoCode":null' +
+      ',"regionName":null' +
+      ',"metroCode":null' +
       '}',
   );
   const lastLine = lines[lines.length - 1];
   expect(lastLine).toBe(
     'Druid row: {' +
       '"__time":1442020314823' +
-      ',"isRobot":"false"' +
-      ',"countryIsoCode":null' +
-      ',"added":"1"' +
-      ',"regionName":null' +
       ',"channel":"#en.wikipedia"' +
-      ',"delta":"1"' +
-      ',"isUnpatrolled":"false"' +
-      ',"isNew":"false"' +
-      ',"isMinor":"true"' +
-      ',"isAnonymous":"false"' +
-      ',"deleted":"0"' +
-      ',"cityName":null' +
-      ',"metroCode":null' +
-      ',"namespace":"Main"' +
       ',"comment":"/* History */[[WP:AWB/T|Typo fixing]], [[WP:AWB/T|typo(s) fixed]]: nothern → northern using [[Project:AWB|AWB]]"' +
-      ',"countryName":null' +
+      ',"isAnonymous":"false"' +
+      ',"isMinor":"true"' +
+      ',"isNew":"false"' +
+      ',"isRobot":"false"' +
+      ',"isUnpatrolled":"false"' +
+      ',"namespace":"Main"' +
       ',"page":"Hapoel Katamon Jerusalem F.C."' +
       ',"user":"The Quixotic Potato"' +
+      ',"added":"1"' +
+      ',"deleted":"0"' +
+      ',"delta":"1"' +
+      ',"cityName":null' +
+      ',"countryIsoCode":null' +
+      ',"countryName":null' +
       ',"regionIsoCode":null' +
+      ',"regionName":null' +
+      ',"metroCode":null' +
       '}',
   );
 }

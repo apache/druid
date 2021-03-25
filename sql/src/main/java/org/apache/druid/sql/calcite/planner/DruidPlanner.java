@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -62,6 +64,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -75,19 +78,24 @@ import java.util.Properties;
 
 public class DruidPlanner implements Closeable
 {
+  private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
+
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
   private final PlannerContext plannerContext;
+  private final ObjectMapper jsonMapper;
   private RexBuilder rexBuilder;
 
   public DruidPlanner(
       final FrameworkConfig frameworkConfig,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final ObjectMapper jsonMapper
   )
   {
     this.frameworkConfig = frameworkConfig;
     this.planner = Frameworks.getPlanner(frameworkConfig);
     this.plannerContext = plannerContext;
+    this.jsonMapper = jsonMapper;
   }
 
   /**
@@ -358,8 +366,17 @@ public class DruidPlanner implements Closeable
   )
   {
     final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+    String resources;
+    try {
+      resources = jsonMapper.writeValueAsString(plannerContext.getResources());
+    }
+    catch (JsonProcessingException jpe) {
+      // this should never happen, we create the Resources here, not a user
+      log.error(jpe, "Encountered exception while serializing Resources for explain output");
+      resources = null;
+    }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation})));
+        Sequences.simple(ImmutableList.of(new Object[]{explanation, resources})));
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
   }
 
@@ -414,8 +431,11 @@ public class DruidPlanner implements Closeable
   private static RelDataType getExplainStructType(RelDataTypeFactory typeFactory)
   {
     return typeFactory.createStructType(
-        ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
-        ImmutableList.of("PLAN")
+        ImmutableList.of(
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
+        ),
+        ImmutableList.of("PLAN", "RESOURCES")
     );
   }
 

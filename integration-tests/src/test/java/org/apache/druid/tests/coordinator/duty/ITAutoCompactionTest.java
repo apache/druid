@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
+import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
@@ -128,7 +129,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22482,
+          22481,
           0,
           0,
           3,
@@ -274,7 +275,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22482,
+          22481,
           0,
           0,
           3,
@@ -368,6 +369,132 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(1);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, 1000);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularityAndExistingCompactedSegmentsHaveSameSegmentGranularity() throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      // Compacted without SegmentGranularity in auto compaction config
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+
+      // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
+      // Now set auto compaction with DAY granularity in the granularitySpec
+      Granularity newGranularity = Granularities.DAY;
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      // should be no new compaction task as segmentGranularity is already DAY
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularityAndExistingCompactedSegmentsHaveDifferentSegmentGranularity() throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      // Compacted without SegmentGranularity in auto compaction config
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+
+      // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
+      // Now set auto compaction with DAY granularity in the granularitySpec
+      Granularity newGranularity = Granularities.YEAR;
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      forceTriggerAutoCompaction(1);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      // There should be new compaction tasks since SegmentGranularity changed from DAY to YEAR
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertTrue(compactTasksAfter.size() > compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimeline() throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      Granularity newGranularity = Granularities.YEAR;
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+
+      List<String> expectedIntervalAfterCompaction = new ArrayList<>();
+      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
+      forceTriggerAutoCompaction(1);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      loadData(INDEX_TASK);
+      verifySegmentsCount(5);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      // 5 segments. 1 compacted YEAR segment and 4 newly ingested DAY segments across 2 days
+      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) from the compaction earlier
+      // two segments with interval of 2013-08-31/2013-09-01 (newly ingested with DAY)
+      // and two segments with interval of 2013-09-01/2013-09-02 (newly ingested with DAY)
+      expectedIntervalAfterCompaction.addAll(intervalsBeforeCompaction);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      newGranularity = Granularities.MONTH;
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
+      expectedIntervalAfterCompaction = new ArrayList<>();
+      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) from before the compaction
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : Granularities.YEAR.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
+      // one segments with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
+      // and one segments with interval of 2013-10-01/2013-11-01 (compacted with MONTH)
+      for (String interval : intervalsBeforeCompaction) {
+        for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          expectedIntervalAfterCompaction.add(newinterval.toString());
+        }
+      }
+
+      forceTriggerAutoCompaction(3);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(3, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }

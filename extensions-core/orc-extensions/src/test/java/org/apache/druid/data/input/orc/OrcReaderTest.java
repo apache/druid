@@ -21,6 +21,7 @@ package org.apache.druid.data.input.orc;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -259,7 +260,7 @@ public class OrcReaderTest
       String dataFile
   ) throws IOException
   {
-    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList());
+    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(new File(dataFile));
     return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }

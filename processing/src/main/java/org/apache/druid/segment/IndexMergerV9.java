@@ -28,6 +28,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -875,6 +876,7 @@ public class IndexMergerV9 implements IndexMerger
         //                     while merging a single iterable
         false,
         index.getMetricAggs(),
+        null,
         outDir,
         indexSpec,
         progress,
@@ -898,6 +900,31 @@ public class IndexMergerV9 implements IndexMerger
         indexes,
         rollup,
         metricAggs,
+        null,
+        outDir,
+        indexSpec,
+        segmentWriteOutMediumFactory,
+        maxColumnsToMerge
+    );
+  }
+
+  @Override
+  public File mergeQueryableIndex(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      final AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
+  ) throws IOException
+  {
+    return mergeQueryableIndex(
+        indexes,
+        rollup,
+        metricAggs,
+        dimensionsSpec,
         outDir,
         indexSpec,
         new BaseProgressIndicator(),
@@ -911,6 +938,7 @@ public class IndexMergerV9 implements IndexMerger
       List<QueryableIndex> indexes,
       boolean rollup,
       final AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
@@ -922,6 +950,7 @@ public class IndexMergerV9 implements IndexMerger
         IndexMerger.toIndexableAdapters(indexes),
         rollup,
         metricAggs,
+        dimensionsSpec,
         outDir,
         indexSpec,
         progress,
@@ -940,13 +969,14 @@ public class IndexMergerV9 implements IndexMerger
       int maxColumnsToMerge
   ) throws IOException
   {
-    return multiphaseMerge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null, maxColumnsToMerge);
+    return multiphaseMerge(indexes, rollup, metricAggs, null, outDir, indexSpec, new BaseProgressIndicator(), null, maxColumnsToMerge);
   }
 
   private File multiphaseMerge(
       List<IndexableAdapter> indexes,
       final boolean rollup,
       final AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
@@ -964,6 +994,7 @@ public class IndexMergerV9 implements IndexMerger
           indexes,
           rollup,
           metricAggs,
+          dimensionsSpec,
           outDir,
           indexSpec,
           progress,
@@ -997,6 +1028,7 @@ public class IndexMergerV9 implements IndexMerger
               phase,
               rollup,
               metricAggs,
+              dimensionsSpec,
               phaseOutDir,
               indexSpec,
               progress,
@@ -1087,13 +1119,14 @@ public class IndexMergerV9 implements IndexMerger
       List<IndexableAdapter> indexes,
       final boolean rollup,
       final AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
+    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes, dimensionsSpec);
 
     final List<String> mergedMetrics = IndexMerger.mergeIndexed(
         indexes.stream().map(IndexableAdapter::getMetricNames).collect(Collectors.toList())
@@ -1196,7 +1229,7 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.deleteDirectory(outDir);
     org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
-    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
+    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes, null);
 
     final List<String> mergedMetrics = IndexMerger.mergeIndexed(
         indexes.stream().map(IndexableAdapter::getMetricNames).collect(Collectors.toList())

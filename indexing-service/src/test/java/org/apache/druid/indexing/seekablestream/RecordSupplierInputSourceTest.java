@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -79,7 +80,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
         new InputRowSchema(
             new TimestampSpec("col_0", "auto", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(colNames.subList(1, colNames.size()))),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         inputFormat,
         temporaryFolder.newFolder()

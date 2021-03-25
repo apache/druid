@@ -107,7 +107,8 @@ public class PlannerFactory
 
     return new DruidPlanner(
         frameworkConfig,
-        plannerContext
+        plannerContext,
+        jsonMapper
     );
   }
 
@@ -121,7 +122,8 @@ public class PlannerFactory
 
     return new DruidPlanner(
         frameworkConfig,
-        plannerContext
+        plannerContext,
+        jsonMapper
     );
   }
 

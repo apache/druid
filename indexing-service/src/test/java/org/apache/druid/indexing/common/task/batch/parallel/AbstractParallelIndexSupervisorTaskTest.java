@@ -203,7 +203,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             false,
             null,
             null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
+            false
         ),
         null
     );
@@ -521,6 +522,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
+    final TaskConfig taskConfig = new TaskConfig(null, null, null, null, null, false, null, null, null, false);
+
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
@@ -537,6 +540,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(CoordinatorClient.class, coordinatorClient)
             .addValue(SegmentLoaderFactory.class, new SegmentLoaderFactory(indexIO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
+            .addValue(TaskConfig.class, taskConfig)
     );
     objectMapper.registerSubtypes(
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
@@ -552,7 +556,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
     return new TaskToolbox(
-        null,
+        new TaskConfig(null, null, null, null, null, false, null, null, null, false),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
         null,
