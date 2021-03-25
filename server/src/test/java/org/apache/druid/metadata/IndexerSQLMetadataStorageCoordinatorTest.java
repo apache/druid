@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -71,7 +70,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -325,12 +323,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           public Boolean withHandle(Handle handle) throws Exception
           {
             PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                  table,
-                  derbyConnector.getQuoteString()
-              )
+                StringUtils.format(
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                    table,
+                    derbyConnector.getQuoteString()
+                )
             );
             for (DataSegment segment : dataSegments) {
               preparedBatch.add()
