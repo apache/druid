@@ -218,25 +218,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     }
   }
 
-  private void loadData(String indexTask) throws Exception
-  {
-    String taskSpec = getResourceAsString(indexTask);
-    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
-    taskSpec = StringUtils.replace(
-        taskSpec,
-        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
-        jsonMapper.writeValueAsString("0")
-    );
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
-
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
-    );
-  }
-
   private void compactData(String compactionResource, GranularityType newSegmentGranularity, GranularityType newQueryGranularity) throws Exception
   {
     String template = getResourceAsString(compactionResource);
