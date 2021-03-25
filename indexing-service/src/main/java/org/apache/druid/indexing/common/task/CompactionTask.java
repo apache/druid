@@ -624,12 +624,13 @@ public class CompactionTask extends AbstractBatchIndexTask
             interval,
             null,
             null,
-            dataSchema.getDimensionsSpec().getDimensionNames(),
-            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null,
+            null,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
-            retryPolicyFactory
+            retryPolicyFactory,
+            toolbox.getConfig()
         ),
         null,
         false
@@ -699,7 +700,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return new
         DataSchema(
         dataSource,
-        new TimestampSpec(null, null, null),
+        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,

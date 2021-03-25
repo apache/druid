@@ -1292,60 +1292,82 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 |type|This should be "druid".|yes|
 |dataSource|A String defining the Druid datasource to fetch rows from|yes|
 |interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
-|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
-|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
 |filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
 
-A minimal example DruidInputSource spec is shown below:
+The Druid input source can be used for a variety of purposes, including:
+
+- Creating new datasources that are rolled-up copies of existing datasources.
+- Changing the [partitioning or sorting](index.md#partitioning) of a datasource to improve performance.
+- Updating or removing rows using a [`transformSpec`](index.md#transformspec).
+
+When using the Druid input source, the timestamp column shows up as a numeric field named `__time` set to the number
+of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to use this in the timestampSpec, if you
+want the output timestamp to be equivalent to the input timestamp. In this case, set the timestamp column to `__time`
+and the format to `auto` or `millis`.
+
+It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
+previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
+good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
+Alternatively, if your goals can be satisfied by [compaction](compaction.md), consider that instead as a simpler
+approach.
+
+An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new
+rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and "page".
 
 ```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "druid",
-        "dataSource": "wikipedia",
-        "interval": "2013-01-01/2013-01-02"
-      }
-      ...
-    },
-...
-```
-
-The spec above will read all existing dimension and metric columns from
-the `wikipedia` datasource, including all rows with a timestamp (the `__time` column)
-within the interval `2013-01-01/2013-01-02`.
-
-A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
-
-```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "druid",
-        "dataSource": "wikipedia",
-        "interval": "2013-01-01/2013-01-02",
+{
+  "type": "index_parallel",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "wikipedia_rollup",
+      "timestampSpec": {
+        "column": "__time",
+        "format": "millis"
+      },
+      "dimensionsSpec": {
         "dimensions": [
-          "page",
-          "user"
-        ],
-        "metrics": [
-          "added"
-        ],
-        "filter": {
-          "type": "selector",
-          "dimension": "page",
-          "value": "Druid"
+          "countryName",
+          "page"
+        ]
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "cnt"
         }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "HOUR",
+        "segmentGranularity": "DAY",
+        "intervals": ["2016-06-27/P1D"],
+        "rollup": true
       }
-      ...
     },
-...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "druid",
+        "dataSource": "wikipedia_raw",
+        "interval": "2016-06-27/P1D"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "hashed"
+      },
+      "forceGuaranteedRollup": true,
+      "maxNumConcurrentSubTasks": 1
+    }
+  }
+}
 ```
 
-This spec above will only return the `page`, `user` dimensions and `added` metric.
-Only rows where `page` = `Druid` will be returned.
+> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+> have ingestion specs that rely on this and cannot rewrite them, set
+> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+> to `true` to enable a compatibility mode where the timestampSpec is ignored.
 
 ### SQL Input Source
 

@@ -21,12 +21,18 @@ package org.apache.druid.indexing.input;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -35,56 +41,64 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnProcessorFactory;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.utils.CollectionUtils;
-import org.joda.time.DateTime;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
   private final DruidSegmentInputEntity source;
   private final IndexIO indexIO;
-  private final List<String> dimensions;
-  private final List<String> metrics;
+  private final ColumnsFilter columnsFilter;
+  private final InputRowSchema inputRowSchema;
   private final DimFilter dimFilter;
   private final File temporaryDirectory;
 
   DruidSegmentReader(
-      InputEntity source,
-      IndexIO indexIO,
-      List<String> dimensions,
-      List<String> metrics,
-      DimFilter dimFilter,
-      File temporaryDirectory
+      final InputEntity source,
+      final IndexIO indexIO,
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter,
+      final DimFilter dimFilter,
+      final File temporaryDirectory
   )
   {
     Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
     this.source = (DruidSegmentInputEntity) source;
     this.indexIO = indexIO;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
+    this.columnsFilter = columnsFilter;
+    this.inputRowSchema = new InputRowSchema(
+        timestampSpec,
+        dimensionsSpec,
+        columnsFilter
+    );
     this.dimFilter = dimFilter;
     this.temporaryDirectory = temporaryDirectory;
   }
@@ -109,10 +123,23 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         null
     );
 
+    // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
+    // schemaless mode.
+    final Set<String> columnsToRead = Sets.newLinkedHashSet(
+        Iterables.filter(
+            Iterables.concat(
+                Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
+                storageAdapter.getAdapter().getAvailableDimensions(),
+                storageAdapter.getAdapter().getAvailableMetrics()
+            ),
+            columnsFilter::apply
+        )
+    );
+
     final Sequence<Map<String, Object>> sequence = Sequences.concat(
         Sequences.map(
             cursors,
-            this::cursorToSequence
+            cursor -> cursorToSequence(cursor, columnsToRead)
         )
     );
 
@@ -122,8 +149,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
   {
-    final DateTime timestamp = (DateTime) intermediateRow.get(ColumnHolder.TIME_COLUMN_NAME);
-    return Collections.singletonList(new MapBasedInputRow(timestamp.getMillis(), dimensions, intermediateRow));
+    return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, intermediateRow));
   }
 
   @Override
@@ -137,14 +163,13 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
    * Map<String, Object> intermediate rows, selecting the dimensions and metrics of this segment reader.
    *
    * @param cursor A cursor
+   *
    * @return A sequence of intermediate rows
    */
-  private Sequence<Map<String, Object>> cursorToSequence(
-      final Cursor cursor
-  )
+  private Sequence<Map<String, Object>> cursorToSequence(final Cursor cursor, final Set<String> columnsToRead)
   {
     return Sequences.simple(
-        () -> new IntermediateRowFromCursorIterator(cursor, dimensions, metrics)
+        () -> new IntermediateRowFromCursorIterator(cursor, columnsToRead)
     );
   }
 
@@ -152,8 +177,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
    * @param sequence    A sequence of intermediate rows generated from a sequence of
    *                    cursors in {@link #intermediateRowIterator()}
    * @param segmentFile The underlying segment file containing the row data
+   *
    * @return A CloseableIterator from a sequence of intermediate rows, closing the underlying segment file
-   *         when the iterator is closed.
+   * when the iterator is closed.
    */
   @VisibleForTesting
   static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
@@ -191,45 +217,91 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   /**
+   * Reads columns for {@link IntermediateRowFromCursorIterator}.
+   */
+  private static class IntermediateRowColumnProcessorFactory implements ColumnProcessorFactory<Supplier<Object>>
+  {
+    private static final IntermediateRowColumnProcessorFactory INSTANCE = new IntermediateRowColumnProcessorFactory();
+
+    @Override
+    public ValueType defaultType()
+    {
+      return ValueType.STRING;
+    }
+
+    @Override
+    public Supplier<Object> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
+    {
+      return () -> {
+        final IndexedInts vals = selector.getRow();
+
+        int valsSize = vals.size();
+        if (valsSize == 1) {
+          return selector.lookupName(vals.get(0));
+        } else if (valsSize > 1) {
+          List<String> dimVals = new ArrayList<>(valsSize);
+          for (int i = 0; i < valsSize; ++i) {
+            dimVals.add(selector.lookupName(vals.get(i)));
+          }
+
+          return dimVals;
+        }
+
+        return null;
+      };
+    }
+
+    @Override
+    public Supplier<Object> makeFloatProcessor(BaseFloatColumnValueSelector selector)
+    {
+      return () -> selector.isNull() ? null : selector.getFloat();
+    }
+
+    @Override
+    public Supplier<Object> makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
+    {
+      return () -> selector.isNull() ? null : selector.getDouble();
+    }
+
+    @Override
+    public Supplier<Object> makeLongProcessor(BaseLongColumnValueSelector selector)
+    {
+      return () -> selector.isNull() ? null : selector.getLong();
+    }
+
+    @Override
+    public Supplier<Object> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return selector::getObject;
+    }
+  }
+
+  /**
    * Given a {@link Cursor}, a list of dimension names, and a list of metric names, this iterator
    * returns the rows of the cursor as Map<String, Object> intermediate rows.
    */
   private static class IntermediateRowFromCursorIterator implements Iterator<Map<String, Object>>
   {
     private final Cursor cursor;
-    private final BaseLongColumnValueSelector timestampColumnSelector;
-    private final Map<String, DimensionSelector> dimSelectors;
-    private final Map<String, BaseObjectColumnValueSelector> metSelectors;
+    private final Map<String, Supplier<Object>> columnReaders;
 
     public IntermediateRowFromCursorIterator(
-        Cursor cursor,
-        List<String> dimensionNames,
-        List<String> metricNames
+        final Cursor cursor,
+        final Set<String> columnsToRead
     )
     {
       this.cursor = cursor;
+      this.columnReaders = CollectionUtils.newLinkedHashMapWithExpectedSize(columnsToRead.size());
 
-      timestampColumnSelector = cursor
-          .getColumnSelectorFactory()
-          .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-
-      dimSelectors = new HashMap<>();
-      for (String dim : dimensionNames) {
-        final DimensionSelector dimSelector = cursor
-            .getColumnSelectorFactory()
-            .makeDimensionSelector(new DefaultDimensionSpec(dim, dim));
-        // dimSelector is null if the dimension is not present
-        if (dimSelector != null) {
-          dimSelectors.put(dim, dimSelector);
-        }
-      }
-
-      metSelectors = new HashMap<>();
-      for (String metric : metricNames) {
-        final BaseObjectColumnValueSelector metricSelector = cursor
-            .getColumnSelectorFactory()
-            .makeColumnValueSelector(metric);
-        metSelectors.put(metric, metricSelector);
+      for (String column : columnsToRead) {
+        columnReaders.put(
+            column,
+            ColumnProcessors.makeProcessor(
+                column,
+                IntermediateRowColumnProcessorFactory.INSTANCE,
+                cursor.getColumnSelectorFactory()
+            )
+        );
       }
     }
 
@@ -245,46 +317,18 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      final Map<String, Object> theEvent =
-          CollectionUtils.newLinkedHashMapWithExpectedSize(dimSelectors.size() + metSelectors.size() + 1);
+      final Map<String, Object> rowMap =
+          CollectionUtils.newLinkedHashMapWithExpectedSize(columnReaders.size());
 
-      for (Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-        final String dim = dimSelector.getKey();
-        final DimensionSelector selector = dimSelector.getValue();
-        final IndexedInts vals = selector.getRow();
-
-        int valsSize = vals.size();
-        if (valsSize == 1) {
-          final String dimVal = selector.lookupName(vals.get(0));
-          theEvent.put(dim, dimVal);
-        } else if (valsSize > 1) {
-          List<String> dimVals = new ArrayList<>(valsSize);
-          for (int i = 0; i < valsSize; ++i) {
-            dimVals.add(selector.lookupName(vals.get(i)));
-          }
-          theEvent.put(dim, dimVals);
-        }
-      }
-
-      for (Entry<String, BaseObjectColumnValueSelector> metSelector : metSelectors.entrySet()) {
-        final String metric = metSelector.getKey();
-        final BaseObjectColumnValueSelector selector = metSelector.getValue();
-        Object value = selector.getObject();
+      for (Entry<String, Supplier<Object>> entry : columnReaders.entrySet()) {
+        final Object value = entry.getValue().get();
         if (value != null) {
-          theEvent.put(metric, value);
+          rowMap.put(entry.getKey(), value);
         }
       }
-
-      // Timestamp is added last because we expect that the time column will always be a date time object.
-      // If it is added earlier, it can be overwritten by metrics or dimenstions with the same name.
-      //
-      // If a user names a metric or dimension `__time` it will be overwritten. This case should be rare since
-      // __time is reserved for the time column in druid segments.
-      final long timestamp = timestampColumnSelector.getLong();
-      theEvent.put(ColumnHolder.TIME_COLUMN_NAME, DateTimes.utc(timestamp));
 
       cursor.advance();
-      return theEvent;
+      return rowMap;
     }
   }
 }
