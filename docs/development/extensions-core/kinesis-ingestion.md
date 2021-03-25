@@ -480,3 +480,4 @@ Before you deploy the Kinesis extension to production, consider the following kn
 - Timeouts for retrieving earliest sequence number will cause a reset of the supervisor. The job will resume own its own eventually, but it can trigger alerts.
 - The Kinesis supervisor will not make progress if you have empty shards. Make sure you have at least 1 record in the shard.
 - If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
+- A Kinesis supervisor can sometimes check if the checkpointed offset has fallen behind the retention window of the stream. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.
