@@ -127,7 +127,7 @@ public class QueryableIndexCursorSequenceBuilder
                 final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
                 final long timeEnd = Math.min(
                     interval.getEndMillis(),
-                    gran.increment(inputInterval.getStart()).getMillis()
+                    gran.increment(inputInterval.getStartMillis())
                 );
 
                 if (descending) {

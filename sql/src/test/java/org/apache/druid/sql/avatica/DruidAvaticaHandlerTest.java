@@ -347,7 +347,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 "PLAN",
                 StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
                                    DUMMY_SQL_QUERY_ID
-                )
+                ),
+                "RESOURCES",
+                "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
             )
         ),
         getRows(resultSet)

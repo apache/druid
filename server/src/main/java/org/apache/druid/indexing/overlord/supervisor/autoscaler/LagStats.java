@@ -17,34 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.vector.VectorSizeInspector;
-
-import javax.annotation.Nullable;
-
-/**
- * Treats all rows as null.
- */
-public class NilVectorValueMatcher implements VectorValueMatcherFactory
+public class LagStats
 {
-  private final VectorSizeInspector vectorInspector;
+  private final long maxLag;
+  private final long totalLag;
+  private final long avgLag;
 
-  public NilVectorValueMatcher(final VectorSizeInspector vectorInspector)
+  public LagStats(long maxLag, long totalLag, long avgLag)
   {
-    this.vectorInspector = vectorInspector;
+    this.maxLag = maxLag;
+    this.totalLag = totalLag;
+    this.avgLag = avgLag;
   }
 
-  @Override
-  public VectorValueMatcher makeMatcher(@Nullable String value)
+  public long getMaxLag()
   {
-    return BooleanVectorValueMatcher.of(vectorInspector, value == null);
+    return maxLag;
   }
 
-  @Override
-  public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
+  public long getTotalLag()
   {
-    return BooleanVectorValueMatcher.of(vectorInspector, predicateFactory.makeStringPredicate().apply(null));
+    return totalLag;
+  }
+
+  public long getAvgLag()
+  {
+    return avgLag;
   }
 }

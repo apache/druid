@@ -32,7 +32,10 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -150,6 +153,21 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   @Override
   public abstract Supervisor createSupervisor();
+
+  /**
+   * An autoScaler instance will be returned depending on the autoScalerConfig. In case autoScalerConfig is null or autoScaler is disabled then NoopTaskAutoScaler will be returned.
+   * @param supervisor
+   * @return autoScaler
+   */
+  @Override
+  public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
+  {
+    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoscalerConfig();
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
+      return autoScalerConfig.createAutoScaler(supervisor, this);
+    }
+    return new NoopTaskAutoScaler();
+  }
 
   @Override
   public List<String> getDataSources()

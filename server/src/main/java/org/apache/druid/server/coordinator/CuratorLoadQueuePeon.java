@@ -111,6 +111,15 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * {@link #failAssign(SegmentHolder, boolean, Exception)}, {@link #actionCompleted(SegmentHolder)},
+   * {@link #getTimedOutSegments()} and {@link #stop()}
+   */
+  private final ConcurrentSkipListSet<DataSegment> timedOutSegments = new ConcurrentSkipListSet<>(
+      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
+  );
+
   CuratorLoadQueuePeon(
       CuratorFramework curator,
       String basePath,
@@ -147,6 +156,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   public Set<DataSegment> getSegmentsMarkedToDrop()
   {
     return segmentsMarkedToDrop;
+  }
+
+  @Override
+  public Set<DataSegment> getTimedOutSegments()
+  {
+    return timedOutSegments;
   }
 
   @Override
@@ -268,10 +283,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         // This is expected when historicals haven't yet picked up processing this segment and coordinator
         // tries reassigning it to the same node.
         log.warn(ne, "ZK node already exists because segment change request hasn't yet been processed");
-        failAssign(segmentHolder);
+        failAssign(segmentHolder, true);
       }
       catch (Exception e) {
-        failAssign(segmentHolder, e);
+        failAssign(segmentHolder, false, e);
       }
     }
 
@@ -282,14 +297,21 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
           () -> {
             try {
               if (curator.checkExists().forPath(path) != null) {
-                failAssign(segmentHolder, new ISE("%s was never removed! Failing this operation!", path));
+                failAssign(
+                    segmentHolder,
+                    true,
+                    new ISE("Failing this %s operation since it timed out and %s was never removed! These segments might still get processed",
+                            segmentHolder.getType() == DROP ? "DROP" : "LOAD",
+                            path
+                    )
+                );
               } else {
                 log.debug("%s detected to be removed. ", path);
               }
             }
             catch (Exception e) {
               log.error(e, "Exception caught and ignored when checking whether zk node was deleted");
-              failAssign(segmentHolder, e);
+              failAssign(segmentHolder, false, e);
             }
           },
           config.getLoadTimeoutDelay().getMillis(),
@@ -307,10 +329,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         // See https://github.com/apache/druid/pull/10362 for more details.
         if (null != segmentsToLoad.remove(segmentHolder.getSegment())) {
           queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+          timedOutSegments.remove(segmentHolder.getSegment());
         }
         break;
       case DROP:
         segmentsToDrop.remove(segmentHolder.getSegment());
+        timedOutSegments.remove(segmentHolder.getSegment());
         break;
       default:
         throw new UnsupportedOperationException();
@@ -337,6 +361,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     }
     segmentsToLoad.clear();
 
+    timedOutSegments.clear();
     queuedSize.set(0L);
     failedAssignCount.set(0);
   }
@@ -361,21 +386,33 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     );
   }
 
-  private void failAssign(SegmentHolder segmentHolder)
+  private void failAssign(SegmentHolder segmentHolder, boolean handleTimeout)
   {
-    failAssign(segmentHolder, null);
+    failAssign(segmentHolder, handleTimeout, null);
   }
 
-  private void failAssign(SegmentHolder segmentHolder, Exception e)
+  private void failAssign(SegmentHolder segmentHolder, boolean handleTimeout, Exception e)
   {
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
     }
     failedAssignCount.getAndIncrement();
-    // Act like it was completed so that the coordinator gives it to someone else
-    actionCompleted(segmentHolder);
-  }
 
+    if (handleTimeout) {
+      // Avoid removing the segment entry from the load/drop list in case config.getLoadTimeoutDelay() expires.
+      // This is because the ZK Node is still present and it may be processed after this timeout and so the coordinator
+      // needs to take this into account.
+      log.debug(
+          "Skipping segment removal from [%s] queue, since ZK Node still exists!",
+          segmentHolder.getType() == DROP ? "DROP" : "LOAD"
+      );
+      timedOutSegments.add(segmentHolder.getSegment());
+      executeCallbacks(segmentHolder);
+    } else {
+      // This may have failed for a different reason and so act like it was completed.
+      actionCompleted(segmentHolder);
+    }
+  }
 
   private static class SegmentHolder
   {

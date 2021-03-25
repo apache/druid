@@ -28,6 +28,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.inject.ImplementedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -38,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -65,9 +67,12 @@ public interface IndexMerger
   int INVALID_ROW = -1;
   int UNLIMITED_MAX_COLUMNS_TO_MERGE = -1;
 
-  static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
+  static List<String> getMergedDimensionsFromQueryableIndexes(
+      List<QueryableIndex> indexes,
+      @Nullable DimensionsSpec dimensionsSpec
+  )
   {
-    return getMergedDimensions(toIndexableAdapters(indexes));
+    return getMergedDimensions(toIndexableAdapters(indexes), dimensionsSpec);
   }
 
   static List<IndexableAdapter> toIndexableAdapters(List<QueryableIndex> indexes)
@@ -75,14 +80,18 @@ public interface IndexMerger
     return indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList());
   }
 
-  static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
+  static List<String> getMergedDimensions(
+      List<IndexableAdapter> indexes,
+      @Nullable DimensionsSpec dimensionsSpec
+  )
   {
     if (indexes.size() == 0) {
       return ImmutableList.of();
     }
-    List<String> commonDimOrder = getLongestSharedDimOrder(indexes);
+    List<String> commonDimOrder = getLongestSharedDimOrder(indexes, dimensionsSpec);
     if (commonDimOrder == null) {
-      log.warn("Indexes have incompatible dimension orders, using lexicographic order.");
+      log.warn("Indexes have incompatible dimension orders and there is no valid dimension ordering"
+               + " in the ingestionSpec, using lexicographic order.");
       return getLexicographicMergedDimensions(indexes);
     } else {
       return commonDimOrder;
@@ -90,7 +99,10 @@ public interface IndexMerger
   }
 
   @Nullable
-  static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
+  static List<String> getLongestSharedDimOrder(
+      List<IndexableAdapter> indexes,
+      @Nullable DimensionsSpec dimensionsSpec
+  )
   {
     int maxSize = 0;
     Iterable<String> orderingCandidate = null;
@@ -106,6 +118,41 @@ public interface IndexMerger
       return null;
     }
 
+    if (isDimensionOrderingValid(indexes, orderingCandidate)) {
+      return ImmutableList.copyOf(orderingCandidate);
+    } else {
+      log.info("Indexes have incompatible dimension orders, try falling back on dimension ordering from ingestionSpec");
+      // Check if there is a valid dimension ordering in the ingestionSpec to fall back on
+      if (dimensionsSpec == null || CollectionUtils.isNullOrEmpty(dimensionsSpec.getDimensionNames())) {
+        log.info("Cannot fall back on dimension ordering from ingestionSpec as it does not exist");
+        return null;
+      }
+      List<String> candidate = new ArrayList<>(dimensionsSpec.getDimensionNames());
+      // Remove all dimensions that does not exist within the indexes from the candidate
+      Set<String> allValidDimensions = indexes.stream()
+                                         .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames().stream())
+                                         .collect(Collectors.toSet());
+      candidate.retainAll(allValidDimensions);
+      // Sanity check that there is no extra/missing columns
+      if (candidate.size() != allValidDimensions.size()) {
+        log.error("Dimension mismatched between ingestionSpec and indexes. ingestionSpec[%s] indexes[%s]",
+                  candidate,
+                  allValidDimensions);
+        return null;
+      }
+
+      // Sanity check that all indexes dimension ordering is the same as the ordering in candidate
+      if (!isDimensionOrderingValid(indexes, candidate)) {
+        log.error("Dimension from ingestionSpec has invalid ordering");
+        return null;
+      }
+      log.info("Dimension ordering from ingestionSpec is valid. Fall back on dimension ordering [%s]", candidate);
+      return candidate;
+    }
+  }
+
+  static boolean isDimensionOrderingValid(List<IndexableAdapter> indexes, Iterable<String> orderingCandidate)
+  {
     for (IndexableAdapter index : indexes) {
       Iterator<String> candidateIter = orderingCandidate.iterator();
       for (String matchDim : index.getDimensionNames()) {
@@ -118,11 +165,11 @@ public interface IndexMerger
           }
         }
         if (!matched) {
-          return null;
+          return false;
         }
       }
     }
-    return ImmutableList.copyOf(orderingCandidate);
+    return true;
   }
 
   static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
@@ -205,6 +252,18 @@ public interface IndexMerger
       List<QueryableIndex> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      int maxColumnsToMerge
+  ) throws IOException;
+
+  File mergeQueryableIndex(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
+      @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,

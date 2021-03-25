@@ -159,8 +159,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
-    final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
-    final String cancelUrl = StringUtils.format("%s://%s/druid/v2/%s", scheme, host, query.getId());
+    final String url = scheme + "://" + host + "/druid/v2/";
+    final String cancelUrl = url + query.getId();
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);

@@ -66,6 +66,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -102,6 +103,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -304,6 +306,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         1000,
         null,
         null,
+        null,
         false
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
@@ -342,6 +345,72 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // background fetch should not be enabled for supervisor supplier
     supplier.start();
     Assert.assertFalse(supplier.isBackgroundFetchRunning());
+  }
+
+  @Test
+  public void testKinesisIOConfig()
+  {
+    Exception e = null;
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              null,
+              false
+      );
+      AutoScalerConfig autoScalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
+      Assert.assertNull(autoScalerConfig);
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNull(e);
+
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+              false
+      );
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNotNull(e);
+    Assert.assertTrue(e instanceof UnsupportedOperationException);
   }
 
   @Test
@@ -4721,6 +4790,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -4863,6 +4933,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         fetchDelayMillis,
         null,
         null,
+        null,
         false
     );
 
@@ -4948,6 +5019,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false
@@ -5037,6 +5109,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false

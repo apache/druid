@@ -1064,7 +1064,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs://foo/bar/", "hdfs://bar/foo"
+        "paths": "hdfs://namenode_host/foo/bar/", "hdfs://namenode_host/bar/foo"
       },
       "inputFormat": {
         "type": "json"
@@ -1080,7 +1080,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs://foo/bar", "hdfs://bar/foo"]
+        "paths": "hdfs://namenode_host/foo/bar/", "hdfs://namenode_host/bar/foo"
       },
       "inputFormat": {
         "type": "json"
@@ -1096,7 +1096,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": "hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"
+        "paths": "hdfs://namenode_host/foo/bar/file.json", "hdfs://namenode_host/bar/foo/file2.json"
       },
       "inputFormat": {
         "type": "json"
@@ -1112,7 +1112,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "hdfs",
-        "paths": ["hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"]
+        "paths": ["hdfs://namenode_host/foo/bar/file.json", "hdfs://namenode_host/bar/foo/file2.json"]
       },
       "inputFormat": {
         "type": "json"
@@ -1127,14 +1127,21 @@ Sample specs:
 |type|This should be `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
 
-You can also ingest from cloud storage using the HDFS input source.
-However, if you want to read from AWS S3 or Google Cloud Storage, consider using
-the [S3 input source](#s3-input-source) or the [Google Cloud Storage input source](#google-cloud-storage-input-source) instead.
+You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
+However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
+If you want to use a non-hdfs protocol with the HDFS input source, include the protocol
+in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
 ### HTTP Input Source
 
-The HTTP input source is to support reading files directly
-from remote sites via HTTP.
+The HTTP input source is to support reading files directly from remote sites via HTTP.
+
+> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where the they would be denied access otherwise.
+
+> **WARNING:** `HTTPInputSource` is not limited to the HTTP or HTTPS protocols. It uses the Java `URI` class that supports HTTP, HTTPS, FTP, file, and jar protocols by default. This means you should never run Druid under the `root` account, because a user can use the file protocol to access any files on the local disk.
+
+For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
+
 The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
@@ -1203,9 +1210,12 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `http`|None|yes|
-|uris|URIs of the input files.|None|yes|
+|uris|URIs of the input files. See below for the protocols allowed for URIs.|None|yes|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
+
+You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP input sources.
+The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
 
 ### Inline Input Source
 
@@ -1574,6 +1584,11 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 |fetchTimeout|Timeout for fetching each file.|60000|
 |maxFetchRetry|Maximum number of retries for fetching each file.|3|
 
+You can also ingest from other storage using the HDFS firehose if the HDFS client supports that storage.
+However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
+If you want to use a non-hdfs protocol with the HDFS firehose, you need to include the protocol you want
+in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configuration](../configuration/index.md#hdfs-input-source) for more details.
+
 ### LocalFirehose
 
 This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
@@ -1610,6 +1625,9 @@ A sample HTTP Firehose spec is shown below:
     "uris": ["http://example.com/uri1", "http://example2.com/uri2"]
 }
 ```
+
+You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP firehose input sources.
+The `http` and `https` protocols are allowed by default. See [HTTP firehose security configuration](../configuration/index.md#http-input-source) for more details.
 
 The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
 Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.

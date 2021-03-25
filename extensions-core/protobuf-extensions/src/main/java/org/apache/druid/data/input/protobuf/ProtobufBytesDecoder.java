@@ -17,28 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.data.input.protobuf;
 
-import org.apache.druid.timeline.Overshadowable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.protobuf.DynamicMessage;
 
-/**
- */
-public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends PartitionHolder<T>
+import java.nio.ByteBuffer;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SchemaRegistryBasedProtobufBytesDecoder.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "file", value = FileBasedProtobufBytesDecoder.class),
+    @JsonSubTypes.Type(name = "schema_registry", value = SchemaRegistryBasedProtobufBytesDecoder.class)
+})
+public interface ProtobufBytesDecoder
 {
-  protected ImmutablePartitionHolder(OvershadowableManager<T> overshadowableManager)
-  {
-    super(overshadowableManager);
-  }
-
-  @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
-  }
+  DynamicMessage parse(ByteBuffer bytes);
 }
