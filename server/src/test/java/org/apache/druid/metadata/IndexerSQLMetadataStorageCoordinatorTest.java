@@ -224,7 +224,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private TestDerbyConnector derbyConnector;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
     mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
