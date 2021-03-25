@@ -131,23 +131,24 @@ public class SqlResourceTest extends CalciteTestBase
         ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
         new ServerConfig()
-    ) {
+    )
+    {
       @Override
       public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
       {
-          return super.run(
-              query,
-              new LazySequence<T>(() -> {
-                if (sleep) {
-                  try {
-                    // pretend to be a query that is waiting on results
-                    Thread.sleep(500);
-                  }
-                  catch (InterruptedException ignored) {
-                  }
+        return super.run(
+            query,
+            new LazySequence<T>(() -> {
+              if (sleep) {
+                try {
+                  // pretend to be a query that is waiting on results
+                  Thread.sleep(500);
                 }
-                return resultSequence;
-              })
+                catch (InterruptedException ignored) {
+                }
+              }
+              return resultSequence;
+            })
         );
       }
     };
