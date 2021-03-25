@@ -592,10 +592,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     if (segmentsToWaitFor.isEmpty()) {
-      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments!?");
+      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments.");
       return true;
-    } else if (waitTimeout <= 0) {
-      log.warn("Asked to wait for availability for <= 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
+    } else if (waitTimeout < 0) {
+      log.warn("Asked to wait for availability for < 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
       return false;
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());

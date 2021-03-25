@@ -1060,8 +1060,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Return a map of reports for the task.
    *
-   * A successfull task should always have a null errorMsg. A falied task should always have a non-null
-   * errorMsg.
+   * A successfull task should always have a null errorMsg. Segments availability is inherently confirmed
+   * if the task was succesful.
+   *
+   * A falied task should always have a non-null errorMsg. Segment availability is never confirmed if the task
+   * was not successful.
    *
    * @param errorMsg Nullable error message for the task. null if task succeeded.
    * @return Map of reports for the task.
