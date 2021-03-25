@@ -75,9 +75,8 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
 {
   private final DruidSegmentInputEntity source;
   private final IndexIO indexIO;
-  private final TimestampSpec timestampSpec;
-  private final DimensionsSpec dimensionsSpec;
   private final ColumnsFilter columnsFilter;
+  private final InputRowSchema inputRowSchema;
   private final DimFilter dimFilter;
   private final File temporaryDirectory;
 
@@ -94,9 +93,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
     this.source = (DruidSegmentInputEntity) source;
     this.indexIO = indexIO;
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
     this.columnsFilter = columnsFilter;
+    this.inputRowSchema = new InputRowSchema(
+        timestampSpec,
+        dimensionsSpec,
+        columnsFilter
+    );
     this.dimFilter = dimFilter;
     this.temporaryDirectory = temporaryDirectory;
   }
@@ -147,16 +149,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
   {
-    return Collections.singletonList(
-        MapInputRowParser.parse(
-            new InputRowSchema(
-                timestampSpec,
-                dimensionsSpec,
-                columnsFilter
-            ),
-            intermediateRow
-        )
-    );
+    return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, intermediateRow));
   }
 
   @Override

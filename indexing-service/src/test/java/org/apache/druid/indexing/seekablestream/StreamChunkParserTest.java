@@ -180,7 +180,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         row -> true,
@@ -203,7 +203,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
         row -> true,

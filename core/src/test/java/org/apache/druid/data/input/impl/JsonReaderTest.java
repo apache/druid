@@ -379,7 +379,7 @@ public class JsonReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         source,
         null

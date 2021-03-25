@@ -22,7 +22,6 @@ package org.apache.druid.indexing.input;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
@@ -73,6 +72,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -83,6 +83,7 @@ import java.util.stream.Stream;
  *
  * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
 {
   private static final Logger LOG = new Logger(DruidInputSource.class);
@@ -184,7 +185,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   @JsonProperty
-  @JsonInclude(Include.NON_NULL)
   public Interval getInterval()
   {
     return interval;
@@ -192,14 +192,12 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   @JsonProperty("segments")
-  @JsonInclude(Include.NON_NULL)
   public List<WindowedSegmentId> getSegmentIds()
   {
     return segmentIds;
   }
 
   @JsonProperty("filter")
-  @JsonInclude(Include.NON_NULL)
   public DimFilter getDimFilter()
   {
     return dimFilter;
@@ -209,7 +207,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    * Included for serde backwards-compatibility only. Not used.
    */
   @JsonProperty
-  @JsonInclude(Include.NON_NULL)
   public List<String> getDimensions()
   {
     return dimensions;
@@ -219,7 +216,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    * Included for serde backwards-compatibility only. Not used.
    */
   @JsonProperty
-  @JsonInclude(Include.NON_NULL)
   public List<String> getMetrics()
   {
     return metrics;
@@ -353,6 +349,43 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   public boolean needsFormat()
   {
     return false;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DruidInputSource that = (DruidInputSource) o;
+    return Objects.equals(dataSource, that.dataSource)
+           && Objects.equals(interval, that.interval)
+           && Objects.equals(segmentIds, that.segmentIds)
+           && Objects.equals(dimFilter, that.dimFilter)
+           && Objects.equals(dimensions, that.dimensions)
+           && Objects.equals(metrics, that.metrics);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dataSource, interval, segmentIds, dimFilter, dimensions, metrics);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidInputSource{" +
+           "dataSource='" + dataSource + '\'' +
+           ", interval=" + interval +
+           ", segmentIds=" + segmentIds +
+           ", dimFilter=" + dimFilter +
+           (dimensions != null ? ", dimensions=" + dimensions : "") +
+           (metrics != null ? ", metrics=" + metrics : "") +
+           '}';
   }
 
   public static Iterator<InputSplit<List<WindowedSegmentId>>> createSplits(

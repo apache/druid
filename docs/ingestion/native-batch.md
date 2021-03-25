@@ -1308,6 +1308,8 @@ and the format to `auto` or `millis`.
 It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
 previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
 good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
+Alternatively, if your goals can be satisfied by [compaction](compaction.md), consider that instead as a simpler
+approach.
 
 An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new
 rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and "page".
@@ -1353,8 +1355,7 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
     "tuningConfig": {
       "type": "index_parallel",
       "partitionsSpec": {
-        "type": "hashed",
-        "numShards": 1
+        "type": "hashed"
       },
       "forceGuaranteedRollup": true,
       "maxNumConcurrentSubTasks": 1
