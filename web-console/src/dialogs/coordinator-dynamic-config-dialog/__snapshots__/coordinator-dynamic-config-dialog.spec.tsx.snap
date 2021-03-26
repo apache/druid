@@ -183,6 +183,14 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "name": "pauseCoordination",
           "type": "boolean",
         },
+        Object {
+          "defaultValue": false,
+          "info": <React.Fragment>
+            Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of coordinator load timeout. If this is set to true, the coordinator will attempt to replicate the failed segment on a different historical server.
+          </React.Fragment>,
+          "name": "replicateAfterLoadTimeout",
+          "type": "boolean",
+        },
       ]
     }
     model={Object {}}
