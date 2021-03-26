@@ -48,9 +48,8 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
     try {
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
-      final String bucket = descriptorBase.getHost();
-      final String prefix = StringUtils.maybeRemoveLeadingSlash(descriptorBase.getPath());
-      final Objects objects = storage.list(bucket).setPrefix(prefix).setMaxResults(MAX_LISTING_KEYS).execute();
+      final CloudObjectLocation baseLocation = new CloudObjectLocation(descriptorBase);
+      final Objects objects = storage.list(baseLocation.getBucket()).setPrefix(baseLocation.getPath()).setMaxResults(MAX_LISTING_KEYS).execute();
       for (StorageObject storageObject : objects.getItems()) {
         if (GoogleUtils.isDirectoryPlaceholder(storageObject)) {
           continue;
@@ -60,7 +59,7 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
             storageObject.getName()
         );
         final String keyString = StringUtils
-            .maybeRemoveLeadingSlash(storageObject.getName().substring(prefix.length()));
+            .maybeRemoveLeadingSlash(storageObject.getName().substring(baseLocation.getPath().length()));
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }
