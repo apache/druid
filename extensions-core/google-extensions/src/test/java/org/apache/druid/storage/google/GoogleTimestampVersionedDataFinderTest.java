@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 public class GoogleTimestampVersionedDataFinderTest
 {
   @Test
-  public void getLatestVersion() throws InterruptedException
+  public void getLatestVersion()
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
@@ -43,12 +43,9 @@ public class GoogleTimestampVersionedDataFinderTest
     final StorageObject storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v1", 1);
     storageObject2.setUpdated(new DateTime(System.currentTimeMillis()));
     final StorageObject storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v2", 1);
-    // sleep before setting update time on next object
-    Thread.sleep(100);
-    storageObject3.setUpdated(new DateTime(System.currentTimeMillis()));
+    storageObject3.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final StorageObject storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/other", 4);
-    Thread.sleep(100);
-    storageObject4.setUpdated(new DateTime(System.currentTimeMillis()));
+    storageObject4.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
@@ -59,7 +56,7 @@ public class GoogleTimestampVersionedDataFinderTest
   }
 
   @Test
-  public void getLatestVersionTrailingSlashKeyPrefix() throws InterruptedException
+  public void getLatestVersionTrailingSlashKeyPrefix()
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0/";
@@ -70,12 +67,9 @@ public class GoogleTimestampVersionedDataFinderTest
     final StorageObject storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v1", 1);
     storageObject2.setUpdated(new DateTime(System.currentTimeMillis()));
     final StorageObject storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v2", 1);
-    // sleep before setting update time on next object
-    Thread.sleep(100);
-    storageObject3.setUpdated(new DateTime(System.currentTimeMillis()));
+    storageObject3.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final StorageObject storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "other", 4);
-    Thread.sleep(100);
-    storageObject4.setUpdated(new DateTime(System.currentTimeMillis()));
+    storageObject4.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);

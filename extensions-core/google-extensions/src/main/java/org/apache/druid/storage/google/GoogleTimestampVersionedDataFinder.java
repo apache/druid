@@ -48,11 +48,11 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
     try {
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
-      final String bucket = descriptorBase.getAuthority();
+      final String bucket = descriptorBase.getHost();
       final String prefix = StringUtils.maybeRemoveLeadingSlash(descriptorBase.getPath());
       final Objects objects = storage.list(bucket).setPrefix(prefix).setMaxResults(MAX_LISTING_KEYS).execute();
       for (StorageObject storageObject : objects.getItems()) {
-        if (isDirectoryPlaceholder(storageObject)) {
+        if (GoogleUtils.isDirectoryPlaceholder(storageObject)) {
           continue;
         }
         // remove path prefix from file name
@@ -75,19 +75,5 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Similar to {@link org.apache.druid.storage.s3.ObjectSummaryIterator#isDirectoryPlaceholder}
-   * Copied to avoid creating dependency on s3 extensions
-   */
-  private static boolean isDirectoryPlaceholder(final StorageObject storageObject)
-  {
-    // Recognize "standard" directory place-holder indications
-    if (storageObject.getName().endsWith("/") && storageObject.getSize().intValue() == 0) {
-      return true;
-    }
-    // Recognize place-holder objects created by the Google Storage console or S3 Organizer Firefox extension.
-    return storageObject.getName().endsWith("_$folder$") && storageObject.getSize().intValue() == 0;
   }
 }

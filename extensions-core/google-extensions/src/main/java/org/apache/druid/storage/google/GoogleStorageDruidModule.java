@@ -44,8 +44,8 @@ import java.util.List;
 
 public class GoogleStorageDruidModule implements DruidModule
 {
-  static final String SCHEME = "google";
-  static final String SCHEME_GS = "gs";
+  public static final String SCHEME = "google";
+  public static final String SCHEME_GS = "gs";
   private static final Logger LOG = new Logger(GoogleStorageDruidModule.class);
   private static final String APPLICATION_NAME = "druid-google-extensions";
 
