@@ -81,7 +81,7 @@ public class BaseColumnarLongsBenchmark
   {
     EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
     ColumnarLongs encoder = decoders.get(encoding);
-    while(offset.withinBounds()) {
+    while (offset.withinBounds()) {
       blackhole.consume(encoder.get(offset.getOffset()));
       offset.increment();
     }
