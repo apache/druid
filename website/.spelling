@@ -1039,6 +1039,7 @@ chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
 dataSchema's
+dropExisting
 foldCase
 forceGuaranteedRollup
 httpAuthenticationPassword
