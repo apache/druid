@@ -54,21 +54,38 @@ import java.util.concurrent.TimeUnit;
 public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLongsFromSegmentsBenchmark
 {
   private Map<String, ColumnarLongs> decoders;
-  private Map<String, Integer> encodedSize;
 
   /**
    * Number of rows to read, the test will randomly set positions in a simulated offset of the specified density in
-   * {@link #setupFilters(int, double)}
+   * {@link #setupFilters(int, double, String)}
    */
-  @Param({"0.01", "0.1", "0.33", "0.66", "0.95", "1.0"})
+  @Param({
+      "0.1",
+      "0.25",
+      "0.5",
+      "0.75",
+      "0.9",
+      "1.0"
+  })
   private double filteredRowCountPercentage;
+
+  @Param({
+      "random",
+      "contiguous-start",
+      "contiguous-end",
+      "contiguous-bitmap-start",
+      "contiguous-bitmap-end",
+      "chunky-1000",
+      "chunky-10000"
+  })
+  private String filterDistribution;
 
   @Setup
   public void setup() throws Exception
   {
     decoders = new HashMap<>();
     encodedSize = new HashMap<>();
-    setupFilters(rows, filteredRowCountPercentage);
+    setupFilters(rows, filteredRowCountPercentage, filterDistribution);
 
     setupFromFile(encoding);
 
@@ -111,17 +128,7 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void selectRows(Blackhole blackhole)
   {
-    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
-    ColumnarLongs encoder = decoders.get(encoding);
-    if (filter == null) {
-      for (int i = 0; i < rows; i++) {
-        blackhole.consume(encoder.get(i));
-      }
-    } else {
-      for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-        blackhole.consume(encoder.get(i));
-      }
-    }
+    scan(blackhole);
   }
 
   @Benchmark
@@ -129,24 +136,7 @@ public class ColumnarLongsSelectRowsFromSegmentBenchmark extends BaseColumnarLon
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void selectRowsVectorized(Blackhole blackhole)
   {
-    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
-    ColumnarLongs columnDecoder = decoders.get(encoding);
-    long[] vector = new long[VECTOR_SIZE];
-    while (!vectorOffset.isDone()) {
-      if (vectorOffset.isContiguous()) {
-        columnDecoder.get(vector, vectorOffset.getStartOffset(), vectorOffset.getCurrentVectorSize());
-      } else {
-        columnDecoder.get(vector, vectorOffset.getOffsets(), vectorOffset.getCurrentVectorSize());
-      }
-      for (int i = 0; i < vectorOffset.getCurrentVectorSize(); i++) {
-        blackhole.consume(vector[i]);
-      }
-      vectorOffset.advance();
-    }
-    blackhole.consume(vector);
-    blackhole.consume(vectorOffset);
-    vectorOffset.reset();
-    columnDecoder.close();
+    scanVectorized(blackhole);
   }
 
 
