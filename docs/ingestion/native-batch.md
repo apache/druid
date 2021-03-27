@@ -89,6 +89,8 @@ You may want to consider the below things:
   data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
+  You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing data 
+  (in your `granularitySpec`'s intervals) regardless of if new data are in that segment or not.
 
 ### Task syntax
 
@@ -193,6 +195,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If set to true (and `appendToExisting` set to false and `interval` specified in `granularitySpec`), then the ingestion task would transactionally drop (mark unused) all existing segments that are fully contain by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be drop (mark unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be drop even if `dropExisting` is set to `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -538,7 +541,8 @@ An example of the result is
             "l_comment"
           ]
         },
-        "appendToExisting": false
+        "appendToExisting": false,
+        "dropExisting": false
       },
       "tuningConfig": {
         "type": "index_parallel",
@@ -719,6 +723,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If set to true (and `appendToExisting` set to false and `interval` specified in `granularitySpec`), then the ingestion task would transactionally drop (mark unused) all existing segments that are fully contain by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be drop (mark unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be drop even if `dropExisting` is set to `true`.|false|no|
 
 ### `tuningConfig`
 

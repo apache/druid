@@ -81,6 +81,11 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
           );
           spec = StringUtils.replace(
               spec,
+              "%%DROP_EXISTING%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
               "%%FORCE_GUARANTEED_ROLLUP%%",
               jsonMapper.writeValueAsString(false)
           );
