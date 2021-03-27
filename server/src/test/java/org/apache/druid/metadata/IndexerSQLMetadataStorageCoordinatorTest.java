@@ -1447,7 +1447,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDropSegmentsWithHandleForSegmentThatExist()
   {
-    try(Handle handle = derbyConnector.getDBI().open()) {
+    try (Handle handle = derbyConnector.getDBI().open()) {
       Assert.assertTrue(insertUsedSegments(ImmutableSet.of(defaultSegment)));
       List<String> usedSegments = retrieveUsedSegmentIds();
       Assert.assertEquals(1, usedSegments.size());
@@ -1465,7 +1465,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDropSegmentsWithHandleForSegmentThatDoesNotExist()
   {
-    try(Handle handle = derbyConnector.getDBI().open()) {
+    try (Handle handle = derbyConnector.getDBI().open()) {
       // Try drop segment
       IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(handle, ImmutableSet.of(defaultSegment), defaultSegment.getDataSource());
       Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
