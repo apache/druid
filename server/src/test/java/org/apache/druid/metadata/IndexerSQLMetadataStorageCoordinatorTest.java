@@ -73,7 +73,7 @@ import java.util.stream.Collectors;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
-  private static final int MAX_SQL_MEATADATA_RETRY = 2;
+  private static final int MAX_SQL_MEATADATA_RETRY_FOR_TEST = 2;
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -241,7 +241,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     )
     {
       @Override
-      protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
+      protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
           Handle handle,
           String dataSource,
           DataSourceMetadata startMetadata,
@@ -254,7 +254,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
 
       @Override
-      protected DataSourceMetadataUpdateResult dropSegmentsWithHandle(
+      protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
           final Handle handle,
           final Set<DataSegment> segmentsToDrop,
           final String dataSource
@@ -266,9 +266,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
 
       @Override
-      int getSqlMetadataMaxRetry()
+      public int getSqlMetadataMaxRetry()
       {
-        return MAX_SQL_MEATADATA_RETRY;
+        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
       }
     };
   }
@@ -508,7 +508,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     )
     {
       @Override
-      protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
+      protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
           Handle handle,
           String dataSource,
           DataSourceMetadata startMetadata,
@@ -517,7 +517,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       {
         metadataUpdateCounter.getAndIncrement();
         if (attemptCounter.getAndIncrement() == 0) {
-          return DataSourceMetadataUpdateResult.TRY_AGAIN;
+          return DataStoreMetadataUpdateResult.TRY_AGAIN;
         } else {
           return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
         }
@@ -686,7 +686,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
 
-    Assert.assertEquals(MAX_SQL_MEATADATA_RETRY, segmentTableDropUpdateCounter.get());
+    Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
 
     Assert.assertEquals(
         ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
@@ -1442,5 +1442,33 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         false
     );
     Assert.assertNull(id);
+  }
+
+  @Test
+  public void testDropSegmentsWithHandleForSegmentThatExist()
+  {
+    try(Handle handle = derbyConnector.getDBI().open()) {
+      Assert.assertTrue(insertUsedSegments(ImmutableSet.of(defaultSegment)));
+      List<String> usedSegments = retrieveUsedSegmentIds();
+      Assert.assertEquals(1, usedSegments.size());
+      Assert.assertEquals(defaultSegment.getId().toString(), usedSegments.get(0));
+
+      // Try drop segment
+      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(handle, ImmutableSet.of(defaultSegment), defaultSegment.getDataSource());
+
+      Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.SUCCESS, result);
+      usedSegments = retrieveUsedSegmentIds();
+      Assert.assertEquals(0, usedSegments.size());
+    }
+  }
+
+  @Test
+  public void testDropSegmentsWithHandleForSegmentThatDoesNotExist()
+  {
+    try(Handle handle = derbyConnector.getDBI().open()) {
+      // Try drop segment
+      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(handle, ImmutableSet.of(defaultSegment), defaultSegment.getDataSource());
+      Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
+    }
   }
 }

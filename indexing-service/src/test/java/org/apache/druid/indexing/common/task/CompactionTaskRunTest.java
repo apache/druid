@@ -481,6 +481,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -1077,6 +1078,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
+                false,
                 false
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
@@ -1153,7 +1155,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
-            appendToExisting
+            appendToExisting,
+            false
         ),
         null
     );

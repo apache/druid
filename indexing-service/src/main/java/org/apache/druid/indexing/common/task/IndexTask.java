@@ -859,10 +859,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     Set<DataSegment> segmentsFoundForDrop = null;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
-      List<Interval> intervals = ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals();
-      if (!intervals.isEmpty()) {
-        segmentsFoundForDrop = new HashSet<>(toolbox.getTaskActionClient().submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE)));
-      }
+      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
@@ -1066,14 +1063,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting && !this.appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+      if (this.dropExisting && this.appendToExisting) {
+        throw new IAE("Cannot both drop existing segments and append to existing segments. "
+                      + "Either dropExisting or appendToExisting should be set to false");
+      }
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting, null);
+      this(firehoseFactory, null, null, appendToExisting, dropExisting);
     }
 
     @Nullable

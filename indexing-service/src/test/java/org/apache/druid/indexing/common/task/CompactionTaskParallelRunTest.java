@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -48,8 +49,10 @@ import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -76,6 +79,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -437,6 +441,39 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       segmentIdsFromSplits.add(splits.get(i).get().get(0).getSegmentId());
     }
     Assert.assertEquals(segmentIdsFromCoordinator, segmentIdsFromSplits);
+  }
+
+  @Test
+  public void testCompactionDropSegmentsOfInputInterval()
+  {
+    runIndexTask(null, true);
+
+    Collection<DataSegment> usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
+    Assert.assertEquals(3, usedSegments.size());
+    for (DataSegment segment : usedSegments) {
+      Assert.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
+    }
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        getSegmentLoaderFactory(),
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null))
+        .build();
+
+    final Set<DataSegment> compactedSegments = runTask(compactionTask);
+
+    usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
+    // All the HOUR segments got dropped even if we do not have all MINUTES segments fully covering the 3 HOURS interval.
+    // In fact, we only have 3 minutes of data out of the 3 hours interval.
+    Assert.assertEquals(3, usedSegments.size());
+    for (DataSegment segment : usedSegments) {
+      Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+    }
   }
 
   private void runIndexTask(@Nullable PartitionsSpec partitionsSpec, boolean appendToExisting)
