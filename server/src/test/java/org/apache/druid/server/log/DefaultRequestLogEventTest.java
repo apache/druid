@@ -75,7 +75,7 @@ public class DefaultRequestLogEventTest
   }
 
   @Test
-  public void testDefaultRequestLogEventToMap() throws Exception
+  public void testDefaultRequestLogEventToMap()
   {
     final String feed = "test";
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
@@ -92,7 +92,8 @@ public class DefaultRequestLogEventTest
         ImmutableList.of(),
         5,
         ImmutableMap.of("key", "value"));
-    final QueryStats queryStats =  new QueryStats(ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"));
+    final QueryStats queryStats = new QueryStats(
+        ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"));
     RequestLogLine nativeLine = RequestLogLine.forNative(
         query,
         timestamp,
@@ -117,14 +118,15 @@ public class DefaultRequestLogEventTest
   }
 
   @Test
-  public void testDefaultRequestLogEventToMapSQL() throws Exception
+  public void testDefaultRequestLogEventToMapSQL()
   {
     final String feed = "test";
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
     final String service = "druid-service";
     final String host = "127.0.0.1";
     final String sql = "select * from 1337";
-    final QueryStats queryStats =  new QueryStats(ImmutableMap.of("sqlQuery/time", 13L, "sqlQuery/bytes", 10L, "success", true, "identity", "allowAll"));
+    final QueryStats queryStats = new QueryStats(
+        ImmutableMap.of("sqlQuery/time", 13L, "sqlQuery/bytes", 10L, "success", true, "identity", "allowAll"));
 
     RequestLogLine nativeLine = RequestLogLine.forSql(
         sql,
