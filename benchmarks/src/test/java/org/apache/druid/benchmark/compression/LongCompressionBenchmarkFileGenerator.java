@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ColumnarFloatsSerializer;
+import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.generator.ColumnValueGenerator;
@@ -43,21 +43,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FloatCompressionBenchmarkFileGenerator
+public class LongCompressionBenchmarkFileGenerator
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  private static final Logger log = new Logger(FloatCompressionBenchmarkFileGenerator.class);
+  private static final Logger log = new Logger(LongCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
   public static final List<CompressionStrategy> COMPRESSIONS =
       ImmutableList.of(
           CompressionStrategy.LZ4,
-          CompressionStrategy.NONE
-      );
+          CompressionStrategy.NONE);
+  public static final List<CompressionFactory.LongEncodingStrategy> ENCODINGS =
+      ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
-  private static String dirPath = "floatCompress/";
+  private static String dirPath = "longCompress/";
 
   public static void main(String[] args) throws IOException
   {
@@ -67,16 +68,16 @@ public class FloatCompressionBenchmarkFileGenerator
 
     GeneratorColumnSchema enumeratedSchema = GeneratorColumnSchema.makeEnumerated(
         "",
-        ValueType.FLOAT,
+        ValueType.LONG,
         true,
         1,
         0d,
         ImmutableList.of(
-            0f,
-            1.1f,
-            2.2f,
-            3.3f,
-            4.4f
+            0,
+            1,
+            2,
+            3,
+            4
         ),
         ImmutableList.of(
             0.95,
@@ -86,19 +87,10 @@ public class FloatCompressionBenchmarkFileGenerator
             0.0001
         )
     );
-    GeneratorColumnSchema zipfLowSchema = GeneratorColumnSchema.makeZipf(
-        "",
-        ValueType.FLOAT,
-        true,
-        1,
-        0d,
-        -1,
-        1000,
-        1d
-    );
+    GeneratorColumnSchema zipfLowSchema = GeneratorColumnSchema.makeZipf("", ValueType.LONG, true, 1, 0d, -1, 1000, 1d);
     GeneratorColumnSchema zipfHighSchema = GeneratorColumnSchema.makeZipf(
         "",
-        ValueType.FLOAT,
+        ValueType.LONG,
         true,
         1,
         0d,
@@ -108,16 +100,16 @@ public class FloatCompressionBenchmarkFileGenerator
     );
     GeneratorColumnSchema sequentialSchema = GeneratorColumnSchema.makeSequential(
         "",
-        ValueType.FLOAT,
+        ValueType.LONG,
         true,
         1,
         0d,
         1470187671,
         2000000000
     );
-    GeneratorColumnSchema uniformSchema = GeneratorColumnSchema.makeContinuousUniform(
+    GeneratorColumnSchema uniformSchema = GeneratorColumnSchema.makeDiscreteUniform(
         "",
-        ValueType.FLOAT,
+        ValueType.LONG,
         true,
         1,
         0d,
@@ -141,40 +133,43 @@ public class FloatCompressionBenchmarkFileGenerator
       dataFile.delete();
       try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
         for (int i = 0; i < ROW_NUM; i++) {
-          writer.write((Float) entry.getValue().generateRowValue() + "\n");
+          writer.write((long) entry.getValue().generateRowValue() + "\n");
         }
       }
     }
 
-    // create compressed files using all combinations of CompressionStrategy and FloatEncoding provided
+    // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
     for (Map.Entry<String, ColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressionStrategy compression : COMPRESSIONS) {
-        String name = entry.getKey() + "-" + compression;
-        log.info("%s: ", name);
-        File compFile = new File(dir, name);
-        compFile.delete();
-        File dataFile = new File(dir, entry.getKey());
+        for (CompressionFactory.LongEncodingStrategy encoding : ENCODINGS) {
+          String name = entry.getKey() + "-" + compression + "-" + encoding;
+          log.info("%s: ", name);
+          File compFile = new File(dir, name);
+          compFile.delete();
+          File dataFile = new File(dir, entry.getKey());
 
-        ColumnarFloatsSerializer writer = CompressionFactory.getFloatSerializer(
-            "float-benchmark",
-            new OffHeapMemorySegmentWriteOutMedium(),
-            "float",
-            ByteOrder.nativeOrder(),
-            compression
-        );
-        try (
-            BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);
-            FileChannel output =
-                FileChannel.open(compFile.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-        ) {
-          writer.open();
-          String line;
-          while ((line = br.readLine()) != null) {
-            writer.add(Float.parseFloat(line));
+          ColumnarLongsSerializer writer = CompressionFactory.getLongSerializer(
+              "long-benchmark",
+              new OffHeapMemorySegmentWriteOutMedium(),
+              "long",
+              ByteOrder.nativeOrder(),
+              encoding,
+              compression
+          );
+          try (
+              BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);
+              FileChannel output =
+                  FileChannel.open(compFile.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+          ) {
+            writer.open();
+            String line;
+            while ((line = br.readLine()) != null) {
+              writer.add(Long.parseLong(line));
+            }
+            writer.writeTo(output, null);
           }
-          writer.writeTo(output, null);
+          log.info("%d", compFile.length() / 1024);
         }
-        log.info("%d", compFile.length() / 1024);
       }
     }
   }

@@ -66,6 +66,18 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   }
 
   @Override
+  public void read(long[] out, int outPosition, int startIndex, int length)
+  {
+    deserializer.getDelta(out, outPosition, startIndex, length, base);
+  }
+
+  @Override
+  public int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+  {
+    return deserializer.getDelta(out, outPosition, indexes, length, indexOffset, limit, base);
+  }
+
+  @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
     return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);

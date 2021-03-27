@@ -224,11 +224,17 @@ public class CompressedLongsSerdeTest
     Assert.assertEquals(vals.length, indexed.size());
 
     // sequential access
+    long[] vector = new long[256];
     int[] indices = new int[vals.length];
     for (int i = 0; i < indexed.size(); ++i) {
+      if (i % 256 == 0) {
+        indexed.get(vector, i, Math.min(256, indexed.size() - i));
+      }
       Assert.assertEquals(vals[i], indexed.get(i));
+      Assert.assertEquals(vals[i], vector[i % 256]);
       indices[i] = i;
     }
+
 
     // random access, limited to 1000 elements for large lists (every element would take too long)
     IntArrays.shuffle(indices, ThreadLocalRandom.current());

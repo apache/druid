@@ -19,10 +19,11 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.UOE;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -213,6 +214,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -267,6 +269,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -324,6 +327,7 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      Preconditions.checkArgument(value >= 0);
       int shift = 0;
       if (first) {
         shift = 4;
@@ -388,6 +392,10 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      if (numBytes != 8) {
+        // if the value is not stored in a full long, ensure it is zero or positive
+        Preconditions.checkArgument(value >= 0);
+      }
       for (int i = numBytes - 1; i >= 0; i--) {
         buffer.put((byte) (value >>> (i * 8)));
         if (output != null) {
@@ -413,9 +421,74 @@ public class VSizeLongSerde
     }
   }
 
+  /**
+   * Unpack bitpacked long values from an underlying contiguous memory block
+   */
   public interface LongDeserializer
   {
+    /**
+     * Unpack long value at the specified row index
+     */
     long get(int index);
+
+    /**
+     * Unpack a contiguous vector of long values at the specified start index of length and adjust them by the supplied
+     * delta base value.
+     */
+    void getDelta(long[] out, int outPosition, int startIndex, int length, long base);
+
+    /**
+     * Unpack a non-contiguous vector of long values at the specified indexes and adjust them by the supplied delta base
+     * value.
+     */
+    default int getDelta(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit, long base)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = base + get(index);
+      }
+
+      return length;
+    }
+
+    /**
+     * Unpack a contiguous vector of long values at the specified start index of length and lookup and replace stored
+     * values based on their index in the supplied value lookup 'table'
+     */
+    default void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
+    {
+      throw new UOE("Table decoding not supported for %s", this.getClass().getSimpleName());
+    }
+
+    /**
+     * Unpack a contiguous vector of long values at the specified indexes and lookup and replace stored values based on
+     * their index in the supplied value lookup 'table'
+     */
+    default int getTable(
+        long[] out,
+        int outPosition,
+        int[] indexes,
+        int length,
+        int indexOffset,
+        int limit,
+        long[] table
+    )
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = table[(int) get(index)];
+      }
+
+      return length;
+    }
   }
 
   private static final class Size1Des implements LongDeserializer
@@ -434,6 +507,58 @@ public class VSizeLongSerde
     {
       int shift = 7 - (index & 7);
       return (buffer.get(offset + (index >> 3)) >> shift) & 1;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x7) != 0 && i < length) {
+        out[outPosition + i++] = base + get(index++);
+      }
+      for ( ; i + Byte.SIZE < length; index += Byte.SIZE) {
+        final byte unpack = buffer.get(offset + (index >> 3));
+        out[outPosition + i++] = base + (unpack >> 7) & 1;
+        out[outPosition + i++] = base + (unpack >> 6) & 1;
+        out[outPosition + i++] = base + (unpack >> 5) & 1;
+        out[outPosition + i++] = base + (unpack >> 4) & 1;
+        out[outPosition + i++] = base + (unpack >> 3) & 1;
+        out[outPosition + i++] = base + (unpack >> 2) & 1;
+        out[outPosition + i++] = base + (unpack >> 1) & 1;
+        out[outPosition + i++] = base + unpack & 1;
+      }
+      while (i < length) {
+        out[outPosition + i++] = base + get(index++);
+      }
+    }
+
+    @Override
+    public void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x7) != 0 && i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
+      for ( ; i + Byte.SIZE < length; index += Byte.SIZE) {
+        final byte unpack = buffer.get(offset + (index >> 3));
+        out[outPosition + i++] = table[(unpack >> 7) & 1];
+        out[outPosition + i++] = table[(unpack >> 6) & 1];
+        out[outPosition + i++] = table[(unpack >> 5) & 1];
+        out[outPosition + i++] = table[(unpack >> 4) & 1];
+        out[outPosition + i++] = table[(unpack >> 3) & 1];
+        out[outPosition + i++] = table[(unpack >> 2) & 1];
+        out[outPosition + i++] = table[(unpack >> 1) & 1];
+        out[outPosition + i++] = table[unpack & 1];
+      }
+      while (i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
     }
   }
 
@@ -454,6 +579,58 @@ public class VSizeLongSerde
       int shift = 6 - ((index & 3) << 1);
       return (buffer.get(offset + (index >> 2)) >> shift) & 3;
     }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x3) != 0 && i < length) {
+        out[outPosition + i++] = base + get(index++);
+      }
+      for ( ; i + 8 < length; index += 8) {
+        final short unpack = buffer.getShort(offset + (index >> 2));
+        out[outPosition + i++] = base + (unpack >> 14) & 3;
+        out[outPosition + i++] = base + (unpack >> 12) & 3;
+        out[outPosition + i++] = base + (unpack >> 10) & 3;
+        out[outPosition + i++] = base + (unpack >> 8) & 3;
+        out[outPosition + i++] = base + (unpack >> 6) & 3;
+        out[outPosition + i++] = base + (unpack >> 4) & 3;
+        out[outPosition + i++] = base + (unpack >> 2) & 3;
+        out[outPosition + i++] = base + unpack & 3;
+      }
+      while (i < length) {
+        out[outPosition + i++] = base + get(index++);
+      }
+    }
+
+    @Override
+    public void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x3) != 0 && i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
+      for ( ; i + 8 < length; index += 8) {
+        final short unpack = buffer.getShort(offset + (index >> 2));
+        out[outPosition + i++] = table[(unpack >> 14) & 3];
+        out[outPosition + i++] = table[(unpack >> 12) & 3];
+        out[outPosition + i++] = table[(unpack >> 10) & 3];
+        out[outPosition + i++] = table[(unpack >> 8) & 3];
+        out[outPosition + i++] = table[(unpack >> 6) & 3];
+        out[outPosition + i++] = table[(unpack >> 4) & 3];
+        out[outPosition + i++] = table[(unpack >> 2) & 3];
+        out[outPosition + i++] = table[unpack & 3];
+      }
+      while (i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
+    }
   }
 
   private static final class Size4Des implements LongDeserializer
@@ -473,6 +650,58 @@ public class VSizeLongSerde
       int shift = ((index + 1) & 1) << 2;
       return (buffer.get(offset + (index >> 1)) >> shift) & 0xF;
     }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x1) != 0 && i < length) {
+        out[outPosition + i++] = base + get(index++) & 0xF;
+      }
+      for ( ; i + 8 < length; index += 8) {
+        final int unpack = buffer.getInt(offset + (index >> 1));
+        out[outPosition + i++] = base + (unpack >> 28) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 24) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 20) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 16) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 12) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 8) & 0xF;
+        out[outPosition + i++] = base + (unpack >> 4) & 0xF;
+        out[outPosition + i++] = base + unpack & 0xF;
+      }
+      while (i < length) {
+        out[outPosition + i++] = base + get(index++);
+      }
+    }
+
+    @Override
+    public void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
+    {
+      int index = startIndex;
+      int i = 0;
+
+      // byte align
+      while ((index & 0x1) != 0 && i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
+      for ( ; i + 8 < length; index += 8) {
+        final int unpack = buffer.getInt(offset + (index >> 1));
+        out[outPosition + i++] = table[(unpack >> 28) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 24) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 20) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 16) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 12) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 8) & 0xF];
+        out[outPosition + i++] = table[(unpack >> 4) & 0xF];
+        out[outPosition + i++] = table[unpack & 0xF];
+      }
+      while (i < length) {
+        out[outPosition + i++] = table[(int) get(index++)];
+      }
+    }
   }
 
   private static final class Size8Des implements LongDeserializer
@@ -491,6 +720,52 @@ public class VSizeLongSerde
     {
       return buffer.get(offset + index) & 0xFF;
     }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      for (int i = 0, indexOffset = startIndex; i < length; i++, indexOffset++) {
+        out[outPosition + i] = base + buffer.get(offset + indexOffset) & 0xFF;
+      }
+    }
+
+    @Override
+    public int getDelta(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit, long base)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = base + (buffer.get(offset + index) & 0xFF);
+      }
+
+      return length;
+    }
+
+    @Override
+    public void getTable(long[] out, int outPosition, int startIndex, int length, long[] table)
+    {
+      for (int i = 0, indexOffset = startIndex; i < length; i++, indexOffset++) {
+        out[outPosition + i] = table[buffer.get(offset + indexOffset) & 0xFF];
+      }
+    }
+
+    @Override
+    public int getTable(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit, long[] table)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = table[buffer.get(offset + index) & 0xFF];
+      }
+
+      return length;
+    }
   }
 
   private static final class Size12Des implements LongDeserializer
@@ -508,8 +783,37 @@ public class VSizeLongSerde
     public long get(int index)
     {
       int shift = ((index + 1) & 1) << 2;
-      int offset = (index * 3) >> 1;
-      return (buffer.getShort(this.offset + offset) >> shift) & 0xFFF;
+      int indexOffset = (index * 3) >> 1;
+      return (buffer.getShort(offset + indexOffset) >> shift) & 0xFFF;
+    }
+
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      int index = startIndex;
+      // every other value is byte aligned
+      if ((index & 0x1) != 0) {
+        out[outPosition + i++] = get(index++);
+      }
+      final int unpackSize = Long.BYTES + Integer.BYTES;
+      for (int indexOffset = (index * 3) >> 1; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final int unpack2 = buffer.getInt(offset + indexOffset + Long.BYTES);
+        out[outPosition + i++] = base + ((unpack >> 52) & 0xFFF);
+        out[outPosition + i++] = base + ((unpack >> 40) & 0xFFF);
+        out[outPosition + i++] = base + ((unpack >> 28) & 0xFFF);
+        out[outPosition + i++] = base + ((unpack >> 16) & 0xFFF);
+        out[outPosition + i++] = base + ((unpack >> 4) & 0xFFF);
+        out[outPosition + i++] = base + (((unpack & 0xF) << 8) | ((unpack2 >>> 24) & 0xFF));
+        out[outPosition + i++] = base + ((unpack2 >> 12) & 0xFFF);
+        out[outPosition + i++] = base + (unpack2 & 0xFFF);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -529,6 +833,29 @@ public class VSizeLongSerde
     {
       return buffer.getShort(offset + (index << 1)) & 0xFFFF;
     }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      for (int i = 0, indexOffset = (startIndex << 1); i < length; i++, indexOffset += Short.BYTES) {
+        out[outPosition + i] = base + buffer.getShort(offset + indexOffset) & 0xFFFF;
+      }
+    }
+
+    @Override
+    public int getDelta(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit, long base)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = base + buffer.getShort(offset + (index << 1)) & 0xFFFF;
+      }
+
+      return length;
+    }
   }
 
   private static final class Size20Des implements LongDeserializer
@@ -546,8 +873,37 @@ public class VSizeLongSerde
     public long get(int index)
     {
       int shift = (((index + 1) & 1) << 2) + 8;
-      int offset = (index * 5) >> 1;
-      return (buffer.getInt(this.offset + offset) >> shift) & 0xFFFFF;
+      int indexOffset = (index * 5) >> 1;
+      return (buffer.getInt(offset + indexOffset) >> shift) & 0xFFFFF;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      int index = startIndex;
+      // every other value is byte aligned
+      if ((index & 0x1) != 0) {
+        out[outPosition + i++] = get(index++);
+      }
+      final int unpackSize = Long.BYTES + Long.BYTES + Integer.BYTES;
+      for (int indexOffset = (index * 5) >> 1; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final int unpack3 = buffer.getInt(offset + indexOffset + Long.BYTES + Long.BYTES);
+        out[outPosition + i++] = base + ((unpack >> 44) & 0xFFFFF);
+        out[outPosition + i++] = base + ((unpack >> 24) & 0xFFFFF);
+        out[outPosition + i++] = base + ((unpack >> 4) & 0xFFFFF);
+        out[outPosition + i++] = base + (((unpack & 0xF) << 16) | ((unpack2 >>> 48) & 0xFFFF));
+        out[outPosition + i++] = base + ((unpack2 >> 28) & 0xFFFFF);
+        out[outPosition + i++] = base + ((unpack2 >> 8) & 0xFFFFF);
+        out[outPosition + i++] = base + (((unpack2 & 0xFF) << 12) | ((unpack3 >>> 20) & 0xFFF));
+        out[outPosition + i++] = base + (unpack3 & 0xFFFFF);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -565,7 +921,31 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + index * 3) >>> 8;
+      return buffer.getInt(offset + (index * 3)) >>> 8;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      final int unpackSize = 3 * Long.BYTES;
+      for (int indexOffset = startIndex * 3; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + Long.BYTES + Long.BYTES);
+        out[outPosition + i++] = base + ((unpack >> 40) & 0xFFFFFF);
+        out[outPosition + i++] = base + ((unpack >> 16) & 0xFFFFFF);
+        out[outPosition + i++] = base + (((unpack & 0xFFFF) << 8) | ((unpack2 >>> 56) & 0xFF));
+        out[outPosition + i++] = base + ((unpack2 >> 32) & 0xFFFFFF);
+        out[outPosition + i++] = base + ((unpack2 >> 8) & 0xFFFFFF);
+        out[outPosition + i++] = base + (((unpack2 & 0xFF) << 16) | ((unpack3 >>> 48) & 0xFFFF));
+        out[outPosition + i++] = base + ((unpack3 >> 24) & 0xFFFFFF);
+        out[outPosition + i++] = base + (unpack3 & 0xFFFFFF);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -583,7 +963,15 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + (index << 2)) & 0xFFFFFFFFL;
+      return buffer.getInt((offset + (index << 2))) & 0xFFFFFFFFL;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      for (int i = 0, indexOffset = (startIndex << 2); i < length; i++, indexOffset += Integer.BYTES) {
+        out[outPosition + i] = base + buffer.getInt(offset + indexOffset) & 0xFFFFFFFFL;
+      }
     }
   }
 
@@ -601,7 +989,33 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 5) >>> 24;
+      return buffer.getLong(offset + (index * 5)) >>> 24;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      final int unpackSize = 5 * Long.BYTES;
+      for (int indexOffset = startIndex * 5; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        out[outPosition + i++] = base + ((unpack >>> 24) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack & 0xFFFFFFL) << 16) | ((unpack2 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = base + ((unpack2 >>> 8) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack2 & 0xFFL) << 32) | ((unpack3 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack3 & 0xFFFFFFFFL) << 8) | ((unpack4 >>> 56) & 0xFFL));
+        out[outPosition + i++] = base + ((unpack4 >>> 16) & 0xFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack4 & 0xFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
+        out[outPosition + i++] = base + (unpack5 & 0xFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -619,7 +1033,34 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 6) >>> 16;
+      return buffer.getLong(offset + (index * 6)) >>> 16;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      final int unpackSize = 6 * Long.BYTES;
+      for (int indexOffset = startIndex * 6; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
+        out[outPosition + i++] = base + ((unpack >>> 16) & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack & 0xFFFFL) << 32) | ((unpack2 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack2 & 0xFFFFFFFFL) << 16) | ((unpack3 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = base + (unpack3 & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = base + ((unpack4 >>> 16) & 0xFFFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack4 & 0xFFFFL) << 32) | ((unpack5 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack5 & 0xFFFFFFFFL) << 16) | ((unpack6 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = base + (unpack6 & 0xFFFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -637,7 +1078,35 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 7) >>> 8;
+      return buffer.getLong(offset + (index * 7)) >>> 8;
+    }
+
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      int i = 0;
+      final int unpackSize = 7 * Long.BYTES;
+      for (int indexOffset = startIndex * 7; i + 8 < length; indexOffset += unpackSize) {
+        final long unpack = buffer.getLong(offset + indexOffset);
+        final long unpack2 = buffer.getLong(offset + indexOffset + Long.BYTES);
+        final long unpack3 = buffer.getLong(offset + indexOffset + (2 * Long.BYTES));
+        final long unpack4 = buffer.getLong(offset + indexOffset + (3 * Long.BYTES));
+        final long unpack5 = buffer.getLong(offset + indexOffset + (4 * Long.BYTES));
+        final long unpack6 = buffer.getLong(offset + indexOffset + (5 * Long.BYTES));
+        final long unpack7 = buffer.getLong(offset + indexOffset + (6 * Long.BYTES));
+        out[outPosition + i++] = base + ((unpack >>> 8) & 0xFFFFFFFFFFFFFFL);
+        out[outPosition + i++] = base + (((unpack & 0xFFL) << 48) | ((unpack2 >>> 16) & 0xFFFFFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack2 & 0xFFFFL) << 40) | ((unpack3 >>> 24) & 0xFFFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack3 & 0xFFFFFFL) << 32) | ((unpack4 >>> 32) & 0xFFFFFFFFL));
+        out[outPosition + i++] = base + (((unpack4 & 0xFFFFFFFFL) << 24) | ((unpack5 >>> 40) & 0xFFFFFFL));
+        out[outPosition + i++] = base + (((unpack5 & 0xFFFFFFFFFFL) << 16) | ((unpack6 >>> 48) & 0xFFFFL));
+        out[outPosition + i++] = base + (((unpack6 & 0xFFFFFFFFFFFFL) << 8) | ((unpack7 >>> 56) & 0xFFL));
+        out[outPosition + i++] = base + (unpack7 & 0xFFFFFFFFFFFFFFL);
+      }
+      while (i < length) {
+        out[outPosition + i] = base + get(startIndex + i);
+        i++;
+      }
     }
   }
 
@@ -657,6 +1126,26 @@ public class VSizeLongSerde
     {
       return buffer.getLong(offset + (index << 3));
     }
-  }
 
+    @Override
+    public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
+    {
+      for (int i = 0, indexOffset = (startIndex << 3); i < length; i++, indexOffset += Long.BYTES) {
+        out[outPosition + i] = base + buffer.getLong(offset + indexOffset);
+      }
+    }
+
+    @Override
+    public int getDelta(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit, long base)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+        out[outPosition + i] = base + buffer.getLong(offset + (index << 3));
+      }
+      return length;
+    }
+  }
 }
