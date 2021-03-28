@@ -39,7 +39,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
 
 public class ProtobufInputFormatTest
@@ -107,7 +106,7 @@ public class ProtobufInputFormatTest
 
     final ByteEntity entity = new ByteEntity(ByteBuffer.wrap(out.toByteArray()));
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList()), entity, null).read().next();
+    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
 
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
@@ -151,7 +150,7 @@ public class ProtobufInputFormatTest
 
     final ByteEntity entity = new ByteEntity(ByteBuffer.wrap(out.toByteArray()));
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList()), entity, null).read().next();
+    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
 
     System.out.println(row);
 
