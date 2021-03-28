@@ -265,6 +265,36 @@ The `inputFormat` to load data of Avro OCF format. An example is:
 }
 ```
 
+### Protobuf
+
+> You need to include the [`druid-avro-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Avro OCF input format.
+
+The `inputFormat` to load data of Protobuf format. An example is:
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "protobuf",
+    "protoBytesDecoder": {
+      "type": "file",
+      "descriptor": "file:///tmp/metrics.desc",
+      "protoMessageType": "Metrics"
+    }
+    "flattenSpec": {
+      "useFieldDiscovery": true,
+      "fields": [
+        {
+          "type": "path",
+          "name": "someRecord_subInt",
+          "expr": "$.someRecord.subInt"
+        }
+      ]
+    },
+    "binaryAsString": false
+  },
+  ...
+}
+```
+
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 |type| String| This should be set to `avro_ocf` to read Avro OCF file| yes |
@@ -1066,8 +1096,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | yes |
-| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
+| protoBytesDecoder | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
 
 Sample spec:
@@ -1075,8 +1104,11 @@ Sample spec:
 ```json
 "parser": {
   "type": "protobuf",
-  "descriptor": "file:///tmp/metrics.desc",
-  "protoMessageType": "Metrics",
+  "protoBytesDecoder": {
+    "type": "file",
+    "descriptor": "file:///tmp/metrics.desc",
+    "protoMessageType": "Metrics"
+  },
   "parseSpec": {
     "format": "json",
     "timestampSpec": {
@@ -1103,6 +1135,83 @@ Sample spec:
 
 See the [extension description](../development/extensions-core/protobuf.md) for
 more details and examples.
+
+#### Protobuf Bytes Decoder
+
+If `type` is not included, the avroBytesDecoder defaults to `schema_registry`.
+
+##### File-based Protobuf Bytes Decoder
+
+This Protobuf bytes decoder first read a descriptor file, and then parse it to get schema used to decode the Protobuf record from bytes.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `file`. | yes |
+| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
+
+Sample spec:
+
+```json
+"protoBytesDecoder": {
+  "type": "file",
+  "descriptor": "file:///tmp/metrics.desc",
+  "protoMessageType": "Metrics"
+}
+```
+
+##### Confluent Schema Registry-based Protobuf Bytes Decoder
+
+This Protobuf bytes decoder first extracts a unique `id` from input message bytes, and then uses it to look up the schema in the Schema Registry used to decode the Avro record from bytes.
+For details, see the Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `schema_registry`. | yes |
+| url | String | Specifies the url endpoint of the Schema Registry. | yes |
+| capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
+| urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
+| config | Json | To send additional configurations, configured for Schema Registry | no |
+| headers | Json | To send headers to the Schema Registry | no |
+
+For a single schema registry instance, use Field `url` or `urls` for multi instances.
+
+Single Instance:
+
+```json
+...
+"protoBytesDecoder": {
+  "url": <schema-registry-url>,
+  "type": "schema_registry"
+}
+...
+```
+
+Multiple Instances:
+```json
+...
+"protoBytesDecoder": {
+  "urls": [<schema-registry-url-1>, <schema-registry-url-2>, ...],
+  "type": "schema_registry",
+  "capacity": 100,
+  "config" : {
+       "basic.auth.credentials.source": "USER_INFO",
+       "basic.auth.user.info": "fred:letmein",
+       "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
+       "schema.registry.ssl.truststore.password": "<password>",
+       "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
+       "schema.registry.ssl.keystore.password": "<password>",
+       "schema.registry.ssl.key.password": "<password>",
+         ... 
+  },
+  "headers": {
+      "traceID" : "b29c5de2-0db4-490b-b421",
+      "timeStamp" : "1577191871865",
+      ...
+  }
+}
+...
+```
 
 ## ParseSpec
 
