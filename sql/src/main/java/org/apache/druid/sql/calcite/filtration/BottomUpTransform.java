@@ -36,8 +36,7 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
   private DimFilter checkedProcess(final DimFilter filter)
   {
     final DimFilter retVal = process(Preconditions.checkNotNull(filter, "filter"));
-    assert retVal != null;
-    return retVal;
+    return Preconditions.checkNotNull(retVal, "process(filter) result in %s", getClass().getSimpleName());
   }
 
   @Override
