@@ -38,10 +38,11 @@ Base64-encoded
 ByteBuffer
 CIDR
 CORS
+CNF
 CPUs
 CSVs
 Ceph
-CNF
+CloudWatch
 ColumnDescriptor
 Corretto
 DDL
