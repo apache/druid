@@ -110,7 +110,6 @@ public class DefaultRequestLogEventTest
     expected.put("service", service);
     expected.put("host", host);
     expected.put("query", query);
-    expected.put("sqlQueryContext", ImmutableMap.of());
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 

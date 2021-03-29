@@ -67,8 +67,8 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     }
     if (getSql() != null) {
       map.put("sql", getSql());
+      map.put("sqlQueryContext", getSqlQueryContext());
     }
-    map.put("sqlQueryContext", getSqlQueryContext());
     map.put("remoteAddr", getRemoteAddr());
     map.put("queryStats", getQueryStats());
     return map;

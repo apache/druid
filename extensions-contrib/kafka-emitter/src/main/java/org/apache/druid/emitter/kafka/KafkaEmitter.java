@@ -120,8 +120,10 @@ public class KafkaEmitter implements Emitter
       scheduler.schedule(this::sendRequestToKafka, 10, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
-               metricLost.get(), alertLost.get(), invalidLost.get());
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%s], invalidLost=[%d]",
+          metricLost.get(), alertLost.get(), config.getRequestTopic() != null ? requestLost.get() : "N/A",
+          invalidLost.get()
+      );
     }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
