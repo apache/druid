@@ -531,3 +531,18 @@ The true filter is a filter which matches all values.  It can be used to tempora
 
 { "type" : "true" }
 ```
+
+### Expression Filter
+The expression is a filter that allows for the implementation of arbitrary conditions by leveraging druids existing expression system. This filter might be less performant than a combination of the other filters on this page due to the fact that not all filter optimizations are in place yet. 
+
+```json
+
+{ 
+    "type" : "expression" ,
+    "expression" : "((foo || bar) && (foobar))"
+}
+```
+
+See the [Druid expression system](https://druid.apache.org/docs/latest/misc/math-expr.html) for more details.
+
+
