@@ -21,15 +21,19 @@ package org.apache.druid.metadata.input;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.junit.Rule;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+
+import java.util.Set;
 
 public class SqlTestUtils
 {
@@ -55,7 +59,17 @@ public class SqlTestUtils
         @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi
     )
     {
-      final BasicDataSource datasource = getDatasource(metadataStorageConnectorConfig);
+      final BasicDataSource datasource = getDatasource(
+          metadataStorageConnectorConfig,
+          new JdbcAccessSecurityConfig()
+          {
+            @Override
+            public Set<String> getAllowedProperties()
+            {
+              return ImmutableSet.of("user", "create");
+            }
+          }
+      );
       datasource.setDriverClassLoader(getClass().getClassLoader());
       datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
       this.dbi = dbi;
@@ -65,6 +79,12 @@ public class SqlTestUtils
     public DBI getDBI()
     {
       return dbi;
+    }
+
+    @Override
+    public Set<String> findPropertyKeysFromConnectURL(String connectUri)
+    {
+      return ImmutableSet.of("user", "create");
     }
   }
 

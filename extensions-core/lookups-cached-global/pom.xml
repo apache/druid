@@ -110,12 +110,15 @@
       <artifactId>jsr311-api</artifactId>
       <scope>provided</scope>
     </dependency>
-
-    <!-- Included to improve the out-of-the-box experience for supported JDBC connectors -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>${mysql.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <!-- Tests -->

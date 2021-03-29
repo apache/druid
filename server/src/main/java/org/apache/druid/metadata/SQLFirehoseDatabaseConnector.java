@@ -21,8 +21,11 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.DBIException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
@@ -32,6 +35,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
+import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public abstract class SQLFirehoseDatabaseConnector
@@ -62,8 +66,15 @@ public abstract class SQLFirehoseDatabaseConnector
                          || (e instanceof DBIException && isTransientException(e.getCause())));
   }
 
-  protected BasicDataSource getDatasource(MetadataStorageConnectorConfig connectorConfig)
+  protected BasicDataSource getDatasource(
+      MetadataStorageConnectorConfig connectorConfig,
+      JdbcAccessSecurityConfig securityConfig
+  )
   {
+    // We validate only the connection URL here as all properties will be read from only the URL except
+    // users and password. If we want to allow another way to specify user properties such as using
+    // MetadataStorageConnectorConfig.getDbcpProperties(), those properties should be validated as well.
+    validateConfigs(connectorConfig.getConnectURI(), securityConfig);
     BasicDataSource dataSource = new BasicDataSourceExt(connectorConfig);
     dataSource.setUsername(connectorConfig.getUser());
     dataSource.setPassword(connectorConfig.getPassword());
@@ -75,6 +86,23 @@ public abstract class SQLFirehoseDatabaseConnector
     return dataSource;
   }
 
+  private void validateConfigs(String urlString, JdbcAccessSecurityConfig securityConfig)
+  {
+    if (Strings.isNullOrEmpty(urlString)) {
+      throw new IllegalArgumentException("connectURI cannot be null or empty");
+    }
+    if (!securityConfig.isEnforceAllowedProperties()) {
+      // You don't want to do anything with properties.
+      return;
+    }
+    final Set<String> propertyKeyFromConnectURL = findPropertyKeysFromConnectURL(urlString);
+    ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
+        propertyKeyFromConnectURL,
+        securityConfig.getSystemPropertyPrefixes(),
+        securityConfig.getAllowedProperties()
+    );
+  }
+
   public String getValidationQuery()
   {
     return "SELECT 1";
@@ -82,5 +110,8 @@ public abstract class SQLFirehoseDatabaseConnector
 
   public abstract DBI getDBI();
 
-
+  /**
+   * Extract property keys from the given JDBC URL.
+   */
+  public abstract Set<String> findPropertyKeysFromConnectURL(String connectUri);
 }

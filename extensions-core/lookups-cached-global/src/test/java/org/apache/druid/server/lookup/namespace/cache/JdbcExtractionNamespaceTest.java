@@ -19,12 +19,15 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
+import com.fasterxml.jackson.databind.InjectableValues.Std;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -34,7 +37,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
-import org.apache.druid.server.ServerTestHelper;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -73,6 +76,7 @@ public class JdbcExtractionNamespaceTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
   private static final String TABLE_NAME = "abstractDbRenameTest";
   private static final String KEY_NAME = "keyName";
@@ -376,7 +380,8 @@ public class JdbcExtractionNamespaceTest
         VAL_NAME,
         tsColumn,
         null,
-        new Period(0)
+        new Period(0),
+        new JdbcAccessSecurityConfig()
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
       CacheSchedulerTest.waitFor(entry);
@@ -407,7 +412,8 @@ public class JdbcExtractionNamespaceTest
         VAL_NAME,
         tsColumn,
         FILTER_COLUMN + "='1'",
-        new Period(0)
+        new Period(0),
+        new JdbcAccessSecurityConfig()
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
       CacheSchedulerTest.waitFor(entry);
@@ -472,6 +478,7 @@ public class JdbcExtractionNamespaceTest
   @Test
   public void testSerde() throws IOException
   {
+    final JdbcAccessSecurityConfig securityConfig = new JdbcAccessSecurityConfig();
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
@@ -479,11 +486,14 @@ public class JdbcExtractionNamespaceTest
         VAL_NAME,
         tsColumn,
         "some filter",
-        new Period(10)
+        new Period(10),
+        securityConfig
     );
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(new Std().addValue(JdbcAccessSecurityConfig.class, securityConfig));
 
-    final ExtractionNamespace extractionNamespace2 = ServerTestHelper.MAPPER.readValue(
-        ServerTestHelper.MAPPER.writeValueAsBytes(extractionNamespace),
+    final ExtractionNamespace extractionNamespace2 = mapper.readValue(
+        mapper.writeValueAsBytes(extractionNamespace),
         ExtractionNamespace.class
     );
 
@@ -500,7 +510,8 @@ public class JdbcExtractionNamespaceTest
         VAL_NAME,
         tsColumn,
         null,
-        new Period(10)
+        new Period(10),
+        new JdbcAccessSecurityConfig()
     );
     CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace);
 
