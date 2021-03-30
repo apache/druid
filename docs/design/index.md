@@ -55,7 +55,7 @@ updates.
 6. **Cloud-native, fault-tolerant architecture that won't lose data.** After ingestion, Druid safely stores a copy of your data in [deep storage](architecture.md#deep-storage). Deep storage is typically cloud storage, HDFS, or a shared filesystem. You can recover your data from deep storage even in the unlikely case that all Druid servers fail. For a limited failure that affects only a few Druid servers, replication ensures that queries are still possible during system recoveries.
 7. **Indexes for quick filtering.** Druid uses [Roaring](https://roaringbitmap.org/) or
 [CONCISE](https://arxiv.org/pdf/1004.0403) compressed bitmap indexes to create indexes to enable fast filtering and searching across multiple columns.
-8. **Time-based partitioning.** Druid first partitions data by time. YOu can optionally implement additional partitioning based upon other fields.
+8. **Time-based partitioning.** Druid first partitions data by time. You can optionally implement additional partitioning based upon other fields.
 Time-based queries only access the partitions that match the time range of the query which leads to significant performance improvements.
 9. **Approximate algorithms.** Druid includes algorithms for approximate count-distinct, approximate ranking, and
 computation of approximate histograms and quantiles. These algorithms offer bounded memory usage and are often
