@@ -32,6 +32,10 @@ env:
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
       MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
     - MAVEN_SKIP_TESTS="-Pskip-tests"
+    # travis encrypt AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXG64V4
+    - secure: "VUK51NLXN05OqRhk/NUfU3q5wLesY1EJhayl/5YHg3nvC/HvJaAghQyIKnc1nlb7EczgqKuoDj37WtlUSz6hbxP+5o+G/WmGWUFez1Uyy54XEAhnhvD9jtD/um+AvGEkdTt+6LdbpWRb4Du+Yr05m096gHMgovo2yTwmAzbJ4hc="
+    # travis encrypt AWS_SECRET_ACCESS_KEY
+    - secure: "Y3nLvKHpwahSk0kKXh1iy8L86QSjiAH5WImK/ODeckeLzUiA4a0w2Wp5BFje6+rgGbH0LsiCupeTJaO+O6HIUeh4GWA5Q/wZeK2TtegqPID0W9UQvrCH8M5cAGQfvLglbYQMaJ/LFbobK4QyehMLokI8Fc4PunNth8qz6ZO+0j8="
 
 addons:
   apt:
