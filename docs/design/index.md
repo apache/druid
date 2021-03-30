@@ -62,7 +62,7 @@ computation of approximate histograms and quantiles. These algorithms offer boun
 substantially faster than exact computations. For situations where accuracy is more important than speed, Druid also
 offers exact count-distinct and exact ranking.
 10. **Automatic summarization at ingest time.** Druid optionally supports data summarization at ingestion time. This
-summarization partially pre-aggregates your data potentially leading to significant cost savings and performance boosts.
+summarization partially pre-aggregates your data, potentially leading to significant cost savings and performance boosts.
 
 ## When to use Druid
 
