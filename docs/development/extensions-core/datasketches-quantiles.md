@@ -55,7 +55,7 @@ The result of the aggregation is a DoublesSketch that is the union of all sketch
 |type|This String should always be "quantilesDoublesSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field (can contain sketches or raw numeric values).|yes|
-|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2 from 2 to 32768. See the [Quantiles Accuracy](https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy) for details. |no, defaults to 128|
+|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2 from 2 to 32768. See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for details.|no, defaults to 128|
 
 ### Post Aggregators
 
