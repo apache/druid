@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import javax.annotation.Nullable;
 
 import java.io.File;
+import java.util.Objects;
 
 public class ProtobufInputFormat extends NestedInputFormat
 {
@@ -43,6 +44,12 @@ public class ProtobufInputFormat extends NestedInputFormat
   {
     super(flattenSpec);
     this.protobufBytesDecoder = protobufBytesDecoder;
+  }
+
+  @JsonProperty
+  public ProtobufBytesDecoder getProtoBytesDecoder()
+  {
+    return protobufBytesDecoder;
   }
 
   @Override
@@ -60,5 +67,19 @@ public class ProtobufInputFormat extends NestedInputFormat
         protobufBytesDecoder,
         getFlattenSpec()
     );
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ProtobufInputFormat that = (ProtobufInputFormat) o;
+    return Objects.equals(getFlattenSpec(), that.getFlattenSpec()) &&
+        Objects.equals(protobufBytesDecoder, that.protobufBytesDecoder);
   }
 }

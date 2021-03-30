@@ -295,8 +295,7 @@ The `inputFormat` to load data of Protobuf format. An example is:
           "expr": "$.someRecord.subInt"
         }
       ]
-    },
-    "binaryAsString": false
+    }
   },
   ...
 }
@@ -304,9 +303,9 @@ The `inputFormat` to load data of Protobuf format. An example is:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `protobuf` to read Protobuf file| yes |
+|type| String| This should be set to `protobuf` to read Protobuf serialized data| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|protoBytesDecoder| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
+|`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
 
 ### FlattenSpec
 
@@ -1102,7 +1101,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | yes |
-| protoBytesDecoder | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
+| `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
 
 Sample spec:
@@ -1144,7 +1143,7 @@ more details and examples.
 
 #### Protobuf Bytes Decoder
 
-If `type` is not included, the avroBytesDecoder defaults to `schema_registry`.
+If `type` is not included, the `protoBytesDecoder` defaults to `schema_registry`.
 
 ##### File-based Protobuf Bytes Decoder
 

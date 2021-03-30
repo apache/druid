@@ -73,8 +73,8 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
   protected CloseableIterator<DynamicMessage> intermediateRowIterator() throws IOException
   {
     return CloseableIterators.withEmptyBaggage(
-        Iterators.singletonIterator(protobufBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open())
-        ))));
+        Iterators.singletonIterator(protobufBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open()))))
+    );
   }
 
   @Override
