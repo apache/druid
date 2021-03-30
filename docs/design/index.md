@@ -69,7 +69,7 @@ summarization partially pre-aggregates your data, potentially leading to signifi
 Druid is used by many companies of various sizes for many different use cases. For more information see
 [Powered by Apache Druid](/druid-powered).
 
-Druid is likely a good choice if your use case has matches a few of the following:
+Druid is likely a good choice if your use case matches a few of the following:
 
 - Insert rates are very high, but updates are less common.
 - Most of your queries are aggregation and reporting queries. For example "group by" queries. You may also have searching and
