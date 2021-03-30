@@ -591,7 +591,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
 
-    try(
+    try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
                                                  .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
     ) {
