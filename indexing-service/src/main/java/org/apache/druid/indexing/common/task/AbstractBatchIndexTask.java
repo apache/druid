@@ -591,36 +591,34 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
 
-    SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                             .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource());
-    ExecutorService exec = Execs.directExecutor();
-    CountDownLatch doneSignal = new CountDownLatch(segmentsToWaitFor.size());
+    try(
+        SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+    ) {
 
-    notifier.start();
-    for (DataSegment s : segmentsToWaitFor) {
-      notifier.registerSegmentHandoffCallback(
-          new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
-          exec,
-          () -> {
-            log.debug(
-                "Confirmed availability for [%s]. Removing from list of segments to wait for",
-                s.getId()
-            );
-            doneSignal.countDown();
-          }
-      );
-    }
+      ExecutorService exec = Execs.directExecutor();
+      CountDownLatch doneSignal = new CountDownLatch(segmentsToWaitFor.size());
 
-    try {
+      notifier.start();
+      for (DataSegment s : segmentsToWaitFor) {
+        notifier.registerSegmentHandoffCallback(
+            new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
+            exec,
+            () -> {
+              log.debug(
+                  "Confirmed availability for [%s]. Removing from list of segments to wait for",
+                  s.getId()
+              );
+              doneSignal.countDown();
+            }
+        );
+      }
       return doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
     }
     catch (InterruptedException e) {
       log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
       Thread.currentThread().interrupt();
       return false;
-    }
-    finally {
-      notifier.close();
     }
   }
 
