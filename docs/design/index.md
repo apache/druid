@@ -52,7 +52,7 @@ remove servers to scale down. The Druid cluster re-balances itself automatically
 Druid server fails, the system automatically routes data around the damage until the server can be replaced. Druid
 is designed to run continuously without planned downtime for any reason. This is true for configuration changes and software
 updates.
-6. **Cloud-native, fault-tolerant architecture that won't lose data.** After ingestion, Druid safely stores a copy of your data in [deep storage](architecture.md#deep-storage). Deep storage is typically cloud storage, HDFS, or a shared filesystem. You can recover your data from deep storage even in the unlikely case that all Druid servers fail. For a limited failure that affects only a few Druid servers, Druid uses replication to ensure that queries are still possible during system recovers.
+6. **Cloud-native, fault-tolerant architecture that won't lose data.** After ingestion, Druid safely stores a copy of your data in [deep storage](architecture.md#deep-storage). Deep storage is typically cloud storage, HDFS, or a shared filesystem. You can recover your data from deep storage even in the unlikely case that all Druid servers fail. For a limited failure that affects only a few Druid servers, replication ensures that queries are still possible during system recoveries.
 7. **Indexes for quick filtering.** Druid uses [Roaring](https://roaringbitmap.org/) or
 [CONCISE](https://arxiv.org/pdf/1004.0403) compressed bitmap indexes to create indexes to enable fast filtering and searching across multiple columns.
 8. **Time-based partitioning.** Druid first partitions data by time. YOu can optionally implement additional partitioning based upon other fields.
