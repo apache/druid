@@ -33,6 +33,8 @@ following order:
 5. Broker
 6. Coordinator ( or merged Coordinator+Overlord )
 
+For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
+
 \* In 0.12.0, there are protocol changes between the Kafka supervisor and Kafka Indexing task and also some changes to the metadata formats persisted on disk. Therefore, to support rolling upgrade, all the Middle Managers will need to be upgraded first before the Overlord. Note that this ordering is different from the standard order of upgrade, also note that this ordering is only necessary when using the Kafka Indexing Service. If one is not using Kafka Indexing Service or can handle down time for Kafka Supervisor then one can upgrade in any order.
 
 ## Historical
