@@ -433,10 +433,11 @@ for your specific scenario and be sure to test any changes in staging environmen
 
 Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 
-- Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
-- On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
-- Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
-- Try disabling biased locking by using `-XX:-UseBiasedLocking` JVM flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
+
+- Mount /tmp on tmpfs. See [The Four Month Bug: JVM statistics cause garbage collection pauses](http://www.evanjones.ca/jvm-mmap-pause.html).
+- On Disk-IO intensive processes (e.g., Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- Disable [Transparent Huge Pages](https://www.kernel.org/doc/html/latest/admin-guide/mm/transhuge.html).
+- Try disabling biased locking by using `-XX:-UseBiasedLocking` JVM flag. See [Logging Stop-the-world Pauses in JVM](https://dzone.com/articles/logging-stop-world-pauses-jvm).
 
 ### Use UTC timezone
 
