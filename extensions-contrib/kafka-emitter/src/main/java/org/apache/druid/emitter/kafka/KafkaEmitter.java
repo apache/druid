@@ -21,6 +21,7 @@ package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import org.apache.druid.java.util.common.StringUtils;
@@ -91,7 +92,8 @@ public class KafkaEmitter implements Emitter
     };
   }
 
-  private Producer<String, String> setKafkaProducer()
+  @VisibleForTesting
+  protected Producer<String, String> setKafkaProducer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -143,7 +145,8 @@ public class KafkaEmitter implements Emitter
     sendToKafka(config.getRequestTopic(), requestQueue, setProducerCallback(requestLost));
   }
 
-  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
+  @VisibleForTesting
+  protected void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
     ObjectContainer<String> objectToSend;
     try {
@@ -207,5 +210,25 @@ public class KafkaEmitter implements Emitter
   {
     scheduler.shutdownNow();
     producer.close();
+  }
+
+  public long getMetricLostCount()
+  {
+    return metricLost.get();
+  }
+
+  public long getAlertLostCount()
+  {
+    return alertLost.get();
+  }
+
+  public long getRequestLostCount()
+  {
+    return requestLost.get();
+  }
+
+  public long getInvalidLostCount()
+  {
+    return invalidLost.get();
   }
 }
