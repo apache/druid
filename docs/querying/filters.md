@@ -539,7 +539,7 @@ The expression filter allows for the implementation of arbitrary conditions, lev
 
 { 
     "type" : "expression" ,
-    "expression" : "((foo || bar) && (foobar))"
+    "expression" : "((product_type == 42) && (!is_deleted))"
 }
 ```
 
