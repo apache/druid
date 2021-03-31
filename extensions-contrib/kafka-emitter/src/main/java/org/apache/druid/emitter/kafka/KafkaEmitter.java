@@ -122,9 +122,8 @@ public class KafkaEmitter implements Emitter
       scheduler.schedule(this::sendRequestToKafka, 10, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%s], invalidLost=[%d]",
-          metricLost.get(), alertLost.get(), config.getRequestTopic() != null ? requestLost.get() : "N/A",
-          invalidLost.get()
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+          metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get()
       );
     }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
@@ -184,8 +183,8 @@ public class KafkaEmitter implements Emitter
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
           }
-        } else if (event instanceof RequestLogEvent && config.getRequestTopic() != null) {
-          if (!requestQueue.offer(objectContainer)) {
+        } else if (event instanceof RequestLogEvent) {
+          if (config.getRequestTopic() == null || !requestQueue.offer(objectContainer)) {
             requestLost.incrementAndGet();
           }
         } else {

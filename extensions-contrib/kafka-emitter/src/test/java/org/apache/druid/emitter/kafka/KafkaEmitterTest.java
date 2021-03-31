@@ -120,8 +120,8 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(requestTopic == null ? requestLogEvents.size() : 0, kafkaEmitter.getInvalidLostCount());
+    Assert.assertEquals(requestTopic == null ? requestLogEvents.size() : 0, kafkaEmitter.getRequestLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
     while (true) {
       try {
