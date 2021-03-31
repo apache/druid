@@ -223,6 +223,51 @@ The Parquet `inputFormat` has the following components:
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
+### Avro Stream
+
+> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream input format.
+
+> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+
+The `inputFormat` to load data of Avro format in stream injestion. An example is:
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "avro_stream",
+    "avroBytesDecoder" : {
+      "type" : "schema_repo",
+      "subjectAndIdConverter" : {
+        "type" : "avro_1124",
+        "topic" : "${YOUR_TOPIC}"
+      },
+      "schemaRepository" : {
+        "type" : "avro_1124_rest_client",
+        "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
+      }
+    },
+    "flattenSpec": {
+      "useFieldDiscovery": true,
+      "fields": [
+        {
+          "type": "path",
+          "name": "someRecord_subInt",
+          "expr": "$.someRecord.subInt"
+        }
+      ]
+    },
+    "binaryAsString": false
+  },
+  ...
+}
+```
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+|type| String| This should be set to `avro_stream` to read Avro serialized data| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|`avroBytesDecoder`| JSON Object |Specifies how to decode bytes to Avro record. | yes |
+| binaryAsString | Boolean | Specifies if the bytes Avro column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+
 ### Avro OCF
 
 > You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro OCF input format.

@@ -65,8 +65,8 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
   protected CloseableIterator<GenericRecord> intermediateRowIterator() throws IOException
   {
     return CloseableIterators.withEmptyBaggage(
-        Iterators.singletonIterator(avroBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open())
-        ))));
+        Iterators.singletonIterator(avroBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open()))))
+    );
   }
 
   @Override

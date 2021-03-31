@@ -85,12 +85,13 @@ public class AvroStreamInputFormat extends NestedInputFormat
     }
     final AvroStreamInputFormat that = (AvroStreamInputFormat) o;
     return Objects.equals(getFlattenSpec(), that.getFlattenSpec()) &&
-        Objects.equals(avroBytesDecoder, that.avroBytesDecoder);
+        Objects.equals(avroBytesDecoder, that.avroBytesDecoder) &&
+        Objects.equals(binaryAsString, that.binaryAsString);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getFlattenSpec(), avroBytesDecoder);
+    return Objects.hash(getFlattenSpec(), avroBytesDecoder, binaryAsString);
   }
 }
