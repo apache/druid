@@ -74,6 +74,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
@@ -242,6 +243,7 @@ public class Rules
         .addAll(baseRuleSet(plannerContext))
         .add(DruidRelToDruidRule.instance())
         .add(new DruidTableScanRule(queryMaker))
+        .add(new DruidLogicalValuesRule(queryMaker))
         .addAll(DruidRules.rules(plannerContext));
 
     return retVal.build();
