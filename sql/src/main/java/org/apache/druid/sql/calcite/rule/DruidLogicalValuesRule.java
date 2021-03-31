@@ -70,15 +70,29 @@ public class DruidLogicalValuesRule extends RelOptRule
   }
 
   /**
-   * Similar to {@link RexLiteral#getValue2()} but takes time zone into account when retrieving date/time types.
+   * Retrieves value from the literal based on Druid data type mapping
+   * (https://druid.apache.org/docs/latest/querying/sql.html#standard-types).
+   * Falls back to {@link RexLiteral#getValue2()} for unknown types which returns the Java object as it is.
    */
   private Object getValueFromLiteral(RexLiteral literal)
   {
     switch (literal.getTypeName()) {
       case CHAR:
+      case VARCHAR:
         return literal.getValueAs(String.class);
+      case FLOAT:
+        return literal.getValueAs(Float.class);
+      case DOUBLE:
+      case REAL:
       case DECIMAL:
+        return literal.getValueAs(Double.class);
+      case TINYINT:
+      case SMALLINT:
+      case INTEGER:
+      case BIGINT:
         return literal.getValueAs(Long.class);
+      case BOOLEAN:
+        return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case DATE:
