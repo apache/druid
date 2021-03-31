@@ -25,11 +25,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -85,7 +87,8 @@ public class CoordinatorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
-      @QueryParam("full") String full
+      @QueryParam("full") String full,
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
   )
   {
     if (simple != null) {
@@ -93,7 +96,9 @@ public class CoordinatorResource
     }
 
     if (full != null) {
-      return Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
+      return computeUsingClusterView != null
+             ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()).build() :
+             Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
     }
     return Response.ok(coordinator.getLoadStatus()).build();
   }

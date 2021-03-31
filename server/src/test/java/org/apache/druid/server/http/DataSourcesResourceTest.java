@@ -1201,7 +1201,7 @@ public class DataSourcesResourceTest
   public void testGetDatasourceLoadstatusForceMetadataRefreshNull()
   {
     DataSourcesResource dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
-    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", null, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", null, null, null, null, null);
     Assert.assertEquals(400, response.getStatus());
   }
 
@@ -1223,7 +1223,7 @@ public class DataSourcesResourceTest
         null,
         null
     );
-    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null, null);
     Assert.assertEquals(204, response.getStatus());
   }
 
@@ -1281,7 +1281,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
     DataSourcesResource dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
-    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1297,7 +1297,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
     dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
-    response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null);
+    response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1360,7 +1360,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
     DataSourcesResource dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
-    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, "simple", null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, "simple", null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1376,7 +1376,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
     dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
-    response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, "simple", null);
+    response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, "simple", null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1431,7 +1431,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
 
     DataSourcesResource dataSourcesResource = new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, druidCoordinator);
-    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, "full");
+    Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, "full", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(2, ((Map) response.getEntity()).size());

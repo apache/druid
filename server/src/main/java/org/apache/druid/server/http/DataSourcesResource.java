@@ -407,7 +407,8 @@ public class DataSourcesResource
       @QueryParam("forceMetadataRefresh") final Boolean forceMetadataRefresh,
       @QueryParam("interval") @Nullable final String interval,
       @QueryParam("simple") @Nullable final String simple,
-      @QueryParam("full") @Nullable final String full
+      @QueryParam("full") @Nullable final String full,
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
   )
   {
     if (forceMetadataRefresh == null) {
@@ -452,14 +453,9 @@ public class DataSourcesResource
       ).build();
     } else if (full != null) {
       // Calculate response for full mode
-      Map<String, Object2LongMap<String>> segmentLoadMap
-          = coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
-      if (segmentLoadMap.isEmpty()) {
-        return Response.serverError()
-                       .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")
-                       .build();
-      }
-      return Response.ok(segmentLoadMap).build();
+      return computeUsingClusterView != null
+             ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments.get())).build() :
+             Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get())).build();
     } else {
       // Calculate response for default mode
       SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
