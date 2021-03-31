@@ -77,7 +77,8 @@ public class KafkaEmitterConfigTest
     try {
       @SuppressWarnings("unused")
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, mapper);
-    } catch (NullPointerException e) {
+    }
+    catch (NullPointerException e) {
       Assert.fail();
     }
   }
