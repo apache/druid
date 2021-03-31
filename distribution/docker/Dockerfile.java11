@@ -34,8 +34,8 @@ RUN mvn -B -ff -q dependency:go-offline \
 RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
- && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
+ && mkdir -p /opt/druid \
+ && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz --strip-components=1 -C /opt/druid/
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
