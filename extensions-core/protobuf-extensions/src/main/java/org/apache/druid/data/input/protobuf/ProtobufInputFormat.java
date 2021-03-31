@@ -82,4 +82,11 @@ public class ProtobufInputFormat extends NestedInputFormat
     return Objects.equals(getFlattenSpec(), that.getFlattenSpec()) &&
         Objects.equals(protobufBytesDecoder, that.protobufBytesDecoder);
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(protobufBytesDecoder, getFlattenSpec());
+  }
+
 }

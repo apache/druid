@@ -152,4 +152,10 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     return Objects.equals(descriptorFilePath, that.descriptorFilePath);
   }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(descriptorFilePath, protoMessageType);
+  }
+
 }
