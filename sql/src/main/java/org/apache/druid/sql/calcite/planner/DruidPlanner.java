@@ -253,14 +253,11 @@ public class DruidPlanner implements Closeable
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
-        // Currently, the resources found in the plannerContext can be less than the datasources in
-        // the query plan, because the query planner can eliminate empty tables by replacing them with InlineDataSource
-        // of empty rows.
-        // This sanity check will be no longer valid once views become stable and used in production
-        // (such as views on joins or unions). We currently use views in only some tests such as
-        // CalciteQueryTest or DruidPlannerResourceAnalyzeTest.
         Preconditions.checkState(
             plannerContext.getResources().isEmpty() == druidRel.getDataSourceNames().isEmpty()
+            // The resources found in the plannerContext can be less than the datasources in
+            // the query plan, because the query planner can eliminate empty tables by replacing
+            // them with InlineDataSource of empty rows.
             || plannerContext.getResources().size() >= druidRel.getDataSourceNames().size(),
             "Authorization sanity check failed"
         );
