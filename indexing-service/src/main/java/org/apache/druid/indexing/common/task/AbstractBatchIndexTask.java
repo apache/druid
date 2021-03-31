@@ -496,6 +496,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         for (Interval interval : condensedIntervals) {
           if (interval.contains(segment.getInterval())) {
             segmentsFoundForDrop.add(segment);
+            break;
           }
         }
       }

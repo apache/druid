@@ -89,8 +89,26 @@ You may want to consider the below things:
   data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
-  You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing data 
-  (in your `granularitySpec`'s intervals) regardless of if new data are in that segment or not.
+- You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that 
+  start and end within your `granularitySpec`'s intervals, regardless of if new data are in existing segments or not 
+  (this is only applicable if `appendToExisting` is set to false and `interval` specified in `granularitySpec`). 
+  
+  Here are some examples on when to set `dropExisting` flag in the `ioConfig` to true
+  
+  - Example 1: Existing segment has a interval of 2020-01-01 to 2021-01-01 (YEAR segmentGranularity) and we are trying to 
+  overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data in smaller segmentGranularity, MONTH. 
+  If new data we are ingesting does not have data in all 12 months from 2020-01-01 to 2021-01-01
+  (even if it does have data in every month of the existing data), then this would then prevent the original YEAR segment 
+  from being dropped. By setting `dropExisting` flag to true, we can drop the original 2020-01-01 to 2021-01-01 
+  (YEAR segmentGranularity) segment, which is no longer needed.
+  - Example 2: Re-ingesting/overwriting a datasource and the new data does not contains time intervals that already existed
+   in the datasource. For example, if a user has the following MONTH segmentGranularity data: `Jan has 1 record, Feb has 10 records, Mar has 10 records` 
+   in the datasource. Now the user is trying to re-ingest with new data that overwrites all the existing data. 
+   The new data has the following data for each month: `Jan has 0 record, Feb has 10 records, Mar has 9 records`.
+   Without setting `dropExisting` to true, the result after ingestion with overwrite (using the same MONTH segmentGranularity) would be:
+   `Jan has 1 record, Feb has 10 records, Mar has 9 records`. However, this is incorrect as the new data has 0 record for Jan 
+   and the user would expect to see that Jan has 0 record. By setting `dropExisting` flag to true, we can drop the original
+   segment of Janurary which is no longer needed (as new ingested data does not have any data in Janurary).
 
 ### Task syntax
 
@@ -195,7 +213,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If set to true (and `appendToExisting` set to false and `interval` specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contain by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be drop (mark unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be drop even if `dropExisting` is set to `true`.|false|no|
+|dropExisting|If set to true (and `appendToExisting` is set to false and `interval` is specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contained by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be dropped (marked unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be dropped even if `dropExisting` is set to `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -723,7 +741,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If set to true (and `appendToExisting` set to false and `interval` specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contain by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be drop (mark unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be drop even if `dropExisting` is set to `true`.|false|no|
+|dropExisting|If set to true (and `appendToExisting` is set to false and `interval` is specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contained by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be dropped (marked unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be dropped even if `dropExisting` is set to `true`.|false|no|
 
 ### `tuningConfig`
 

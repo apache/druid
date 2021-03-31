@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -53,17 +54,28 @@ import java.util.stream.Collectors;
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
+  /**
+   * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalInsertAction#segments}
+   */
   @Nullable
   private final Set<DataSegment> segmentsToBeOverwritten;
+  /**
+   * Set of segments to be inserted into metadata storage
+   */
   private final Set<DataSegment> segments;
+  /**
+   * Set of segments to be dropped (mark unused) when new segments, {@link SegmentTransactionalInsertAction#segments},
+   * are inserted into metadata storage.
+   */
+  @Nullable
+  private final Set<DataSegment> segmentsToBeDropped;
+
   @Nullable
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
   @Nullable
   private final String dataSource;
-  @Nullable
-  private final Set<DataSegment> segmentsToBeDropped;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
@@ -317,12 +329,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
-           "segmentsToBeOverwritten=" + segmentsToBeOverwritten +
-           ", segments=" + segments +
+           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            ", dataSource='" + dataSource + '\'' +
-           ", segmentsToBeDropped=" + segmentsToBeDropped +
+           ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
 }
