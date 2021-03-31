@@ -229,7 +229,7 @@ The Parquet `inputFormat` has the following components:
 
 > See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 
-The `inputFormat` to load data of Avro format in stream injestion. An example is:
+The `inputFormat` to load data of Avro format in stream ingestion. An example is:
 ```json
 "ioConfig": {
   "inputFormat": {
