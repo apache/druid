@@ -26,6 +26,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import org.apache.calcite.avatica.remote.ProtobufTranslation;
+import org.apache.calcite.avatica.remote.ProtobufTranslationImpl;
+import org.apache.calcite.avatica.remote.Service;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
@@ -118,6 +122,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AuthenticatorMapper authenticatorMapper;
+  private final ProtobufTranslation protobufTranslation;
 
   private HttpClient broadcastClient;
 
@@ -145,6 +150,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
     this.authenticatorMapper = authenticatorMapper;
+    this.protobufTranslation = new ProtobufTranslationImpl();
   }
 
   @Override
@@ -191,9 +197,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // them as a generic request.
     final boolean isQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
 
-    final boolean isAvatica = requestURI.startsWith("/druid/v2/sql/avatica");
+    final boolean isAvaticaJson = requestURI.startsWith("/druid/v2/sql/avatica");
+    final boolean isAvaticaPb = requestURI.startsWith("/druid/v2/sql/avatica-protobuf");
 
-    if (isAvatica) {
+    if (isAvaticaPb) {
+      byte[] requestBytes = IOUtils.toByteArray(request.getInputStream());
+      Service.Request protobufRequest = this.protobufTranslation.parseRequest(requestBytes);
+      String connectionId = getAvaticaProtobufConnectionId(protobufRequest);
+      targetServer = hostFinder.findServerAvatica(connectionId);
+      request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
+    } else if (isAvaticaJson) {
       Map<String, Object> requestMap = objectMapper.readValue(
           request.getInputStream(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
@@ -454,6 +467,95 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     return (String) connectionIdObj;
+  }
+
+  static String getAvaticaProtobufConnectionId(Service.Request request)
+  {
+    if (request instanceof Service.CatalogsRequest) {
+      return ((Service.CatalogsRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.SchemasRequest) {
+      return ((Service.SchemasRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.TablesRequest) {
+      return ((Service.TablesRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.TypeInfoRequest) {
+      return ((Service.TypeInfoRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.ColumnsRequest) {
+      return ((Service.ColumnsRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.ExecuteRequest) {
+      return ((Service.ExecuteRequest) request).statementHandle.connectionId;
+    }
+
+    if (request instanceof Service.TableTypesRequest) {
+      return ((Service.TableTypesRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.PrepareRequest) {
+      return ((Service.PrepareRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.PrepareAndExecuteRequest) {
+      return ((Service.PrepareAndExecuteRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.FetchRequest) {
+      return ((Service.FetchRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.CreateStatementRequest) {
+      return ((Service.CreateStatementRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.CloseStatementRequest) {
+      return ((Service.CloseStatementRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.OpenConnectionRequest) {
+      return ((Service.OpenConnectionRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.CloseConnectionRequest) {
+      return ((Service.CloseConnectionRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.ConnectionSyncRequest) {
+      return ((Service.ConnectionSyncRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.DatabasePropertyRequest) {
+      return ((Service.DatabasePropertyRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.SyncResultsRequest) {
+      return ((Service.SyncResultsRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.CommitRequest) {
+      return ((Service.CommitRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.RollbackRequest) {
+      return ((Service.RollbackRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.PrepareAndExecuteBatchRequest) {
+      return ((Service.PrepareAndExecuteBatchRequest) request).connectionId;
+    }
+
+    if (request instanceof Service.ExecuteBatchRequest) {
+      return ((Service.ExecuteBatchRequest) request).connectionId;
+    }
+
+    throw new IAE("Received an unknown Avatica protobuf request");
   }
 
   private class MetricsEmittingProxyResponseListener<T> extends ProxyResponseListener

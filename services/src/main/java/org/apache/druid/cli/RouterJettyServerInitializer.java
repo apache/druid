@@ -39,7 +39,8 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.sql.avatica.DruidAvaticaHandler;
+import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
+import org.apache.druid.sql.avatica.DruidAvaticaProtobufHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -57,7 +58,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
       // performing the auth checks.
-      DruidAvaticaHandler.AVATICA_PATH
+      DruidAvaticaJsonHandler.AVATICA_PATH,
+      DruidAvaticaProtobufHandler.AVATICA_PATH
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;

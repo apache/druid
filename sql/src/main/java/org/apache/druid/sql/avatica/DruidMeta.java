@@ -104,8 +104,10 @@ public class DruidMeta extends MetaImpl
   {
     // Build connection context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    for (Map.Entry<String, String> entry : info.entrySet()) {
-      context.put(entry);
+    if (info != null) {
+      for (Map.Entry<String, String> entry : info.entrySet()) {
+        context.put(entry);
+      }
     }
     openDruidConnection(ch.id, context.build());
   }
