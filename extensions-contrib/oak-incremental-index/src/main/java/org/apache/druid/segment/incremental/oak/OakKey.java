@@ -305,7 +305,7 @@ public final class OakKey
               UnsafeUtils.putInt(dimsAddress + STRING_DIM_ARRAY_POS_OFFSET, stringDimArraysPos);
               UnsafeUtils.putInt(dimsAddress + STRING_DIM_ARRAY_LENGTH_OFFSET, length);
               long lengthBytes = UnsafeUtils.copyFromArray(arr, address + stringDimArraysPos, length);
-              stringDimArraysPos += lengthBytes;
+              stringDimArraysPos += (int) lengthBytes;
               break;
           }
         }
