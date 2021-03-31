@@ -533,7 +533,9 @@ The true filter is a filter which matches all values.  It can be used to tempora
 ```
 
 ### Expression Filter
-The expression filter allows for the implementation of arbitrary conditions, leveraging the Druid expression system. This filter might be less performant than a combination of the other filters on this page due to the fact that not all filter optimizations are in place yet.
+The expression filter allows for the implementation of arbitrary conditions, leveraging the Druid expression system. 
+
+This filter allows for more flexibility, but it might be less performant than a combination of the other filters on this page due to the fact that not all filter optimizations are in place yet.
 
 ```json
 
