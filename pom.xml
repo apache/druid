@@ -101,8 +101,8 @@
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.48.Final</netty4.version>
-        <node.version>v10.14.2</node.version>
-        <npm.version>6.5.0</npm.version>
+        <node.version>v10.24.0</node.version>
+        <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
@@ -1739,10 +1739,10 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.6</version>
+                    <version>1.11.3</version>
                     <configuration>
-                        <nodeVersion>v10.13.0</nodeVersion>
-                        <npmVersion>6.4.1</npmVersion>
+                        <nodeVersion>${node.version}</nodeVersion>
+                        <npmVersion>${npm.version}</npmVersion>
                     </configuration>
                 </plugin>
             </plugins>
