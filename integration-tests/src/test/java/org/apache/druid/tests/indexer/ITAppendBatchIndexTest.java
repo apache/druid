@@ -116,6 +116,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
   private void submitIngestionTaskAndVerify(
       String indexDatasource,
       PartitionsSpec partitionsSpec,
+
       boolean appendToExisting,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws Exception
