@@ -109,4 +109,4 @@ There are a few ways this can occur. Druid will throttle ingestion to prevent ou
 
 ## More information
 
-Data ingestion for Druid can be difficult for first time users. Please don't hesitate to ask questions the [Druid Forum](https://www.druidforum.org/).
+Data ingestion for Druid can be difficult for first time users. Please don't hesitate to ask questions in the [Druid Forum](https://www.druidforum.org/).
