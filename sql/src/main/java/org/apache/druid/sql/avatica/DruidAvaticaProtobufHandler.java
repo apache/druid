@@ -22,7 +22,7 @@ package org.apache.druid.sql.avatica;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.Service;
-import org.apache.calcite.avatica.server.AvaticaJsonHandler;
+import org.apache.calcite.avatica.server.AvaticaProtobufHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.server.Request;
@@ -32,12 +32,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class DruidAvaticaHandler extends AvaticaJsonHandler
+public class DruidAvaticaProtobufHandler extends AvaticaProtobufHandler
 {
-  public static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
+  public static final String AVATICA_PATH = "/druid/v2/sql/avatica-protobuf/";
 
   @Inject
-  public DruidAvaticaHandler(
+  public DruidAvaticaProtobufHandler(
       final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor
