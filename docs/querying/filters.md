@@ -543,5 +543,4 @@ The expression filter allows for the implementation of arbitrary conditions, lev
 }
 ```
 
-See the [Druid expression system](https://druid.apache.org/docs/latest/misc/math-expr.html) for more details.
-
+See the [Druid expression system](../misc/math-expr.md) for more details.
