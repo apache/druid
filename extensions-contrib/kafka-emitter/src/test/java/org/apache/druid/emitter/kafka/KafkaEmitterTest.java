@@ -51,7 +51,10 @@ public class KafkaEmitterTest
   @Parameterized.Parameters(name = "{index}: requestTopic - {0}")
   public static Object[] data()
   {
-    return new Object[] { "requests", null };
+    return new Object[] {
+        "requests",
+        null
+    };
   }
 
   // there is 10 seconds wait in kafka emitter before it starts sending events to broker, so set a timeout for 15 seconds
@@ -124,7 +127,8 @@ public class KafkaEmitterTest
       try {
         EasyMock.verify(producer);
         break;
-      } catch (Throwable e) {
+      }
+      catch (Throwable e) {
         // although the latch may have count down, producer.send may not have been called yet in KafkaEmitter
         // so wait for sometime before verifying the mock
         Thread.sleep(100);
