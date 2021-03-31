@@ -42,7 +42,7 @@
         <dependency> <!-- aliyun oss -->
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
-            <version>3.3.0</version>
+            <version>3.11.3</version>
         </dependency>
         
         <dependency>

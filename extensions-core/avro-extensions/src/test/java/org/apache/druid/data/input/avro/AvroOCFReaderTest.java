@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.AvroHadoopInputRowParserTest;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -199,10 +200,9 @@ public class AvroOCFReaderTest
     final TimestampSpec timestampSpec = new TimestampSpec("timestamp", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
         "eventType")));
-    final List<String> metricNames = ImmutableList.of("someLong");
 
     final AvroOCFInputFormat inputFormat = new AvroOCFInputFormat(mapper, null, readerSchema, null);
-    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, metricNames);
+    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(someAvroFile);
     return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }

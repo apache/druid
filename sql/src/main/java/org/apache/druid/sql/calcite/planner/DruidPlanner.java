@@ -147,7 +147,7 @@ public class DruidPlanner implements Closeable
     RelDataType rowType = root.validatedRowType;
 
     SqlValidator validator = getValidator();
-    RelDataType parameterTypes = validator.getParameterRowType(validator.validate(parsed));
+    RelDataType parameterTypes = validator.getParameterRowType(validator.validate(validated));
 
     if (explain != null) {
       final RelDataTypeFactory typeFactory = root.rel.getCluster().getTypeFactory();

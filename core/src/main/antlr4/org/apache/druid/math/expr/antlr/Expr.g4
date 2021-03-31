@@ -15,6 +15,8 @@
 
 grammar Expr;
 
+start : expr EOF;
+
 expr : NULL                                                         # null
      | ('-'|'!') expr                                               # unaryOpExpr
      |<assoc=right> expr '^' expr                                   # powOpExpr

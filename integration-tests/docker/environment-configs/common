@@ -68,3 +68,7 @@ druid_indexer_logs_directory=/shared/tasklogs
 druid_sql_enable=true
 druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies
 druid_request_logging_type=slf4j
+
+# Testing the legacy config from https://github.com/apache/druid/pull/10267
+# Can remove this when the flag is no longer needed
+druid_indexer_task_ignoreTimestampSpecForDruidInputSource=true

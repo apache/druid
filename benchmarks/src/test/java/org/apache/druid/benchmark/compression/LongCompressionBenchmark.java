@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -50,8 +51,8 @@ import java.util.concurrent.TimeUnit;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class LongCompressionBenchmark
@@ -69,7 +70,7 @@ public class LongCompressionBenchmark
   @Param({"auto", "longs"})
   private static String format;
 
-  @Param({"lz4", "none"})
+  @Param({"lz4"})
   private static String strategy;
 
   private Supplier<ColumnarLongs> supplier;
@@ -114,4 +115,18 @@ public class LongCompressionBenchmark
     columnarLongs.close();
   }
 
+  @Benchmark
+  public void readVectorizedContinuous(Blackhole bh)
+  {
+    long[] vector = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
+    ColumnarLongs columnarLongs = supplier.get();
+    int count = columnarLongs.size();
+    for (int i = 0; i < count; i++) {
+      if (i % vector.length == 0) {
+        columnarLongs.get(vector, i, Math.min(vector.length, count - i));
+      }
+      bh.consume(vector[i % vector.length]);
+    }
+    columnarLongs.close();
+  }
 }

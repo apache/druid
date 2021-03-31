@@ -29,6 +29,8 @@ import {
   isDruidSource,
   MetricSpec,
   PLACEHOLDER_TIMESTAMP_SPEC,
+  REINDEX_TIMESTAMP_SPEC,
+  TIME_COLUMN,
   TimestampSpec,
   Transform,
   TransformSpec,
@@ -152,13 +154,13 @@ export function headerFromSampleResponse(options: HeaderFromSampleResponseOption
 
   let columns = sortWithPrefixSuffix(
     dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
-    columnOrder || ['__time'],
+    columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
     alphanumericCompare,
   );
 
   if (ignoreTimeColumn) {
-    columns = columns.filter(c => c !== '__time');
+    columns = columns.filter(c => c !== TIME_COLUMN);
   }
 
   return columns;
@@ -290,7 +292,7 @@ export async function sampleForConnect(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     } as any,
@@ -338,13 +340,15 @@ export async function sampleForParser(
     sampleStrategy,
   );
 
+  const reingestMode = isDruidSource(spec);
+
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     },
@@ -398,7 +402,7 @@ export async function sampleForTimestamp(
         dimensionsSpec: {},
         timestampSpec,
         transformSpec: {
-          transforms: transforms.filter(transform => transform.name === '__time'),
+          transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
         },
       },
     },
@@ -459,7 +463,7 @@ export async function sampleForTransform(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: ['__time'].concat(inputFormatColumns),
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       }).concat(transforms.map(t => t.name)),
     );
   }
@@ -518,7 +522,7 @@ export async function sampleForFilter(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: ['__time'].concat(inputFormatColumns),
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       }).concat(transforms.map(t => t.name)),
     );
   }

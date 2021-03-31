@@ -1479,7 +1479,11 @@ public class CompactionTaskTest
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
       Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      Assert.assertEquals(new TimestampSpec(null, null, null), dataSchema.getTimestampSpec());
+      Assert.assertEquals(
+          new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
+          dataSchema.getTimestampSpec()
+      );
+
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensions()),
           new HashSet<>(dataSchema.getDimensionsSpec().getDimensions())
@@ -1510,11 +1514,6 @@ public class CompactionTaskTest
       Assert.assertEquals(DATA_SOURCE, druidInputSource.getDataSource());
       Assert.assertEquals(expectedSegmentIntervals.get(i), druidInputSource.getInterval());
       Assert.assertNull(druidInputSource.getDimFilter());
-
-      Assert.assertEquals(
-          new HashSet<>(expectedDimensionsSpec.getDimensionNames()),
-          new HashSet<>(druidInputSource.getDimensions())
-      );
 
       // assert tuningConfig
       Assert.assertEquals(expectedTuningConfig, ingestionSchema.getTuningConfig());
@@ -1552,7 +1551,7 @@ public class CompactionTaskTest
     )
     {
       super(
-          null,
+          new TaskConfig(null, null, null, null, null, false, null, null, null, false),
           null,
           taskActionClient,
           null,

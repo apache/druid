@@ -222,4 +222,16 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
       </>
     ),
   },
+  {
+    name: 'replicateAfterLoadTimeout',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether or not additional replication is needed for segments that have
+        failed to load due to the expiry of coordinator load timeout. If this is set to true, the
+        coordinator will attempt to replicate the failed segment on a different historical server.
+      </>
+    ),
+  },
 ];

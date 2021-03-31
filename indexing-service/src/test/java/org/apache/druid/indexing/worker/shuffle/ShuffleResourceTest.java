@@ -95,7 +95,8 @@ public class ShuffleResourceTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null))
+        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
+        false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
     {

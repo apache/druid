@@ -23,7 +23,6 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -53,7 +52,7 @@ public class GoogleUtils
 
   public static URI objectToUri(StorageObject object)
   {
-    return objectToCloudObjectLocation(object).toUri(GoogleCloudStorageInputSource.SCHEME);
+    return objectToCloudObjectLocation(object).toUri(GoogleStorageDruidModule.SCHEME_GS);
   }
 
   public static CloudObjectLocation objectToCloudObjectLocation(StorageObject object)
@@ -91,7 +90,7 @@ public class GoogleUtils
   {
     final Iterator<StorageObject> iterator = lazyFetchingStorageObjectsIterator(
         storage,
-        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("gs")).iterator(),
+        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
         config.getMaxListingLength()
     );
 
@@ -104,5 +103,19 @@ public class GoogleUtils
         });
       }
     }
+  }
+
+  /**
+   * Similar to {@link org.apache.druid.storage.s3.ObjectSummaryIterator#isDirectoryPlaceholder}
+   * Copied to avoid creating dependency on s3 extensions
+   */
+  public static boolean isDirectoryPlaceholder(final StorageObject storageObject)
+  {
+    // Recognize "standard" directory place-holder indications
+    if (storageObject.getName().endsWith("/") && storageObject.getSize().intValue() == 0) {
+      return true;
+    }
+    // Recognize place-holder objects created by the Google Storage console or S3 Organizer Firefox extension.
+    return storageObject.getName().endsWith("_$folder$") && storageObject.getSize().intValue() == 0;
   }
 }

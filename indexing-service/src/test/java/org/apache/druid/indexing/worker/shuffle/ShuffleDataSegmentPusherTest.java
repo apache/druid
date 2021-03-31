@@ -69,7 +69,8 @@ public class ShuffleDataSegmentPusherTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
+        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
+        false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);

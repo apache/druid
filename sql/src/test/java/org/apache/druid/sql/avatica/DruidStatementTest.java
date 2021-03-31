@@ -151,6 +151,34 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
+  public void testSubQueryWithOrderBy()
+  {
+    final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
+    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
+    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    // First frame, ask for all rows.
+    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
+    Assert.assertEquals(
+        Meta.Frame.create(
+            0,
+            true,
+            Lists.newArrayList(
+                new Object[]{""},
+                new Object[]{
+                    "1"
+                },
+                new Object[]{"10.1"},
+                new Object[]{"2"},
+                new Object[]{"abc"},
+                new Object[]{"def"}
+            )
+        ),
+        frame
+    );
+    Assert.assertTrue(statement.isDone());
+  }
+
+  @Test
   public void testSelectAllInFirstFrame()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";

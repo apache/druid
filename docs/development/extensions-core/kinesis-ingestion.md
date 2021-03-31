@@ -24,16 +24,15 @@ sidebar_label: "Amazon Kinesis"
   -->
 
 
-Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
-Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
+Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service for Apache Druid enables the configuration of *supervisors* on the Overlord. These supervisors facilitate ingestion from Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
 Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion.
 The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid extension (see
-[Including Extensions](../../development/extensions.md#loading-extensions)). Please note that this is
-currently designated as an *experimental feature* and is subject to the usual
-[experimental caveats](../experimental.md).
+[Including Extensions](../../development/extensions.md#loading-extensions)).
+
+> Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
 ## Submitting a Supervisor Spec
 
@@ -471,3 +470,14 @@ with an assignment of closed shards that have been fully read and to ensure a ba
 This window with early task shutdowns and possible task failures will conclude when:
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage
 - Any remaining tasks that had inactive shards in the assignment have been shutdown (these tasks would have been created before the closed shards were completely drained)
+
+## Kinesis known issues
+
+Before you deploy the Kinesis extension to production, consider the following known issues:
+
+- Avoid implementing more than one Kinesis supervisor that read from the same Kinesis stream for ingestion. Kinesis has a per-shard read throughput limit and having multiple supervisors on the same stream can reduce available read throughput for an individual Supervisor's tasks. Additionally, multiple Supervisors ingesting to the same Druid Datasource can cause increased contention for locks on the Datasource.
+- The only way to change the stream reset policy is to submit a new ingestion spec and set up a new supervisor.
+- Timeouts for retrieving earliest sequence number will cause a reset of the supervisor. The job will resume own its own eventually, but it can trigger alerts.
+- The Kinesis supervisor will not make progress if you have empty shards. Make sure you have at least 1 record in the shard.
+- If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
+- A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.

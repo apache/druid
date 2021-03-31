@@ -66,6 +66,9 @@ public class ITHighAvailabilityTest
   private static final String SYSTEM_QUERIES_RESOURCE = "/queries/high_availability_sys.json";
   private static final int NUM_LEADERSHIP_SWAPS = 3;
 
+  private static final int NUM_RETRIES = 120;
+  private static final long RETRY_DELAY = TimeUnit.SECONDS.toMillis(5);
+
   @Inject
   private IntegrationTestingConfig config;
 
@@ -126,26 +129,31 @@ public class ITHighAvailabilityTest
   {
     ITRetryUtil.retryUntil(
         () -> {
-          List<DruidNodeDiscovery> disco = ImmutableList.of(
-              druidNodeDiscovery.getForNodeRole(NodeRole.COORDINATOR),
-              druidNodeDiscovery.getForNodeRole(NodeRole.OVERLORD),
-              druidNodeDiscovery.getForNodeRole(NodeRole.HISTORICAL),
-              druidNodeDiscovery.getForNodeRole(NodeRole.MIDDLE_MANAGER),
-              druidNodeDiscovery.getForNodeRole(NodeRole.INDEXER),
-              druidNodeDiscovery.getForNodeRole(NodeRole.BROKER),
-              druidNodeDiscovery.getForNodeRole(NodeRole.ROUTER)
-          );
+          try {
+            List<DruidNodeDiscovery> disco = ImmutableList.of(
+                druidNodeDiscovery.getForNodeRole(NodeRole.COORDINATOR),
+                druidNodeDiscovery.getForNodeRole(NodeRole.OVERLORD),
+                druidNodeDiscovery.getForNodeRole(NodeRole.HISTORICAL),
+                druidNodeDiscovery.getForNodeRole(NodeRole.MIDDLE_MANAGER),
+                druidNodeDiscovery.getForNodeRole(NodeRole.INDEXER),
+                druidNodeDiscovery.getForNodeRole(NodeRole.BROKER),
+                druidNodeDiscovery.getForNodeRole(NodeRole.ROUTER)
+            );
 
-          int servicesDiscovered = 0;
-          for (DruidNodeDiscovery nodeRole : disco) {
-            Collection<DiscoveryDruidNode> nodes = nodeRole.getAllNodes();
-            servicesDiscovered += testSelfDiscovery(nodes);
+            int servicesDiscovered = 0;
+            for (DruidNodeDiscovery nodeRole : disco) {
+              Collection<DiscoveryDruidNode> nodes = nodeRole.getAllNodes();
+              servicesDiscovered += testSelfDiscovery(nodes);
+            }
+            return servicesDiscovered > 5;
           }
-          return servicesDiscovered > 5;
+          catch (Throwable t) {
+            return false;
+          }
         },
         true,
-        TimeUnit.SECONDS.toMillis(5),
-        60,
+        RETRY_DELAY,
+        NUM_RETRIES,
         "Standard services discovered"
     );
   }
@@ -155,14 +163,19 @@ public class ITHighAvailabilityTest
   {
     ITRetryUtil.retryUntil(
         () -> {
-          DruidNodeDiscovery customDisco =
-              druidNodeDiscovery.getForNodeRole(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
-          int count = testSelfDiscovery(customDisco.getAllNodes());
-          return count > 0;
+          try {
+            DruidNodeDiscovery customDisco =
+                druidNodeDiscovery.getForNodeRole(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
+            int count = testSelfDiscovery(customDisco.getAllNodes());
+            return count > 0;
+          }
+          catch (Throwable t) {
+            return false;
+          }
         },
         true,
-        TimeUnit.SECONDS.toMillis(5),
-        60,
+        RETRY_DELAY,
+        NUM_RETRIES,
         "Custom service discovered"
     );
   }
