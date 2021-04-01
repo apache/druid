@@ -123,7 +123,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             new TestInputSource(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
             new NoopInputFormat(),
-            false
+            false,
+            null
         )
     );
     getIndexingServiceClient().runTask(task.getId(), task);
@@ -548,7 +549,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().isAppendToExisting()
+                  getIngestionSchema().getIOConfig().isAppendToExisting(),
+                  null
               ),
               getIngestionSchema().getTuningConfig()
           ),

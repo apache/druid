@@ -97,7 +97,8 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
             firehoseFactory,
             inputSource,
             ingestionSchema.getIOConfig().getInputFormat(),
-            ingestionSchema.getIOConfig().isAppendToExisting()
+            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().isDropExisting()
         ),
         ingestionSchema.getTuningConfig()
     );

@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -479,6 +480,28 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       return Function.identity();
     }
+  }
+
+  public static Set<DataSegment> getUsedSegmentsWithinInterval(
+      TaskToolbox toolbox,
+      String dataSource,
+      List<Interval> intervals
+  ) throws IOException
+  {
+    Set<DataSegment> segmentsFoundForDrop = new HashSet<>();
+    List<Interval> condensedIntervals = JodaUtils.condenseIntervals(intervals);
+    if (!intervals.isEmpty()) {
+      Collection<DataSegment> usedSegment = toolbox.getTaskActionClient().submit(new RetrieveUsedSegmentsAction(dataSource, null, condensedIntervals, Segments.ONLY_VISIBLE));
+      for (DataSegment segment : usedSegment) {
+        for (Interval interval : condensedIntervals) {
+          if (interval.contains(segment.getInterval())) {
+            segmentsFoundForDrop.add(segment);
+            break;
+          }
+        }
+      }
+    }
+    return segmentsFoundForDrop;
   }
 
   @Nullable
