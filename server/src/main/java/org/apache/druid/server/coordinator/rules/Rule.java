@@ -91,7 +91,7 @@ public interface Rule
       DataSegment segment
   )
   {
-    Preconditions.checkArgument(this instanceof LoadRule);
+    Preconditions.checkArgument(!canLoadSegments());
   }
 
   /**

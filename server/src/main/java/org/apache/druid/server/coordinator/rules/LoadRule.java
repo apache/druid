@@ -134,7 +134,7 @@ public abstract class LoadRule implements Rule
           ignored -> new Object2LongOpenHashMap<>()
       );
       int possibleReplicants = Math.min(ruleReplicants, cluster.getHistoricals().get(tier).size());
-      log.info(
+      log.debug(
           "ruleReplicants: [%d], possibleReplicants: [%d], currentReplicants: [%d]",
           ruleReplicants,
           possibleReplicants,

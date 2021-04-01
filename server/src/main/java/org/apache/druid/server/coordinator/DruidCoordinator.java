@@ -588,8 +588,7 @@ public class DruidCoordinator
     final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
 
     if (segmentReplicantLookup == null) {
-      throw new ServiceUnavailableException(
-          "Coordinator segment replicant lookup is not initialized yet. Try again later.");
+      return underReplicationCountsPerDataSourcePerTier;
     }
 
     if (computeUsingClusterView && cluster == null) {
@@ -613,7 +612,7 @@ public class DruidCoordinator
           break;
         }
 
-        if (computeUsingClusterView && (rule instanceof LoadRule)) {
+        if (computeUsingClusterView) {
           rule.updateUnderReplicatedWithClusterView(
               underReplicationCountsPerDataSourcePerTier,
               segmentReplicantLookup,

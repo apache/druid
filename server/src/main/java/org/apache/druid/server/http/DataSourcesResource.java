@@ -453,9 +453,16 @@ public class DataSourcesResource
       ).build();
     } else if (full != null) {
       // Calculate response for full mode
-      return computeUsingClusterView != null
-             ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments.get())).build() :
-             Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get())).build();
+      Map<String, Object2LongMap<String>> segmentLoadMap =
+          (computeUsingClusterView != null) ?
+          coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments.get()) :
+          coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
+      if (segmentLoadMap.isEmpty()) {
+        return Response.serverError()
+                       .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")
+                       .build();
+      }
+      return Response.ok(segmentLoadMap).build();
     } else {
       // Calculate response for default mode
       SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
