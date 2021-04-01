@@ -114,7 +114,7 @@ The supported compression formats for native batch ingestion are `bz2`, `gz`, `x
     February: 10 records  
     March: 9 records  
   This is incorrect since the new data has 0 records for January. Setting `dropExisting` to true to drop the original 
-  segment for Janurary that is not needed since the newly ingested data has no records for January.
+  segment for January that is not needed since the newly ingested data has no records for January.
    
 ### Task syntax
 
