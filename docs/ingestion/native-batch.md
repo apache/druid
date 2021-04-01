@@ -74,7 +74,7 @@ The supported compression formats for native batch ingestion are `bz2`, `gz`, `x
 
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
-You may want to consider the below things:
+### Implementation considerations
 
 - You may want to control the amount of input data each worker task processes. This can be
   controlled using different configurations depending on the phase in parallel ingestion (see [`partitionsSpec`](#partitionsspec) for more details).
@@ -90,26 +90,32 @@ You may want to consider the below things:
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
 - You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that 
-  start and end within your `granularitySpec`'s intervals, regardless of if new data are in existing segments or not 
-  (this is only applicable if `appendToExisting` is set to false and `interval` specified in `granularitySpec`). 
+  start and end within your `granularitySpec`'s intervals. This applies whether or not the new data covers all existing segments. 
+  `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. 
   
-  Here are some examples on when to set `dropExisting` flag in the `ioConfig` to true
+  The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
   
-  - Example 1: Existing segment has a interval of 2020-01-01 to 2021-01-01 (YEAR segmentGranularity) and we are trying to 
-  overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data in smaller segmentGranularity, MONTH. 
-  If new data we are ingesting does not have data in all 12 months from 2020-01-01 to 2021-01-01
-  (even if it does have data in every month of the existing data), then this would then prevent the original YEAR segment 
-  from being dropped. By setting `dropExisting` flag to true, we can drop the original 2020-01-01 to 2021-01-01 
-  (YEAR segmentGranularity) segment, which is no longer needed.
-  - Example 2: Re-ingesting/overwriting a datasource and the new data does not contains time intervals that already existed
-   in the datasource. For example, if a user has the following MONTH segmentGranularity data: `Jan has 1 record, Feb has 10 records, Mar has 10 records` 
-   in the datasource. Now the user is trying to re-ingest with new data that overwrites all the existing data. 
-   The new data has the following data for each month: `Jan has 0 record, Feb has 10 records, Mar has 9 records`.
-   Without setting `dropExisting` to true, the result after ingestion with overwrite (using the same MONTH segmentGranularity) would be:
-   `Jan has 1 record, Feb has 10 records, Mar has 9 records`. However, this is incorrect as the new data has 0 record for Jan 
-   and the user would expect to see that Jan has 0 record. By setting `dropExisting` flag to true, we can drop the original
-   segment of Janurary which is no longer needed (as new ingested data does not have any data in Janurary).
-
+  - Example 1: Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and YEAR segmentGranularity. You want to
+  overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of MONTH. 
+  If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01
+  Druid cannot drop the original YEAR segment even if it does include all the replacement. Set `dropExisting` to true in this case to drop 
+  the original segment at year `segmentGranularity` since you no longer need it.
+  - Example 2: Consider the case where you want to re-ingest or overwrite a datasource and the new data does not contains some time intervals that exist
+  in the datasource. For example, a datasource contains the following data at MONTH segmentGranularity:  
+    January: 1 record  
+    February: 10 records  
+    March: 10 records  
+  You want to re-ingest and overwrite with new data as follows:  
+    January: 0 records  
+    February: 10 records  
+    March: 9 records  
+  Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same MONTH segmentGranularity would be:  
+    January: 1 record  
+    February: 10 records  
+    March: 9 records  
+  This is incorrect since the new data has 0 records for January. Setting `dropExisting` to true to drop the original 
+  segment for Janurary that is not needed since the newly ingested data has no records for January.
+   
 ### Task syntax
 
 A sample task is shown below:
@@ -213,7 +219,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If set to true (and `appendToExisting` is set to false and `interval` is specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contained by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be dropped (marked unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be dropped even if `dropExisting` is set to `true`.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -741,7 +747,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If set to true (and `appendToExisting` is set to false and `interval` is specified in `granularitySpec`), then the ingestion task would drop (mark unused) all existing segments that are fully contained by the `interval` in the `granularitySpec` when the task publishes new segments (no segments would be dropped (marked unused) if the ingestion fails). Note that if either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec` then no segments would be dropped even if `dropExisting` is set to `true`.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`.|false|no|
 
 ### `tuningConfig`
 
