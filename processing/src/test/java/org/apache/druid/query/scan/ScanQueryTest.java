@@ -269,4 +269,32 @@ public class ScanQueryTest
     // This should throw an ISE
     List<ScanResultValue> res = borkedSequence.toList();
   }
+
+  @Test
+  public void testGetRequiredColumnsWithNoColumns()
+  {
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .order(ScanQuery.Order.DESCENDING)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .build();
+
+    Assert.assertNull(query.getRequiredColumns());
+  }
+
+  @Test
+  public void testGetRequiredColumnsWithColumns()
+  {
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .columns("foo", "bar")
+              .build();
+
+    Assert.assertEquals(ImmutableSet.of("__time", "foo", "bar"), query.getRequiredColumns());
+  }
 }

@@ -275,6 +275,15 @@ public class JoinConditionAnalysisTest
   }
 
   @Test
+  public void test_getRequiredColumns()
+  {
+    final String expression = "(x == \"j.y\") && ((x + y == \"j.z\") || (z == \"j.zz\"))";
+    final JoinConditionAnalysis analysis = analyze(expression);
+
+    Assert.assertEquals(ImmutableSet.of("x", "j.y", "y", "j.z", "z", "j.zz"), analysis.getRequiredColumns());
+  }
+
+  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(JoinConditionAnalysis.class)
