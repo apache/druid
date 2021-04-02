@@ -604,11 +604,16 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter() throws Exception
   {
+    if (!useDefault) {
+      // cannot vectorize inline datasource
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
         + "WHERE l1 > ? AND f1 = ?",
-        useDefault ? ImmutableList.of(
+        useDefault
+        ? ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -622,7 +627,20 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
-        ) : ImmutableList.of(),
+        )
+        : ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(),
+                          RowSignature.builder().add("f1", ValueType.FLOAT).add("l1", ValueType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
