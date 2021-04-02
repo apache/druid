@@ -85,7 +85,7 @@ public class DruidLogicalValuesRule extends RelOptRule
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
-    switch (literal.getTypeName()) {
+    switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
         return literal.getValueAs(String.class);

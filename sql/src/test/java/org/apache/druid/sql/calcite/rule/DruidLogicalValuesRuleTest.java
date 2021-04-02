@@ -20,11 +20,8 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.avatica.util.ByteString;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
