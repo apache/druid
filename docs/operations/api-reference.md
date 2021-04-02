@@ -86,6 +86,8 @@ Coordinator of the cluster. In addition, returns HTTP 200 if the server is the c
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
 
+
+<a name="coordinator-segment-loading"></a>
 #### Segment Loading
 
 ##### GET
@@ -159,6 +161,8 @@ Setting `forceMetadataRefresh` to true will force the coordinator to poll latest
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
 of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+An optional query parameter `computeUsingClusterView` can be set to consider the cluster services available when computing
+the segments left to load. Please see [Coordinator Segment Loading](#coordinator-segment-loading) for a more detailed description of this parameter.
 If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
