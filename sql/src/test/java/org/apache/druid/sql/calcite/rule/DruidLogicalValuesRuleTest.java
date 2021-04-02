@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -86,14 +87,16 @@ public class DruidLogicalValuesRuleTest
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(javaType, fromLiteral.getClass());
       Assert.assertEquals(val, fromLiteral);
-      Mockito.verify(literal, Mockito.times(1)).getTypeName();
+      Mockito.verify(literal, Mockito.times(1)).getType();
       Mockito.verify(literal, Mockito.times(1)).getValueAs(ArgumentMatchers.any());
     }
 
     private static RexLiteral makeLiteral(Object val, SqlTypeName typeName, Class<?> javaType)
     {
+      RelDataType dataType = Mockito.mock(RelDataType.class);
+      Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
       RexLiteral literal = Mockito.mock(RexLiteral.class);
-      Mockito.when(literal.getTypeName()).thenReturn(typeName);
+      Mockito.when(literal.getType()).thenReturn(dataType);
       Mockito.when(literal.getValueAs(ArgumentMatchers.any())).thenReturn(javaType.cast(val));
       return literal;
     }
@@ -117,9 +120,7 @@ public class DruidLogicalValuesRuleTest
     @Test
     public void testGetValueFromTrueLiteral()
     {
-      RexLiteral literal = Mockito.mock(RexLiteral.class);
-      Mockito.when(literal.getTypeName()).thenReturn(SqlTypeName.BOOLEAN);
-      Mockito.when(literal.isAlwaysTrue()).thenReturn(true);
+      RexLiteral literal = REX_BUILDER.makeLiteral(true);
 
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(Long.class, fromLiteral.getClass());
@@ -129,9 +130,7 @@ public class DruidLogicalValuesRuleTest
     @Test
     public void testGetValueFromFalseLiteral()
     {
-      RexLiteral literal = Mockito.mock(RexLiteral.class);
-      Mockito.when(literal.getTypeName()).thenReturn(SqlTypeName.BOOLEAN);
-      Mockito.when(literal.isAlwaysTrue()).thenReturn(false);
+      RexLiteral literal = REX_BUILDER.makeLiteral(false);
 
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(Long.class, fromLiteral.getClass());
