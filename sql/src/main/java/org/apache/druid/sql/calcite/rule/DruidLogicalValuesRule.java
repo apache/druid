@@ -19,14 +19,17 @@
 
 package org.apache.druid.sql.calcite.rule;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -52,7 +55,12 @@ public class DruidLogicalValuesRule extends RelOptRule
     final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
     final List<Object[]> objectTuples = tuples
         .stream()
-        .map(tuple -> tuple.stream().map(this::getValueFromLiteral).collect(Collectors.toList()).toArray(new Object[0]))
+        .map(tuple -> tuple
+            .stream()
+            .map(v -> getValueFromLiteral(v, queryMaker.getPlannerContext()))
+            .collect(Collectors.toList())
+            .toArray(new Object[0])
+        )
         .collect(Collectors.toList());
     final RowSignature rowSignature = RowSignatures.fromRelDataType(
         values.getRowType().getFieldNames(),
@@ -74,7 +82,8 @@ public class DruidLogicalValuesRule extends RelOptRule
    * (https://druid.apache.org/docs/latest/querying/sql.html#standard-types).
    * Falls back to {@link RexLiteral#getValue2()} for unknown types which returns the Java object as it is.
    */
-  private Object getValueFromLiteral(RexLiteral literal)
+  @VisibleForTesting
+  static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
     switch (literal.getTypeName()) {
       case CHAR:
@@ -94,13 +103,13 @@ public class DruidLogicalValuesRule extends RelOptRule
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:
-      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case DATE:
+        return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
-        return Calcites.calciteDateTimeLiteralToJoda(literal, queryMaker.getPlannerContext().getTimeZone()).getMillis();
       default:
-        return literal.getValue2();
+        throw new IAE("Unsupported type[%s]", literal.getTypeName());
     }
   }
 }
