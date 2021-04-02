@@ -17092,25 +17092,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testLookupWithNull() throws Exception
   {
     testQuery(
-        "SELECT dim2 ,lookup(dim2,'lookyloo') from foo where dim2 is null",
+        "SELECT dim1 ,lookup(dim1,'lookyloo') from foo where dim1 = 'def'",
         ImmutableList.of(
             new Druids.ScanQueryBuilder()
             .dataSource(CalciteTests.DATASOURCE1)
             .intervals(querySegmentSpec(Filtration.eternity()))
             .virtualColumns(
-                expressionVirtualColumn("v0", "null", ValueType.STRING)
+                expressionVirtualColumn("v0", "'def'", ValueType.STRING),
+                expressionVirtualColumn("v1", "null", ValueType.STRING)
             )
-            .columns("v0")
+            .columns("v0", "v1")
             .legacy(false)
-            .filters(new SelectorDimFilter("dim2", "", null))
+            .filters(new SelectorDimFilter("dim1", "def", null))
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .context(QUERY_CONTEXT_DEFAULT)
             .build()
         ),
         ImmutableList.<Object[]>builder().add(
-            new Object[]{"", NULL_STRING},
-            new Object[]{"", NULL_STRING},
-            new Object[]{"", NULL_STRING}
+            new Object[]{"def", NULL_STRING}
         ).build()
     );
   }
