@@ -106,11 +106,11 @@ Returns the number of segments left to load in each tier until segments that sho
 
 * `/druid/coordinator/v1/loadstatus?full?computeUsingClusterView`
 
-Returns the number of segments not yet loaded for each tier until all segments to load in the cluster are available.
+Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
 The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
 A segment is considered fully loaded when:
-- Druid had replicated it the number of times configured in the corresponding load rule.
-- Or the number of replicas for the segment in each tier where it configured to be replicated equals the available nodes of a service type that are currently allowed to load the segment in the tier.
+- Druid has replicated it the number of times configured in the corresponding load rule.
+- Or the number of replicas for the segment in each tier where it is configured to be replicated equals the available nodes of a service type that are currently allowed to load the segment in the tier.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -161,8 +161,8 @@ Setting `forceMetadataRefresh` to true will force the coordinator to poll latest
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
 of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
-An optional query parameter `computeUsingClusterView` can be set to consider the cluster services available when computing
-the segments left to load. Please see [Coordinator Segment Loading](#coordinator-segment-loading) for a more detailed description of this parameter.
+You can pass the optional query parameter `computeUsingClusterView` to factor in the available cluster services when calculating
+the segments left to load. See [Coordinator Segment Loading](#coordinator-segment-loading) for details.
 If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
