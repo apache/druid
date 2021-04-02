@@ -81,7 +81,7 @@ public interface Rule
   /**
    * This method should update the {@param underReplicatedPerTier} with the replication count of the
    * {@param segment} taking into consideration the number of servers available in cluster that the segment can be
-   * replicated on. {@link LoadRule} must override this method.
+   * replicated on. Rule that returns true for {@link Rule#canLoadSegments()} must override this method.
    * Note that {@param underReplicatedPerTier} is a map of tier -> { dataSource -> underReplicationCount }
    */
   default void updateUnderReplicatedWithClusterView(
