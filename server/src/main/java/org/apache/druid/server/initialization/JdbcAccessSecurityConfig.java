@@ -69,13 +69,12 @@ public class JdbcAccessSecurityConfig
   @JsonProperty
   private boolean allowUnknownJdbcUrlFormat = true;
 
-  // Enforcing allow list check can break rolling upgrade. This is not good for patch releases
-  // and is why this config is added. However, from the security point of view, this config
-  // should be always enabled in production to secure your cluster. As a result, this config
-  // is deprecated and will be removed in the near future.
+  // This config is for compatibility as enforcing allow list can break existing ingestion jobs or lookups.
+  // However, from the security point of view, this config should be always enabled in production to secure
+  // your cluster. As a result, this config is deprecated and will be removed in a future release.
   @Deprecated
   @JsonProperty
-  private boolean enforceAllowedProperties = false;
+  private boolean enforceAllowedProperties = true;
 
   @JsonIgnore
   public Set<String> getSystemPropertyPrefixes()
