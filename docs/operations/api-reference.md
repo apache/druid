@@ -401,6 +401,30 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
+#### Dynamic configuration
+
+See [Coordinator Dynamic Configuration](../configuration/index.md#dynamic-configuration) for details.
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
+##### GET
+
+* `/druid/coordinator/v1/config`
+
+Retrieves current coordinator dynamic configuration.
+
+* `/druid/coordinator/v1/config/history?interval={interval}&count={count}`
+
+Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
+to filter by interval and limit the number of results respectively.
+
+##### POST
+
+* `/druid/coordinator/v1/config`
+
+Update overlord dynamic worker configuration.
+
 #### Compaction Status
 
 ##### GET
@@ -689,7 +713,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 Retrieves current overlord dynamic configuration.
 
-* `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
+* `/druid/indexer/v1/worker/history?interval={interval}&count={count}`
 
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
