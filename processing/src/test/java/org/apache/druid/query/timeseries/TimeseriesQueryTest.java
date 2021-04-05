@@ -74,7 +74,7 @@ public class TimeseriesQueryTest
   }
 
   @Test
-  public void testGetRequiredColumns() throws IOException
+  public void testGetRequiredColumns()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()

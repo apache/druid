@@ -290,7 +290,7 @@ public class JoinConditionAnalysisTest
                   .usingGetClass()
                   .withIgnoredFields(
                           // These fields are tightly coupled with originalExpression
-                          "equiConditions", "nonEquiConditions",
+                          "equiConditions", "nonEquiConditions", "requiredColumns",
                           // These fields are calculated from other other fields in the class
                           "isAlwaysTrue", "isAlwaysFalse", "canHashJoin", "rightKeyColumns")
                   .verify();

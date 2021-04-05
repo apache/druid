@@ -285,6 +285,21 @@ public class ScanQueryTest
   }
 
   @Test
+  public void testGetRequiredColumnsWithEmptyColumns()
+  {
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .order(ScanQuery.Order.DESCENDING)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .columns(Collections.emptyList())
+              .build();
+
+    Assert.assertNull(query.getRequiredColumns());
+  }
+
+  @Test
   public void testGetRequiredColumnsWithColumns()
   {
     final ScanQuery query =

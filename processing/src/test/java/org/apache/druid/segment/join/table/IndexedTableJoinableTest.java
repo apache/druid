@@ -352,6 +352,14 @@ public class IndexedTableJoinableTest
   }
 
   @Test
+  public void getNonNullColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique("nonexistent", Integer.MAX_VALUE);
+
+    Assert.assertEquals(Optional.empty(), values);
+  }
+
+  @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
     final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, Integer.MAX_VALUE);
