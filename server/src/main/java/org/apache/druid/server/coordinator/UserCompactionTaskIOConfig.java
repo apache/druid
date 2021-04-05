@@ -21,11 +21,10 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
-
-import static org.apache.druid.segment.indexing.IOConfig.DEFAULT_DROP_EXISTING;
 
 /**
  * Spec containing IO configs for Auto Compaction.
@@ -44,7 +43,7 @@ public class UserCompactionTaskIOConfig
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
-    this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+    this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty
