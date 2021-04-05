@@ -687,7 +687,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -757,7 +758,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -828,7 +830,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -899,7 +902,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -961,7 +965,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
 
     ingestionSpecs.sort(
@@ -1003,7 +1008,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -1038,7 +1044,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1079,7 +1086,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
   }
 
@@ -1102,7 +1110,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
   }
 
@@ -1136,7 +1145,8 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1172,7 +1182,8 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1209,7 +1220,8 @@ public class CompactionTaskTest
         ),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1245,7 +1257,8 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1280,7 +1293,8 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        null
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
