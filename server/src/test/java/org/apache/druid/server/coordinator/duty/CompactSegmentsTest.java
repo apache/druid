@@ -592,6 +592,7 @@ public class CompactSegmentsTest
                 null
             ),
             null,
+            null,
             null
         )
     );
@@ -605,6 +606,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     // Only the same amount of segments as the original PARTITION_PER_TIME_INTERVAL since segment granulartity is the same
@@ -646,6 +648,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
+            null,
             null
         )
     );
@@ -659,6 +662,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
@@ -698,7 +702,8 @@ public class CompactSegmentsTest
                 new ClientCompactionIntervalSpec(
                     Intervals.of("2000/2099"),
                     "testSha256OfSortedSegmentIds"
-                )
+                ),
+                null
             ),
             null,
             new ClientCompactionTaskGranularitySpec(Granularities.DAY, null),
@@ -737,6 +742,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
+            null,
             null
         )
     );
@@ -755,6 +761,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
@@ -1058,6 +1065,7 @@ public class CompactSegmentsTest
                   null,
                   null
               ),
+              null,
               null,
               null
           )

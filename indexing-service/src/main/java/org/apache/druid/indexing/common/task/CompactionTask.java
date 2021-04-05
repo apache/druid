@@ -198,11 +198,11 @@ public class CompactionTask extends AbstractBatchIndexTask
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
-      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null));
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), null);
     } else {
       // We already checked segments is not null or empty above.
       //noinspection ConstantConditions
-      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments));
+      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), null);
     }
 
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
@@ -383,7 +383,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         granularitySpec,
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        ioConfig
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -491,7 +492,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
-      final RetryPolicyFactory retryPolicyFactory
+      final RetryPolicyFactory retryPolicyFactory,
+      final CompactionIOConfig ioConfig
   ) throws IOException, SegmentLoadingException
   {
     NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -573,7 +575,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                     interval,
                     coordinatorClient,
                     segmentLoaderFactory,
-                    retryPolicyFactory
+                    retryPolicyFactory,
+                    ioConfig
                 ),
                 compactionTuningConfig
             )
@@ -600,7 +603,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentProvider.interval,
                   coordinatorClient,
                   segmentLoaderFactory,
-                  retryPolicyFactory
+                  retryPolicyFactory,
+                  ioConfig
               ),
               compactionTuningConfig
           )
@@ -614,7 +618,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       Interval interval,
       CoordinatorClient coordinatorClient,
       SegmentLoaderFactory segmentLoaderFactory,
-      RetryPolicyFactory retryPolicyFactory
+      RetryPolicyFactory retryPolicyFactory,
+      CompactionIOConfig ioConfig
   )
   {
     return new ParallelIndexIOConfig(
@@ -634,7 +639,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         ),
         null,
         false,
-        true
+        ioConfig.isDropExisting()
     );
   }
 
@@ -1021,7 +1026,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     public Builder inputSpec(CompactionInputSpec inputSpec)
     {
-      this.ioConfig = new CompactionIOConfig(inputSpec);
+      this.ioConfig = new CompactionIOConfig(inputSpec, null);
       return this;
     }
 

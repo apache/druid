@@ -158,10 +158,12 @@ This task doesn't specify a `granularitySpec` so Druid retains the original segm
 
 The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `compact`|Yes|
-|`inputSpec`|Input specification|Yes|
+|Field|Description|Default|Required?|
+|-----|-----------|-------|--------|
+|`type`|Task type. Should be `compact`|none|Yes|
+|`inputSpec`|Input specification|none|Yes|
+|`dropExisting`|If `true`, then the compaction task drops (mark unused) all existing segments fully contained by either the `interval` in the `interval` type `inputSpec` or the umbrella interval of the `segments` in the `segment` type `inputSpec` when the task publishes new compacted segments. If compaction fails, Druid does not drop or mark unused any segments.|false|no|
+
 
 There are two supported `inputSpec`s for now.
 

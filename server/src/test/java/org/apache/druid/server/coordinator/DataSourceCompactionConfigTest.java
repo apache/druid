@@ -58,6 +58,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -82,6 +83,7 @@ public class DataSourceCompactionConfigTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -127,6 +129,7 @@ public class DataSourceCompactionConfigTest
             null
         ),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -169,6 +172,7 @@ public class DataSourceCompactionConfigTest
             null,
             null
         ),
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -235,6 +239,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -261,6 +266,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, Granularities.MONTH),
+        null,
         ImmutableMap.of("key", "val")
     );
   }
@@ -274,6 +280,7 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         new Period(3600),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -302,6 +309,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, null),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
