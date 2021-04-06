@@ -29,7 +29,7 @@ import java.util.Objects;
 /**
  * Spec containing IO configs for Auto Compaction.
  * This class mimics JSON field names for fields supported in auto compaction with
- * the corresponding fields in {@link org.apache.druid.segment.indexing.IOConfig}.
+ * the corresponding fields in {@link IOConfig}.
  * This is done for end-user ease of use. Basically, end-user will use the same syntax / JSON structure to set
  * IO configs for Auto Compaction as they would for any other ingestion task.
  * Note that this class simply holds IO configs and pass it to compaction task spec.
