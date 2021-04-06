@@ -1000,6 +1000,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
@@ -1031,6 +1032,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
@@ -1069,6 +1071,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
@@ -1128,6 +1131,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
