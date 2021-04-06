@@ -19,52 +19,56 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.datasketches.memory.Memory;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 
 public class LongsLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
-  private LongBuffer buffer;
+  private Memory buffer;
 
   public LongsLongEncodingReader(ByteBuffer fromBuffer, ByteOrder order)
   {
-    this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asLongBuffer();
-  }
-
-  private LongsLongEncodingReader(LongBuffer buffer)
-  {
-    this.buffer = buffer;
+    this.buffer = Memory.wrap(fromBuffer.slice(), order);
   }
 
   @Override
   public void setBuffer(ByteBuffer buffer)
   {
-    this.buffer = buffer.asLongBuffer();
+    this.buffer = Memory.wrap(buffer.slice(), buffer.order());
   }
 
   @Override
   public long read(int index)
   {
-    return buffer.get(buffer.position() + index);
+    return buffer.getLong((long) index << 3);
   }
 
   @Override
   public void read(final long[] out, final int outPosition, final int startIndex, final int length)
   {
-    final int oldPosition = buffer.position();
-    try {
-      buffer.position(oldPosition + startIndex);
-      buffer.get(out, outPosition, length);
+    buffer.getLongArray((long) startIndex << 3, out, outPosition, length);
+  }
+
+  @Override
+  public int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+  {
+    for (int i = 0; i < length; i++) {
+      int index = indexes[outPosition + i] - indexOffset;
+      if (index >= limit) {
+        return i;
+      }
+
+      out[outPosition + i] = buffer.getLong((long) index << 3);
     }
-    finally {
-      buffer.position(oldPosition);
-    }
+
+    return length;
   }
 
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new LongsLongEncodingReader(buffer.duplicate());
+    return this;
   }
 }

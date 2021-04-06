@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -58,6 +59,7 @@ import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -108,7 +110,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.connector = connector;
   }
 
-  enum DataSourceMetadataUpdateResult
+  enum DataStoreMetadataUpdateResult
   {
     SUCCESS,
     FAILURE,
@@ -325,7 +327,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null);
+    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null, null);
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -338,6 +340,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       final Set<DataSegment> segments,
+      final Set<DataSegment> segmentsToDrop,
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata
   ) throws IOException
@@ -383,21 +386,40 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               definitelyNotUpdated.set(false);
 
               if (startMetadata != null) {
-                final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+                final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                     handle,
                     dataSource,
                     startMetadata,
                     endMetadata
                 );
 
-                if (result != DataSourceMetadataUpdateResult.SUCCESS) {
+                if (result != DataStoreMetadataUpdateResult.SUCCESS) {
                   // Metadata was definitely not updated.
                   transactionStatus.setRollbackOnly();
                   definitelyNotUpdated.set(true);
 
-                  if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                  if (result == DataStoreMetadataUpdateResult.FAILURE) {
                     throw new RuntimeException("Aborting transaction!");
-                  } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                  } else if (result == DataStoreMetadataUpdateResult.TRY_AGAIN) {
+                    throw new RetryTransactionException("Aborting transaction!");
+                  }
+                }
+              }
+
+              if (segmentsToDrop != null && !segmentsToDrop.isEmpty()) {
+                final DataStoreMetadataUpdateResult result = dropSegmentsWithHandle(
+                    handle,
+                    segmentsToDrop,
+                    dataSource
+                );
+                if (result != DataStoreMetadataUpdateResult.SUCCESS) {
+                  // Metadata store was definitely not updated.
+                  transactionStatus.setRollbackOnly();
+                  definitelyNotUpdated.set(true);
+
+                  if (result == DataStoreMetadataUpdateResult.FAILURE) {
+                    throw new RuntimeException("Aborting transaction!");
+                  } else if (result == DataStoreMetadataUpdateResult.TRY_AGAIN) {
                     throw new RetryTransactionException("Aborting transaction!");
                   }
                 }
@@ -409,7 +431,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
           },
           3,
-          SQLMetadataConnector.DEFAULT_MAX_TRIES
+          getSqlMetadataMaxRetry()
       );
     }
     catch (CallbackFailedException e) {
@@ -454,21 +476,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               // Set definitelyNotUpdated back to false upon retrying.
               definitelyNotUpdated.set(false);
 
-              final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+              final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                   handle,
                   dataSource,
                   startMetadata,
                   endMetadata
               );
 
-              if (result != DataSourceMetadataUpdateResult.SUCCESS) {
+              if (result != DataStoreMetadataUpdateResult.SUCCESS) {
                 // Metadata was definitely not updated.
                 transactionStatus.setRollbackOnly();
                 definitelyNotUpdated.set(true);
 
-                if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                if (result == DataStoreMetadataUpdateResult.FAILURE) {
                   throw new RuntimeException("Aborting transaction!");
-                } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                } else if (result == DataStoreMetadataUpdateResult.TRY_AGAIN) {
                   throw new RetryTransactionException("Aborting transaction!");
                 }
               }
@@ -477,7 +499,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
           },
           3,
-          SQLMetadataConnector.DEFAULT_MAX_TRIES
+          getSqlMetadataMaxRetry()
       );
     }
     catch (CallbackFailedException e) {
@@ -488,6 +510,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         throw e;
       }
     }
+  }
+
+  @VisibleForTesting
+  public int getSqlMetadataMaxRetry()
+  {
+    return SQLMetadataConnector.DEFAULT_MAX_TRIES;
   }
 
   @Override
@@ -1087,12 +1115,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return SUCCESS if dataSource metadata was updated from matching startMetadata to matching endMetadata, FAILURE or
    * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)}
+   * {@link #announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
    * achieve its own guarantee.
    *
    * @throws RuntimeException if state is unknown after this call
    */
-  protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
+  protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
       final Handle handle,
       final String dataSource,
       final DataSourceMetadata startMetadata,
@@ -1137,7 +1165,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           oldCommitMetadataFromDb,
           startMetadata
       );
-      return DataSourceMetadataUpdateResult.FAILURE;
+      return DataStoreMetadataUpdateResult.FAILURE;
     }
 
     // Only endOffsets should be stored in metadata store
@@ -1149,7 +1177,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
     );
 
-    final DataSourceMetadataUpdateResult retVal;
+    final DataStoreMetadataUpdateResult retVal;
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
@@ -1165,7 +1193,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .bind("commit_metadata_sha1", newCommitMetadataSha1)
                                 .execute();
 
-      retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
+      retVal = numRows == 1 ? DataStoreMetadataUpdateResult.SUCCESS : DataStoreMetadataUpdateResult.TRY_AGAIN;
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
@@ -1183,16 +1211,74 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
                                 .execute();
 
-      retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
+      retVal = numRows == 1 ? DataStoreMetadataUpdateResult.SUCCESS : DataStoreMetadataUpdateResult.TRY_AGAIN;
     }
 
-    if (retVal == DataSourceMetadataUpdateResult.SUCCESS) {
+    if (retVal == DataStoreMetadataUpdateResult.SUCCESS) {
       log.info("Updated metadata from[%s] to[%s].", oldCommitMetadataFromDb, newCommitMetadata);
     } else {
       log.info("Not updating metadata, compare-and-swap failure.");
     }
 
     return retVal;
+  }
+
+  /**
+   * Mark segments as unsed in a transaction. This method is idempotent in that if
+   * the segments was already marked unused, it will return true.
+   *
+   * @param handle         database handle
+   * @param segmentsToDrop segments to mark as unused
+   * @param dataSource     druid dataSource
+   *
+   * @return SUCCESS if segment was marked unused, FAILURE or
+   * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
+   * {@link #announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+   * achieve its own guarantee.
+   *
+   * @throws RuntimeException if state is unknown after this call
+   */
+  protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
+      final Handle handle,
+      final Set<DataSegment> segmentsToDrop,
+      final String dataSource
+  )
+  {
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(segmentsToDrop, "segmentsToDrop");
+
+    if (segmentsToDrop.isEmpty()) {
+      return DataStoreMetadataUpdateResult.SUCCESS;
+    }
+
+    if (segmentsToDrop.stream().anyMatch(segment -> !dataSource.equals(segment.getDataSource()))) {
+      // All segments to drop must belong to the same datasource
+      log.error(
+          "Not dropping segments, as not all segments belong to the datasource[%s].",
+          dataSource
+      );
+      return DataStoreMetadataUpdateResult.FAILURE;
+    }
+    final List<String> segmentIdList = segmentsToDrop.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList());
+    Batch batch = handle.createBatch();
+    segmentIdList.forEach(segmentId -> batch.add(
+        StringUtils.format(
+            "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s'",
+            dbTables.getSegmentsTable(),
+            dataSource,
+            segmentId
+        )
+    ));
+    final int[] segmentChanges = batch.execute();
+    int numChangedSegments = SqlSegmentsMetadataManager.computeNumChangedSegments(segmentIdList, segmentChanges);
+    if (numChangedSegments != segmentsToDrop.size()) {
+      log.warn("Failed to drop segments metadata update as numChangedSegments[%s] segmentsToDropSize[%s]",
+               numChangedSegments,
+               segmentsToDrop.size()
+      );
+      return DataStoreMetadataUpdateResult.TRY_AGAIN;
+    }
+    return DataStoreMetadataUpdateResult.SUCCESS;
   }
 
   @Override

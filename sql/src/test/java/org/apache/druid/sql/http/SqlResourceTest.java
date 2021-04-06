@@ -35,8 +35,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
@@ -105,6 +108,8 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
 
+  private boolean sleep = false;
+
   @BeforeClass
   public static void setUpClass()
   {
@@ -126,7 +131,27 @@ public class SqlResourceTest extends CalciteTestBase
         ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
         new ServerConfig()
-    );
+    )
+    {
+      @Override
+      public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
+      {
+        return super.run(
+            query,
+            new LazySequence<T>(() -> {
+              if (sleep) {
+                try {
+                  // pretend to be a query that is waiting on results
+                  Thread.sleep(500);
+                }
+                catch (InterruptedException ignored) {
+                }
+              }
+              return resultSequence;
+            })
+        );
+      }
+    };
 
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
@@ -803,6 +828,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testTooManyRequests() throws Exception
   {
+    sleep = true;
     final int numQueries = 3;
 
     List<Future<Pair<QueryException, List<Map<String, Object>>>>> futures = new ArrayList<>(numQueries);

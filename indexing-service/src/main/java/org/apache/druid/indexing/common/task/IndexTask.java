@@ -855,9 +855,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+    Set<DataSegment> segmentsFoundForDrop = null;
+    if (ingestionSchema.getIOConfig().isDropExisting()) {
+      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+    }
+
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
+               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -911,7 +916,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
+          awaitPublish(driver.publishAll(inputSegments, segmentsFoundForDrop, publisher, annotateFunction), pushTimeout);
       appenderator.close();
 
       // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
@@ -1041,18 +1046,21 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public static class IndexIOConfig implements BatchIOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
+    private static final boolean DEFAULT_DROP_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
+    private final boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1065,13 +1073,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+      if (this.dropExisting && this.appendToExisting) {
+        throw new IAE("Cannot both drop existing segments and append to existing segments. "
+                      + "Either dropExisting or appendToExisting should be set to false");
+      }
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, dropExisting);
     }
 
     @Nullable
@@ -1125,6 +1138,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public boolean isAppendToExisting()
     {
       return appendToExisting;
+    }
+
+    @Override
+    @JsonProperty
+    public boolean isDropExisting()
+    {
+      return dropExisting;
     }
   }
 

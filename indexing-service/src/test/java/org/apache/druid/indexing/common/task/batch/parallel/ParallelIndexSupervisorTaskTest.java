@@ -190,7 +190,8 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null),
-          appendToExisting
+          appendToExisting,
+          null
       );
       final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
           null,

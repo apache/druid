@@ -23,26 +23,17 @@ sidebar_label: "Troubleshooting FAQ"
   ~ under the License.
   -->
 
-### Realtime ingestion
-
-The most common cause of this is because events being ingested are out of band of Druid's `windowPeriod`. Druid realtime ingestion
-only accepts events within a configurable windowPeriod of the current time. You can verify this is what is happening by looking at the logs of your real-time process for log lines containing `ingest/events/*`. These metrics will indicate the events ingested, rejected, etc.
-
-We recommend using batch ingestion methods for historical data in production.
-
-### Batch Ingestion
+## Batch Ingestion
 
 If you are trying to batch load historical data but no events are being loaded, make sure the interval of your ingestion spec actually encapsulates the interval of your data. Events outside this interval are dropped.
+
+## Druid ingested my events but I they are not in my query results
+
+If the number of ingested events seem correct, make sure your query is correctly formed. If you included a `count` aggregator in your ingestion spec, you will need to query for the results of this aggregate with a `longSum` aggregator. Issuing a query with a count aggregator will count the number of Druid rows, which includes [roll-up](../design/index.md).
 
 ## What types of data does Druid support?
 
 Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of strings). Druid supports long, float, and double numeric columns.
-
-## Not all of my events were ingested
-
-Druid will reject events outside of a window period. The best way to see if events are being rejected is to check the [Druid ingest metrics](../operations/metrics.md).
-
-If the number of ingested events seem correct, make sure your query is correctly formed. If you included a `count` aggregator in your ingestion spec, you will need to query for the results of this aggregate with a `longSum` aggregator. Issuing a query with a count aggregator will count the number of Druid rows, which includes [roll-up](../design/index.md).
 
 ## Where do my Druid segments end up after ingestion?
 
@@ -100,9 +91,9 @@ Or, if you use hadoop based ingestion, then you can use "dataSource" input spec 
 
 See the [Update existing data](../ingestion/data-management.md#update) section of the data management page for more details.
 
-## How can I change the granularity of existing data in Druid?
+## How can I change the query granularity of existing data in Druid?
 
-In a lot of situations you may want to lower the granularity of older data. Example, any data older than 1 month has only hour level granularity but newer data has minute level granularity. This use case is same as re-indexing.
+In a lot of situations you may want coarser granularity for older data. Example, any data older than 1 month has only hour level granularity but newer data has minute level granularity. This use case is same as re-indexing.
 
 To do this use the [DruidInputSource](../ingestion/native-batch.md#druid-input-source) and run a [Parallel task](../ingestion/native-batch.md). The DruidInputSource will allow you to take in existing segments from Druid and aggregate them and feed them back into Druid. It will also allow you to filter the data in those segments while feeding it back in. This means if there are rows you want to delete, you can just filter them away during re-ingestion.
 Typically the above will be run as a batch job to say everyday feed in a chunk of data and aggregate it.
@@ -110,10 +101,12 @@ Or, if you use hadoop based ingestion, then you can use "dataSource" input spec 
 
 See the [Update existing data](../ingestion/data-management.md#update) section of the data management page for more details.
 
+You can also change the query granularity using compaction. See [Query granularity handling](../ingestion/compaction.md#query-granularity-handling).
+
 ## Real-time ingestion seems to be stuck
 
 There are a few ways this can occur. Druid will throttle ingestion to prevent out of memory problems if the intermediate persists are taking too long or if hand-off is taking too long. If your process logs indicate certain columns are taking a very long time to build (for example, if your segment granularity is hourly, but creating a single column takes 30 minutes), you should re-evaluate your configuration or scale up your real-time ingestion.
 
 ## More information
 
-Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-user).
+Data ingestion for Druid can be difficult for first time users. Please don't hesitate to ask questions in the [Druid Forum](https://www.druidforum.org/).

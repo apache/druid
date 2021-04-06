@@ -119,6 +119,34 @@ public abstract class LoadRule implements Rule
     });
   }
 
+  @Override
+  public void updateUnderReplicatedWithClusterView(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DruidCluster cluster,
+      DataSegment segment
+  )
+  {
+    getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
+      int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
+      Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
+          tier,
+          ignored -> new Object2LongOpenHashMap<>()
+      );
+      int possibleReplicants = Math.min(ruleReplicants, cluster.getHistoricals().get(tier).size());
+      log.debug(
+          "ruleReplicants: [%d], possibleReplicants: [%d], currentReplicants: [%d]",
+          ruleReplicants,
+          possibleReplicants,
+          currentReplicants
+      );
+      ((Object2LongOpenHashMap<String>) underReplicationPerDataSource).addTo(
+          segment.getDataSource(),
+          Math.max(possibleReplicants - currentReplicants, 0)
+      );
+    });
+  }
+
   /**
    * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
    */

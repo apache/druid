@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
