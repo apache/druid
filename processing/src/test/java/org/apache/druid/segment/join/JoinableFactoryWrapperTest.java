@@ -534,33 +534,6 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
-  public void test_convertJoinsToFilters_dontConvertUnknownRequiredColumns()
-  {
-    final JoinableClause clause = new JoinableClause(
-        "j.",
-        LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
-        JoinType.INNER,
-        JoinConditionAnalysis.forExpression("x == \"j.k\"", "j.", ExprMacroTable.nil())
-    );
-
-    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
-        ImmutableList.of(
-            clause
-        ),
-        null,
-        Integer.MAX_VALUE
-    );
-
-    Assert.assertEquals(
-        Pair.of(
-            ImmutableList.of(),
-            ImmutableList.of(clause)
-        ),
-        conversion
-    );
-  }
-
-  @Test
   public void test_convertJoinsToFilters_dontConvertLeftJoin()
   {
     final JoinableClause clause = new JoinableClause(
