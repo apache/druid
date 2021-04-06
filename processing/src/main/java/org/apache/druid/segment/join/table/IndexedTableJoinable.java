@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -107,7 +108,7 @@ public class IndexedTableJoinable implements Joinable
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
 
-        if (s != null) {
+        if (NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
             // Duplicate found. Since the values are not all unique, we must return an empty Optional.
             return Optional.empty();

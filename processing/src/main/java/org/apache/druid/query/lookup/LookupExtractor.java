@@ -121,7 +121,7 @@ public abstract class LookupExtractor
   /**
    * Returns a Set of all keys in this lookup extractor. The returned Set will not change.
    *
-   * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
+   * @throws UnsupportedOperationException if {@link #canGetKeySet()} returns false.
    */
   public abstract Set<String> keySet();
 
