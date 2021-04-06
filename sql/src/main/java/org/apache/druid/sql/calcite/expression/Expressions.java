@@ -166,13 +166,17 @@ public class Expressions
   }
 
   /**
-   * Translate a Calcite {@code RexNode} to a Druid expressions.
+   * Translate a Calcite {@link RexNode} to a Druid expression for projections or the aggregators that don't
+   * require numeric inputs.
+   *
+   * Consider using {@link org.apache.druid.sql.calcite.aggregation.Aggregations#toDruidExpressionForNumericAggregator}
+   * for the aggregators that require numeric inputs.
    *
    * @param plannerContext SQL planner context
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
    *
-   * @return rexNode referring to fields in rowOrder, or null if not possible
+   * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
    */
   @Nullable
   public static DruidExpression toDruidExpression(
