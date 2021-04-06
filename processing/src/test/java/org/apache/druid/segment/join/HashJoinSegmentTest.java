@@ -195,7 +195,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_constructor_noClauses()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
+    expectedException.expectMessage("'clauses' and 'baseFilter' are both empty, no need to create HashJoinSegment");
 
     List<JoinableClause> joinableClauses = ImmutableList.of();
 

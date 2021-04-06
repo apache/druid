@@ -13780,7 +13780,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     .setGranularity(Granularities.ALL)
                                                     .setAggregatorSpecs(
                                                         new CountAggregatorFactory("_a0"),
-                                                        new CountAggregatorFactory("_a1")
+                                                        NullHandling.sqlCompatible()
+                                                        ? new FilteredAggregatorFactory(
+                                                            new CountAggregatorFactory("_a1"),
+                                                            not(selector("a0", null, null))
+                                                        )
+                                                        : new CountAggregatorFactory("_a1")
                                                     )
                                                     .setContext(QUERY_CONTEXT_DEFAULT)
                                                     .build()

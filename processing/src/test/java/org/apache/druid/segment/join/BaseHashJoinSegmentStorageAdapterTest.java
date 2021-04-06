@@ -30,6 +30,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
@@ -48,6 +49,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class BaseHashJoinSegmentStorageAdapterTest
@@ -236,12 +238,16 @@ public class BaseHashJoinSegmentStorageAdapterTest
       VirtualColumns virtualColumns
   )
   {
+    // Seemingly-useless "Filter.maybeAnd" is here to dedupe filters, flatten stacks, etc, in the same way that
+    // JoinableFactoryWrapper's segmentMapFn would do.
+    final Filter filterToUse = Filters.maybeAnd(Collections.singletonList(originalFilter)).orElse(null);
+
     return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
         new JoinFilterPreAnalysisKey(
             DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
             joinableClauses,
             virtualColumns,
-            originalFilter
+            filterToUse
         )
     );
   }
