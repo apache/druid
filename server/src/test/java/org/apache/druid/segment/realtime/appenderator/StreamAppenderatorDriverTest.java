@@ -366,13 +366,13 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+    return (segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, commitMetadata) ->
         SegmentPublishResult.ok(Collections.emptySet());
   }
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
+    return (segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, commitMetadata) -> {
       final RuntimeException exception = new RuntimeException("test");
       if (failWithException) {
         throw exception;

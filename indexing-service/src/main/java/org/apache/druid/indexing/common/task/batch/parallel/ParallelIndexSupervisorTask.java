@@ -932,12 +932,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getTuningConfig(),
         ingestionSchema.getDataSchema().getGranularitySpec()
     );
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+
+    Set<DataSegment> segmentsFoundForDrop = null;
+    if (ingestionSchema.getIOConfig().isDropExisting()) {
+      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+    }
+
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
+            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
         );
     final boolean published = newSegments.isEmpty()
-                              || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null)
+                              || publisher.publishSegments(oldSegments, segmentsFoundForDrop, newSegments, annotateFunction, null)
                                           .isSuccess();
 
     if (published) {
