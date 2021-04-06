@@ -38,6 +38,16 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * A {@link RelOptRule} that converts {@link LogicalValues} into {@link InlineDataSource}.
+ * This rule is used when the query directly reads in-memory tuples. For example, given a query of
+ * `SELECT 1 + 1`, the query planner will create {@link LogicalValues} that contains one tuple,
+ * which in turn containing one column of value 2.
+ *
+ * The query planner can sometimes reduce a regular query to a query that reads in-memory tuples.
+ * For example, `SELECT count(*) FROM foo WHERE 1 = 0` is reduced to `SELECT 0`. This rule will
+ * be used for this case as well.
+ */
 public class DruidLogicalValuesRule extends RelOptRule
 {
   private final QueryMaker queryMaker;
@@ -80,7 +90,8 @@ public class DruidLogicalValuesRule extends RelOptRule
   /**
    * Retrieves value from the literal based on Druid data type mapping
    * (https://druid.apache.org/docs/latest/querying/sql.html#standard-types).
-   * Falls back to {@link RexLiteral#getValue2()} for unknown types which returns the Java object as it is.
+   *
+   * @throws IllegalArgumentException for unsupported types
    */
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
