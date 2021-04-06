@@ -112,7 +112,7 @@ public class LookupJoinable implements Joinable
 
       for (String value : nullEquivalentValues) {
         if (keys.contains(value)) {
-          nonNullKeys --;
+          nonNullKeys--;
         }
       }
 
