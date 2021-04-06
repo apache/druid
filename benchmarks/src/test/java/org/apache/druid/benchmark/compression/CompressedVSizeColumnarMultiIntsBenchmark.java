@@ -17,16 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.data.ColumnarInts;
-import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
+import org.apache.druid.segment.data.ColumnarMultiInts;
+import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.VSizeColumnarInts;
+import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.data.WritableSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -42,23 +45,28 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-public class CompressedColumnarIntsBenchmark
+public class CompressedVSizeColumnarMultiIntsBenchmark
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  private IndexedInts uncompressed;
-  private IndexedInts compressed;
+  private ColumnarMultiInts uncompressed;
+  private ColumnarMultiInts compressed;
 
   @Param({"1", "2", "3", "4"})
   int bytes;
+
+  @Param({"5", "10", "100", "1000"})
+  int valuesPerRowBound;
 
   // Number of rows to read, the test will read random rows
   @Param({"1000", "10000", "100000", "1000000", "1000000"})
@@ -70,42 +78,49 @@ public class CompressedColumnarIntsBenchmark
   public void setup() throws IOException
   {
     Random rand = ThreadLocalRandom.current();
-    int[] vals = new int[0x100000];
+    List<int[]> rows = new ArrayList<>();
     final int bound = 1 << bytes;
-    for (int i = 0; i < vals.length; ++i) {
-      vals[i] = rand.nextInt(bound);
+    for (int i = 0; i < 0x100000; i++) {
+      int count = rand.nextInt(valuesPerRowBound) + 1;
+      int[] row = new int[rand.nextInt(count)];
+      for (int j = 0; j < row.length; j++) {
+        row[j] = rand.nextInt(bound);
+      }
+      rows.add(row);
     }
+
     final ByteBuffer bufferCompressed = serialize(
-        CompressedVSizeColumnarIntsSupplier.fromList(
-            IntArrayList.wrap(vals),
+        CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
+            Iterables.transform(rows, (Function<int[], ColumnarInts>) input -> VSizeColumnarInts.fromArray(input, 20)),
             bound - 1,
-            CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(bytes),
             ByteOrder.nativeOrder(),
             CompressionStrategy.LZ4,
             Closer.create()
         )
     );
-    this.compressed = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+    this.compressed = CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
         bufferCompressed,
         ByteOrder.nativeOrder()
     ).get();
 
-    final ByteBuffer bufferUncompressed = serialize(VSizeColumnarInts.fromArray(vals));
-    this.uncompressed = VSizeColumnarInts.readFromByteBuffer(bufferUncompressed);
+    final ByteBuffer bufferUncompressed = serialize(
+        VSizeColumnarMultiInts.fromIterable(Iterables.transform(rows, input -> VSizeColumnarInts.fromArray(input, 20)))
+    );
+    this.uncompressed = VSizeColumnarMultiInts.readFromByteBuffer(bufferUncompressed);
 
     filter = new BitSet();
     for (int i = 0; i < filteredRowCount; i++) {
-      int rowToAccess = rand.nextInt(vals.length);
+      int rowToAccess = rand.nextInt(rows.size());
       // Skip already selected rows if any
       while (filter.get(rowToAccess)) {
-        rowToAccess = (rowToAccess + 1) % vals.length;
+        rowToAccess = (rowToAccess + 1) % rows.size();
       }
       filter.set(rowToAccess);
     }
-
   }
 
-  private static ByteBuffer serialize(WritableSupplier<ColumnarInts> writableSupplier) throws IOException
+  private static ByteBuffer serialize(WritableSupplier<ColumnarMultiInts> writableSupplier)
+      throws IOException
   {
     final ByteBuffer buffer = ByteBuffer.allocateDirect((int) writableSupplier.getSerializedSize());
 
@@ -142,7 +157,10 @@ public class CompressedColumnarIntsBenchmark
   public void uncompressed(Blackhole blackhole)
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-      blackhole.consume(uncompressed.get(i));
+      IndexedInts row = uncompressed.get(i);
+      for (int j = 0, rowSize = row.size(); j < rowSize; j++) {
+        blackhole.consume(row.get(j));
+      }
     }
   }
 
@@ -152,7 +170,10 @@ public class CompressedColumnarIntsBenchmark
   public void compressed(Blackhole blackhole)
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-      blackhole.consume(compressed.get(i));
+      IndexedInts row = compressed.get(i);
+      for (int j = 0, rowSize = row.size(); j < rowSize; j++) {
+        blackhole.consume(row.get(j));
+      }
     }
   }
 }

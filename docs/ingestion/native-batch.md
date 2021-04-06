@@ -74,7 +74,7 @@ The supported compression formats for native batch ingestion are `bz2`, `gz`, `x
 
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
-You may want to consider the below things:
+### Implementation considerations
 
 - You may want to control the amount of input data each worker task processes. This can be
   controlled using different configurations depending on the phase in parallel ingestion (see [`partitionsSpec`](#partitionsspec) for more details).
@@ -89,7 +89,33 @@ You may want to consider the below things:
   data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
-
+- You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that 
+  start and end within your `granularitySpec`'s intervals. This applies whether or not the new data covers all existing segments. 
+  `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. 
+  
+  The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
+  
+  - Example 1: Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and YEAR segmentGranularity. You want to
+  overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of MONTH. 
+  If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01
+  Druid cannot drop the original YEAR segment even if it does include all the replacement. Set `dropExisting` to true in this case to drop 
+  the original segment at year `segmentGranularity` since you no longer need it.
+  - Example 2: Consider the case where you want to re-ingest or overwrite a datasource and the new data does not contains some time intervals that exist
+  in the datasource. For example, a datasource contains the following data at MONTH segmentGranularity:  
+    January: 1 record  
+    February: 10 records  
+    March: 10 records  
+  You want to re-ingest and overwrite with new data as follows:  
+    January: 0 records  
+    February: 10 records  
+    March: 9 records  
+  Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same MONTH segmentGranularity would be:  
+    January: 1 record  
+    February: 10 records  
+    March: 9 records  
+  This is incorrect since the new data has 0 records for January. Setting `dropExisting` to true to drop the original 
+  segment for January that is not needed since the newly ingested data has no records for January.
+   
 ### Task syntax
 
 A sample task is shown below:
@@ -193,6 +219,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -538,7 +565,8 @@ An example of the result is
             "l_comment"
           ]
         },
-        "appendToExisting": false
+        "appendToExisting": false,
+        "dropExisting": false
       },
       "tuningConfig": {
         "type": "index_parallel",
@@ -719,6 +747,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`.|false|no|
 
 ### `tuningConfig`
 
@@ -1380,7 +1409,7 @@ Please refer to the Recommended practices section below before using this input 
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "sql".|Yes|
-|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support and this extension must be loaded into Druid. For database types `mysql` and `postgresql`, the `connectorConfig` support is provided by [mysql-metadata-storage](../development/extensions-core/mysql.md) and [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extensions respectively.|Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
@@ -1734,7 +1763,7 @@ Requires one of the following extensions:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be "sql".||Yes|
-|database|Specifies the database connection details.||Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.||Yes|
 |maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|No|
 |maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|No|
 |prefetchTriggerBytes|Threshold to trigger prefetching SQL result objects.|maxFetchCapacityBytes / 2|No|

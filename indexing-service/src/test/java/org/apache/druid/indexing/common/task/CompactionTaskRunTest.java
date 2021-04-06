@@ -482,6 +482,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -808,12 +809,27 @@ public class CompactionTaskRunTest extends IngestionTestBase
       return;
     }
 
+    // This creates HOUR segments with intervals of
+    // - 2014-01-01T00:00:00/2014-01-01T01:00:00
+    // - 2014-01-01T01:00:00/2014-01-01T02:00:00
+    // - 2014-01-01T02:00:00/2014-01-01T03:00:00
     runIndexTask();
 
-    final Set<DataSegment> expectedSegments = new HashSet<>(
+    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+
+    // Segments that did not belong in the compaction interval are expected unchanged
+    final Set<DataSegment> expectedSegments = new HashSet<>();
+    expectedSegments.addAll(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
-            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
             Segments.ONLY_VISIBLE
         )
     );
@@ -824,15 +840,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
         RETRY_POLICY_FACTORY
     );
 
-    final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
     final CompactionTask partialCompactionTask = builder
-        .interval(partialInterval)
+        .interval(compactionPartialInterval)
         .segmentGranularity(Granularities.MINUTE)
         .build();
 
     final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
     Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
-    // All segments in the previous expectedSegments should still appear as they have larger segment granularity.
+
+    // New segments that was compacted are expected. However, old segments of the compacted interval should be drop
+    // regardless of the new segments fully overshadow the old segments or not. Hence, we do not expect old segments
+    // of the 2014-01-01T01:00:00/2014-01-01T02:00:00 interval post-compaction
     expectedSegments.addAll(partialCompactionResult.rhs);
 
     final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
@@ -865,12 +883,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     Assert.assertEquals(3, segmentsAfterFullCompaction.size());
-    for (int i = 0; i < segmentsAfterFullCompaction.size(); i++) {
-      Assert.assertEquals(
-          Intervals.of(StringUtils.format("2014-01-01T%02d/2014-01-01T%02d", i, i + 1)),
-          segmentsAfterFullCompaction.get(i).getInterval()
-      );
-    }
+    // Full Compaction with null segmentGranularity meaning that the original segmentGrnaularity is perserved
+    // For the intervals, 2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z and 2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z
+    // the original segmentGranularity is HOUR from the initial ingestion.
+    // For the interval, 2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z, the original segmentGranularity is
+    // MINUTE from the partial compaction done earlier.
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z"),
+        segmentsAfterFullCompaction.get(0).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z"),
+        segmentsAfterFullCompaction.get(1).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
+        segmentsAfterFullCompaction.get(2).getInterval()
+    );
   }
 
   @Test
@@ -1050,6 +1079,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
+                false,
                 false
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
@@ -1126,7 +1156,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
-            appendToExisting
+            appendToExisting,
+            false
         ),
         null
     );

@@ -954,6 +954,14 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 }
 ```
 
+It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
+improvements for larger result sets. To use it apply the following connection url instead, everything else remains the same
+```
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica-protobuf/;serialization=protobuf";
+```
+
+> The protobuf endpoint is also known to work with the official [Golang Avatica driver](https://github.com/apache/calcite-avatica-go)
+
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
 ["INFORMATION_SCHEMA" tables](#metadata-tables).
 

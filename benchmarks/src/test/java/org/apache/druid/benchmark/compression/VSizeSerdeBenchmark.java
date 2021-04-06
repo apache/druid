@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.compression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;

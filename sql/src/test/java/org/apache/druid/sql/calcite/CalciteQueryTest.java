@@ -17086,4 +17086,41 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ).build()
     );
   }
+
+
+  @Test
+  public void testLookupWithNull() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.<Object[]>builder().add(
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING}
+      ).build();
+    } else {
+      expected = ImmutableList.<Object[]>builder().add(
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING}
+      ).build();
+    }
+    testQuery(
+        "SELECT dim2 ,lookup(dim2,'lookyloo') from foo where dim2 is null",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "null", ValueType.STRING)
+                )
+                .columns("v0")
+                .legacy(false)
+                .filters(new SelectorDimFilter("dim2", NULL_STRING, null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
 }

@@ -26,14 +26,19 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DefaultRequestLogEventTest
 {
@@ -67,5 +72,82 @@ public class DefaultRequestLogEventTest
     String logEventJson = objectMapper.writeValueAsString(defaultRequestLogEvent);
     String expected = "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},\"descending\":true,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[],\"postAggregations\":[],\"limit\":5,\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\",\"service\":\"druid-service\",\"sql\":null,\"sqlQueryContext\":{},\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
     Assert.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
+  }
+
+  @Test
+  public void testDefaultRequestLogEventToMap()
+  {
+    final String feed = "test";
+    final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
+    final String service = "druid-service";
+    final String host = "127.0.0.1";
+    final Query query = new TimeseriesQuery(
+        new TableDataSource("dummy"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+        true,
+        VirtualColumns.EMPTY,
+        null,
+        Granularities.ALL,
+        ImmutableList.of(),
+        ImmutableList.of(),
+        5,
+        ImmutableMap.of("key", "value"));
+    final QueryStats queryStats = new QueryStats(
+        ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"));
+    RequestLogLine nativeLine = RequestLogLine.forNative(
+        query,
+        timestamp,
+        host,
+        queryStats
+    );
+
+    DefaultRequestLogEvent defaultRequestLogEvent = new DefaultRequestLogEvent(
+        ImmutableMap.of("service", service, "host", host), feed, nativeLine
+    );
+    final Map<String, Object> expected = new HashMap<>();
+    expected.put("feed", feed);
+    expected.put("timestamp", timestamp);
+    expected.put("service", service);
+    expected.put("host", host);
+    expected.put("query", query);
+    expected.put("remoteAddr", host);
+    expected.put("queryStats", queryStats);
+
+    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
+  }
+
+  @Test
+  public void testDefaultRequestLogEventToMapSQL()
+  {
+    final String feed = "test";
+    final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
+    final String service = "druid-service";
+    final String host = "127.0.0.1";
+    final String sql = "select * from 1337";
+    final QueryStats queryStats = new QueryStats(
+        ImmutableMap.of("sqlQuery/time", 13L, "sqlQuery/bytes", 10L, "success", true, "identity", "allowAll"));
+
+    RequestLogLine nativeLine = RequestLogLine.forSql(
+        sql,
+        ImmutableMap.of(),
+        timestamp,
+        host,
+        queryStats
+    );
+
+    DefaultRequestLogEvent defaultRequestLogEvent = new DefaultRequestLogEvent(
+        ImmutableMap.of("service", service, "host", host), feed, nativeLine
+    );
+    final Map<String, Object> expected = new HashMap<>();
+    expected.put("feed", feed);
+    expected.put("timestamp", timestamp);
+    expected.put("service", service);
+    expected.put("host", host);
+    expected.put("sql", sql);
+    expected.put("sqlQueryContext", ImmutableMap.of());
+    expected.put("remoteAddr", host);
+    expected.put("queryStats", queryStats);
+
+    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
   }
 }
