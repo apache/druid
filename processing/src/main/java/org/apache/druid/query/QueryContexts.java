@@ -291,7 +291,7 @@ public class QueryContexts
     return parseBoolean(
         query,
         REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
-        DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+        DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
     );
   }
 
