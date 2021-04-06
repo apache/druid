@@ -111,6 +111,7 @@ import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -130,8 +131,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.sql.calcite.planner.PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
@@ -7616,7 +7615,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     requireMergeBuffers(4);
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "true")),
+        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "true")),
         "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(

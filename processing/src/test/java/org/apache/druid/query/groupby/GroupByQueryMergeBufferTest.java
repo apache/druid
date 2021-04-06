@@ -56,10 +56,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.MARKET_DIMENSION;
-import static org.apache.druid.query.QueryRunnerTestHelper.PLACEMENT_DIMENSION;
-import static org.apache.druid.query.QueryRunnerTestHelper.QUALITY_DIMENSION;
-
 @RunWith(Parameterized.class)
 public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
 {
@@ -288,7 +284,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
     Assert.assertEquals(2, GroupByStrategyV2.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
-    // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
+    // This should be 1 because the broker needs 2 buffers and the queryable node needs one.
     Assert.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
     Assert.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
@@ -354,16 +350,16 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setDimensions(Arrays.asList(
-            DefaultDimensionSpec.of(MARKET_DIMENSION),
-            DefaultDimensionSpec.of(PLACEMENT_DIMENSION),
-            DefaultDimensionSpec.of(QUALITY_DIMENSION)
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.PLACEMENT_DIMENSION),
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.QUALITY_DIMENSION)
         ))
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setSubtotalsSpec(Arrays.asList(
-            Arrays.asList(MARKET_DIMENSION, PLACEMENT_DIMENSION),
-            Arrays.asList(MARKET_DIMENSION, PLACEMENT_DIMENSION, QUALITY_DIMENSION)
+            Arrays.asList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENT_DIMENSION),
+            Arrays.asList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENT_DIMENSION, QueryRunnerTestHelper.QUALITY_DIMENSION)
         ))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
@@ -383,16 +379,16 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setDimensions(Arrays.asList(
-            DefaultDimensionSpec.of(MARKET_DIMENSION),
-            DefaultDimensionSpec.of(PLACEMENT_DIMENSION),
-            DefaultDimensionSpec.of(QUALITY_DIMENSION)
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.PLACEMENT_DIMENSION),
+            DefaultDimensionSpec.of(QueryRunnerTestHelper.QUALITY_DIMENSION)
         ))
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setSubtotalsSpec(Arrays.asList(
-            Arrays.asList(MARKET_DIMENSION, PLACEMENT_DIMENSION),
-            Arrays.asList(MARKET_DIMENSION, QUALITY_DIMENSION)
+            Arrays.asList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENT_DIMENSION),
+            Arrays.asList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.QUALITY_DIMENSION)
         ))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
