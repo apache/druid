@@ -69,7 +69,13 @@ getComposeArgs()
       echo "-f ${DOCKERDIR}/docker-compose.yml"
     fi
   else
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]
+    then
+      # default + with override config + schema registry container
+      echo "-f ${DOCKERDIR}/docker-compose.override-env.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
+    else
     # with override config
-    echo "-f ${DOCKERDIR}/docker-compose.override-env.yml"
+      echo "-f ${DOCKERDIR}/docker-compose.override-env.yml"
+    fi
   fi
 }
