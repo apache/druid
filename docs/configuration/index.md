@@ -902,7 +902,7 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 
 ###### Automatic compaction IOConfig
 
-Auto compaction supports a subset of the [IOConfig for Parallel task](../ingestion/native-batch.md#ioConfig).
+Auto compaction supports a subset of the [IOConfig for Parallel task](../ingestion/native-batch.md).
 The below is a list of the supported configurations for auto compaction.
 
 |Property|Description|Default|Required|
