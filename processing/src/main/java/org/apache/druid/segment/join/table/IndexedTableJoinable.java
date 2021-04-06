@@ -108,7 +108,7 @@ public class IndexedTableJoinable implements Joinable
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
 
-        if (NullHandling.isNullOrEquivalent(s)) {
+        if (!NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
             // Duplicate found. Since the values are not all unique, we must return an empty Optional.
             return Optional.empty();
