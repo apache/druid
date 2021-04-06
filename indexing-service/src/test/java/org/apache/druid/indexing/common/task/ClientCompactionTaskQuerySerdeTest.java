@@ -84,7 +84,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
             ),
-            null
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             null,
@@ -202,6 +202,10 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
+    Assert.assertEquals(
+        query.getIoConfig().isDropExisting(),
+        task.getIoConfig().isDropExisting()
+    );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
 
@@ -215,7 +219,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
             new ParallelIndexTuningConfig(
                 null,
@@ -270,7 +274,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
             ),
-            null
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,

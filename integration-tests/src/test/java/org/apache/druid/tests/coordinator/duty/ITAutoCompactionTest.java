@@ -568,6 +568,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             1
         ),
         granularitySpec,
+        null,
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

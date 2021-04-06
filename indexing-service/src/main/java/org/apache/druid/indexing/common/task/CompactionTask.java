@@ -384,7 +384,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox.getCoordinatorClient(),
         segmentLoaderFactory,
         retryPolicyFactory,
-        ioConfig
+        ioConfig.isDropExisting()
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -493,7 +493,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final CoordinatorClient coordinatorClient,
       final SegmentLoaderFactory segmentLoaderFactory,
       final RetryPolicyFactory retryPolicyFactory,
-      final CompactionIOConfig ioConfig
+      final boolean dropExisting
   ) throws IOException, SegmentLoadingException
   {
     NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -576,7 +576,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                     coordinatorClient,
                     segmentLoaderFactory,
                     retryPolicyFactory,
-                    ioConfig
+                    dropExisting
                 ),
                 compactionTuningConfig
             )
@@ -604,7 +604,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                   coordinatorClient,
                   segmentLoaderFactory,
                   retryPolicyFactory,
-                  ioConfig
+                  dropExisting
               ),
               compactionTuningConfig
           )
@@ -619,7 +619,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       CoordinatorClient coordinatorClient,
       SegmentLoaderFactory segmentLoaderFactory,
       RetryPolicyFactory retryPolicyFactory,
-      CompactionIOConfig ioConfig
+      boolean dropExisting
   )
   {
     return new ParallelIndexIOConfig(
@@ -639,7 +639,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         ),
         null,
         false,
-        ioConfig.isDropExisting()
+        dropExisting
     );
   }
 
@@ -1027,6 +1027,12 @@ public class CompactionTask extends AbstractBatchIndexTask
     public Builder inputSpec(CompactionInputSpec inputSpec)
     {
       this.ioConfig = new CompactionIOConfig(inputSpec, null);
+      return this;
+    }
+
+    public Builder inputSpec(CompactionInputSpec inputSpec, Boolean dropExisting)
+    {
+      this.ioConfig = new CompactionIOConfig(inputSpec, dropExisting);
       return this;
     }
 
