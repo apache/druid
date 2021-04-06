@@ -100,7 +100,6 @@ public class LookupJoinable implements Joinable
   {
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
       final Set<String> keys = extractor.keySet();
-      final Set<String> retVal;
 
       final Set<String> nullEquivalentValues = new HashSet<>();
       nullEquivalentValues.add(null);
@@ -108,16 +107,21 @@ public class LookupJoinable implements Joinable
         nullEquivalentValues.add(NullHandling.defaultStringValue());
       }
 
-      if (nullEquivalentValues.stream().anyMatch(keys::contains)) {
-        retVal = Sets.difference(keys, nullEquivalentValues);
-      } else {
-        retVal = keys;
+      // size() of Sets.difference is slow; avoid it.
+      int nonNullKeys = keys.size();
+
+      for (String value : nullEquivalentValues) {
+        if (keys.contains(value)) {
+          nonNullKeys --;
+        }
       }
 
-      if (retVal.size() > maxNumValues) {
+      if (nonNullKeys > maxNumValues) {
         return Optional.empty();
+      } else if (nonNullKeys == keys.size()) {
+        return Optional.of(keys);
       } else {
-        return Optional.of(retVal);
+        return Optional.of(Sets.difference(keys, nullEquivalentValues));
       }
     } else {
       return Optional.empty();
