@@ -1,5 +1,6 @@
 package org.apache.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
 
@@ -10,9 +11,10 @@ public class DataSegmentAndTmpPath
   private final DataSegment segment;
   private final String indexZipFilePath;
 
+  @JsonCreator
   public DataSegmentAndTmpPath(
-      DataSegment segment,
-      String indexZipFilePath
+      @JsonProperty("segment") DataSegment segment,
+      @JsonProperty("indexZipFilePath") String indexZipFilePath
   )
   {
     this.segment = segment;

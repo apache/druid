@@ -762,4 +762,114 @@ public class JobHelper
     }
     return jobTrackerAddress;
   }
+
+  /**
+   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
+   * which will not overwrite
+   */
+  public static void renameIndexFilesForSegments(
+      HadoopIngestionSpec indexerSchema,
+      String segmentOutputPath,
+      String workingPath,
+      List<DataSegmentAndTmpPath> segmentsAndTmpPaths
+  ) throws IOException
+  {
+    log.info("Building HadoopDruidIndexerConfig");
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
+        indexerSchema
+            .withIOConfig(indexerSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
+            .withTuningConfig(indexerSchema.getTuningConfig().withWorkingPath(workingPath))
+    );
+    log.info("Building Configuration");
+    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
+    config.addJobProperties(configuration);
+    JobHelper.injectDruidProperties(configuration, config);
+    log.info("Built Configuration");
+    for (DataSegmentAndTmpPath segmentAndTmpPath : segmentsAndTmpPaths) {
+      log.info("tmpPath: [%s]", segmentAndTmpPath.getIndexZipFilePath());
+      log.info("segmentId: [%s]", segmentAndTmpPath.getSegment().getId());
+      Path tmpPath = new Path(segmentAndTmpPath.getIndexZipFilePath());
+      Path finalIndexZipFilePath = new Path(tmpPath.getParent(), INDEX_ZIP);
+      final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
+      log.info("about to rename segment index file");
+      if (!renameIndexFile(outputFS, tmpPath, finalIndexZipFilePath)) {
+        throw new IOE(
+            "Unable to rename [%s] to [%s]",
+            tmpPath.toUri().toString(),
+            finalIndexZipFilePath.toUri().toString()
+        );
+      }
+    }
+  }
+
+  /**
+   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
+   * which will not overwrite
+   *
+   * @param outputFS              The output fs
+   * @param indexZipFilePath      The original file path
+   * @param finalIndexZipFilePath The to rename the original file to
+   *
+   * @return False if a rename failed, true otherwise (rename success or no rename needed)
+   */
+  public static boolean renameIndexFile(
+      final FileSystem outputFS,
+      final Path indexZipFilePath,
+      final Path finalIndexZipFilePath
+  )
+  {
+    log.info("renameIndexFile: finalIndexZipFilePath: [%s], tmpPath: [%s]",
+             finalIndexZipFilePath.toUri().getPath(),
+             indexZipFilePath.toUri().getPath());
+    try {
+      return RetryUtils.retry(
+          () -> {
+            final boolean needRename;
+
+            if (outputFS.exists(finalIndexZipFilePath)) {
+              // NativeS3FileSystem.rename won't overwrite, so we might need to delete the old index first
+              final FileStatus zipFile = outputFS.getFileStatus(indexZipFilePath);
+              final FileStatus finalIndexZipFile = outputFS.getFileStatus(finalIndexZipFilePath);
+
+              if (zipFile.getModificationTime() >= finalIndexZipFile.getModificationTime()
+                  || zipFile.getLen() != finalIndexZipFile.getLen()) {
+                log.info(
+                    "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
+                    finalIndexZipFile.getPath(),
+                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
+                    finalIndexZipFile.getLen(),
+                    zipFile.getPath(),
+                    DateTimes.utc(zipFile.getModificationTime()),
+                    zipFile.getLen()
+                );
+                outputFS.delete(finalIndexZipFilePath, false);
+                needRename = true;
+              } else {
+                log.info(
+                    "File[%s / %s / %sB] existed and will be kept",
+                    finalIndexZipFile.getPath(),
+                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
+                    finalIndexZipFile.getLen()
+                );
+                needRename = false;
+              }
+            } else {
+              needRename = true;
+            }
+
+            if (needRename) {
+              log.info("Attempting rename from [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
+              return outputFS.rename(indexZipFilePath, finalIndexZipFilePath);
+            } else {
+              return true;
+            }
+          },
+          FileUtils.IS_EXCEPTION,
+          NUM_RETRIES
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

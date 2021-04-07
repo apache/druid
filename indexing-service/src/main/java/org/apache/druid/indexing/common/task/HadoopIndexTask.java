@@ -52,11 +52,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -68,9 +64,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.util.ToolRunner;
 import org.joda.time.Interval;
@@ -85,7 +78,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -343,6 +335,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     };
 
     HadoopIngestionSpec indexerSchema;
+    String workingPath;
+    String segmentOutputPath;
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
     Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
@@ -368,8 +362,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
 
       indexerSchema = determineConfigStatus.getSchema();
-      String workingPath = determineConfigStatus.getWorkingPath();
-      String segmentOutputPath = determineConfigStatus.getSegmentOutputPath();
+      workingPath = determineConfigStatus.getWorkingPath();
+      segmentOutputPath = determineConfigStatus.getSegmentOutputPath();
       if (indexerSchema == null) {
         errorMsg = determineConfigStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -378,11 +372,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             errorMsg
         );
       }
-      config = HadoopDruidIndexerConfig.fromSpec(
-          indexerSchema
-              .withIOConfig(indexerSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
-              .withTuningConfig(indexerSchema.getTuningConfig().withWorkingPath(workingPath))
-      );
+      log.info("workingPath: [%s], segmentOutputPath: [%s]", workingPath, segmentOutputPath);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -390,9 +380,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
-
-    final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config);
-    config.addJobProperties(conf);
 
     // We should have a lock from before we started running only if interval was specified
     String version;
@@ -452,6 +439,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       Thread.currentThread().setContextClassLoader(loader);
 
+      log.info("about to invoke job");
       ingestionState = IngestionState.BUILD_SEGMENTS;
       final String jobStatusString = (String) innerProcessingRunTask.invoke(
           innerProcessingRunner,
@@ -463,14 +451,18 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           HadoopIndexGeneratorInnerProcessingStatus.class
       );
 
-      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths = buildSegmentsStatus.getDataSegmentsAndTmpPaths();
+      log.info("about to get segment files");
+      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths = buildSegmentsStatus.getDataSegmentAndTmpPaths();
+      log.info("about to rename segment files");
       if (dataSegmentAndTmpPaths != null) {
-        renameIndexFilesForSegments(conf, dataSegmentAndTmpPaths);
+        log.info("found non-null segment files");
+        JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath, dataSegmentAndTmpPaths);
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(dataSegmentAndTmpPaths.stream().map(DataSegmentAndTmpPath::getSegment).collect(Collectors.toList()));
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       } else {
+        log.info("found null segment files :(");
         errorMsg = buildSegmentsStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
@@ -484,100 +476,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
-    }
-  }
-
-  /**
-   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
-   * which will not overwrite
-   */
-  private static void renameIndexFilesForSegments(
-      Configuration configuration,
-      List<DataSegmentAndTmpPath> segmentsAndTmpPaths
-  ) throws IOException
-  {
-    for (DataSegmentAndTmpPath segmentAndTmpPath : segmentsAndTmpPaths) {
-      org.apache.hadoop.fs.Path tmpPath = new org.apache.hadoop.fs.Path(segmentAndTmpPath.getIndexZipFilePath());
-      org.apache.hadoop.fs.Path finalIndexZipFilePath = new org.apache.hadoop.fs.Path(tmpPath.getParent(), INDEX_ZIP);
-      final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
-      if (!renameIndexFile(outputFS, tmpPath, finalIndexZipFilePath)) {
-        throw new IOE(
-            "Unable to rename [%s] to [%s]",
-            tmpPath.toUri().toString(),
-            finalIndexZipFilePath.toUri().toString()
-        );
-      }
-    }
-  }
-
-  /**
-   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
-   * which will not overwrite
-   *
-   * @param outputFS              The output fs
-   * @param indexZipFilePath      The original file path
-   * @param finalIndexZipFilePath The to rename the original file to
-   *
-   * @return False if a rename failed, true otherwise (rename success or no rename needed)
-   */
-  private static boolean renameIndexFile(
-      final FileSystem outputFS,
-      final org.apache.hadoop.fs.Path indexZipFilePath,
-      final org.apache.hadoop.fs.Path finalIndexZipFilePath
-  )
-  {
-    log.info("renameIndexFile: finalIndexZipFilePath: [%s], tmpPath: [%s]",
-             finalIndexZipFilePath.toUri().getPath(),
-             indexZipFilePath.toUri().getPath());
-    try {
-      return RetryUtils.retry(
-          () -> {
-            final boolean needRename;
-
-            if (outputFS.exists(finalIndexZipFilePath)) {
-              // NativeS3FileSystem.rename won't overwrite, so we might need to delete the old index first
-              final FileStatus zipFile = outputFS.getFileStatus(indexZipFilePath);
-              final FileStatus finalIndexZipFile = outputFS.getFileStatus(finalIndexZipFilePath);
-
-              if (zipFile.getModificationTime() >= finalIndexZipFile.getModificationTime()
-                  || zipFile.getLen() != finalIndexZipFile.getLen()) {
-                log.info(
-                    "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
-                    finalIndexZipFile.getPath(),
-                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
-                    finalIndexZipFile.getLen(),
-                    zipFile.getPath(),
-                    DateTimes.utc(zipFile.getModificationTime()),
-                    zipFile.getLen()
-                );
-                outputFS.delete(finalIndexZipFilePath, false);
-                needRename = true;
-              } else {
-                log.info(
-                    "File[%s / %s / %sB] existed and will be kept",
-                    finalIndexZipFile.getPath(),
-                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
-                    finalIndexZipFile.getLen()
-                );
-                needRename = false;
-              }
-            } else {
-              needRename = true;
-            }
-
-            if (needRename) {
-              log.info("Attempting rename from [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
-              return outputFS.rename(indexZipFilePath, finalIndexZipFilePath);
-            } else {
-              return true;
-            }
-          },
-          FileUtils.IS_EXCEPTION,
-          NUM_RETRIES
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -826,6 +724,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       log.info("Starting a hadoop index generator job...");
       try {
         if (job.run()) {
+          log.info("Constructing HadoopIndexGeneratorInnerProcessingStatus with segmentsAndPaths...");
           return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
               new HadoopIndexGeneratorInnerProcessingStatus(
                   job.getPublishedSegmentAndTmpPaths(),
@@ -898,26 +797,26 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   public static class HadoopIndexGeneratorInnerProcessingStatus
   {
-    private final List<DataSegmentAndTmpPath> dataSegmentsAndTmpPaths;
+    private final List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths;
     private final Map<String, Object> metrics;
     private final String errorMsg;
 
     @JsonCreator
     public HadoopIndexGeneratorInnerProcessingStatus(
-        @JsonProperty("dataSegments") List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths,
+        @JsonProperty("dataSegmentAndTmpPaths") List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths,
         @JsonProperty("metrics") Map<String, Object> metrics,
         @JsonProperty("errorMsg") String errorMsg
     )
     {
-      this.dataSegmentsAndTmpPaths = dataSegmentAndTmpPaths;
+      this.dataSegmentAndTmpPaths = dataSegmentAndTmpPaths;
       this.metrics = metrics;
       this.errorMsg = errorMsg;
     }
 
     @JsonProperty
-    public List<DataSegmentAndTmpPath> getDataSegmentsAndTmpPaths()
+    public List<DataSegmentAndTmpPath> getDataSegmentAndTmpPaths()
     {
-      return dataSegmentsAndTmpPaths;
+      return dataSegmentAndTmpPaths;
     }
 
     @JsonProperty
