@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -456,9 +457,19 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       log.info("about to rename segment files");
       if (dataSegmentAndTmpPaths != null) {
         log.info("found non-null segment files");
-        JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath, dataSegmentAndTmpPaths);
+
+
+        renameSegmentIndexFilesJob(
+            indexerSchema,
+            segmentOutputPath,
+            workingPath,
+            dataSegmentAndTmpPaths
+        );
+
         ingestionState = IngestionState.COMPLETED;
-        toolbox.publishSegments(dataSegmentAndTmpPaths.stream().map(DataSegmentAndTmpPath::getSegment).collect(Collectors.toList()));
+        toolbox.publishSegments(dataSegmentAndTmpPaths.stream()
+                                                      .map(DataSegmentAndTmpPath::getSegment)
+                                                      .collect(Collectors.toList()));
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       } else {
@@ -516,6 +527,64 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       finally {
         Thread.currentThread().setContextClassLoader(oldLoader);
       }
+    }
+  }
+
+  private void renameSegmentIndexFilesJob(
+      HadoopIngestionSpec indexerSchema,
+      String segmentOutputPath,
+      String workingPath,
+      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths
+  )
+  {
+    log.info("In renameSegmentIndexFilesJob");
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      ClassLoader loader = HadoopTask.buildClassLoader(
+          getHadoopDependencyCoordinates(),
+          taskConfig.getDefaultHadoopCoordinates()
+      );
+
+      Object renameSegmentIndexFilesRunner = getForeignClassloaderObject(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner",
+          loader
+      );
+
+      String hadoopIngestionSpecStr =
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(indexerSchema);
+      String dataSegmentAndTmpPathListStr =
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(dataSegmentAndTmpPaths);
+      String[] renameSegmentIndexFilesJobInput = new String[]{
+          hadoopIngestionSpecStr,
+          workingPath,
+          segmentOutputPath,
+          dataSegmentAndTmpPathListStr
+      };
+
+      log.info(
+          "hadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndTmpPathListStr: [%s]",
+          hadoopIngestionSpecStr,
+          workingPath,
+          segmentOutputPath,
+          dataSegmentAndTmpPathListStr
+      );
+      Class<?> buildKillJobRunnerClass = renameSegmentIndexFilesRunner.getClass();
+      Method renameSegmentIndexFiles = buildKillJobRunnerClass.getMethod(
+          "runTask",
+          renameSegmentIndexFilesJobInput.getClass()
+      );
+
+      Thread.currentThread().setContextClassLoader(loader);
+      renameSegmentIndexFiles.invoke(
+          renameSegmentIndexFilesRunner,
+          new Object[]{renameSegmentIndexFilesJobInput}
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
 
@@ -792,6 +861,54 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         return new String[]{jobId, (res == 0 ? "Success" : "Fail")};
       }
       return new String[]{jobId, "Fail"};
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public static class HadoopRenameSegmentIndexFilesRunner
+  {
+    TypeReference<List<DataSegmentAndTmpPath>> LIST_DATA_SEGMENT_AND_TMP_PATH =
+        new TypeReference<List<DataSegmentAndTmpPath>>()
+        {
+        };
+
+    public void runTask(String[] args) throws Exception
+    {
+      if (args.length != 4) {
+        log.warn("HadoopRenameSegmentIndexFilesRunner called with improper number of arguments");
+      }
+      String hadoopIngestionSpecStr = args[0];
+      String workingPath = args[1];
+      String segmentOutputPath = args[2];
+      String dataSegmentAndTmpPathListStr = args[3];
+      log.info(
+          "HadoopRenameSegmentIndexFilesRunner: HadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndTmpPathListStr: [%s]",
+          hadoopIngestionSpecStr,
+          workingPath,
+          segmentOutputPath,
+          dataSegmentAndTmpPathListStr
+      );
+
+      HadoopIngestionSpec indexerSchema;
+      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths;
+      try {
+        indexerSchema = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+            hadoopIngestionSpecStr,
+            HadoopIngestionSpec.class
+        );
+        dataSegmentAndTmpPaths = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+            dataSegmentAndTmpPathListStr,
+            LIST_DATA_SEGMENT_AND_TMP_PATH
+        );
+      }
+      catch (Exception e) {
+        log.warn(
+            e,
+            "HadoopRenameSegmentIndexFilesRunner: Error occurred while trying to read input parameters into data objects"
+        );
+        throw e;
+      }
+      JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath, dataSegmentAndTmpPaths);
     }
   }
 
