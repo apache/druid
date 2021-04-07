@@ -25,5 +25,6 @@ public interface ConfigSerde<T>
 {
   byte[] serialize(T obj);
   String serializeToString(T obj);
+  String serializeSkipNullToString(T obj);
   T deserialize(byte[] bytes);
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.common.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,7 @@ public class JacksonConfigManager
 {
   private final ConfigManager configManager;
   private final ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapperSkipNull;
   private final AuditManager auditManager;
 
   @Inject
@@ -50,6 +52,7 @@ public class JacksonConfigManager
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
     this.auditManager = auditManager;
+    this.jsonMapperSkipNull = jsonMapper.copy().setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
   public <T> AtomicReference<T> watch(String key, Class<? extends T> clazz)
@@ -77,7 +80,7 @@ public class JacksonConfigManager
                   .key(key)
                   .type(key)
                   .auditInfo(auditInfo)
-                  .payload(configSerde.serializeToString(val))
+                  .payload(configSerde.serializeSkipNullToString(val))
                   .build()
     );
     return configManager.set(key, configSerde, val);
@@ -103,6 +106,17 @@ public class JacksonConfigManager
       {
         try {
           return jsonMapper.writeValueAsString(obj);
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public String serializeSkipNullToString(T obj)
+      {
+        try {
+          return jsonMapperSkipNull.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -141,6 +155,17 @@ public class JacksonConfigManager
       {
         try {
           return jsonMapper.writeValueAsString(obj);
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public String serializeSkipNullToString(T obj)
+      {
+        try {
+          return jsonMapperSkipNull.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
