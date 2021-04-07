@@ -102,14 +102,14 @@ public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
 
-  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
+  public static List<DataSegmentAndTmpPath> getPublishedSegmentAndTmpPaths(HadoopDruidIndexerConfig config)
   {
     final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(conf);
 
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
-    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
+    ImmutableList.Builder<DataSegmentAndTmpPath> publishedSegmentAndTmpPathsBuilder = ImmutableList.builder();
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
@@ -117,9 +117,9 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegment.class);
-        publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getId());
+        final DataSegmentAndTmpPath segmentAndTmpPath = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegmentAndTmpPath.class);
+        publishedSegmentAndTmpPathsBuilder.add(segmentAndTmpPath);
+        log.info("Adding segment %s to the list of published segments", segmentAndTmpPath.getSegment().getId());
       }
     }
     catch (FileNotFoundException e) {
@@ -133,9 +133,9 @@ public class IndexGeneratorJob implements Jobby
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
+    List<DataSegmentAndTmpPath> publishedSegmentAndTmpPaths = publishedSegmentAndTmpPathsBuilder.build();
 
-    return publishedSegments;
+    return publishedSegmentAndTmpPaths;
   }
 
   private final HadoopDruidIndexerConfig config;
@@ -809,7 +809,7 @@ public class IndexGeneratorJob implements Jobby
             0
         );
 
-        final DataSegment segment = JobHelper.serializeOutIndex(
+        final DataSegmentAndTmpPath segmentAndTmpPath = JobHelper.serializeOutIndex(
             segmentTemplate,
             context.getConfiguration(),
             context,
@@ -831,7 +831,7 @@ public class IndexGeneratorJob implements Jobby
             HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
         );
 
-        Path descriptorPath = config.makeDescriptorInfoPath(segment);
+        Path descriptorPath = config.makeDescriptorInfoPath(segmentAndTmpPath.getSegment());
         descriptorPath = JobHelper.prependFSIfNullScheme(
             FileSystem.get(
                 descriptorPath.toUri(),
@@ -842,7 +842,7 @@ public class IndexGeneratorJob implements Jobby
         log.info("Writing descriptor to path[%s]", descriptorPath);
         JobHelper.writeSegmentDescriptor(
             config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration()),
-            segment,
+            segmentAndTmpPath,
             descriptorPath,
             context
         );

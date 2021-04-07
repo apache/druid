@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ public class HadoopDruidIndexerJob implements Jobby
   @Nullable
   private IndexGeneratorJob indexJob;
   @Nullable
-  private volatile List<DataSegment> publishedSegments = null;
+  private volatile List<DataSegmentAndTmpPath> publishedSegmentAndTmpPaths = null;
   @Nullable
   private String hadoopJobIdFile;
 
@@ -91,7 +90,7 @@ public class HadoopDruidIndexerJob implements Jobby
           @Override
           public boolean run()
           {
-            publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+            publishedSegmentAndTmpPaths = IndexGeneratorJob.getPublishedSegmentAndTmpPaths(config);
             return true;
           }
         }
@@ -122,12 +121,12 @@ public class HadoopDruidIndexerJob implements Jobby
     return indexJob.getErrorMessage();
   }
 
-  public List<DataSegment> getPublishedSegments()
+  public List<DataSegmentAndTmpPath> getPublishedSegmentAndTmpPaths()
   {
-    if (publishedSegments == null) {
+    if (publishedSegmentAndTmpPaths == null) {
       throw new IllegalStateException("Job hasn't run yet. No segments have been published yet.");
     }
-    return publishedSegments;
+    return publishedSegmentAndTmpPaths;
   }
 
   public void setHadoopJobIdFile(String hadoopJobIdFile)
