@@ -28,7 +28,7 @@ import java.util.List;
 
 public interface AuditManager
 {
-  String PAYLOAD_SKIP_MESSAGE = "Payload was not stored as the payload size exceed limit configured by druid.audit.manager.skipStorePayloadExceedSizeByte";
+  String PAYLOAD_SKIP_MESSAGE = "Payload was not stored as the payload size exceed limit configured by druid.audit.manager.maxPayloadSizeBytes";
 
   String X_DRUID_AUTHOR = "X-Druid-Author";
 

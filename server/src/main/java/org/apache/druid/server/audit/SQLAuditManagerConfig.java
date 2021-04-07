@@ -32,7 +32,7 @@ public class SQLAuditManagerConfig
   private boolean includePayloadAsDimensionInMetric = false;
 
   @JsonProperty
-  private long skipStorePayloadExceedSizeByte = -1;
+  private long maxPayloadSizeBytes = -1;
 
   public long getAuditHistoryMillis()
   {
@@ -44,8 +44,8 @@ public class SQLAuditManagerConfig
     return includePayloadAsDimensionInMetric;
   }
 
-  public long getSkipStorePayloadExceedSizeByte()
+  public long getMaxPayloadSizeBytes()
   {
-    return skipStorePayloadExceedSizeByte;
+    return maxPayloadSizeBytes;
   }
 }

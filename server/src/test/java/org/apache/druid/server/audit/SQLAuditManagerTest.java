@@ -273,7 +273,7 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
   {
-    SQLAuditManager auditManagerWithSkipStorePayloadExceedSizeByte = new SQLAuditManager(
+    SQLAuditManager auditManagerWithMaxPayloadSizeBytes = new SQLAuditManager(
         connector,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopServiceEmitter(),
@@ -281,7 +281,7 @@ public class SQLAuditManagerTest
         new SQLAuditManagerConfig()
         {
           @Override
-          public long getSkipStorePayloadExceedSizeByte()
+          public long getMaxPayloadSizeBytes()
           {
             return 10;
           }
@@ -301,7 +301,7 @@ public class SQLAuditManagerTest
     AuditEntry auditEntryToStore = auditEntryBuilder.payload("payload audit to store").build();
     AuditEntry expectedWithSkipPayload = auditEntryBuilder.payload(AuditManager.PAYLOAD_SKIP_MESSAGE).build();
 
-    auditManagerWithSkipStorePayloadExceedSizeByte.doAudit(auditEntryToStore);
+    auditManagerWithMaxPayloadSizeBytes.doAudit(auditEntryToStore);
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
         "audit_key",
@@ -316,7 +316,7 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithPayloadUnderSkipPayloadLimit() throws IOException
   {
-    SQLAuditManager auditManagerWithSkipStorePayloadExceedSizeByte = new SQLAuditManager(
+    SQLAuditManager auditManagerWithMaxPayloadSizeBytes = new SQLAuditManager(
         connector,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopServiceEmitter(),
@@ -324,7 +324,7 @@ public class SQLAuditManagerTest
         new SQLAuditManagerConfig()
         {
           @Override
-          public long getSkipStorePayloadExceedSizeByte()
+          public long getMaxPayloadSizeBytes()
           {
             return 500;
           }
@@ -343,7 +343,7 @@ public class SQLAuditManagerTest
 
     AuditEntry auditEntryToStore = auditEntryBuilder.payload("payload audit to store").build();
 
-    auditManagerWithSkipStorePayloadExceedSizeByte.doAudit(auditEntryToStore);
+    auditManagerWithMaxPayloadSizeBytes.doAudit(auditEntryToStore);
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
         "audit_key",
