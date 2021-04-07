@@ -338,6 +338,8 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 |--------|-----------|-------|
 |`druid.audit.manager.auditHistoryMillis`|Default duration for querying audit history.|1 week|
 |`druid.audit.manager.includePayloadAsDimensionInMetric`|Boolean flag on whether to add `payload` column in service metric.|false|
+|`druid.audit.manager.skipStorePayloadExceedSizeByte`|The maximum size of audit payload, in bytes, to store in Druid's metadata store audit table. If the size of audit payload exceed this value, the audit log would be stored with a messaging indicating that the payload was omitted instead. Setting skipStorePayloadExceedSizeByte to -1 (default value) disables this check, meaning Druid will always store audit payload regardless of it's size.|-1|
+
 
 ### Enabling Metrics
 

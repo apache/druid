@@ -114,6 +114,18 @@ public class SQLAuditManager implements AuditManager
   {
     emitter.emit(getAuditMetricEventBuilder(auditEntry).build("config/audit", 1));
 
+    AuditEntry auditEntryToStore = auditEntry;
+    int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
+    if (config.getSkipStorePayloadExceedSizeByte() >=0 && payloadSize > config.getSkipStorePayloadExceedSizeByte()) {
+      auditEntryToStore = AuditEntry.builder()
+                                    .key(auditEntry.getKey())
+                                    .type(auditEntry.getType())
+                                    .auditInfo(auditEntry.getAuditInfo())
+                                    .payload(PAYLOAD_SKIP_MESSAGE)
+                                    .auditTime(auditEntry.getAuditTime())
+                                    .build();
+    }
+
     handle.createStatement(
         StringUtils.format(
             "INSERT INTO %s ( audit_key, type, author, comment, created_date, payload) VALUES (:audit_key, :type, :author, :comment, :created_date, :payload)",
@@ -125,7 +137,7 @@ public class SQLAuditManager implements AuditManager
           .bind("author", auditEntry.getAuditInfo().getAuthor())
           .bind("comment", auditEntry.getAuditInfo().getComment())
           .bind("created_date", auditEntry.getAuditTime().toString())
-          .bind("payload", jsonMapper.writeValueAsBytes(auditEntry))
+          .bind("payload", jsonMapper.writeValueAsBytes(auditEntryToStore))
           .execute();
   }
 

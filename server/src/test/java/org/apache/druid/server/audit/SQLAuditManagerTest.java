@@ -270,6 +270,91 @@ public class SQLAuditManagerTest
     auditManager.fetchAuditHistory("testType", 0);
   }
 
+  @Test(timeout = 60_000L)
+  public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
+  {
+    SQLAuditManager auditManagerWithSkipStorePayloadExceedSizeByte = new SQLAuditManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopServiceEmitter(),
+        mapper,
+        new SQLAuditManagerConfig()
+        {
+          @Override
+          public long getSkipStorePayloadExceedSizeByte()
+          {
+            return 10;
+          }
+        }
+    );
+
+    AuditEntry.Builder auditEntryBuilder = AuditEntry.builder()
+                                                     .key("testKey")
+                                                     .type("testType")
+                                                     .auditInfo(new AuditInfo(
+                                                         "testAuthor",
+                                                         "testComment",
+                                                         "127.0.0.1"
+                                                     ))
+                                                     .auditTime(DateTimes.of("1994-04-29T00:00:00Z"));
+
+    AuditEntry auditEntryToStore = auditEntryBuilder.payload("payload audit to store").build();
+    AuditEntry expectedWithSkipPayload = auditEntryBuilder.payload(AuditManager.PAYLOAD_SKIP_MESSAGE).build();
+
+    auditManagerWithSkipStorePayloadExceedSizeByte.doAudit(auditEntryToStore);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(expectedWithSkipPayload, dbEntry);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCreateAuditEntryWithPayloadUnderSkipPayloadLimit() throws IOException
+  {
+    SQLAuditManager auditManagerWithSkipStorePayloadExceedSizeByte = new SQLAuditManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopServiceEmitter(),
+        mapper,
+        new SQLAuditManagerConfig()
+        {
+          @Override
+          public long getSkipStorePayloadExceedSizeByte()
+          {
+            return 500;
+          }
+        }
+    );
+
+    AuditEntry.Builder auditEntryBuilder = AuditEntry.builder()
+                                                     .key("testKey")
+                                                     .type("testType")
+                                                     .auditInfo(new AuditInfo(
+                                                         "testAuthor",
+                                                         "testComment",
+                                                         "127.0.0.1"
+                                                     ))
+                                                     .auditTime(DateTimes.of("1994-04-29T00:00:00Z"));
+
+    AuditEntry auditEntryToStore = auditEntryBuilder.payload("payload audit to store").build();
+
+    auditManagerWithSkipStorePayloadExceedSizeByte.doAudit(auditEntryToStore);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(auditEntryToStore, dbEntry);
+  }
+
   @After
   public void cleanup()
   {
