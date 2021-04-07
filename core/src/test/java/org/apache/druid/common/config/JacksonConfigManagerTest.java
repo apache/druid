@@ -46,6 +46,7 @@ public class JacksonConfigManagerTest
   private AuditManager mockAuditManager;
 
   private JacksonConfigManager jacksonConfigManager;
+
   @Before
   public void setUp()
   {
