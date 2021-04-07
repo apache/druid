@@ -458,13 +458,18 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (dataSegmentAndTmpPaths != null) {
         log.info("found non-null segment files");
 
-
-        renameSegmentIndexFilesJob(
-            indexerSchema,
-            segmentOutputPath,
-            workingPath,
-            dataSegmentAndTmpPaths
-        );
+        try {
+          Thread.currentThread().setContextClassLoader(oldLoader);
+          renameSegmentIndexFilesJob(
+              toolbox.getJsonMapper().writeValueAsString(indexerSchema),
+              segmentOutputPath,
+              workingPath,
+              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndTmpPaths)
+          );
+        }
+        finally {
+          Thread.currentThread().setContextClassLoader(loader);
+        }
 
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(dataSegmentAndTmpPaths.stream()
@@ -531,10 +536,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   private void renameSegmentIndexFilesJob(
-      HadoopIngestionSpec indexerSchema,
+      String hadoopIngestionSpecStr,
       String segmentOutputPath,
       String workingPath,
-      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths
+      String dataSegmentAndTmpPathListStr
   )
   {
     log.info("In renameSegmentIndexFilesJob");
@@ -550,10 +555,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           loader
       );
 
-      String hadoopIngestionSpecStr =
-          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(indexerSchema);
-      String dataSegmentAndTmpPathListStr =
-          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(dataSegmentAndTmpPaths);
       String[] renameSegmentIndexFilesJobInput = new String[]{
           hadoopIngestionSpecStr,
           workingPath,
