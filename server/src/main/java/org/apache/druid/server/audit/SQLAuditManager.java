@@ -116,7 +116,7 @@ public class SQLAuditManager implements AuditManager
 
     AuditEntry auditEntryToStore = auditEntry;
     int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
-    if (config.getSkipStorePayloadExceedSizeByte() >=0 && payloadSize > config.getSkipStorePayloadExceedSizeByte()) {
+    if (config.getSkipStorePayloadExceedSizeByte() >= 0 && payloadSize > config.getSkipStorePayloadExceedSizeByte()) {
       auditEntryToStore = AuditEntry.builder()
                                     .key(auditEntry.getKey())
                                     .type(auditEntry.getType())
