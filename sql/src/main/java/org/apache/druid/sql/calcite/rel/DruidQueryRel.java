@@ -29,11 +29,13 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -41,21 +43,22 @@ import java.util.Set;
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
-  private final RelOptTable table;
+  @Nullable
+  private final RelOptTable table; // must not be null except for inline data
   private final DruidTable druidTable;
   private final PartialDruidQuery partialQuery;
 
   private DruidQueryRel(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final RelOptTable table,
+      @Nullable final RelOptTable table,
       final DruidTable druidTable,
       final QueryMaker queryMaker,
       final PartialDruidQuery partialQuery
   )
   {
     super(cluster, traitSet, queryMaker);
-    this.table = Preconditions.checkNotNull(table, "table");
+    this.table = table;
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
     this.partialQuery = Preconditions.checkNotNull(partialQuery, "partialQuery");
   }
@@ -77,6 +80,22 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         druidTable,
         queryMaker,
         PartialDruidQuery.create(scanRel)
+    );
+  }
+
+  public static DruidQueryRel fullScan(
+      final LogicalValues valuesRel,
+      final DruidTable druidTable,
+      final QueryMaker queryMaker
+  )
+  {
+    return new DruidQueryRel(
+        valuesRel.getCluster(),
+        valuesRel.getCluster().traitSetOf(Convention.NONE),
+        null,
+        druidTable,
+        queryMaker,
+        PartialDruidQuery.create(valuesRel)
     );
   }
 
