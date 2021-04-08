@@ -27,8 +27,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -45,8 +46,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -55,7 +55,6 @@ import java.util.stream.Collectors;
 public class DataSchema
 {
   private static final Logger log = new Logger(DataSchema.class);
-  private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
   private final String dataSource;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
@@ -150,35 +149,47 @@ public class DataSchema
     IdUtils.validateId("dataSource", dataSource);
   }
 
+  /**
+   * Computes the {@link DimensionsSpec} that we will actually use. It is derived from, but not necessarily identical
+   * to, the one that we were given.
+   */
   private static DimensionsSpec computeDimensionsSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] aggregators
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final AggregatorFactory[] aggregators
   )
   {
-    final Set<String> dimensionExclusions = new HashSet<>();
+    final Set<String> inputFieldNames = new HashSet<>();
+    final Set<String> outputFieldNames = new HashSet<>();
 
-    final String timestampColumn = timestampSpec.getTimestampColumn();
-    if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensionNames().contains(timestampColumn))) {
-      dimensionExclusions.add(timestampColumn);
-    }
+    // Populate inputFieldNames.
+    inputFieldNames.add(timestampSpec.getTimestampColumn());
+    inputFieldNames.addAll(dimensionsSpec.getDimensionNames());
+    Arrays.stream(aggregators)
+          .flatMap(aggregator -> aggregator.requiredFields().stream())
+          .forEach(inputFieldNames::add);
 
-    for (AggregatorFactory aggregator : aggregators) {
-      dimensionExclusions.addAll(aggregator.requiredFields());
-      dimensionExclusions.add(aggregator.getName());
-    }
+    // Populate outputFieldNames, validating along the way for lack of duplicates.
+    outputFieldNames.add(ColumnHolder.TIME_COLUMN_NAME);
 
-    final Set<String> metSet = Arrays.stream(aggregators).map(AggregatorFactory::getName).collect(Collectors.toSet());
-    final Set<String> dimSet = new HashSet<>(dimensionsSpec.getDimensionNames());
-    final Set<String> overlap = Sets.intersection(metSet, dimSet);
-    if (!overlap.isEmpty()) {
-      throw new IAE(
-          "Cannot have overlapping dimensions and metrics of the same name. Please change the name of the metric. Overlap: %s",
-          overlap
-      );
-    }
+    Stream.concat(
+        dimensionsSpec.getDimensions().stream().map(DimensionSchema::getName),
+        Arrays.stream(aggregators).map(AggregatorFactory::getName)
+    ).forEach(
+        field -> {
+          if (!outputFieldNames.add(field)) {
+            throw new IAE("Cannot specify field [%s] more than once", field);
+          }
+        }
+    );
 
-    return dimensionsSpec.withDimensionExclusions(Sets.difference(dimensionExclusions, dimSet));
+    // Set up additional exclusions: all inputs and outputs, minus defined dimensions.
+    final Set<String> additionalDimensionExclusions = new HashSet<>();
+    additionalDimensionExclusions.addAll(inputFieldNames);
+    additionalDimensionExclusions.addAll(outputFieldNames);
+    additionalDimensionExclusions.removeAll(dimensionsSpec.getDimensionNames());
+
+    return dimensionsSpec.withDimensionExclusions(additionalDimensionExclusions);
   }
 
   @JsonProperty

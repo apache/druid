@@ -119,6 +119,42 @@ exports[`header bar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Lookups"
           />
+          <Blueprint3.MenuDivider />
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="cog"
+            multiline={false}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Console options"
+          >
+            <React.Fragment>
+              <Blueprint3.MenuItem
+                disabled={false}
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Force Coordinator/Overlord mode"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Force Coordinator mode"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Force Overlord mode"
+              />
+            </React.Fragment>
+          </Blueprint3.MenuItem>
         </Blueprint3.Menu>
       }
       defaultIsOpen={false}

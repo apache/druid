@@ -46,10 +46,11 @@ When you have to put a large number for some configuration as above, it is easy 
 Given a disk of 1T, the configuration can be
 
 ```properties
-druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1t"}]
+druid.segmentCache.locations=[{"path":"/segment-cache-00","maxSize":"1t"},{"path":"/segment-cache-01","maxSize":"1200g"}]
 ```
 
 Note: in above example, both `1t` and `1T` are acceptable since it's case-insensitive.
+Also, only integers are valid as the number part. For example, you can't replace `1200g` with `1.2t`.
 
 ### Supported Units
 In the world of computer, a unit like `K` is ambiguous. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).

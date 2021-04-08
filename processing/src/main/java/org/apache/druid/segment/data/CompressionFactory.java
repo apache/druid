@@ -283,26 +283,9 @@ public class CompressionFactory
 
     long read(int index);
 
-    default void read(long[] out, int outPosition, int startIndex, int length)
-    {
-      for (int i = 0; i < length; i++) {
-        out[outPosition + i] = read(startIndex + i);
-      }
-    }
+    void read(long[] out, int outPosition, int startIndex, int length);
 
-    default int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
-    {
-      for (int i = 0; i < length; i++) {
-        int index = indexes[outPosition + i] - indexOffset;
-        if (index >= limit) {
-          return i;
-        }
-
-        out[outPosition + i] = read(index);
-      }
-
-      return length;
-    }
+    int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit);
 
     LongEncodingReader duplicate();
   }

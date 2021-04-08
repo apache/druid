@@ -784,7 +784,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type, String typeName)
+  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type, @Nullable String typeName)
   {
     switch (type) {
       case STRING:

@@ -79,7 +79,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
-      @Nullable ClientCompactionTaskQueryGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable Map<String, Object> context
   )
   {

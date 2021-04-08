@@ -883,7 +883,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return numUpdatedRows > 0;
   }
 
-  private static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)
+  static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)
   {
     int numChangedSegments = 0;
     for (int i = 0; i < segmentChanges.length; i++) {

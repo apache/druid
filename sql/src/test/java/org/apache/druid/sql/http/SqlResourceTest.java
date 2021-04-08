@@ -35,8 +35,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
@@ -105,6 +108,8 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
 
+  private boolean sleep = false;
+
   @BeforeClass
   public static void setUpClass()
   {
@@ -126,7 +131,27 @@ public class SqlResourceTest extends CalciteTestBase
         ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
         new ServerConfig()
-    );
+    )
+    {
+      @Override
+      public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
+      {
+        return super.run(
+            query,
+            new LazySequence<T>(() -> {
+              if (sleep) {
+                try {
+                  // pretend to be a query that is waiting on results
+                  Thread.sleep(500);
+                }
+                catch (InterruptedException ignored) {
+                }
+              }
+              return resultSequence;
+            })
+        );
+      }
+    };
 
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
@@ -698,7 +723,9 @@ public class SqlResourceTest extends CalciteTestBase
                 StringUtils.format(
                     "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\"}}], signature=[{a0:LONG}])\n",
                     DUMMY_SQL_QUERY_ID
-                )
+                ),
+                "RESOURCES",
+                "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
             )
         ),
         rows
@@ -801,6 +828,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testTooManyRequests() throws Exception
   {
+    sleep = true;
     final int numQueries = 3;
 
     List<Future<Pair<QueryException, List<Map<String, Object>>>>> futures = new ArrayList<>(numQueries);

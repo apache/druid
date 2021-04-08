@@ -116,7 +116,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private DictionaryEncodedColumnPartSerde(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      Serializer serializer
+      @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;

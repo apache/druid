@@ -35,6 +35,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
@@ -43,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -2016,6 +2018,207 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         Granularities.ALL,
         false,
         null
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryLeftWithBaseFilter()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        null,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            Filters.or(Arrays.asList(
+                new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+                new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+            )),
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryInnerWithBaseFilter()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        null,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            Filters.or(Arrays.asList(
+                new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+                new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+            )),
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryRightWithBaseFilter()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        null,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            Filters.or(Arrays.asList(
+                new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+                new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+            )),
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{null, null, "AU", "Australia", 0L},
+            new Object[]{null, null, "CL", "Chile", 2L},
+            new Object[]{null, null, "DE", "Germany", 3L},
+            new Object[]{null, null, "EC", "Ecuador", 4L},
+            new Object[]{null, null, "FR", "France", 5L},
+            new Object[]{null, null, "GB", "United Kingdom", 6L},
+            new Object[]{null, null, "IT", "Italy", 7L},
+            new Object[]{null, null, "JP", "Japan", 8L},
+            new Object[]{null, null, "KR", "Republic of Korea", 9L},
+            new Object[]{null, null, "MX", "Mexico", 10L},
+            new Object[]{null, null, "NO", "Norway", 11L},
+            new Object[]{null, null, "SV", "El Salvador", 12L},
+            new Object[]{null, null, "US", "United States", 13L},
+            new Object[]{null, null, "AX", "Atlantis", 14L},
+            new Object[]{null, null, "SU", "States United", 15L},
+            new Object[]{null, null, "USCA", "Usca", 16L},
+            new Object[]{null, null, "MMMM", "Fourems", 205L}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryFullWithBaseFilter()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        null,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            Filters.or(Arrays.asList(
+                new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+                new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+            )),
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NullHandling.sqlCompatible() ? null : 0L},
+            new Object[]{null, null, "AU", "Australia", 0L},
+            new Object[]{null, null, "CL", "Chile", 2L},
+            new Object[]{null, null, "DE", "Germany", 3L},
+            new Object[]{null, null, "EC", "Ecuador", 4L},
+            new Object[]{null, null, "FR", "France", 5L},
+            new Object[]{null, null, "GB", "United Kingdom", 6L},
+            new Object[]{null, null, "IT", "Italy", 7L},
+            new Object[]{null, null, "JP", "Japan", 8L},
+            new Object[]{null, null, "KR", "Republic of Korea", 9L},
+            new Object[]{null, null, "MX", "Mexico", 10L},
+            new Object[]{null, null, "NO", "Norway", 11L},
+            new Object[]{null, null, "SV", "El Salvador", 12L},
+            new Object[]{null, null, "US", "United States", 13L},
+            new Object[]{null, null, "AX", "Atlantis", 14L},
+            new Object[]{null, null, "SU", "States United", 15L},
+            new Object[]{null, null, "USCA", "Usca", 16L},
+            new Object[]{null, null, "MMMM", "Fourems", 205L}
+        )
     );
   }
 

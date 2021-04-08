@@ -1084,8 +1084,10 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.integerMathFunction(args.get(0).getOutputType(inspector), args.get(1).getOutputType(
-          inspector));
+      return ExprTypeConversion.integerMathFunction(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
     }
 
     @Override
