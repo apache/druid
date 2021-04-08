@@ -624,9 +624,9 @@ public class IndexGeneratorJobTest
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     IndexGeneratorJob
-        .getPublishedSegmentAndTmpPaths(config)
-        .forEach(segmentAndTmpPath -> intervalToSegments.computeIfAbsent(segmentAndTmpPath.getSegment().getInterval(), k -> new ArrayList<>())
-                                              .add(segmentAndTmpPath.getSegment()));
+        .getPublishedSegmentAndIndexZipFilePaths(config)
+        .forEach(segmentAndIndexZipFilePath -> intervalToSegments.computeIfAbsent(segmentAndIndexZipFilePath.getSegment().getInterval(), k -> new ArrayList<>())
+                                              .add(segmentAndIndexZipFilePath.getSegment()));
 
     final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;

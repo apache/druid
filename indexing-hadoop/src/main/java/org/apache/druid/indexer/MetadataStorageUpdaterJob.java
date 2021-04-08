@@ -43,8 +43,8 @@ public class MetadataStorageUpdaterJob implements Jobby
   @Override
   public boolean run()
   {
-    final List<DataSegmentAndIndexZipFilePath> segmentAndTmpPaths = IndexGeneratorJob.getPublishedSegmentAndTmpPaths(config);
-    final List<DataSegment> segments = segmentAndTmpPaths.stream().map(s -> s.getSegment()).collect(Collectors.toList());
+    final List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    final List<DataSegment> segments = segmentAndIndexZipFilePaths.stream().map(s -> s.getSegment()).collect(Collectors.toList());
     final String segmentTable = config.getSchema().getIOConfig().getMetadataUpdateSpec().getSegmentTable();
     handler.publishSegments(segmentTable, segments, HadoopDruidIndexerConfig.JSON_MAPPER);
 

@@ -60,7 +60,7 @@ public class DataSegmentAndIndexZipFilePath
   @Override
   public String toString()
   {
-    return "DataSegmentAndTmpPath{" +
+    return "DataSegmentAndIndexZipFilePath{" +
            "segment=" + segment +
            ", tmpIndexZipFilePath=" + tmpIndexZipFilePath +
            ", finalIndexZipFilePath=" + finalIndexZipFilePath +

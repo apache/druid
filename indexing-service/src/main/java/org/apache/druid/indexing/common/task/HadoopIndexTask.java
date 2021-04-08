@@ -342,9 +342,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         "runTask",
         determinePartitionsInput.getClass()
     );
-
-    HadoopDruidIndexerConfig config;
-
     try {
       Thread.currentThread().setContextClassLoader(loader);
 
@@ -371,7 +368,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             errorMsg
         );
       }
-      log.info("workingPath: [%s], segmentOutputPath: [%s]", workingPath, segmentOutputPath);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -438,7 +434,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       Thread.currentThread().setContextClassLoader(loader);
 
-      log.info("about to invoke job");
       ingestionState = IngestionState.BUILD_SEGMENTS;
       final String jobStatusString = (String) innerProcessingRunTask.invoke(
           innerProcessingRunner,
@@ -450,12 +445,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           HadoopIndexGeneratorInnerProcessingStatus.class
       );
 
-      log.info("about to get segment files");
       List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
-      log.info("about to rename segment files");
       if (dataSegmentAndIndexZipFilePaths != null) {
-        log.info("found non-null segment files");
-
         try {
           Thread.currentThread().setContextClassLoader(oldLoader);
           renameSegmentIndexFilesJob(
@@ -476,7 +467,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       } else {
-        log.info("found null segment files :(");
         errorMsg = buildSegmentsStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
@@ -540,7 +530,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String dataSegmentAndIndexZipFilePathListStr
   )
   {
-    log.info("In renameSegmentIndexFilesJob");
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     try {
       ClassLoader loader = HadoopTask.buildClassLoader(
@@ -560,13 +549,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           dataSegmentAndIndexZipFilePathListStr
       };
 
-      log.info(
-          "hadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndIndexZipFilePathListStr: [%s]",
-          hadoopIngestionSpecStr,
-          workingPath,
-          segmentOutputPath,
-          dataSegmentAndIndexZipFilePathListStr
-      );
       Class<?> buildKillJobRunnerClass = renameSegmentIndexFilesRunner.getClass();
       Method renameSegmentIndexFiles = buildKillJobRunnerClass.getMethod(
           "runTask",
@@ -792,10 +774,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       log.info("Starting a hadoop index generator job...");
       try {
         if (job.run()) {
-          log.info("Constructing HadoopIndexGeneratorInnerProcessingStatus with segmentsAndPaths...");
           return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
               new HadoopIndexGeneratorInnerProcessingStatus(
-                  job.getPublishedSegmentAndTmpPaths(),
+                  job.getPublishedSegmentAndIndexZipFilePaths(),
                   job.getStats(),
                   null
               )
