@@ -65,7 +65,10 @@ public class DataSegmentAndIndexZipFilePath
   public boolean equals(Object o)
   {
     if (o instanceof DataSegmentAndIndexZipFilePath) {
-      return segment.equals(((DataSegmentAndIndexZipFilePath) o).getSegment());
+      DataSegmentAndIndexZipFilePath that = (DataSegmentAndIndexZipFilePath) o;
+      return segment.equals(((DataSegmentAndIndexZipFilePath) o).getSegment())
+          && tmpIndexZipFilePath.equals(that.getTmpIndexZipFilePath())
+          && finalIndexZipFilePath.equals(that.getFinalIndexZipFilePath());
     }
     return false;
   }

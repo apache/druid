@@ -633,14 +633,14 @@ public class JobHelper
    */
   public static void renameIndexFilesForSegments(
       HadoopIngestionSpec indexerSchema,
-      List<DataSegmentAndIndexZipFilePath> segmentsAndIndexZipFilePath
+      List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths
   ) throws IOException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
     final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);
     JobHelper.injectDruidProperties(configuration, config);
-    for (DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath : segmentsAndIndexZipFilePath) {
+    for (DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath : segmentAndIndexZipFilePaths) {
       Path tmpPath = new Path(segmentAndIndexZipFilePath.getTmpIndexZipFilePath());
       Path finalIndexZipFilePath = new Path(segmentAndIndexZipFilePath.getFinalIndexZipFilePath());
       final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
@@ -664,7 +664,7 @@ public class JobHelper
    *
    * @return False if a rename failed, true otherwise (rename success or no rename needed)
    */
-  public static boolean renameIndexFile(
+  private static boolean renameIndexFile(
       final FileSystem outputFS,
       final Path indexZipFilePath,
       final Path finalIndexZipFilePath
