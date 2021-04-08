@@ -42,6 +42,7 @@ public class VectorStringProcessors
         @Override
         protected String processValue(@Nullable String leftVal, @Nullable String rightVal)
         {
+          // in sql compatible mode, nulls are handled by super class and never make it here...
           return leftVal + rightVal;
         }
       };
