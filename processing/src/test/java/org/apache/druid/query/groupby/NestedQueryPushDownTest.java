@@ -30,6 +30,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -60,13 +61,16 @@ import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -75,9 +79,11 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
@@ -148,8 +154,8 @@ public class NestedQueryPushDownTest
 
   @Before
   public void setup() throws Exception
-
   {
+    NullHandling.initializeForTests();
     tmpDir = FileUtils.createTempDir();
 
     InputRow row;
@@ -582,6 +588,70 @@ public class NestedQueryPushDownTest
 
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(expectedRow0, results.get(0));
+  }
+
+  @Test
+  public void testVirtualColumnFilterOnInnerQuery()
+  {
+    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+        Collections.singletonList(Intervals.utc(1500000000000L, 1600000000000L))
+    );
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("blah")
+        .setDimensions(new DefaultDimensionSpec("dimA", "dimA"))
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
+        .setGranularity(Granularities.ALL)
+        .setQuerySegmentSpec(intervalSpec)
+        .build();
+
+    GroupByQuery nestedQuery = GroupByQuery
+        .builder()
+        .setDataSource(query)
+        .setDimensions(new DefaultDimensionSpec("dimA", "newDimA"))
+        .setContext(
+            ImmutableMap.of(
+                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false
+            )
+        )
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "case_searched((CAST(metBSum, 'LONG') == 10),0,5.3)",
+                ValueType.DOUBLE,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(Granularities.ALL)
+        .setDimFilter(new BoundDimFilter("v0", "0", null, true, false, null, null, StringComparators.NUMERIC))
+        .setQuerySegmentSpec(intervalSpec)
+        .build();
+
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        nestedQuery,
+        "2017-07-14T02:40:00.000Z",
+        "newDimA", "mango"
+    );
+
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        nestedQuery,
+        "2017-07-14T02:40:00.000Z",
+        "newDimA", "pomegranate"
+    );
+
+    QueryRunner<ResultRow> runner =
+        groupByFactory.getToolchest().mergeResults(groupByFactory.mergeRunners(executorService, getQueryRunnerForSegment1()));
+
+    Iterable<ResultRow> queryResult = GroupByQueryRunnerTestHelper.runQuery(groupByFactory, runner, nestedQuery);
+    List<ResultRow> results = new ArrayList<>();
+    queryResult.forEach(results::add);
+
+    Assert.assertEquals(2, results.size());
+    Assert.assertEquals(expectedRow0, results.get(0));
+    Assert.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test

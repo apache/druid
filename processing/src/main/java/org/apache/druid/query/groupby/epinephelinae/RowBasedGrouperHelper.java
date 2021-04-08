@@ -71,6 +71,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -398,8 +399,10 @@ public class RowBasedGrouperHelper
     );
 
     final SettableSupplier<ResultRow> rowSupplier = new SettableSupplier<>();
-    final ColumnSelectorFactory columnSelectorFactory =
-        RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier);
+    final ColumnSelectorFactory columnSelectorFactory = new VirtualizedColumnSelectorFactory(
+        RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier),
+        query.getVirtualColumns()
+    );
 
     final ValueMatcher filterMatcher = filter == null
                                        ? BooleanValueMatcher.of(true)
