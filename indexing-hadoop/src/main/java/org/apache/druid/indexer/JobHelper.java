@@ -436,7 +436,7 @@ public class JobHelper
     return succeeded;
   }
 
-  public static DataSegmentAndTmpPath serializeOutIndex(
+  public static DataSegmentAndIndexZipFilePath serializeOutIndex(
       final DataSegment segmentTemplate,
       final Configuration configuration,
       final Progressable progressable,
@@ -485,12 +485,16 @@ public class JobHelper
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
-    return new DataSegmentAndTmpPath(finalSegment, tmpPath.toUri().getPath());
+    return new DataSegmentAndIndexZipFilePath(
+        finalSegment,
+        tmpPath.toUri().getPath(),
+        finalIndexZipFilePath.toUri().getPath()
+    );
   }
 
   public static void writeSegmentDescriptor(
       final FileSystem outputFS,
-      final DataSegmentAndTmpPath segmentAndPath,
+      final DataSegmentAndIndexZipFilePath segmentAndPath,
       final Path descriptorPath,
       final Progressable progressable
   )
@@ -771,7 +775,7 @@ public class JobHelper
       HadoopIngestionSpec indexerSchema,
       String segmentOutputPath,
       String workingPath,
-      List<DataSegmentAndTmpPath> segmentsAndTmpPaths
+      List<DataSegmentAndIndexZipFilePath> segmentsAndIndexZipFilePath
   ) throws IOException
   {
     log.info("Building HadoopDruidIndexerConfig");
@@ -785,11 +789,11 @@ public class JobHelper
     config.addJobProperties(configuration);
     JobHelper.injectDruidProperties(configuration, config);
     log.info("Built Configuration");
-    for (DataSegmentAndTmpPath segmentAndTmpPath : segmentsAndTmpPaths) {
-      log.info("tmpPath: [%s]", segmentAndTmpPath.getIndexZipFilePath());
+    for (DataSegmentAndIndexZipFilePath segmentAndTmpPath : segmentsAndIndexZipFilePath) {
+      log.info("tmpPath: [%s]", segmentAndTmpPath.getTmpIndexZipFilePath());
       log.info("segmentId: [%s]", segmentAndTmpPath.getSegment().getId());
-      Path tmpPath = new Path(segmentAndTmpPath.getIndexZipFilePath());
-      Path finalIndexZipFilePath = new Path(tmpPath.getParent(), INDEX_ZIP);
+      Path tmpPath = new Path(segmentAndTmpPath.getTmpIndexZipFilePath());
+      Path finalIndexZipFilePath = new Path(segmentAndTmpPath.getFinalIndexZipFilePath());
       final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
       log.info("about to rename segment index file");
       if (!renameIndexFile(outputFS, tmpPath, finalIndexZipFilePath)) {

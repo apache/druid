@@ -31,7 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.indexer.DataSegmentAndTmpPath;
+import org.apache.druid.indexer.DataSegmentAndIndexZipFilePath;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
@@ -91,8 +91,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private static final String TYPE = "index_hadoop";
-  private static final int NUM_RETRIES = 8;
-  public static final String INDEX_ZIP = "index.zip";
   private TaskConfig taskConfig = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
@@ -453,9 +451,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       );
 
       log.info("about to get segment files");
-      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths = buildSegmentsStatus.getDataSegmentAndTmpPaths();
+      List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
       log.info("about to rename segment files");
-      if (dataSegmentAndTmpPaths != null) {
+      if (dataSegmentAndIndexZipFilePaths != null) {
         log.info("found non-null segment files");
 
         try {
@@ -464,7 +462,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
               toolbox.getJsonMapper().writeValueAsString(indexerSchema),
               segmentOutputPath,
               workingPath,
-              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndTmpPaths)
+              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
           );
         }
         finally {
@@ -472,9 +470,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         }
 
         ingestionState = IngestionState.COMPLETED;
-        toolbox.publishSegments(dataSegmentAndTmpPaths.stream()
-                                                      .map(DataSegmentAndTmpPath::getSegment)
-                                                      .collect(Collectors.toList()));
+        toolbox.publishSegments(dataSegmentAndIndexZipFilePaths.stream()
+                                                               .map(DataSegmentAndIndexZipFilePath::getSegment)
+                                                               .collect(Collectors.toList()));
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       } else {
@@ -539,7 +537,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopIngestionSpecStr,
       String segmentOutputPath,
       String workingPath,
-      String dataSegmentAndTmpPathListStr
+      String dataSegmentAndIndexZipFilePathListStr
   )
   {
     log.info("In renameSegmentIndexFilesJob");
@@ -559,15 +557,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           hadoopIngestionSpecStr,
           workingPath,
           segmentOutputPath,
-          dataSegmentAndTmpPathListStr
+          dataSegmentAndIndexZipFilePathListStr
       };
 
       log.info(
-          "hadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndTmpPathListStr: [%s]",
+          "hadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndIndexZipFilePathListStr: [%s]",
           hadoopIngestionSpecStr,
           workingPath,
           segmentOutputPath,
-          dataSegmentAndTmpPathListStr
+          dataSegmentAndIndexZipFilePathListStr
       );
       Class<?> buildKillJobRunnerClass = renameSegmentIndexFilesRunner.getClass();
       Method renameSegmentIndexFiles = buildKillJobRunnerClass.getMethod(
@@ -868,8 +866,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unused")
   public static class HadoopRenameSegmentIndexFilesRunner
   {
-    TypeReference<List<DataSegmentAndTmpPath>> LIST_DATA_SEGMENT_AND_TMP_PATH =
-        new TypeReference<List<DataSegmentAndTmpPath>>()
+    TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_TMP_PATH =
+        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
         {
         };
 
@@ -881,24 +879,24 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopIngestionSpecStr = args[0];
       String workingPath = args[1];
       String segmentOutputPath = args[2];
-      String dataSegmentAndTmpPathListStr = args[3];
+      String dataSegmentAndIndexZipFilePathListStr = args[3];
       log.info(
-          "HadoopRenameSegmentIndexFilesRunner: HadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndTmpPathListStr: [%s]",
+          "HadoopRenameSegmentIndexFilesRunner: HadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndIndexZipFilePathListStr: [%s]",
           hadoopIngestionSpecStr,
           workingPath,
           segmentOutputPath,
-          dataSegmentAndTmpPathListStr
+          dataSegmentAndIndexZipFilePathListStr
       );
 
       HadoopIngestionSpec indexerSchema;
-      List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths;
+      List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths;
       try {
         indexerSchema = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
             hadoopIngestionSpecStr,
             HadoopIngestionSpec.class
         );
-        dataSegmentAndTmpPaths = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-            dataSegmentAndTmpPathListStr,
+        dataSegmentAndIndexZipFilePaths = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+            dataSegmentAndIndexZipFilePathListStr,
             LIST_DATA_SEGMENT_AND_TMP_PATH
         );
       }
@@ -909,32 +907,34 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         );
         throw e;
       }
-      JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath, dataSegmentAndTmpPaths);
+      JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath,
+                                            dataSegmentAndIndexZipFilePaths
+      );
     }
   }
 
   public static class HadoopIndexGeneratorInnerProcessingStatus
   {
-    private final List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths;
+    private final List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths;
     private final Map<String, Object> metrics;
     private final String errorMsg;
 
     @JsonCreator
     public HadoopIndexGeneratorInnerProcessingStatus(
-        @JsonProperty("dataSegmentAndTmpPaths") List<DataSegmentAndTmpPath> dataSegmentAndTmpPaths,
+        @JsonProperty("dataSegmentAndIndexZipFilePaths") List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths,
         @JsonProperty("metrics") Map<String, Object> metrics,
         @JsonProperty("errorMsg") String errorMsg
     )
     {
-      this.dataSegmentAndTmpPaths = dataSegmentAndTmpPaths;
+      this.dataSegmentAndIndexZipFilePaths = dataSegmentAndIndexZipFilePaths;
       this.metrics = metrics;
       this.errorMsg = errorMsg;
     }
 
     @JsonProperty
-    public List<DataSegmentAndTmpPath> getDataSegmentAndTmpPaths()
+    public List<DataSegmentAndIndexZipFilePath> getDataSegmentAndIndexZipFilePaths()
     {
-      return dataSegmentAndTmpPaths;
+      return dataSegmentAndIndexZipFilePaths;
     }
 
     @JsonProperty

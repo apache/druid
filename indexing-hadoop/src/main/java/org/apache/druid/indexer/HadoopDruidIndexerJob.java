@@ -39,7 +39,7 @@ public class HadoopDruidIndexerJob implements Jobby
   @Nullable
   private IndexGeneratorJob indexJob;
   @Nullable
-  private volatile List<DataSegmentAndTmpPath> publishedSegmentAndTmpPaths = null;
+  private volatile List<DataSegmentAndIndexZipFilePath> publishedSegmentAndTmpPaths = null;
   @Nullable
   private String hadoopJobIdFile;
 
@@ -121,7 +121,7 @@ public class HadoopDruidIndexerJob implements Jobby
     return indexJob.getErrorMessage();
   }
 
-  public List<DataSegmentAndTmpPath> getPublishedSegmentAndTmpPaths()
+  public List<DataSegmentAndIndexZipFilePath> getPublishedSegmentAndTmpPaths()
   {
     if (publishedSegmentAndTmpPaths == null) {
       throw new IllegalStateException("Job hasn't run yet. No segments have been published yet.");

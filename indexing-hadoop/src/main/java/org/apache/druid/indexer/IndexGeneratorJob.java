@@ -102,14 +102,14 @@ public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
 
-  public static List<DataSegmentAndTmpPath> getPublishedSegmentAndTmpPaths(HadoopDruidIndexerConfig config)
+  public static List<DataSegmentAndIndexZipFilePath> getPublishedSegmentAndTmpPaths(HadoopDruidIndexerConfig config)
   {
     final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(conf);
 
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
-    ImmutableList.Builder<DataSegmentAndTmpPath> publishedSegmentAndTmpPathsBuilder = ImmutableList.builder();
+    ImmutableList.Builder<DataSegmentAndIndexZipFilePath> publishedSegmentAndTmpPathsBuilder = ImmutableList.builder();
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
@@ -117,7 +117,7 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegmentAndTmpPath segmentAndTmpPath = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegmentAndTmpPath.class);
+        final DataSegmentAndIndexZipFilePath segmentAndTmpPath = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegmentAndIndexZipFilePath.class);
         publishedSegmentAndTmpPathsBuilder.add(segmentAndTmpPath);
         log.info("Adding segment %s to the list of published segments", segmentAndTmpPath.getSegment().getId());
       }
@@ -133,7 +133,7 @@ public class IndexGeneratorJob implements Jobby
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    List<DataSegmentAndTmpPath> publishedSegmentAndTmpPaths = publishedSegmentAndTmpPathsBuilder.build();
+    List<DataSegmentAndIndexZipFilePath> publishedSegmentAndTmpPaths = publishedSegmentAndTmpPathsBuilder.build();
 
     return publishedSegmentAndTmpPaths;
   }
@@ -809,7 +809,7 @@ public class IndexGeneratorJob implements Jobby
             0
         );
 
-        final DataSegmentAndTmpPath segmentAndTmpPath = JobHelper.serializeOutIndex(
+        final DataSegmentAndIndexZipFilePath segmentAndTmpPath = JobHelper.serializeOutIndex(
             segmentTemplate,
             context.getConfiguration(),
             context,
