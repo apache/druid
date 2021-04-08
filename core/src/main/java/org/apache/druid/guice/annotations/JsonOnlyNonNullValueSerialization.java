@@ -17,26 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.common.config;
+package org.apache.druid.guice.annotations;
+
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
-*/
-public interface ConfigSerde<T>
+ */
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+@PublicApi
+public @interface JsonOnlyNonNullValueSerialization
 {
-  byte[] serialize(T obj);
-  /**
-   * Serialize the input object to String
-   * @param obj to be serialize
-   * @return String serialization of the input
-   */
-  String serializeToString(T obj);
-  /**
-   * Serialize the input object to String, skipping serialization of any field with null value. This method can be
-   * used instead of {@link ConfigSerde#serializeToString(Object)} to reduce the size of the resulting String.
-   *
-   * @param obj to be serialize
-   * @return String serialization of the input without fields with null values
-   */
-  String serializeSkipNullToString(T obj);
-  T deserialize(byte[] bytes);
 }

@@ -1752,7 +1752,6 @@ loadqueuepeon
 loadspec
 localStorage
 maxHeaderSize
-maxPayloadSizeBytes
 maxQueuedBytes
 maxSize
 middlemanager

@@ -19,7 +19,6 @@
 
 package org.apache.druid.common.config;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +27,8 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.JsonOnlyNonNullValueSerialization;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.io.IOException;
@@ -45,14 +46,15 @@ public class JacksonConfigManager
   @Inject
   public JacksonConfigManager(
       ConfigManager configManager,
-      ObjectMapper jsonMapper,
+      @Json ObjectMapper jsonMapper,
+      @JsonOnlyNonNullValueSerialization ObjectMapper jsonMapperOnlyNonNullValue,
       AuditManager auditManager
   )
   {
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
     this.auditManager = auditManager;
-    this.jsonMapperSkipNull = jsonMapper.copy().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    this.jsonMapperSkipNull = jsonMapperOnlyNonNullValue;
   }
 
   public <T> AtomicReference<T> watch(String key, Class<? extends T> clazz)

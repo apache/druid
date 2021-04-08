@@ -20,6 +20,7 @@
 package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEntry;
@@ -27,7 +28,9 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -47,10 +50,18 @@ public class JacksonConfigManagerTest
 
   private JacksonConfigManager jacksonConfigManager;
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
-    jacksonConfigManager = new JacksonConfigManager(mockConfigManager, new ObjectMapper(), mockAuditManager);
+    jacksonConfigManager = new JacksonConfigManager(
+        mockConfigManager,
+        new ObjectMapper(),
+        new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
+        mockAuditManager
+    );
   }
 
   @Test
@@ -89,6 +100,16 @@ public class JacksonConfigManagerTest
     Assert.assertEquals(auditKey, actual.getType());
     Assert.assertEquals(auditInfo, actual.getAuditInfo());
     Assert.assertEquals("{\"version\":\"version\",\"settingString\":\"string\",\"settingInt\":3}", actual.getPayload());
+  }
+
+  @Test
+  public void testSetWithInvalidConfig()
+  {
+    AuditInfo auditInfo = new AuditInfo("maytas", "hello world", "111");
+    String auditKey = "key";
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("InvalidDefinitionException");
+    jacksonConfigManager.set(auditKey, new ClassThatJacksonCannotSerialize(), auditInfo);
   }
 
   static class TestConfig
@@ -154,5 +175,10 @@ public class JacksonConfigManagerTest
     {
       return Objects.hash(version, settingString, settingInt);
     }
+  }
+
+  static class ClassThatJacksonCannotSerialize
+  {
+
   }
 }
