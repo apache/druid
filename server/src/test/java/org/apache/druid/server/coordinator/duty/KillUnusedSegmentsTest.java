@@ -30,7 +30,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
@@ -38,6 +40,36 @@ import java.util.List;
  */
 public class KillUnusedSegmentsTest
 {
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  /**
+   * Test invalid configuration. A Null durationToRetain should trigger an
+   * exception since we require operators to explicitly configure this value
+   * if they enable the segment killing facility.
+   */
+  @Test
+  public void testInvalidConfiguration()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("druid.coordinator.kill.durationToRetain must be non-null");
+    new KillUnusedSegments(
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            null,
+            1000,
+            Duration.ZERO,
+            false
+        )
+    );
+  }
 
   /**
    * Test that retainDuration is properly set based on the value available in the

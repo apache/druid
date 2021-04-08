@@ -70,6 +70,11 @@ public class KillUnusedSegments implements CoordinatorDuty
         "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
     );
 
+    // Operators must explicitly set this configuration if they are going to enable Segment Killing
+    Preconditions.checkArgument(
+        config.getCoordinatorKillDurationToRetain() != null,
+        "druid.coordinator.kill.durationToRetain must be non-null"
+    );
     this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
     this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
 

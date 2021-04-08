@@ -23,6 +23,8 @@ import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public abstract class DruidCoordinatorConfig
@@ -43,9 +45,12 @@ public abstract class DruidCoordinatorConfig
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();
 
+  @Nullable
   @Config("druid.coordinator.kill.durationToRetain")
-  @Default("PT0s")
-  public abstract Duration getCoordinatorKillDurationToRetain();
+  public Duration getCoordinatorKillDurationToRetain()
+  {
+    return null;
+  }
 
   @Config("druid.coordinator.kill.ignoreDurationToRetain")
   @Default("false")

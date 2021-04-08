@@ -292,7 +292,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             10,
-            new Duration("PT1s")
+            new Duration("PT1s"),
+            false
         )
     );
 
