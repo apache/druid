@@ -629,7 +629,12 @@ public class JobHelper
 
   /**
    * Renames the index files for the segments. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
-   * which will not overwrite
+   * which will not overwrite. Note: segments should be renamed in the index task, not in a hadoop job, as race
+   * conditions between job retries can cause the final segment index file path to get clobbered.
+   *
+   * @param indexerSchema  the hadoop ingestion spec
+   * @param segmentAndIndexZipFilePaths the list of segments with their currently stored tmp path and the final path
+   *                                    that they should be renamed to.
    */
   public static void renameIndexFilesForSegments(
       HadoopIngestionSpec indexerSchema,

@@ -23,8 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Objects;
 
+/**
+ * holds a {@link DataSegment} with the temporary file path where the corresponding index zip file is currently stored
+ * and the final path where the index zip file should eventually be moved to.
+ * see {@link JobHelper#renameIndexFilesForSegments(HadoopIngestionSpec, List)}
+ */
 public class DataSegmentAndIndexZipFilePath
 {
   private final DataSegment segment;
