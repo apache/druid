@@ -184,6 +184,12 @@ public class MySQLFirehoseDatabaseConnectorTest
       {
         return ImmutableSet.of("user", "nonenone");
       }
+
+      @Override
+      public boolean isEnforceAllowedProperties()
+      {
+        return false;
+      }
     };
 
     new MySQLFirehoseDatabaseConnector(
@@ -205,13 +211,12 @@ public class MySQLFirehoseDatabaseConnectorTest
       }
     };
 
-    MySQLFirehoseDatabaseConnector connector = new MySQLFirehoseDatabaseConnector(
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
+    new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         new JdbcAccessSecurityConfig()
     );
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
-    connector.findPropertyKeysFromConnectURL(url);
   }
 
   private static JdbcAccessSecurityConfig newSecurityConfigEnforcingAllowList(Set<String> allowedProperties)

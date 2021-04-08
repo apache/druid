@@ -47,7 +47,7 @@ public class ExternalStorageAccessSecurityModuleTest
         securityConfig.getAllowedProperties()
     );
     Assert.assertTrue(securityConfig.isAllowUnknownJdbcUrlFormat());
-    Assert.assertFalse(securityConfig.isEnforceAllowedProperties());
+    Assert.assertTrue(securityConfig.isEnforceAllowedProperties());
   }
 
   @Test

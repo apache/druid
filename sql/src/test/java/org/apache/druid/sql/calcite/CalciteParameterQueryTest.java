@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -33,6 +34,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQuery.ResultFormat;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -54,7 +57,20 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT 1 + ?",
-        ImmutableList.of(),
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(new Object[]{2L}),
+                          RowSignature.builder().add("EXPR$0", ValueType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0")
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
         ImmutableList.of(
             new Object[]{2}
         ),
@@ -588,11 +604,16 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter() throws Exception
   {
+    if (!useDefault) {
+      // cannot vectorize inline datasource
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
         + "WHERE l1 > ? AND f1 = ?",
-        useDefault ? ImmutableList.of(
+        useDefault
+        ? ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -606,7 +627,20 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
-        ) : ImmutableList.of(),
+        )
+        : ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(),
+                          RowSignature.builder().add("f1", ValueType.FLOAT).add("l1", ValueType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );

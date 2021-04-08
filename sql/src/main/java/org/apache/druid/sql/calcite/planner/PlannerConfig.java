@@ -30,6 +30,7 @@ import java.util.Objects;
 public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
+  public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
 
   @JsonProperty
@@ -59,6 +60,9 @@ public class PlannerConfig
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
+  @JsonProperty
+  private boolean useGroupingSetForExactDistinct = false;
+
   public long getMetadataSegmentPollPeriod()
   {
     return metadataSegmentPollPeriod;
@@ -84,6 +88,11 @@ public class PlannerConfig
   public boolean isUseApproximateCountDistinct()
   {
     return useApproximateCountDistinct;
+  }
+
+  public boolean isUseGroupingSetForExactDistinct()
+  {
+    return useGroupingSetForExactDistinct;
   }
 
   public boolean isUseApproximateTopN()
@@ -124,6 +133,11 @@ public class PlannerConfig
         context,
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
         isUseApproximateCountDistinct()
+    );
+    newConfig.useGroupingSetForExactDistinct = getContextBoolean(
+        context,
+        CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+        isUseGroupingSetForExactDistinct()
     );
     newConfig.useApproximateTopN = getContextBoolean(
         context,

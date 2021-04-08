@@ -176,12 +176,12 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 
 #### Jetty Server TLS Configuration
 
-Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
-reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl.html) might be helpful.
-To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.32.v20200930/configuring-ssl.html#configuring-sslcontextfactory)
-can help in understanding TLS/SSL configurations listed below. This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
-values for the below mentioned configs among others provided by Java implementation.
+Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php). 
+
+For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
+The [Java Cryptography Architecture
+Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
+values for the following properties, among others provided by the Java implementation.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -537,7 +537,7 @@ the [HTTP input source](../ingestion/native-batch.md#http-input-source) and the 
 |`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
 
 
-### Ingestion Security Configuration
+### External Data Access Security Configuration
 
 #### JDBC Connections to External Databases
 
@@ -551,7 +551,7 @@ These properties do not apply to metadata storage connections.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.access.jdbc.enforceAllowedProperties`|Boolean|When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is deprecated and will be removed in a future release.|false|
+|`druid.access.jdbc.enforceAllowedProperties`|Boolean|When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release.|true|
 |`druid.access.jdbc.allowedProperties`|List of JDBC properties|Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 5.1.48 and PostgreSQL connector 42.2.14. Other connector versions might not work.|["useSSL", "requireSSL", "ssl", "sslmode"]|
 |`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean|When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL.|true|
 
@@ -1709,6 +1709,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
+|`druid.sql.planner.useGroupingSetForExactDistinct`|Only relevant when `useApproximateCountDistinct` is disabled. If set to true, exact distinct queries are re-written using grouping sets. Otherwise, exact distinct queries are re-written using joins. This should be set to true for group by query with multiple exact distinct aggregations. This flag can be overridden per query.|false|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|

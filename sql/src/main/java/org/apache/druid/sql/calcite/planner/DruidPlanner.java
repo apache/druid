@@ -254,7 +254,11 @@ public class DruidPlanner implements Closeable
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
         Preconditions.checkState(
-            plannerContext.getResources().isEmpty() == druidRel.getDataSourceNames().isEmpty(),
+            plannerContext.getResources().isEmpty() == druidRel.getDataSourceNames().isEmpty()
+            // The resources found in the plannerContext can be less than the datasources in
+            // the query plan, because the query planner can eliminate empty tables by replacing
+            // them with InlineDataSource of empty rows.
+            || plannerContext.getResources().size() >= druidRel.getDataSourceNames().size(),
             "Authorization sanity check failed"
         );
         if (root.isRefTrivial()) {

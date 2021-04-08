@@ -183,6 +183,12 @@ public class PostgresqlFirehoseDatabaseConnectorTest
       {
         return ImmutableSet.of("user", "nonenone");
       }
+
+      @Override
+      public boolean isEnforceAllowedProperties()
+      {
+        return false;
+      }
     };
 
     new PostgresqlFirehoseDatabaseConnector(

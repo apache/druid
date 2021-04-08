@@ -891,4 +891,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
     return newContext;
   }
+
+  /**
+   * Reset the walker and conglomerate with required number of merge buffers. Default value is 2.
+   */
+  protected void requireMergeBuffers(int numMergeBuffers) throws IOException
+  {
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
+        resourceCloser,
+        QueryStackTests.getProcessingConfig(true, numMergeBuffers)
+    );
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+  }
 }
