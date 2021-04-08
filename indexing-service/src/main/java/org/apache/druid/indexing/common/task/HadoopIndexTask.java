@@ -334,8 +334,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     };
 
     HadoopIngestionSpec indexerSchema;
-    String workingPath;
-    String segmentOutputPath;
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
     Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
@@ -358,8 +356,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
 
       indexerSchema = determineConfigStatus.getSchema();
-      workingPath = determineConfigStatus.getWorkingPath();
-      segmentOutputPath = determineConfigStatus.getSegmentOutputPath();
       if (indexerSchema == null) {
         errorMsg = determineConfigStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -451,8 +447,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           Thread.currentThread().setContextClassLoader(oldLoader);
           renameSegmentIndexFilesJob(
               toolbox.getJsonMapper().writeValueAsString(indexerSchema),
-              segmentOutputPath,
-              workingPath,
               toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
           );
         }
@@ -525,8 +519,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private void renameSegmentIndexFilesJob(
       String hadoopIngestionSpecStr,
-      String segmentOutputPath,
-      String workingPath,
       String dataSegmentAndIndexZipFilePathListStr
   )
   {
@@ -544,8 +536,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       String[] renameSegmentIndexFilesJobInput = new String[]{
           hadoopIngestionSpecStr,
-          workingPath,
-          segmentOutputPath,
           dataSegmentAndIndexZipFilePathListStr
       };
 
@@ -719,11 +709,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
         return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
-            new HadoopDetermineConfigInnerProcessingStatus(config.getSchema(), workingPath, segmentOutputPath, job.getStats(), null)
+            new HadoopDetermineConfigInnerProcessingStatus(config.getSchema(), job.getStats(), null)
         );
       } else {
         return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
-            new HadoopDetermineConfigInnerProcessingStatus(null, null, null, job.getStats(), job.getErrorMessage())
+            new HadoopDetermineConfigInnerProcessingStatus(null, job.getStats(), job.getErrorMessage())
         );
       }
     }
@@ -854,20 +844,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     public void runTask(String[] args) throws Exception
     {
-      if (args.length != 4) {
+      if (args.length != 2) {
         log.warn("HadoopRenameSegmentIndexFilesRunner called with improper number of arguments");
       }
       String hadoopIngestionSpecStr = args[0];
-      String workingPath = args[1];
-      String segmentOutputPath = args[2];
-      String dataSegmentAndIndexZipFilePathListStr = args[3];
-      log.info(
-          "HadoopRenameSegmentIndexFilesRunner: HadoopIngestionSpecStr: [%s], workingPath: [%s], segmentOutputPath: [%s], dataSegmentAndIndexZipFilePathListStr: [%s]",
-          hadoopIngestionSpecStr,
-          workingPath,
-          segmentOutputPath,
-          dataSegmentAndIndexZipFilePathListStr
-      );
+      String dataSegmentAndIndexZipFilePathListStr = args[1];
 
       HadoopIngestionSpec indexerSchema;
       List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths;
@@ -888,8 +869,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         );
         throw e;
       }
-      JobHelper.renameIndexFilesForSegments(indexerSchema, segmentOutputPath, workingPath,
-                                            dataSegmentAndIndexZipFilePaths
+      JobHelper.renameIndexFilesForSegments(
+          indexerSchema,
+          dataSegmentAndIndexZipFilePaths
       );
     }
   }
@@ -934,23 +916,17 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopDetermineConfigInnerProcessingStatus
   {
     private final HadoopIngestionSpec schema;
-    private final String workingPath;
-    private final String segmentOutputPath;
     private final Map<String, Object> metrics;
     private final String errorMsg;
 
     @JsonCreator
     public HadoopDetermineConfigInnerProcessingStatus(
         @JsonProperty("schema") HadoopIngestionSpec schema,
-        @JsonProperty("workingPath") String workingPath,
-        @JsonProperty("segmentOutputPath") String segmentOutputPath,
         @JsonProperty("metrics") Map<String, Object> metrics,
         @JsonProperty("errorMsg") String errorMsg
     )
     {
       this.schema = schema;
-      this.workingPath = workingPath;
-      this.segmentOutputPath = segmentOutputPath;
       this.metrics = metrics;
       this.errorMsg = errorMsg;
     }
@@ -959,18 +935,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     public HadoopIngestionSpec getSchema()
     {
       return schema;
-    }
-
-    @JsonProperty
-    public String getWorkingPath()
-    {
-      return workingPath;
-    }
-
-    @JsonProperty
-    public String getSegmentOutputPath()
-    {
-      return segmentOutputPath;
     }
 
     @JsonProperty

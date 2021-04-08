@@ -633,16 +633,10 @@ public class JobHelper
    */
   public static void renameIndexFilesForSegments(
       HadoopIngestionSpec indexerSchema,
-      String segmentOutputPath,
-      String workingPath,
       List<DataSegmentAndIndexZipFilePath> segmentsAndIndexZipFilePath
   ) throws IOException
   {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
-        indexerSchema
-            .withIOConfig(indexerSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
-            .withTuningConfig(indexerSchema.getTuningConfig().withWorkingPath(workingPath))
-    );
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
     final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);
     JobHelper.injectDruidProperties(configuration, config);
