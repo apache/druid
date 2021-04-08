@@ -339,6 +339,17 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 |`druid.audit.manager.auditHistoryMillis`|Default duration for querying audit history.|1 week|
 |`druid.audit.manager.includePayloadAsDimensionInMetric`|Boolean flag on whether to add `payload` column in service metric.|false|
 
+You can also configure the Overlord to automatically retain the audit logs (in metadata storage tables) only for last `x` milliseconds and/or last `y` number of audit logs by configuring following additional properties.
+Note that both `druid.indexer.audit.kill.durationToRetain` and `druid.indexer.audit.kill.sizeToRetain` can be enabled at the same time to enforce both limits.
+
+|Property|Description|Required?|Default|
+|--------|-----------|---------|-------|
+|`druid.indexer.audit.kill.enabled`|Boolean value for whether to enable deletion of old audit logs. If set to true, Overlord will periodically remove audit logs from the audit table entries in metadata storage. |No |false|
+|`druid.indexer.audit.kill.durationToRetain`| In milliseconds, audit logs to be retained created in last x milliseconds. |Yes if `druid.indexer.audit.kill.enabled` is true and `druid.indexer.audit.kill.sizeToRetain` is not set. | None|
+|`druid.indexer.audit.kill.sizeToRetain`| Maximum number of audit logs to be retained. Druid will delete audit logs starting from oldest once the number of task logs exceed this value. |Yes if `druid.indexer.audit.kill.enabled` is true and `druid.indexer.audit.kill.durationToRetain` is not set. |None|
+|`druid.indexer.audit.kill.initialDelay`| Number of milliseconds after Overlord start when first auto kill is run. |No |random value less than 300000 (5 mins)|
+|`druid.indexer.audit.kill.delay`| Number of milliseconds of delay between successive executions of auto kill run. |No |21600000 (6 hours)|
+
 ### Enabling Metrics
 
 Druid processes periodically emit metrics and different metrics monitors can be included. Each process can overwrite the default list of monitors.
@@ -545,15 +556,17 @@ If you are running the indexing service in remote mode, the task logs must be st
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
-You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables only for last x milliseconds by configuring following additional properties.
-Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid processes and backing store nodes might result in unintended behavior.
+You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables only for last `x` milliseconds and/or last `y` number of task logs by configuring following additional properties.
+Caution: Automatic log file deletion with `druid.indexer.logs.kill.durationToRetain` typically works based on log file modification timestamp on the backing store, so large clock skews between druid processes and backing store nodes might result in unintended behavior.
+Note that both `druid.indexer.logs.kill.durationToRetain` and `druid.indexer.logs.kill.sizeToRetain` can be enabled at the same time to enforce both limits.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
-|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
-|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
+|Property|Description|Required?|Default|
+|--------|-----------|---------|-------|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically to delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage. |No |false|
+|`druid.indexer.logs.kill.durationToRetain`| In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |Yes if `druid.indexer.logs.kill.enabled` is true and `druid.indexer.logs.kill.sizeToRetain` is not set. | None|
+|`druid.indexer.logs.kill.sizeToRetain`| Maximum number of task logs and entries in task-related metadata storage tables to be retained. Druid will delete task logs starting from oldest once the number of task logs exceed this value. |Yes if `druid.indexer.logs.kill.enabled` is true and `druid.indexer.logs.kill.durationToRetain` is not set. |None|
+|`druid.indexer.logs.kill.initialDelay`| Number of milliseconds after Overlord start when first auto kill is run. |No |random value less than 300000 (5 mins)|
+|`druid.indexer.logs.kill.delay`| Number of milliseconds of delay between successive executions of auto kill run. |No |21600000 (6 hours)|
 
 #### File Task Logs
 
