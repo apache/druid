@@ -22,6 +22,7 @@ package org.apache.druid.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
@@ -49,6 +50,8 @@ public class JacksonConfigManagerTest
   private AuditManager mockAuditManager;
 
   private JacksonConfigManager jacksonConfigManager;
+  private ConfigSerde<TestConfig> configConfigSerdeFromTypeReference;
+  private ConfigSerde<TestConfig> configConfigSerdeFromClass;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -62,6 +65,10 @@ public class JacksonConfigManagerTest
         new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
         mockAuditManager
     );
+    configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
+    {
+    }, null);
+    configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
   }
 
   @Test
@@ -81,6 +88,26 @@ public class JacksonConfigManagerTest
     Assert.assertEquals(auditKey, actual.getType());
     Assert.assertEquals(auditInfo, actual.getAuditInfo());
     Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual.getPayload());
+  }
+
+  @Test
+  public void testSerializeToStringWithSkipNullTrue()
+  {
+    TestConfig config = new TestConfig("version", null, 3);
+    String actual = configConfigSerdeFromTypeReference.serializeToString(config, true);
+    Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual);
+    actual = configConfigSerdeFromClass.serializeToString(config, true);
+    Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual);
+  }
+
+  @Test
+  public void testSerializeToStringWithSkipNullFalse()
+  {
+    TestConfig config = new TestConfig("version", null, 3);
+    String actual = configConfigSerdeFromTypeReference.serializeToString(config, false);
+    Assert.assertEquals("{\"version\":\"version\",\"settingString\":null,\"settingInt\":3}", actual);
+    actual = configConfigSerdeFromClass.serializeToString(config, false);
+    Assert.assertEquals("{\"version\":\"version\",\"settingString\":null,\"settingInt\":3}", actual);
   }
 
   @Test
