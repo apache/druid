@@ -49,8 +49,6 @@ Additionally, this extension has following configuration.
 |`druid.discovery.k8s.clusterIdentifier`|`string that matches [a-z0-9][a-z0-9-]*[a-z0-9]`|Unique identifier for this Druid cluster in Kubernetes e.g. us-west-prod-druid.|None|Yes|
 |`druid.discovery.k8s.podNameEnvKey`|`Pod Env Variable`|Pod Env variable whose value is that pod's name.|POD_NAME|No|
 |`druid.discovery.k8s.podNamespaceEnvKey`|`Pod Env Variable`|Pod Env variable whose value is that pod's kubernetes namespace.|POD_NAMESPACE|No|
-|`druid.discovery.k8s.coordinatorLeaderElectionConfigMapNamespace`|`k8s namespace`|Leader election algorithm requires creating a ConfigMap resource in a namespace. This MUST only be provided if different coordinator pods run in different namespaces, such setup is discouraged however.|coordinator pod's namespace|No|
-|`druid.discovery.k8s.overlordLeaderElectionConfigMapNamespace`|`k8s namespace`|Leader election algorithm requires creating a ConfigMap resource in a namespace. This MUST only be provided if different overlord pods run in different namespaces, such setup is discouraged however.|overlord pod's namespace|No|
 |`druid.discovery.k8s.leaseDuration`|`Duration`|Lease duration used by Leader Election algorithm. Candidates wait for this time before taking over previous Leader.|PT60S|No|
 |`druid.discovery.k8s.renewDeadline`|`Duration`|Lease renewal period used by Leader.|PT17S|No|
 |`druid.discovery.k8s.retryPeriod`|`Duration`|Retry wait used by Leader Election algorithm on failed operations.|PT5S|No|
@@ -58,7 +56,8 @@ Additionally, this extension has following configuration.
 ### Gotchas
 
 - Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. This limitation may be removed in future.
-- Druid Pods need permissions to be able to add labels to self-pod, List and Watch other Pods, create ConfigMap for leader election. Assuming, "default" service account is used by Druid pods, you might need to add following or something similar Kubernetes Role and Role Binding.
+- All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
+- All Druid Pods need permissions to be able to add labels to self-pod, List and Watch other Pods, create and read ConfigMap for leader election. Assuming, "default" service account is used by Druid pods, you might need to add following or something similar Kubernetes Role and Role Binding.
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
