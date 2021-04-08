@@ -539,8 +539,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           dataSegmentAndIndexZipFilePathListStr
       };
 
-      Class<?> buildKillJobRunnerClass = renameSegmentIndexFilesRunner.getClass();
-      Method renameSegmentIndexFiles = buildKillJobRunnerClass.getMethod(
+      Class<?> buildRenameSegmentIndexFilesJobRunnerClass = renameSegmentIndexFilesRunner.getClass();
+      Method renameSegmentIndexFiles = buildRenameSegmentIndexFilesJobRunnerClass.getMethod(
           "runTask",
           renameSegmentIndexFilesJobInput.getClass()
       );
@@ -837,7 +837,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unused")
   public static class HadoopRenameSegmentIndexFilesRunner
   {
-    TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_TMP_PATH =
+    TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
         new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
         {
         };
@@ -859,7 +859,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         );
         dataSegmentAndIndexZipFilePaths = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
             dataSegmentAndIndexZipFilePathListStr,
-            LIST_DATA_SEGMENT_AND_TMP_PATH
+            LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH
         );
       }
       catch (Exception e) {
