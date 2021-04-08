@@ -82,7 +82,7 @@ public class JacksonConfigManager
                   .key(key)
                   .type(key)
                   .auditInfo(auditInfo)
-                  .payload(configSerde.serializeSkipNullToString(val))
+                  .payload(configSerde.serializeToString(val, true))
                   .build()
     );
     return configManager.set(key, configSerde, val);
@@ -104,21 +104,10 @@ public class JacksonConfigManager
       }
 
       @Override
-      public String serializeToString(T obj)
+      public String serializeToString(T obj, boolean skipNull)
       {
         try {
-          return jsonMapper.writeValueAsString(obj);
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String serializeSkipNullToString(T obj)
-      {
-        try {
-          return jsonMapperSkipNull.writeValueAsString(obj);
+          return skipNull ? jsonMapperSkipNull.writeValueAsString(obj) : jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -153,21 +142,10 @@ public class JacksonConfigManager
       }
 
       @Override
-      public String serializeToString(T obj)
+      public String serializeToString(T obj, boolean skipNull)
       {
         try {
-          return jsonMapper.writeValueAsString(obj);
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String serializeSkipNullToString(T obj)
-      {
-        try {
-          return jsonMapperSkipNull.writeValueAsString(obj);
+          return skipNull ? jsonMapperSkipNull.writeValueAsString(obj) : jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);

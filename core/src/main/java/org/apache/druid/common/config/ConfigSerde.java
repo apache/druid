@@ -25,18 +25,13 @@ public interface ConfigSerde<T>
 {
   byte[] serialize(T obj);
   /**
-   * Serialize the input object to String
-   * @param obj to be serialize
-   * @return String serialization of the input
-   */
-  String serializeToString(T obj);
-  /**
-   * Serialize the input object to String, skipping serialization of any field with null value. This method can be
-   * used instead of {@link ConfigSerde#serializeToString(Object)} to reduce the size of the resulting String.
+   * Serialize object to String
    *
    * @param obj to be serialize
+   * @param skipNull if true, then skip serialization of any field with null value.
+   *                 This can be used to reduce the size of the resulting String.
    * @return String serialization of the input without fields with null values
    */
-  String serializeSkipNullToString(T obj);
+  String serializeToString(T obj, boolean skipNull);
   T deserialize(byte[] bytes);
 }

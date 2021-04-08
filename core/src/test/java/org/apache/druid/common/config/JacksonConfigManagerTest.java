@@ -54,7 +54,7 @@ public class JacksonConfigManagerTest
   public ExpectedException exception = ExpectedException.none();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     jacksonConfigManager = new JacksonConfigManager(
         mockConfigManager,
