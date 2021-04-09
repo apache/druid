@@ -58,6 +58,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -82,6 +83,7 @@ public class DataSourceCompactionConfigTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -127,6 +129,7 @@ public class DataSourceCompactionConfigTest
             null
         ),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -169,6 +172,7 @@ public class DataSourceCompactionConfigTest
             null,
             null
         ),
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -235,6 +239,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -261,6 +266,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, Granularities.MONTH),
+        null,
         ImmutableMap.of("key", "val")
     );
   }
@@ -274,6 +280,7 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         new Period(3600),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -302,6 +309,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, null),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -315,5 +323,61 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
     Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+  }
+
+  @Test
+  public void testSerdeIOConfigWithNonNullDropExisting() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskIOConfig(true),
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+    Assert.assertEquals(config.getIoConfig(), fromJson.getIoConfig());
+  }
+
+  @Test
+  public void testSerdeIOConfigWithNullDropExisting() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskIOConfig(null),
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+    Assert.assertEquals(config.getIoConfig(), fromJson.getIoConfig());
   }
 }

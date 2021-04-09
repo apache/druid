@@ -82,6 +82,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -459,11 +460,24 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           finally {
             Thread.currentThread().setContextClassLoader(loader);
           }
+          ArrayList<DataSegment> segments = new ArrayList<>(dataSegmentAndIndexZipFilePaths.stream()
+                                                                                           .map(
+                                                                                               DataSegmentAndIndexZipFilePath::getSegment)
+                                                                                           .collect(Collectors.toList()));
+          toolbox.publishSegments(segments);
+
+          // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
+          // for awaitSegmentAvailabilityTimeoutMillis
+          if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+            ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+            segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+                toolbox,
+                segments,
+                spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
+            );
+          }
 
           ingestionState = IngestionState.COMPLETED;
-          toolbox.publishSegments(dataSegmentAndIndexZipFilePaths.stream()
-                                                                 .map(DataSegmentAndIndexZipFilePath::getSegment)
-                                                                 .collect(Collectors.toList()));
           toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
           return TaskStatus.success(getId());
         } else {
@@ -654,7 +668,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 ingestionState,
                 null,
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                segmentAvailabilityConfirmationCompleted
             )
         )
     );

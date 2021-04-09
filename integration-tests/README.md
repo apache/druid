@@ -258,7 +258,7 @@ of the integration test run discussed above. Running these tests requires the us
 their own Cloud. 
 
 Currently, the integration test supports Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure.
-These can be run by providing "kinesis-index", "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
+These can be run by providing "kinesis-index", "kinesis-data-format", "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
 to -Dgroups for Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure respectively. Note that only
 one group should be run per mvn command.
 

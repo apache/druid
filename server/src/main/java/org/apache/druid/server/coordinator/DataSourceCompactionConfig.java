@@ -47,6 +47,7 @@ public class DataSourceCompactionConfig
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final UserCompactionTaskGranularityConfig granularitySpec;
+  private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -58,6 +59,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
+      @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -71,6 +73,7 @@ public class DataSourceCompactionConfig
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
+    this.ioConfig = ioConfig;
     if (granularitySpec != null) {
       Preconditions.checkArgument(
           granularitySpec.getQueryGranularity() == null,
@@ -121,6 +124,13 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
+  public UserCompactionTaskIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty
+  @Nullable
   public UserCompactionTaskGranularityConfig getGranularitySpec()
   {
     return granularitySpec;
@@ -150,6 +160,7 @@ public class DataSourceCompactionConfig
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -164,6 +175,7 @@ public class DataSourceCompactionConfig
         skipOffsetFromLatest,
         tuningConfig,
         granularitySpec,
+        ioConfig,
         taskContext
     );
   }
