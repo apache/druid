@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nullable;
@@ -27,8 +26,6 @@ import javax.annotation.Nullable;
 public abstract class StringOutStringsInFunctionVectorProcessor
     extends BivariateFunctionVectorObjectProcessor<String[], String[], String[]>
 {
-  final boolean sqlCompatible = NullHandling.sqlCompatible();
-
   protected StringOutStringsInFunctionVectorProcessor(
       ExprVectorProcessor<String[]> left,
       ExprVectorProcessor<String[]> right,
@@ -44,7 +41,7 @@ public abstract class StringOutStringsInFunctionVectorProcessor
   }
 
   @Nullable
-  abstract String processValue(@Nullable String leftVal, @Nullable String rightVal);
+  protected abstract String processValue(@Nullable String leftVal, @Nullable String rightVal);
 
   @Override
   void processIndex(String[] strings, String[] strings2, int i)
