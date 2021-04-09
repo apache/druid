@@ -65,7 +65,7 @@ public class SQLAuditManagerTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
@@ -410,7 +410,7 @@ public class SQLAuditManagerTest
   }
 
   @Test(timeout = 60_000L)
-  public void testCreateAuditEntryWithSkipNullConfigTrue() throws IOException
+  public void testCreateAuditEntryWithSkipNullConfigTrue()
   {
     ConfigSerde<Map<String, String>> mockConfigSerde = Mockito.mock(ConfigSerde.class);
     SQLAuditManager auditManagerWithSkipNull = new SQLAuditManager(
