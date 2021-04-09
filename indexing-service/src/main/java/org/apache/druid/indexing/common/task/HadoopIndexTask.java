@@ -447,7 +447,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
           ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
           ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(buildSegmentsStatus.getDataSegments());
-          segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+          waitForSegmentAvailability(
               toolbox,
               segmentsToWaitFor,
               spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
@@ -548,7 +548,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 null,
                 getTaskCompletionRowStats(),
                 errorMsg,
-                segmentAvailabilityConfirmationCompleted
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );
