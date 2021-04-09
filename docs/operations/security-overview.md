@@ -1,6 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
+description: Overiew of Apache Druid security. Includes best practices, configuration instructions, and a description of the security model.
 ---
 
 <!--
@@ -31,30 +32,28 @@ By default, security features in Druid are disabled, which simplifies the initia
 
 ## Best practices
 
-
+The following recommendations apply to the Druid cluster setup:
 * Run Druid as an unprivileged Unix user. Do not run Druid as the root user.
    > **WARNING!** \
    Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
-* Do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console will have the same permissions as the OS user running the Druid Console process.
-* Use an API gateway to
+* Enable authorization and do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the Druid Console process.
+* Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
+* * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
+
+The following recommendations apply the network where Druid runs:
+* Enable TLS to encrypt communication within the cluster.
+* Use an API gateway to:
   - Restrict access from untrusted networks
   - Create an allow list of specific APIs that your users need to access
   - Implement account lockout and throttling features.
 * When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
+
+The following recommendation applies to Druids authorization and authentication model:
+* Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid Console process. 
 * Only grant `STATE READ`, `STATE WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allows users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
-* Enable TLS to encrypt communication within the cluster.
-* You should only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid process.
-* Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
-* Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 
-## Authentication and Authorization
-
-You can configure authentication and authorization to control access to the the Druid APIs. The first step is enabling TLS for the cluster nodes. This is essential to ensure passwords and authentication tokens are encrypted over the network.
-Then configure users, roles, and permissions, as described in the following sections. 
-
-The configuration settings mentioned below are primarily located in the `common.runtime.properties` file. Note that you need to make the configuration changes on all Druid server in the cluster.
 
 ## Enable TLS
 
@@ -113,7 +112,7 @@ druid.client.https.trustStorePassword=secret123  # replace with your own passwor
 
 # Setup server side TLS
 druid.server.https.keyStoreType=jks
-druid.server.https.keyStorePath=imply-keystore.jks # replace with correct keyStore file
+druid.server.https.keyStorePath=my-keystore.jks # replace with correct keyStore file
 druid.server.https.keyStorePassword=secret123 # replace with your own password
 druid.server.https.certAlias=druid 
 
@@ -122,6 +121,8 @@ For more information, see [TLS support](tls-support.md) and [Simple SSLContext P
 
 
 ## Authentication and authorization
+
+You can configure authentication and authorization to control access to the the Druid APIs. Then configure users, roles, and permissions, as described in the following sections. Make the configuration changes in the `common.runtime.properties` file on all Druid servers in the cluster.
 
 Within Druid's operating context, authenticators control the way user identities are verified. Authorizers employ user roles to relate authenticated users to the datasources they are permitted to access. You can set the finest-grained permissions on a per-datasource basis.
 
@@ -139,7 +140,7 @@ The following takes you through sample configuration steps for enabling basic au
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
-   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
+   druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
 2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another. 
 
@@ -324,16 +325,18 @@ Congratulations, you have configured permissions for user-assigned roles in Drui
 
 
 ## Druid security trust model
-Like all other security systems, trust is the foundation of the Druid security model. Druid administrators and read-only users are trusted users. Therefore, they are not expected to act maliciously.
+Within Druid's trust model there users can have different authorization levels:
+- Users with resource write permissions can are allowed to anything that the druid process can do.
+- Authenticated read only users can execute queries against resources to which they have permissions.
+- An authenticated user without any permissions is allowed to execute queries that don't require access to a resource.
 
-
-Based on this expectation, Druid operates according to the following principles:
+Additionally, Druid operates according to the following principles:
 
 From the inner most layer:
-1. Druid processes run within the system user context. They have access to the local files granted to the specified system user.
+1. Druid processes have the same access to the local files granted to the specified system user running the process.
 2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
-> Note: Only grant the permission to submit ingestion tasks to trusted users because they can read and write to local file system.
+> Note: Only grant the permission to submit ingestion tasks to trusted users because they can  act as the Druid process.
 
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.
