@@ -82,7 +82,7 @@ public class SQLAuditManager implements AuditManager
   {
     AuditEntry auditEntry = AuditEntry.builder()
                                       .key(key)
-                                      .type(key)
+                                      .type(type)
                                       .auditInfo(auditInfo)
                                       .payload(configSerde.serializeToString(payload, config.isSkipNullField()))
                                       .build();
@@ -124,15 +124,17 @@ public class SQLAuditManager implements AuditManager
     emitter.emit(getAuditMetricEventBuilder(auditEntry).build("config/audit", 1));
 
     AuditEntry auditEntryToStore = auditEntry;
-    int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
-    if (config.getMaxPayloadSizeBytes() >= 0 && payloadSize > config.getMaxPayloadSizeBytes()) {
-      auditEntryToStore = AuditEntry.builder()
-                                    .key(auditEntry.getKey())
-                                    .type(auditEntry.getType())
-                                    .auditInfo(auditEntry.getAuditInfo())
-                                    .payload(StringUtils.format(PAYLOAD_SKIP_MESSAGE, config.getMaxPayloadSizeBytes()))
-                                    .auditTime(auditEntry.getAuditTime())
-                                    .build();
+    if (config.getMaxPayloadSizeBytes() >= 0) {
+      int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
+      if (payloadSize > config.getMaxPayloadSizeBytes()) {
+        auditEntryToStore = AuditEntry.builder()
+                                      .key(auditEntry.getKey())
+                                      .type(auditEntry.getType())
+                                      .auditInfo(auditEntry.getAuditInfo())
+                                      .payload(StringUtils.format(PAYLOAD_SKIP_MESSAGE, config.getMaxPayloadSizeBytes()))
+                                      .auditTime(auditEntry.getAuditTime())
+                                      .build();
+      }
     }
 
     handle.createStatement(

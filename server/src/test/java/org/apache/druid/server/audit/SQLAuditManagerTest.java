@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.audit;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEntry;
@@ -39,12 +38,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+@RunWith(MockitoJUnitRunner.class)
 public class SQLAuditManagerTest
 {
   @Rule
@@ -53,12 +59,13 @@ public class SQLAuditManagerTest
   private TestDerbyConnector connector;
   private AuditManager auditManager;
   private final String PAYLOAD_DIMENSION_KEY = "payload";
-  private ConfigSerde<String> configSerde;
+  private ConfigSerde<String> stringConfigSerde;
+
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
     connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
@@ -69,8 +76,7 @@ public class SQLAuditManagerTest
         mapper,
         new SQLAuditManagerConfig()
     );
-    ObjectMapper jsonMapperSkipNull = mapper.copy().setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    configSerde = new ConfigSerde<String>()
+    stringConfigSerde = new ConfigSerde<String>()
     {
       @Override
       public byte[] serialize(String obj)
@@ -86,20 +92,14 @@ public class SQLAuditManagerTest
       @Override
       public String serializeToString(String obj, boolean skipNull)
       {
-        try {
-          return skipNull ? jsonMapperSkipNull.writeValueAsString(obj) : mapper.writeValueAsString(obj);
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
+        // In our test, payload Object is already a String
+        // So to serialize to String, we just return a String
+        return obj;
       }
 
       @Override
       public String deserialize(byte[] bytes)
       {
-        if (bytes == null) {
-          return "";
-        }
         return JacksonUtils.readValue(mapper, bytes, String.class);
       }
     };
@@ -173,7 +173,7 @@ public class SQLAuditManagerTest
     );
     String entry1Payload = "testPayload";
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
 
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
@@ -191,7 +191,7 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testFetchAuditHistory()
   {
-    String entry1Key = "testKey1";
+    String entry1Key = "testKey";
     String entry1Type = "testType";
     AuditInfo entry1AuditInfo = new AuditInfo(
         "testAuthor",
@@ -200,13 +200,13 @@ public class SQLAuditManagerTest
     );
     String entry1Payload = "testPayload";
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
 
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testKey",
         "testType",
-        Intervals.ETERNITY
+        Intervals.of("2000-01-01T00:00:00Z/2100-01-03T00:00:00Z")
     );
     Assert.assertEquals(2, auditEntries.size());
 
@@ -242,8 +242,8 @@ public class SQLAuditManagerTest
     );
     String entry2Payload = "testPayload";
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
-    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, configSerde);
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testKey1",
         "testType",
@@ -286,9 +286,9 @@ public class SQLAuditManagerTest
     );
     String entry3Payload = "testPayload3";
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
-    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, configSerde);
-    auditManager.doAudit(entry3Key, entry3Type, entry3AuditInfo, entry3Payload, configSerde);
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
+    auditManager.doAudit(entry3Key, entry3Type, entry3AuditInfo, entry3Payload, stringConfigSerde);
 
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testType",
@@ -346,7 +346,9 @@ public class SQLAuditManagerTest
     );
     String entry1Payload = "payload audit to store";
 
-    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
+    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload,
+                                                stringConfigSerde
+    );
 
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
@@ -389,7 +391,9 @@ public class SQLAuditManagerTest
     );
     String entry1Payload = "payload audit to store";
 
-    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, configSerde);
+    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload,
+                                                stringConfigSerde
+    );
 
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
@@ -403,6 +407,41 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry1Payload, dbEntry.getPayload());
     Assert.assertEquals(entry1Type, dbEntry.getType());
     Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCreateAuditEntryWithSkipNullConfigTrue() throws IOException
+  {
+    ConfigSerde<Map<String, String>> mockConfigSerde = Mockito.mock(ConfigSerde.class);
+    SQLAuditManager auditManagerWithSkipNull = new SQLAuditManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopServiceEmitter(),
+        mapper,
+        new SQLAuditManagerConfig()
+        {
+          @Override
+          public boolean isSkipNullField()
+          {
+            return true;
+          }
+        }
+    );
+
+    String entry1Key = "test1Key";
+    String entry1Type = "test1Type";
+    AuditInfo entry1AuditInfo = new AuditInfo(
+        "testAuthor",
+        "testComment",
+        "127.0.0.1"
+    );
+    // Entry 1 payload has a null field for one of the property
+    Map<String, String> entryPayload1WithNull = new HashMap<>();
+    entryPayload1WithNull.put("version", "x");
+    entryPayload1WithNull.put("something", null);
+
+    auditManagerWithSkipNull.doAudit(entry1Key, entry1Type, entry1AuditInfo, entryPayload1WithNull, mockConfigSerde);
+    Mockito.verify(mockConfigSerde).serializeToString(ArgumentMatchers.eq(entryPayload1WithNull), ArgumentMatchers.eq(true));
   }
 
   @After

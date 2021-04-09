@@ -146,37 +146,6 @@ public class JacksonConfigManagerTest
     {
       return settingInt;
     }
-
-    @Override
-    public String toString()
-    {
-      return "TestConfig{" +
-             "version='" + version + '\'' +
-             ", settingString='" + settingString + '\'' +
-             ", settingInt=" + settingInt +
-             '}';
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      TestConfig that = (TestConfig) o;
-      return settingInt == that.settingInt &&
-             Objects.equals(version, that.version) &&
-             Objects.equals(settingString, that.settingString);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(version, settingString, settingInt);
-    }
   }
 
   static class ClassThatJacksonCannotSerialize
