@@ -39,7 +39,7 @@ The following recommendations apply to the Druid cluster setup:
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
 * Enable authorization and do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the Druid Console process.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
-* * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
+* Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 
 The following recommendations apply the network where Druid runs:
 * Enable TLS to encrypt communication within the cluster.
