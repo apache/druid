@@ -209,13 +209,12 @@ public class DataSchema
     // Field name -> where it was seen
     final Map<String, Multiset<String>> fields = new TreeMap<>();
 
-    fields.computeIfAbsent(ColumnHolder.TIME_COLUMN_NAME, k -> TreeMultiset.create())
-          .add(
-              StringUtils.format(
-                  "primary timestamp (%s cannot appear as a dimension or metric)",
-                  ColumnHolder.TIME_COLUMN_NAME
-              )
-          );
+    fields.computeIfAbsent(ColumnHolder.TIME_COLUMN_NAME, k -> TreeMultiset.create()).add(
+        StringUtils.format(
+            "primary timestamp (%s cannot appear as a dimension or metric)",
+            ColumnHolder.TIME_COLUMN_NAME
+        )
+    );
 
     if (dimensionsSpec != null) {
       for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
