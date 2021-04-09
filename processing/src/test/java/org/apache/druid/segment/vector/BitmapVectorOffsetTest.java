@@ -22,7 +22,9 @@ package org.apache.druid.segment.vector;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,6 +33,43 @@ public class BitmapVectorOffsetTest
 {
   private static final int VECTOR_SIZE = 128;
   private static final int ROWS = VECTOR_SIZE * VECTOR_SIZE;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testContiguousGetOffsetsIsExplode()
+  {
+    MutableRoaringBitmap wrapped = new MutableRoaringBitmap();
+    for (int i = 0; i < ROWS; i++) {
+      wrapped.add(i);
+    }
+
+    ImmutableBitmap bitmap = new WrappedImmutableRoaringBitmap(wrapped.toImmutableRoaringBitmap());
+    BitmapVectorOffset offset = new BitmapVectorOffset(VECTOR_SIZE, bitmap, 0, ROWS);
+
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("is contiguous");
+    offset.getOffsets();
+  }
+
+  @Test
+  public void testNotContiguousGetStartOffsetIsExplode()
+  {
+    MutableRoaringBitmap wrapped = new MutableRoaringBitmap();
+    for (int i = 0; i < ROWS; i++) {
+      if (i % 2 != 0) {
+        wrapped.add(i);
+      }
+    }
+
+    ImmutableBitmap bitmap = new WrappedImmutableRoaringBitmap(wrapped.toImmutableRoaringBitmap());
+    BitmapVectorOffset offset = new BitmapVectorOffset(VECTOR_SIZE, bitmap, 0, ROWS);
+
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("not contiguous");
+    offset.getStartOffset();
+  }
 
   @Test
   public void testContiguous()

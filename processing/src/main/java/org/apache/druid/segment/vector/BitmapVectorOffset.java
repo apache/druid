@@ -133,6 +133,9 @@ public class BitmapVectorOffset implements VectorOffset
   @Override
   public int[] getOffsets()
   {
+    if (isContiguous) {
+      throw new UnsupportedOperationException("is contiguous");
+    }
     return offsets;
   }
 
