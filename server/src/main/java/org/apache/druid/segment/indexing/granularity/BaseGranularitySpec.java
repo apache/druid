@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,16 +43,12 @@ public abstract class BaseGranularitySpec implements GranularitySpec
   public static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
   public static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
 
-  protected List<Interval> inputIntervals;
+  protected final List<Interval> inputIntervals;
   protected final Boolean rollup;
 
   public BaseGranularitySpec(List<Interval> inputIntervals, Boolean rollup)
   {
-    if (inputIntervals != null) {
-      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
-    } else {
-      this.inputIntervals = Collections.emptyList();
-    }
+    this.inputIntervals = inputIntervals == null ? Collections.emptyList() : inputIntervals;
     this.rollup = rollup == null ? DEFAULT_ROLLUP : rollup;
   }
 

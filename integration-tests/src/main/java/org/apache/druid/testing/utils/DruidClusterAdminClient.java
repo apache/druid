@@ -35,10 +35,12 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -185,7 +187,27 @@ public class DruidClusterAdminClient
             return response.getStatus().equals(HttpResponseStatus.OK);
           }
           catch (Throwable e) {
-            LOG.error(e, "");
+            //
+            // supress stack trace logging for some specific exceptions
+            // to reduce excessive stack trace messages when waiting druid nodes to start up
+            //
+            if (e.getCause() instanceof ChannelException) {
+              Throwable channelException = e.getCause();
+
+              if (channelException.getCause() instanceof ClosedChannelException) {
+                LOG.error("Channel Closed");
+              } else if ("Channel disconnected".equals(channelException.getMessage())) {
+                // log message only
+                LOG.error("Channel disconnected");
+              } else {
+                // log stack trace for unknown exception
+                LOG.error(e, "");
+              }
+            } else {
+              // log stack trace for unknown exception
+              LOG.error(e, "");
+            }
+
             return false;
           }
         },

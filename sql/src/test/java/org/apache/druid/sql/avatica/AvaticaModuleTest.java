@@ -176,19 +176,36 @@ public class AvaticaModuleTest
   }
 
   @Test
-  public void testDruidAvaticaHandlerIsInjected()
+  public void testDruidAvaticaJsonHandlerIsInjected()
   {
-    DruidAvaticaHandler handler = injector.getInstance(DruidAvaticaHandler.class);
+    DruidAvaticaJsonHandler handler = injector.getInstance(DruidAvaticaJsonHandler.class);
     Assert.assertNotNull(handler);
-    DruidAvaticaHandler other = injector.getInstance(DruidAvaticaHandler.class);
+    DruidAvaticaJsonHandler other = injector.getInstance(DruidAvaticaJsonHandler.class);
     Assert.assertNotSame(handler, other);
   }
 
   @Test
-  public void testDruidAvaticaHandlerIsRegisterdWithJerseyModule()
+  public void testDruidAvaticaProtobufHandlerIsInjected()
+  {
+    DruidAvaticaProtobufHandler handler = injector.getInstance(DruidAvaticaProtobufHandler.class);
+    Assert.assertNotNull(handler);
+    DruidAvaticaProtobufHandler other = injector.getInstance(DruidAvaticaProtobufHandler.class);
+    Assert.assertNotSame(handler, other);
+  }
+
+  @Test
+  public void testDruidAvaticaJsonHandlerIsRegisterdWithJerseyModule()
   {
     Set<Handler> handlers =
         injector.getInstance(Key.get(new TypeLiteral<Set<Handler>>(){}));
-    Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaHandler.class.equals(h.getClass())));
+    Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaJsonHandler.class.equals(h.getClass())));
+  }
+
+  @Test
+  public void testDruidAvaticaProtobufHandlerIsRegisterdWithJerseyModule()
+  {
+    Set<Handler> handlers =
+            injector.getInstance(Key.get(new TypeLiteral<Set<Handler>>(){}));
+    Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaProtobufHandler.class.equals(h.getClass())));
   }
 }

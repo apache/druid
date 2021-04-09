@@ -46,6 +46,12 @@ environment variable to localhost on your system, as follows:
 export DOCKER_IP=127.0.0.1
 ```
 
+Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override `https://archive.apache.org` host. This host is used to download archives such as hadoop and kafka during building docker images:
+
+```
+export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
+```
+
 ## Running tests
 
 To run all tests from a test group using docker and mvn run the following command: 

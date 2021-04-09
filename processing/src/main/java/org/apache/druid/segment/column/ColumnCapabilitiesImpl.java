@@ -178,6 +178,21 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
+   * Simple, single valued, non dictionary encoded string without bitmap index or anything fancy
+   */
+  public static ColumnCapabilitiesImpl createSimpleSingleValueStringColumnCapabilities()
+  {
+    return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                       .setHasMultipleValues(false)
+                                       .setHasBitmapIndexes(false)
+                                       .setDictionaryEncoded(false)
+                                       .setDictionaryValuesSorted(false)
+                                       .setDictionaryValuesUnique(false)
+                                       .setHasSpatialIndexes(false)
+                                       .setHasNulls(true);
+  }
+
+  /**
    * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
    * and {@link #hasNulls} is not set
    */

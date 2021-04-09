@@ -599,7 +599,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false);
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -742,7 +742,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -827,7 +827,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1257,7 +1257,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1369,7 +1369,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,

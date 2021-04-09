@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
@@ -43,6 +44,7 @@ import java.util.Optional;
 public class HashJoinSegment implements SegmentReference
 {
   private final SegmentReference baseSegment;
+  private final Filter baseFilter;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
@@ -54,11 +56,13 @@ public class HashJoinSegment implements SegmentReference
    */
   public HashJoinSegment(
       SegmentReference baseSegment,
+      @Nullable Filter baseFilter,
       List<JoinableClause> clauses,
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
     this.baseSegment = baseSegment;
+    this.baseFilter = baseFilter;
     this.clauses = clauses;
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
 
@@ -93,7 +97,12 @@ public class HashJoinSegment implements SegmentReference
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, joinFilterPreAnalysis);
+    return new HashJoinSegmentStorageAdapter(
+        baseSegment.asStorageAdapter(),
+        baseFilter,
+        clauses,
+        joinFilterPreAnalysis
+    );
   }
 
   @Override

@@ -148,6 +148,11 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
             "%%APPEND_TO_EXISTING%%",
             jsonMapper.writeValueAsString(appendToExisting)
         );
+        spec = StringUtils.replace(
+            spec,
+            "%%DROP_EXISTING%%",
+            jsonMapper.writeValueAsString(false)
+        );
         if (partitionsSpec instanceof DynamicPartitionsSpec) {
           spec = StringUtils.replace(
               spec,

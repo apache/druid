@@ -129,7 +129,6 @@ public class ExpressionVectorSelectorsTest
     return EXPRESSIONS.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
   }
 
-  @Nullable
   private ExprType outputType;
   private String expression;
 
@@ -153,6 +152,9 @@ public class ExpressionVectorSelectorsTest
           }
         }
     );
+    if (outputType == null) {
+      outputType = ExprType.STRING;
+    }
   }
 
   @Test
@@ -207,7 +209,7 @@ public class ExpressionVectorSelectorsTest
     } else {
       VectorValueSelector selector = null;
       VectorObjectSelector objectSelector = null;
-      if (outputType.isNumeric()) {
+      if (outputType != null && outputType.isNumeric()) {
         selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
       } else {
         objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");

@@ -42,9 +42,15 @@ import java.util.List;
     @Type(name = JsonEventSerializer.TYPE, value = JsonEventSerializer.class),
     @Type(name = CsvEventSerializer.TYPE, value = CsvEventSerializer.class),
     @Type(name = DelimitedEventSerializer.TYPE, value = DelimitedEventSerializer.class),
-    @Type(name = AvroEventSerializer.TYPE, value = AvroEventSerializer.class)
+    @Type(name = AvroEventSerializer.TYPE, value = AvroEventSerializer.class),
+    @Type(name = AvroSchemaRegistryEventSerializer.TYPE, value = AvroSchemaRegistryEventSerializer.class)
 })
 public interface EventSerializer extends Closeable
 {
+  default void initialize(String topic)
+  {
+
+  }
+
   byte[] serialize(List<Pair<String, Object>> event) throws IOException;
 }

@@ -55,7 +55,7 @@ public class ParserTest extends InitializedNullHandlingTest
   @Test
   public void testParseConstants()
   {
-    validateLiteral("null", ExprType.STRING, null);
+    validateLiteral("null", null, null);
     validateLiteral("'hello'", ExprType.STRING, "hello");
     validateLiteral("'hello \\uD83E\\uDD18'", ExprType.STRING, "hello \uD83E\uDD18");
     validateLiteral("1", ExprType.LONG, 1L);

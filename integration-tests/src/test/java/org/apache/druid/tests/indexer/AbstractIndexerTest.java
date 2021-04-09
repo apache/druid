@@ -101,6 +101,20 @@ public abstract class AbstractIndexerTest
     unloadAndKillData(dataSource, first, last);
   }
 
+  protected void loadData(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    String taskSpec = getResourceAsString(indexTask);
+    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for loading index task %s", taskID);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Load"
+    );
+  }
+
   private void unloadAndKillData(final String dataSource, String start, String end)
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise

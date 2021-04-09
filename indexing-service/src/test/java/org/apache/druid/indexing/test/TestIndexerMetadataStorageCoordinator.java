@@ -120,6 +120,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
       DataSourceMetadata oldCommitMetadata,
       DataSourceMetadata newCommitMetadata
   )

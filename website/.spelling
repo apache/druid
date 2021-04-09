@@ -38,10 +38,11 @@ Base64-encoded
 ByteBuffer
 CIDR
 CORS
+CNF
 CPUs
 CSVs
 Ceph
-CNF
+CloudWatch
 ColumnDescriptor
 Corretto
 DDL
@@ -218,6 +219,7 @@ codec
 colocated
 colocation
 compactable
+compactionTask
 config
 configs
 consumerProperties
@@ -258,6 +260,7 @@ firehoses
 fromPigAvroStorage
 frontends
 granularities
+granularitySpec
 gzip
 gzipped
 hadoop
@@ -280,6 +283,7 @@ javadoc
 joinable
 kerberos
 keystore
+KeyStores
 keytab
 kubernetes
 laning
@@ -300,6 +304,7 @@ mergeable
 metadata
 millis
 misconfiguration
+misconfigured
 mostAvailableSize
 multitenancy
 multitenant
@@ -312,6 +317,7 @@ netflow
 non-nullable
 noop
 numerics
+numShards
 parameterized
 parseable
 partitioner
@@ -365,6 +371,7 @@ reingest
 reingesting
 reingestion
 repo
+requireSSL
 rollup
 rollups
 rsync
@@ -380,6 +387,8 @@ sharding
 skipHeaderRows
 smooshed
 splittable
+ssl
+sslmode
 stdout
 storages
 stringified
@@ -415,8 +424,10 @@ unparsed
 unsetting
 untrusted
 useFilterCNF
+useSSL
 uptime
 uris
+urls
 useFieldDiscovery
 v1
 v2
@@ -582,6 +593,11 @@ com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
  - ../docs/development/extensions-contrib/statsd.md
 convertRange
+- ../docs/development/extensions-contrib/prometheus.md
+HTTPServer
+conversionFactor
+prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -938,6 +954,7 @@ ctrl
 jsonLowercase
 listDelimiter
 timestampSpec
+urls
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1029,7 +1046,9 @@ baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
+countryName
 dataSchema's
+dropExisting
 foldCase
 forceGuaranteedRollup
 httpAuthenticationPassword
@@ -1422,6 +1441,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary
@@ -1523,6 +1543,7 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
+druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
 error_msg
 exprs
@@ -1555,6 +1576,7 @@ timestamp_expr
 tls_port
 total_size
 useApproximateCountDistinct
+useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
  - ../docs/querying/timeseriesquery.md
@@ -1772,6 +1794,7 @@ successfulSending
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
+timestampSpec
 tmp
 tmpfs
 truststore
@@ -1847,3 +1870,5 @@ MiB
 GiB
 TiB
 PiB
+protobuf
+Golang

@@ -164,6 +164,13 @@ public interface IntegrationTestingConfig
 
   String getStreamEndpoint();
 
+  String getSchemaRegistryHost();
+
+  default String getSchemaRegistryInternalHost()
+  {
+    return getSchemaRegistryHost();
+  }
+
   boolean isDocker();
 
   @Nullable

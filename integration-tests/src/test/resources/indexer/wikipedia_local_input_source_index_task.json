@@ -72,6 +72,7 @@
         "baseDir": "%%INPUT_SOURCE_BASE_DIR%%"
       },
       "appendToExisting": %%APPEND_TO_EXISTING%%,
+      "dropExisting": %%DROP_EXISTING%%,
       "inputFormat": %%INPUT_FORMAT%%
     },
     "tuningConfig": {

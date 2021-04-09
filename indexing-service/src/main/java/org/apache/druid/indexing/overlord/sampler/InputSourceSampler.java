@@ -33,6 +33,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -51,8 +52,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -175,10 +175,10 @@ public class InputSourceSampler
         columnNames.remove(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
 
         for (Row row : index) {
-          Map<String, Object> parsed = new HashMap<>();
+          Map<String, Object> parsed = new LinkedHashMap<>();
 
-          columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
           parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
+          columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
 
           Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
           if (sortKey != null) {
@@ -215,14 +215,7 @@ public class InputSourceSampler
       File tempDir
   )
   {
-    final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                            .map(AggregatorFactory::getName)
-                                            .collect(Collectors.toList());
-    final InputRowSchema inputRowSchema = new InputRowSchema(
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        metricsNames
-    );
+    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
 
     InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
 
