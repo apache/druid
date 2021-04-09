@@ -97,7 +97,7 @@ public class HadoopDruidIndexerJob implements Jobby
     );
 
     config.setHadoopJobIdFileName(hadoopJobIdFile);
-    return JobHelper.runJobs(jobs, config);
+    return JobHelper.runJobs(jobs);
   }
 
   @Override

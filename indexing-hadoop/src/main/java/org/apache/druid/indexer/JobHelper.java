@@ -386,29 +386,13 @@ public class JobHelper
     }
   }
 
-  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
+  public static boolean runSingleJob(Jobby job)
   {
     boolean succeeded = job.run();
-
-    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
-        Path workingPath = config.makeIntermediatePath();
-        log.info("Deleting path[%s]", workingPath);
-        try {
-          Configuration conf = injectSystemProperties(new Configuration(), config);
-          config.addJobProperties(conf);
-          workingPath.getFileSystem(conf).delete(workingPath, true);
-        }
-        catch (IOException e) {
-          log.error(e, "Failed to cleanup path[%s]", workingPath);
-        }
-      }
-    }
-
     return succeeded;
   }
 
-  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  public static boolean runJobs(List<Jobby> jobs)
   {
     boolean succeeded = true;
     for (Jobby job : jobs) {
@@ -418,8 +402,19 @@ public class JobHelper
       }
     }
 
+    return succeeded;
+  }
+
+  public static void maybeDeleteIntermediatePath(
+      boolean indexerGeneratorJobSucceeded,
+      HadoopIngestionSpec indexerSchema)
+  {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
+    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
+    config.addJobProperties(configuration);
+    JobHelper.injectDruidProperties(configuration, config);
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+      if (indexerGeneratorJobSucceeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
@@ -432,8 +427,6 @@ public class JobHelper
         }
       }
     }
-
-    return succeeded;
   }
 
   public static DataSegmentAndIndexZipFilePath serializeOutIndex(

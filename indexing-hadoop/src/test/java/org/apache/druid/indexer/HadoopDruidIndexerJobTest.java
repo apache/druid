@@ -58,7 +58,7 @@ public class HadoopDruidIndexerJobTest
     JobHelper.ensurePaths(config);
     EasyMock.expectLastCall();
     Capture<List<Jobby>> capturedJobs = Capture.newInstance();
-    EasyMock.expect(JobHelper.runJobs(EasyMock.capture(capturedJobs), EasyMock.eq(config))).andReturn(true);
+    EasyMock.expect(JobHelper.runJobs(EasyMock.capture(capturedJobs))).andReturn(true);
     EasyMock.expect(IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(EasyMock.anyObject())).andReturn(null);
 
 

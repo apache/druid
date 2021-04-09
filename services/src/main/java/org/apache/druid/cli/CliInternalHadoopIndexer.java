@@ -119,7 +119,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
       List<Jobby> jobs = new ArrayList<>();
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));
       jobs.add(new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class)));
-      JobHelper.runJobs(jobs, config);
+      JobHelper.runJobs(jobs);
 
     }
     catch (Exception e) {

@@ -49,6 +49,8 @@ public class JobHelperPowerMockTest
   private static final String TMP_PATH = "/tmp/index.zip.0";
   private static final String FINAL_PATH = "/final/index.zip.0";
 
+  private HadoopDruidIndexerConfig indexerConfig;
+
   @Test
   public void test_renameIndexFilesForSegments_emptySegments() throws IOException
   {
@@ -106,15 +108,96 @@ public class JobHelperPowerMockTest
     PowerMock.verifyAll();
   }
 
+  @Test
+  public void test_maybeDeleteIntermediatePath_leaveIntermediate_doesNotDeleteIntermediatePath()
+  {
+    HadoopIngestionSpec ingestionSpec = mockIngestionSpec();
+    HadoopTuningConfig tuningConfig = PowerMock.createMock(HadoopTuningConfig.class);
+    EasyMock.expect(tuningConfig.isLeaveIntermediate()).andReturn(true);
+    EasyMock.expect(ingestionSpec.getTuningConfig()).andReturn(tuningConfig);
+
+    PowerMock.replayAll();
+
+    JobHelper.maybeDeleteIntermediatePath(true, ingestionSpec);
+
+    PowerMock.verifyAll();
+  }
+
+  @Test
+  public void test_maybeDeleteIntermediatePath_doNotleaveIntermediateAndIndexerJobSucceeded_deleteIntermediatePath()
+      throws IOException
+  {
+    HadoopIngestionSpec ingestionSpec = mockIngestionSpec();
+    HadoopTuningConfig tuningConfig = PowerMock.createMock(HadoopTuningConfig.class);
+    Path workingPath = PowerMock.createMock(Path.class);
+    FileSystem workingPathFs = PowerMock.createMock(FileSystem.class);
+    EasyMock.expect(tuningConfig.isLeaveIntermediate()).andReturn(false);
+    EasyMock.expect(ingestionSpec.getTuningConfig()).andReturn(tuningConfig);
+    EasyMock.expect(workingPathFs.delete(workingPath, true)).andReturn(true);
+    EasyMock.expect(workingPath.getFileSystem(EasyMock.anyObject())).andReturn(workingPathFs);
+    EasyMock.expect(indexerConfig.makeIntermediatePath()).andReturn(workingPath);
+
+    PowerMock.replayAll();
+
+    JobHelper.maybeDeleteIntermediatePath(true, ingestionSpec);
+
+    PowerMock.verifyAll();
+  }
+
+  @Test
+  public void test_maybeDeleteIntermediatePath_doNotleaveIntermediateAndIndexJobFailedAndCleanupOnFailure_deleteIntermediatePath()
+      throws IOException
+  {
+    HadoopIngestionSpec ingestionSpec = mockIngestionSpec();
+    HadoopTuningConfig tuningConfig = PowerMock.createMock(HadoopTuningConfig.class);
+    Path workingPath = PowerMock.createMock(Path.class);
+    FileSystem workingPathFs = PowerMock.createMock(FileSystem.class);
+    EasyMock.expect(tuningConfig.isLeaveIntermediate()).andReturn(false);
+    EasyMock.expect(tuningConfig.isCleanupOnFailure()).andReturn(true);
+    EasyMock.expect(ingestionSpec.getTuningConfig()).andReturn(tuningConfig).anyTimes();
+    EasyMock.expect(workingPathFs.delete(workingPath, true)).andReturn(true);
+    EasyMock.expect(workingPath.getFileSystem(EasyMock.anyObject())).andReturn(workingPathFs);
+    EasyMock.expect(indexerConfig.makeIntermediatePath()).andReturn(workingPath);
+
+    PowerMock.replayAll();
+
+    JobHelper.maybeDeleteIntermediatePath(false, ingestionSpec);
+
+    PowerMock.verifyAll();
+  }
+
+  @Test
+  public void test_maybeDeleteIntermediatePath_deleteThrowsException_noExceptionPropogated()
+      throws IOException
+  {
+    HadoopIngestionSpec ingestionSpec = mockIngestionSpec();
+    HadoopTuningConfig tuningConfig = PowerMock.createMock(HadoopTuningConfig.class);
+    Path workingPath = PowerMock.createMock(Path.class);
+    FileSystem workingPathFs = PowerMock.createMock(FileSystem.class);
+    EasyMock.expect(tuningConfig.isLeaveIntermediate()).andReturn(false);
+    EasyMock.expect(tuningConfig.isCleanupOnFailure()).andReturn(true);
+    EasyMock.expect(ingestionSpec.getTuningConfig()).andReturn(tuningConfig).anyTimes();
+    EasyMock.expect(workingPathFs.delete(workingPath, true)).andThrow(new IOException("Delete Exception"));
+    EasyMock.expect(workingPath.getFileSystem(EasyMock.anyObject())).andReturn(workingPathFs);
+    EasyMock.expect(indexerConfig.makeIntermediatePath()).andReturn(workingPath);
+
+    PowerMock.replayAll();
+
+    JobHelper.maybeDeleteIntermediatePath(false, ingestionSpec);
+
+    PowerMock.verifyAll();
+  }
+
   private HadoopIngestionSpec mockIngestionSpec()
   {
-    HadoopDruidIndexerConfig indexerConfig = PowerMock.createMock(HadoopDruidIndexerConfig.class);
+    indexerConfig = PowerMock.createMock(HadoopDruidIndexerConfig.class);
     HadoopIngestionSpec ingestionSpec = PowerMock.createMock(HadoopIngestionSpec.class);
     PowerMock.mockStaticNice(HadoopDruidIndexerConfig.class);
     EasyMock.expect(indexerConfig.getAllowedProperties()).andReturn(ImmutableMap.of()).anyTimes();
     indexerConfig.addJobProperties(EasyMock.anyObject(Configuration.class));
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(HadoopDruidIndexerConfig.fromSpec(ingestionSpec)).andReturn(indexerConfig);
+    EasyMock.expect(indexerConfig.getSchema()).andReturn(ingestionSpec).anyTimes();
     return ingestionSpec;
   }
 

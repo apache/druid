@@ -31,6 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.druid.indexer.DataSegmentAndIndexZipFilePath;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -309,171 +310,184 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unchecked")
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
-    registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
-    String hadoopJobIdFile = getHadoopJobIdFileName();
-    final ClassLoader loader = buildClassLoader(toolbox);
-    boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
-
-    HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
-        spec,
-        jsonMapper,
-        new OverlordActionBasedUsedSegmentsRetriever(toolbox)
-    );
-
-    Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
-        "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
-        loader
-    );
-    determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
-
-    String[] determinePartitionsInput = new String[]{
-        toolbox.getJsonMapper().writeValueAsString(spec),
-        toolbox.getConfig().getHadoopWorkingPath(),
-        toolbox.getSegmentPusher().getPathForHadoop(),
-        hadoopJobIdFile
-    };
-
-    HadoopIngestionSpec indexerSchema;
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-    Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
-    Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
-        "runTask",
-        determinePartitionsInput.getClass()
-    );
+    boolean indexGeneratorJobAttempted = false;
+    boolean indexGeneratorJobSuccess = false;
+    HadoopIngestionSpec indexerSchema = null;
     try {
-      Thread.currentThread().setContextClassLoader(loader);
+      registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
+      String hadoopJobIdFile = getHadoopJobIdFileName();
+      final ClassLoader loader = buildClassLoader(toolbox);
+      boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
-      ingestionState = IngestionState.DETERMINE_PARTITIONS;
-
-      final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
-          determinePartitionsInnerProcessingRunner,
-          new Object[]{determinePartitionsInput}
+      HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+          spec,
+          jsonMapper,
+          new OverlordActionBasedUsedSegmentsRetriever(toolbox)
       );
 
+      Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
+          loader
+      );
+      determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
-      determineConfigStatus = toolbox
-          .getJsonMapper()
-          .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
+      String[] determinePartitionsInput = new String[]{
+          toolbox.getJsonMapper().writeValueAsString(spec),
+          toolbox.getConfig().getHadoopWorkingPath(),
+          toolbox.getSegmentPusher().getPathForHadoop(),
+          hadoopJobIdFile
+      };
 
-      indexerSchema = determineConfigStatus.getSchema();
-      if (indexerSchema == null) {
-        errorMsg = determineConfigStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
-        return TaskStatus.failure(
-            getId(),
-            errorMsg
+      final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+      Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
+      Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
+          "runTask",
+          determinePartitionsInput.getClass()
+      );
+      try {
+        Thread.currentThread().setContextClassLoader(loader);
+
+        ingestionState = IngestionState.DETERMINE_PARTITIONS;
+
+        final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
+            determinePartitionsInnerProcessingRunner,
+            new Object[]{determinePartitionsInput}
         );
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
-    }
 
-    // We should have a lock from before we started running only if interval was specified
-    String version;
-    if (determineIntervals) {
-      Interval interval = JodaUtils.umbrellaInterval(
-          JodaUtils.condenseIntervals(
-              indexerSchema.getDataSchema().getGranularitySpec().sortedBucketIntervals()
-          )
-      );
-      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);
-      // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
-      final TaskLock lock = Preconditions.checkNotNull(
-          toolbox.getTaskActionClient().submit(
-              new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
-          ),
-          "Cannot acquire a lock for interval[%s]", interval
-      );
-      version = lock.getVersion();
-    } else {
-      Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
-      final TaskLock myLock = Iterables.getOnlyElement(locks);
-      version = myLock.getVersion();
-    }
 
-    final String specVersion = indexerSchema.getTuningConfig().getVersion();
-    if (indexerSchema.getTuningConfig().isUseExplicitVersion()) {
-      if (specVersion.compareTo(version) < 0) {
-        version = specVersion;
-      } else {
-        log.error(
-            "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
-            specVersion,
-            version
-        );
-        toolbox.getTaskReportFileWriter().write(getId(), null);
-        return TaskStatus.failure(getId());
-      }
-    }
+        determineConfigStatus = toolbox
+            .getJsonMapper()
+            .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
 
-    log.info("Setting version to: %s", version);
-
-    Object innerProcessingRunner = getForeignClassloaderObject(
-        "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
-        loader
-    );
-    buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
-
-    String[] buildSegmentsInput = new String[]{
-        toolbox.getJsonMapper().writeValueAsString(indexerSchema),
-        version,
-        hadoopJobIdFile
-    };
-
-    Class<?> buildSegmentsRunnerClass = innerProcessingRunner.getClass();
-    Method innerProcessingRunTask = buildSegmentsRunnerClass.getMethod("runTask", buildSegmentsInput.getClass());
-
-    try {
-      Thread.currentThread().setContextClassLoader(loader);
-
-      ingestionState = IngestionState.BUILD_SEGMENTS;
-      final String jobStatusString = (String) innerProcessingRunTask.invoke(
-          innerProcessingRunner,
-          new Object[]{buildSegmentsInput}
-      );
-
-      buildSegmentsStatus = toolbox.getJsonMapper().readValue(
-          jobStatusString,
-          HadoopIndexGeneratorInnerProcessingStatus.class
-      );
-
-      List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
-      if (dataSegmentAndIndexZipFilePaths != null) {
-        try {
-          Thread.currentThread().setContextClassLoader(oldLoader);
-          renameSegmentIndexFilesJob(
-              toolbox.getJsonMapper().writeValueAsString(indexerSchema),
-              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
+        indexerSchema = determineConfigStatus.getSchema();
+        if (indexerSchema == null) {
+          errorMsg = determineConfigStatus.getErrorMsg();
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+          return TaskStatus.failure(
+              getId(),
+              errorMsg
           );
         }
-        finally {
-          Thread.currentThread().setContextClassLoader(loader);
-        }
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(oldLoader);
+      }
 
-        ingestionState = IngestionState.COMPLETED;
-        toolbox.publishSegments(dataSegmentAndIndexZipFilePaths.stream()
-                                                               .map(DataSegmentAndIndexZipFilePath::getSegment)
-                                                               .collect(Collectors.toList()));
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
-        return TaskStatus.success(getId());
-      } else {
-        errorMsg = buildSegmentsStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
-        return TaskStatus.failure(
-            getId(),
-            errorMsg
+      // We should have a lock from before we started running only if interval was specified
+      String version;
+      if (determineIntervals) {
+        Interval interval = JodaUtils.umbrellaInterval(
+            JodaUtils.condenseIntervals(
+                indexerSchema.getDataSchema().getGranularitySpec().sortedBucketIntervals()
+            )
         );
+        final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);
+        // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
+            ),
+            "Cannot acquire a lock for interval[%s]", interval
+        );
+        version = lock.getVersion();
+      } else {
+        Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
+        final TaskLock myLock = Iterables.getOnlyElement(locks);
+        version = myLock.getVersion();
+      }
+
+      final String specVersion = indexerSchema.getTuningConfig().getVersion();
+      if (indexerSchema.getTuningConfig().isUseExplicitVersion()) {
+        if (specVersion.compareTo(version) < 0) {
+          version = specVersion;
+        } else {
+          log.error(
+              "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
+              specVersion,
+              version
+          );
+          toolbox.getTaskReportFileWriter().write(getId(), null);
+          return TaskStatus.failure(getId());
+        }
+      }
+
+      log.info("Setting version to: %s", version);
+
+      Object innerProcessingRunner = getForeignClassloaderObject(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
+          loader
+      );
+      buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
+
+      String[] buildSegmentsInput = new String[]{
+          toolbox.getJsonMapper().writeValueAsString(indexerSchema),
+          version,
+          hadoopJobIdFile
+      };
+
+      Class<?> buildSegmentsRunnerClass = innerProcessingRunner.getClass();
+      Method innerProcessingRunTask = buildSegmentsRunnerClass.getMethod("runTask", buildSegmentsInput.getClass());
+
+      try {
+        Thread.currentThread().setContextClassLoader(loader);
+
+        ingestionState = IngestionState.BUILD_SEGMENTS;
+        indexGeneratorJobAttempted = true;
+        final String jobStatusString = (String) innerProcessingRunTask.invoke(
+            innerProcessingRunner,
+            new Object[]{buildSegmentsInput}
+        );
+
+        buildSegmentsStatus = toolbox.getJsonMapper().readValue(
+            jobStatusString,
+            HadoopIndexGeneratorInnerProcessingStatus.class
+        );
+
+        List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
+        if (dataSegmentAndIndexZipFilePaths != null) {
+          indexGeneratorJobSuccess = true;
+          try {
+            Thread.currentThread().setContextClassLoader(oldLoader);
+            renameSegmentIndexFilesJob(
+                toolbox.getJsonMapper().writeValueAsString(indexerSchema),
+                toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
+            );
+          }
+          finally {
+            Thread.currentThread().setContextClassLoader(loader);
+          }
+
+          ingestionState = IngestionState.COMPLETED;
+          toolbox.publishSegments(dataSegmentAndIndexZipFilePaths.stream()
+                                                                 .map(DataSegmentAndIndexZipFilePath::getSegment)
+                                                                 .collect(Collectors.toList()));
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+          return TaskStatus.success(getId());
+        } else {
+          errorMsg = buildSegmentsStatus.getErrorMsg();
+          toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+          return TaskStatus.failure(
+              getId(),
+              errorMsg
+          );
+        }
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(oldLoader);
       }
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
     finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
+      indexerGeneratorCleanupJob(
+          indexGeneratorJobAttempted,
+          indexGeneratorJobSuccess,
+          indexerSchema == null ? null : toolbox.getJsonMapper().writeValueAsString(indexerSchema)
+      );
     }
   }
 
@@ -553,6 +567,54 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
+  }
+
+  private void indexerGeneratorCleanupJob(
+      boolean indexGeneratorJobAttempted,
+      boolean indexGeneratorJobSuccess,
+      String hadoopIngestionSpecStr
+  )
+  {
+    if (!indexGeneratorJobAttempted) {
+      log.info("No need for cleanup as index generator job did not even run");
+      return;
+    }
+
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      ClassLoader loader = HadoopTask.buildClassLoader(
+          getHadoopDependencyCoordinates(),
+          taskConfig.getDefaultHadoopCoordinates()
+      );
+
+      Object indexerGeneratorCleanupRunner = getForeignClassloaderObject(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexerGeneratorCleanupRunner",
+          loader
+      );
+
+      String[] indexerGeneratorCleanupJobInput = new String[]{
+          indexGeneratorJobSuccess ? "true" : "false",
+          hadoopIngestionSpecStr,
+      };
+
+      Class<?> buildIndexerGeneratorCleanupRunnerClass = indexerGeneratorCleanupRunner.getClass();
+      Method indexerGeneratorCleanup = buildIndexerGeneratorCleanupRunnerClass.getMethod(
+          "runTask",
+          indexerGeneratorCleanupJobInput.getClass()
+      );
+
+      Thread.currentThread().setContextClassLoader(loader);
+      indexerGeneratorCleanup.invoke(
+          indexerGeneratorCleanupRunner,
+          new Object[]{indexerGeneratorCleanupJobInput}
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to cleanup after index generator job");
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
@@ -872,6 +934,47 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       JobHelper.renameIndexFilesForSegments(
           indexerSchema,
           dataSegmentAndIndexZipFilePaths
+      );
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public static class HadoopIndexerGeneratorCleanupRunner
+  {
+    TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
+        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
+        {
+        };
+
+    public void runTask(String[] args) throws Exception
+    {
+      if (args.length != 2) {
+        log.warn("HadoopIndexerGeneratorCleanupRunner called with improper number of arguments");
+      }
+
+      String indexGeneratorJobSucceededStr = args[0];
+      String hadoopIngestionSpecStr = args[1];
+
+      HadoopIngestionSpec indexerSchema;
+      boolean indexGeneratorJobSucceeded;
+      List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths;
+      try {
+        indexerSchema = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+            hadoopIngestionSpecStr,
+            HadoopIngestionSpec.class
+        );
+        indexGeneratorJobSucceeded = BooleanUtils.toBoolean(indexGeneratorJobSucceededStr);
+      }
+      catch (Exception e) {
+        log.warn(
+            e,
+            "HadoopIndexerGeneratorCleanupRunner: Error occurred while trying to read input parameters into data objects"
+        );
+        throw e;
+      }
+      JobHelper.maybeDeleteIntermediatePath(
+          indexGeneratorJobSucceeded,
+          indexerSchema
       );
     }
   }
