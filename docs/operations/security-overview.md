@@ -41,7 +41,7 @@ The following recommendations apply to the Druid cluster setup:
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 
-The following recommendations apply the network where Druid runs:
+The following recommendations apply to the network where Druid runs:
 * Enable TLS to encrypt communication within the cluster.
 * Use an API gateway to:
   - Restrict access from untrusted networks
