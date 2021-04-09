@@ -88,32 +88,32 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     final QueryableIndex index =
-      IndexBuilder.create()
-                  .tmpDir(temporaryFolder.newFolder())
-                  .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                  .schema(
-                      new IncrementalIndexSchema.Builder()
-                          .withDimensionsSpec(
-                              new DimensionsSpec(
-                                  ImmutableList.<DimensionSchema>builder()
-                                               .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                                               .add(new DoubleDimensionSchema("d1"))
-                                               .add(new FloatDimensionSchema("f1"))
-                                               .add(new LongDimensionSchema("l1"))
-                                               .build(),
-                                  null,
-                                  null
-                              )
-                          )
-                          .withMetrics(
-                              new CountAggregatorFactory("cnt"),
-                              new DoubleSumAggregatorFactory("m1", "m1")
-                          )
-                          .withRollup(false)
-                          .build()
-                  )
-                  .rows(CalciteTests.ROWS1_WITH_NUMERIC_DIMS)
-                  .buildMMappedIndex();
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withDimensionsSpec(
+                                new DimensionsSpec(
+                                    ImmutableList.<DimensionSchema>builder()
+                                                 .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                                                 .add(new DoubleDimensionSchema("d1"))
+                                                 .add(new FloatDimensionSchema("f1"))
+                                                 .add(new LongDimensionSchema("l1"))
+                                                 .build(),
+                                    null,
+                                    null
+                                )
+                            )
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt"),
+                                new DoubleSumAggregatorFactory("m1", "m1")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(CalciteTests.ROWS1_WITH_NUMERIC_DIMS)
+                    .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()

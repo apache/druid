@@ -102,7 +102,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     .rows(CalciteTests.ROWS1)
                     .buildMMappedIndex();
 
-    return  new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
