@@ -27,11 +27,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * The ObjectMapper of this annotation will skip serialization of any field with null value.
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
 @PublicApi
-public @interface JsonOnlyNonNullValueSerialization
+public @interface JsonNonNull
 {
 }

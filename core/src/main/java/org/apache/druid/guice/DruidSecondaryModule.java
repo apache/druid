@@ -30,7 +30,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.JsonOnlyNonNullValueSerialization;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -51,7 +51,7 @@ public class DruidSecondaryModule implements Module
       Properties properties,
       ConfigurationObjectFactory factory,
       @Json ObjectMapper jsonMapper,
-      @JsonOnlyNonNullValueSerialization ObjectMapper jsonMapperOnlyNonNullValueSerialization,
+      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValueSerialization,
       @Smile ObjectMapper smileMapper,
       Validator validator
   )
@@ -82,7 +82,7 @@ public class DruidSecondaryModule implements Module
     return jsonMapper;
   }
 
-  @Provides @LazySingleton @JsonOnlyNonNullValueSerialization
+  @Provides @LazySingleton @JsonNonNull
   public ObjectMapper getJsonMapperOnlyNonNullValueSerialization(final Injector injector)
   {
     setupJackson(injector, jsonMapperOnlyNonNullValueSerialization);

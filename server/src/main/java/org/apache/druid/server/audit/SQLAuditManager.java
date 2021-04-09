@@ -121,7 +121,7 @@ public class SQLAuditManager implements AuditManager
                                     .key(auditEntry.getKey())
                                     .type(auditEntry.getType())
                                     .auditInfo(auditEntry.getAuditInfo())
-                                    .payload(PAYLOAD_SKIP_MESSAGE)
+                                    .payload(StringUtils.format(PAYLOAD_SKIP_MESSAGE, config.getMaxPayloadSizeBytes()))
                                     .auditTime(auditEntry.getAuditTime())
                                     .build();
     }

@@ -29,7 +29,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.JsonOnlyNonNullValueSerialization;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
 
 /**
@@ -51,7 +51,7 @@ public class JacksonModule implements Module
   /**
    * Provides ObjectMapper that suppress serializing properties with null values
    */
-  @Provides @LazySingleton @JsonOnlyNonNullValueSerialization
+  @Provides @LazySingleton @JsonNonNull
   public ObjectMapper jsonMapperOnlyNonNullValue()
   {
     return new DefaultObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);

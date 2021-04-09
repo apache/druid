@@ -29,7 +29,7 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.JsonOnlyNonNullValueSerialization;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class JacksonConfigManager
   public JacksonConfigManager(
       ConfigManager configManager,
       @Json ObjectMapper jsonMapper,
-      @JsonOnlyNonNullValueSerialization ObjectMapper jsonMapperOnlyNonNullValue,
+      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValue,
       AuditManager auditManager
   )
   {
@@ -78,12 +78,14 @@ public class JacksonConfigManager
     ConfigSerde configSerde = create(val.getClass(), null);
     // Audit and actual config change are done in separate transactions
     // there can be phantom audits and reOrdering in audit changes as well.
+    if (con)
+    String serializedPayload = configSerde.serializeToString(val, true);
     auditManager.doAudit(
         AuditEntry.builder()
                   .key(key)
                   .type(key)
                   .auditInfo(auditInfo)
-                  .payload(configSerde.serializeToString(val, true))
+                  .payload(serializedPayload)
                   .build()
     );
     return configManager.set(key, configSerde, val);

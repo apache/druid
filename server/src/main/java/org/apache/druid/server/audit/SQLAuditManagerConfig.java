@@ -20,6 +20,7 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 /**
  */
@@ -32,7 +33,7 @@ public class SQLAuditManagerConfig
   private boolean includePayloadAsDimensionInMetric = false;
 
   @JsonProperty
-  private long maxPayloadSizeBytes = -1;
+  private HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
 
   public long getAuditHistoryMillis()
   {
@@ -46,6 +47,6 @@ public class SQLAuditManagerConfig
 
   public long getMaxPayloadSizeBytes()
   {
-    return maxPayloadSizeBytes;
+    return maxPayloadSizeBytes.getBytes();
   }
 }

@@ -273,6 +273,7 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
   {
+    int maxPayloadSize = 10;
     SQLAuditManager auditManagerWithMaxPayloadSizeBytes = new SQLAuditManager(
         connector,
         derbyConnectorRule.metadataTablesConfigSupplier(),
@@ -283,7 +284,7 @@ public class SQLAuditManagerTest
           @Override
           public long getMaxPayloadSizeBytes()
           {
-            return 10;
+            return maxPayloadSize;
           }
         }
     );
@@ -299,7 +300,7 @@ public class SQLAuditManagerTest
                                                      .auditTime(DateTimes.of("1994-04-29T00:00:00Z"));
 
     AuditEntry auditEntryToStore = auditEntryBuilder.payload("payload audit to store").build();
-    AuditEntry expectedWithSkipPayload = auditEntryBuilder.payload(AuditManager.PAYLOAD_SKIP_MESSAGE).build();
+    AuditEntry expectedWithSkipPayload = auditEntryBuilder.payload(StringUtils.format(AuditManager.PAYLOAD_SKIP_MESSAGE, maxPayloadSize)).build();
 
     auditManagerWithMaxPayloadSizeBytes.doAudit(auditEntryToStore);
     byte[] payload = connector.lookup(
