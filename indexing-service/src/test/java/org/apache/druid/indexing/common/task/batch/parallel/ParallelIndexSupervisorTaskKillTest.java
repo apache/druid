@@ -192,6 +192,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
+            null,
             null
         )
     );

@@ -190,6 +190,13 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
       checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
       String queryResponseTemplate = getQueryResponseTemplate(queriesResource);
+
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+          jsonMapper.writeValueAsString("0")
+      );
+
       queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData(compactionResource, newSegmentGranularity, null);
 

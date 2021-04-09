@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
@@ -58,42 +59,42 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
                                  "type", "record",
                                  "name", "wikipedia",
                                  "fields", fieldList);
-    doIndexTest(InputFormatDetails.AVRO, ImmutableMap.of("schema", schema));
+    doIndexTest(InputFormatDetails.AVRO, ImmutableMap.of("schema", schema), new Pair<>(false, false));
   }
 
   @Test
   public void testAvroInputFormatIndexDataIngestionSpecWithoutSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.AVRO);
+    doIndexTest(InputFormatDetails.AVRO, new Pair<>(false, false));
   }
 
   @Test
   public void testJsonInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.JSON);
+    doIndexTest(InputFormatDetails.JSON, new Pair<>(false, false));
   }
 
   @Test
   public void testTsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.TSV, ImmutableMap.of("findColumnsFromHeader", true));
+    doIndexTest(InputFormatDetails.TSV, ImmutableMap.of("findColumnsFromHeader", true), new Pair<>(false, false));
   }
 
   @Test
   public void testParquetInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.PARQUET);
+    doIndexTest(InputFormatDetails.PARQUET, new Pair<>(false, false));
   }
 
   @Test
   public void testOrcInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.ORC);
+    doIndexTest(InputFormatDetails.ORC, new Pair<>(false, false));
   }
 
   @Test
   public void testCsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    doIndexTest(InputFormatDetails.CSV, ImmutableMap.of("findColumnsFromHeader", true));
+    doIndexTest(InputFormatDetails.CSV, ImmutableMap.of("findColumnsFromHeader", true), new Pair<>(false, false));
   }
 }

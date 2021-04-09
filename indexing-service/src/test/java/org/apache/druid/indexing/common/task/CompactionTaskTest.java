@@ -170,7 +170,7 @@ public class CompactionTaskTest
       Intervals.of("2017-06-30/2017-07-01")
   );
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = new HashMap<>();
-  private static final ParallelIndexTuningConfig TUNING_CONFIG = createTuningConfig();
+  private static final CompactionTask.CompactionTuningConfig TUNING_CONFIG = createTuningConfig();
 
   private static final TestUtils TEST_UTILS = new TestUtils();
   private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();
@@ -307,9 +307,9 @@ public class CompactionTaskTest
     return dimensions;
   }
 
-  private static ParallelIndexTuningConfig createTuningConfig()
+  private static CompactionTask.CompactionTuningConfig createTuningConfig()
   {
-    return new ParallelIndexTuningConfig(
+    return new CompactionTask.CompactionTuningConfig(
         null,
         null, // null to compute maxRowsPerSegment automatically
         null,
@@ -331,6 +331,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -575,6 +576,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -604,6 +606,165 @@ public class CompactionTaskTest
     final byte[] bytes = mapper.writeValueAsBytes(oldTask);
     final CompactionTask fromJson = mapper.readValue(bytes, CompactionTask.class);
     assertEquals(expectedFromJson, fromJson);
+  }
+
+  @Test
+  public void testGetTuningConfigWithIndexTuningConfig()
+  {
+    IndexTuningConfig indexTuningConfig = new IndexTuningConfig(
+        null,
+        null, // null to compute maxRowsPerSegment automatically
+        null,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        null,
+        null,
+        true,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    CompactionTask.CompactionTuningConfig compactionTuningConfig = new CompactionTask.CompactionTuningConfig(
+        null,
+        null,
+        null,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        null,
+        null,
+        true,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(indexTuningConfig));
+
+  }
+
+  @Test
+  public void testGetTuningConfigWithParallelIndexTuningConfig()
+  {
+    ParallelIndexTuningConfig parallelIndexTuningConfig = new ParallelIndexTuningConfig(
+        null,
+        null, // null to compute maxRowsPerSegment automatically
+        null,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        null,
+        null,
+        true,
+        false,
+        5000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    CompactionTask.CompactionTuningConfig compactionTuningConfig = new CompactionTask.CompactionTuningConfig(
+        null,
+        null, // null to compute maxRowsPerSegment automatically
+        null,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        null,
+        null,
+        true,
+        false,
+        5000L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(parallelIndexTuningConfig));
   }
 
   @Test
@@ -711,7 +872,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException, SegmentLoadingException
   {
-    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         100000,
         null,
         null,
@@ -736,6 +897,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -782,7 +944,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException, SegmentLoadingException
   {
-    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         null,
         null,
         null,
@@ -804,6 +966,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -853,7 +1016,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithNumShards() throws IOException, SegmentLoadingException
   {
-    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         null,
         null,
         null,
@@ -878,6 +1041,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1413,7 +1577,7 @@ public class CompactionTaskTest
         expectedDimensionsSpecs,
         expectedMetricsSpec,
         expectedSegmentIntervals,
-        new ParallelIndexTuningConfig(
+        new CompactionTask.CompactionTuningConfig(
             null,
             null,
             null,
@@ -1447,6 +1611,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             null
         ),
         expectedSegmentGranularity,
@@ -1459,7 +1624,7 @@ public class CompactionTaskTest
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
       List<Interval> expectedSegmentIntervals,
-      ParallelIndexTuningConfig expectedTuningConfig,
+      CompactionTask.CompactionTuningConfig expectedTuningConfig,
       Granularity expectedSegmentGranularity,
       Granularity expectedQueryGranularity
   )

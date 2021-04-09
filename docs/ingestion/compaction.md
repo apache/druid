@@ -111,7 +111,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one.|No|
 |`metricsSpec`|Custom metrics spec. The compaction task uses the specified metrics spec rather than generating one.|No|
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
-|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig)|No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). Note that your tuning config cannot contain a non-zero value for `awaitSegmentAvailabilityTimeoutMillis` because it is not supported by compaction tasks at this time.|No|
 |`context`|[Task context](./tasks.md#context)|No|
 |`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` and `queryGranularity` for the compacted segments. See [Compaction granularitySpec](#compaction-granularity-spec).|No|
 

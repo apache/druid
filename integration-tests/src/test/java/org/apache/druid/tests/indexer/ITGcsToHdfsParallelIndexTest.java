@@ -47,6 +47,6 @@ public class ITGcsToHdfsParallelIndexTest extends AbstractGcsInputSourceParallel
   @Test(dataProvider = "resources")
   public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception
   {
-    doTest(gcsInputSource);
+    doTest(gcsInputSource, new Pair<>(false, false));
   }
 }
