@@ -326,7 +326,7 @@ Congratulations, you have configured permissions for user-assigned roles in Drui
 
 ## Druid security trust model
 Within Druid's trust model there users can have different authorization levels:
-- Users with resource write permissions can are allowed to anything that the druid process can do.
+- Users with resource write permissions can are allowed to do anything that the druid process can do.
 - Authenticated read only users can execute queries against resources to which they have permissions.
 - An authenticated user without any permissions is allowed to execute queries that don't require access to a resource.
 
