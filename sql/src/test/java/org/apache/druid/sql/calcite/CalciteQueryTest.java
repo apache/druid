@@ -9198,9 +9198,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRegexpLikeFilter() throws Exception
   {
-    // Cannot vectorize due to usage of regex filter.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM foo\n"
@@ -14714,6 +14711,75 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"defabcx5.09999def"},
             new Object[]{NullHandling.sqlCompatible() ? null : "abcx6.09999abc"} // dim2 is null
         )
+    );
+  }
+
+  @Test
+  public void testConcatGroup() throws Exception
+  {
+    testQuery(
+        "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo GROUP BY 1",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setVirtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "concat(\"dim1\",'-',\"dim1\",'_',\"dim1\")",
+                    ValueType.STRING
+                ))
+                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0")))
+                .setGranularity(Granularities.ALL)
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"-_"},
+            new Object[]{"1-1_1"},
+            new Object[]{"10.1-10.1_10.1"},
+            new Object[]{"2-2_2"},
+            new Object[]{"abc-abc_abc"},
+            new Object[]{"def-def_def"}
+        )
+    );
+
+    final List<Object[]> secondResults;
+    if (useDefault) {
+      secondResults = ImmutableList.of(
+          new Object[]{"10.1x2.0999910.1"},
+          new Object[]{"1ax4.099991"},
+          new Object[]{"2x3.099992"},
+          new Object[]{"abcx6.09999abc"},
+          new Object[]{"ax1.09999"},
+          new Object[]{"defabcx5.09999def"}
+      );
+    } else {
+      secondResults = ImmutableList.of(
+          new Object[]{null},
+          new Object[]{"1ax4.099991"},
+          new Object[]{"2x3.099992"},
+          new Object[]{"ax1.09999"},
+          new Object[]{"defabcx5.09999def"}
+      );
+    }
+    testQuery(
+        "SELECT CONCAT(dim1, CONCAT(dim2,'x'), m2, 9999, dim1) as dimX FROM foo GROUP BY 1",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setVirtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "concat(\"dim1\",concat(\"dim2\",'x'),\"m2\",9999,\"dim1\")",
+                    ValueType.STRING
+                ))
+                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0")))
+                .setGranularity(Granularities.ALL)
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+
+        ),
+        secondResults
     );
   }
 

@@ -1016,10 +1016,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithStringVirtualColumn()
   {
-    // Cannot vectorize due to virtual columns.
-    // all virtual columns are single input column, so it will work for group by v1, even with multi-value inputs
-    cannotVectorize();
-
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -1074,6 +1070,69 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-02", "alias", "premiumx", "rows", 3L, "idx", 2505L),
         makeRow(query, "2011-04-02", "alias", "technologyx", "rows", 1L, "idx", 97L),
         makeRow(query, "2011-04-02", "alias", "travelx", "rows", 1L, "idx", 126L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "virtual-column");
+  }
+
+  @Test
+  public void testGroupByWithStringVirtualColumnVectorizable()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "vc",
+                "cast(quality, 'STRING')",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setDimensions(new DefaultDimensionSpec("vc", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "entertainment",
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "entertainment",
+            "rows",
+            1L,
+            "idx",
+            166L
+        ),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -6336,9 +6395,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithSubtotalsSpecOfDimensionsPrefixes()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
@@ -6452,9 +6508,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithSubtotalsSpecGeneral()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
