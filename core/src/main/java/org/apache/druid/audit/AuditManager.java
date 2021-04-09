@@ -41,7 +41,11 @@ public interface AuditManager
 
   /**
    * inserts an audit entry in the Audit Table
-   * @param key
+   * @param key of the audit entry
+   * @param type of the audit entry
+   * @param auditInfo of the audit entry
+   * @param payload of the audit entry
+   * @param configSerde of the payload of the audit entry
    */
   <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde);
 
