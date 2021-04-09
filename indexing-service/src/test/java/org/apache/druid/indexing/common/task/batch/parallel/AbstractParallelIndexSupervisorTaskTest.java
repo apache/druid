@@ -169,6 +169,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
+          null,
           null
       );
 
@@ -244,6 +245,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
         null,
         null,
         null,
@@ -542,6 +544,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     );
     objectMapper.registerSubtypes(
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
+        new NamedType(CompactionTask.CompactionTuningConfig.class, CompactionTask.CompactionTuningConfig.TYPE),
         new NamedType(SinglePhaseSubTask.class, SinglePhaseSubTask.TYPE),
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),
         new NamedType(PartialRangeSegmentGenerateTask.class, PartialRangeSegmentGenerateTask.TYPE),

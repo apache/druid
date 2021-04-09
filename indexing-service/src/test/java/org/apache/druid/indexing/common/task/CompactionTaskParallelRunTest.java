@@ -113,6 +113,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   public void setup() throws IOException
   {
     getObjectMapper().registerSubtypes(ParallelIndexTuningConfig.class, DruidInputSource.class);
+    getObjectMapper().registerSubtypes(CompactionTask.CompactionTuningConfig.class, DruidInputSource.class);
 
     inputDir = temporaryFolder.newFolder();
     final File tmpFile = File.createTempFile("druid", "index", inputDir);

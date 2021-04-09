@@ -227,6 +227,7 @@ public class ParallelIndexSupervisorTaskTest
           false,
           null,
           null,
+          null,
           null
       );
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(

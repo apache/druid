@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.handoff;
 
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -60,7 +60,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   @Override
   public boolean registerSegmentHandoffCallback(SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable)
   {
-    log.info("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
+    log.debug("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
     Pair<Executor, Runnable> prev = handOffCallbacks.putIfAbsent(
         descriptor,
         new Pair<>(exec, handOffRunnable)
@@ -106,7 +106,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
             handOffComplete = isHandOffComplete(loadedSegments, descriptor);
           }
           if (handOffComplete) {
-            log.info("Segment Handoff complete for dataSource[%s] Segment[%s]", dataSource, descriptor);
+            log.debug("Segment Handoff complete for dataSource[%s] Segment[%s]", dataSource, descriptor);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
           }
@@ -122,7 +122,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         }
       }
       if (!handOffCallbacks.isEmpty()) {
-        log.info("Still waiting for Handoff for Segments : [%s]", handOffCallbacks.keySet());
+        log.info("Still waiting for Handoff for [%d] Segments", handOffCallbacks.size());
       }
     }
     catch (Throwable t) {

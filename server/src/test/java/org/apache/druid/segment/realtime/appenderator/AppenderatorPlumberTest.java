@@ -20,12 +20,12 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.SegmentPublisher;
 import org.apache.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
 import org.apache.druid.segment.realtime.plumber.NoopRejectionPolicyFactory;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.easymock.EasyMock;
 import org.junit.Assert;
