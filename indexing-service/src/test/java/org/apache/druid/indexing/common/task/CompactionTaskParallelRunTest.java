@@ -443,7 +443,41 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testCompactionDropSegmentsOfInputInterval()
+  public void testCompactionDropSegmentsOfInputIntervalIfDropFlagIsSet()
+  {
+    runIndexTask(null, true);
+
+    Collection<DataSegment> usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
+    Assert.assertEquals(3, usedSegments.size());
+    for (DataSegment segment : usedSegments) {
+      Assert.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
+    }
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        getSegmentLoaderFactory(),
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask compactionTask = builder
+        // Set the dropExisting flag to true in the IOConfig of the compaction task
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null), true)
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null))
+        .build();
+
+    final Set<DataSegment> compactedSegments = runTask(compactionTask);
+
+    usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
+    // All the HOUR segments got dropped even if we do not have all MINUTES segments fully covering the 3 HOURS interval.
+    // In fact, we only have 3 minutes of data out of the 3 hours interval.
+    Assert.assertEquals(3, usedSegments.size());
+    for (DataSegment segment : usedSegments) {
+      Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+    }
+  }
+
+  @Test
+  public void testCompactionDoesNotDropSegmentsIfDropFlagNotSet()
   {
     runIndexTask(null, true);
 
@@ -467,12 +501,20 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
 
     usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
-    // All the HOUR segments got dropped even if we do not have all MINUTES segments fully covering the 3 HOURS interval.
-    // In fact, we only have 3 minutes of data out of the 3 hours interval.
-    Assert.assertEquals(3, usedSegments.size());
+    // All the HOUR segments did not get dropped since MINUTES segments did not fully covering the 3 HOURS interval.
+    Assert.assertEquals(6, usedSegments.size());
+    int hourSegmentCount = 0;
+    int minuteSegmentCount = 0;
     for (DataSegment segment : usedSegments) {
-      Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+      if (Granularities.MINUTE.isAligned(segment.getInterval())) {
+        minuteSegmentCount++;
+      }
+      if (Granularities.MINUTE.isAligned(segment.getInterval())) {
+        hourSegmentCount++;
+      }
     }
+    Assert.assertEquals(3, hourSegmentCount);
+    Assert.assertEquals(3, minuteSegmentCount);
   }
 
   private void runIndexTask(@Nullable PartitionsSpec partitionsSpec, boolean appendToExisting)

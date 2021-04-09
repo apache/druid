@@ -1068,6 +1068,7 @@ public class NewestSegmentFirstPolicyTest
         skipOffsetFromLatest,
         null,
         granularitySpec,
+        null,
         null
     );
   }

@@ -1046,7 +1046,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public static class IndexIOConfig implements BatchIOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
-    private static final boolean DEFAULT_DROP_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
