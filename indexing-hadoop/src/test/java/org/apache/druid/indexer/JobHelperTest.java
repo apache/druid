@@ -61,7 +61,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -298,13 +297,6 @@ public class JobHelperTest
       return;
     }
     Assert.fail("Exception was not thrown for malicious zip file");
-  }
-
-  @Test
-  public void test_renameIndexFilesForSegments_emptySegments() throws IOException
-  {
-    List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths = ImmutableList.of();
-    JobHelper.renameIndexFilesForSegments(DUMMY_SPEC, segmentAndIndexZipFilePaths);
   }
 
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
