@@ -17566,7 +17566,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "round(\"d1\")", ValueType.DOUBLE)
                 )
-                .columns("d1","v0")
+                .columns("d1", "v0")
                 .legacy(false)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
