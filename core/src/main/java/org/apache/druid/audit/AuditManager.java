@@ -20,6 +20,7 @@
 package org.apache.druid.audit;
 
 
+import org.apache.druid.common.config.ConfigSerde;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 
@@ -39,10 +40,10 @@ public interface AuditManager
   String X_DRUID_COMMENT = "X-Druid-Comment";
 
   /**
-   * inserts an audit Entry in the Audit Table
-   * @param auditEntry
+   * inserts an audit entry in the Audit Table
+   * @param key
    */
-  void doAudit(AuditEntry auditEntry);
+  <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde);
 
   /**
    * inserts an audit Entry in audit table using the handler provided

@@ -78,16 +78,7 @@ public class JacksonConfigManager
     ConfigSerde configSerde = create(val.getClass(), null);
     // Audit and actual config change are done in separate transactions
     // there can be phantom audits and reOrdering in audit changes as well.
-    if (con)
-    String serializedPayload = configSerde.serializeToString(val, true);
-    auditManager.doAudit(
-        AuditEntry.builder()
-                  .key(key)
-                  .type(key)
-                  .auditInfo(auditInfo)
-                  .payload(serializedPayload)
-                  .build()
-    );
+    auditManager.doAudit(key, key, auditInfo, val, configSerde);
     return configManager.set(key, configSerde, val);
   }
 

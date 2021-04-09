@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigSerde;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
@@ -76,8 +78,15 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public void doAudit(final AuditEntry auditEntry)
+  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
   {
+    AuditEntry auditEntry = AuditEntry.builder()
+                                      .key(key)
+                                      .type(key)
+                                      .auditInfo(auditInfo)
+                                      .payload(configSerde.serializeToString(payload, config.isSkipNullField()))
+                                      .build();
+
     dbi.withHandle(
         new HandleCallback<Void>()
         {

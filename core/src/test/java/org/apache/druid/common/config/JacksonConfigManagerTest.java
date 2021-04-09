@@ -50,8 +50,6 @@ public class JacksonConfigManagerTest
   private AuditManager mockAuditManager;
 
   private JacksonConfigManager jacksonConfigManager;
-  private ConfigSerde<TestConfig> configConfigSerdeFromTypeReference;
-  private ConfigSerde<TestConfig> configConfigSerdeFromClass;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -65,34 +63,15 @@ public class JacksonConfigManagerTest
         new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
         mockAuditManager
     );
-    configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
-    {
-    }, null);
-    configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
-  }
-
-  @Test
-  public void testSetConfigWithNull()
-  {
-    TestConfig config = new TestConfig("version", null, 3);
-    AuditInfo auditInfo = new AuditInfo("maytas", "hello world", "111");
-    String auditKey = "key";
-    jacksonConfigManager.set(auditKey, config, auditInfo);
-    ArgumentCaptor<AuditEntry> auditEntryCapture = ArgumentCaptor.forClass(
-        AuditEntry.class);
-    Mockito.verify(mockAuditManager).doAudit(
-        auditEntryCapture.capture()
-    );
-    AuditEntry actual = auditEntryCapture.getValue();
-    Assert.assertEquals(auditKey, actual.getKey());
-    Assert.assertEquals(auditKey, actual.getType());
-    Assert.assertEquals(auditInfo, actual.getAuditInfo());
-    Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual.getPayload());
   }
 
   @Test
   public void testSerializeToStringWithSkipNullTrue()
   {
+    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
+    {
+    }, null);
+    ConfigSerde<TestConfig> configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
     TestConfig config = new TestConfig("version", null, 3);
     String actual = configConfigSerdeFromTypeReference.serializeToString(config, true);
     Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual);
@@ -103,6 +82,10 @@ public class JacksonConfigManagerTest
   @Test
   public void testSerializeToStringWithSkipNullFalse()
   {
+    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
+    {
+    }, null);
+    ConfigSerde<TestConfig> configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
     TestConfig config = new TestConfig("version", null, 3);
     String actual = configConfigSerdeFromTypeReference.serializeToString(config, false);
     Assert.assertEquals("{\"version\":\"version\",\"settingString\":null,\"settingInt\":3}", actual);
@@ -111,33 +94,25 @@ public class JacksonConfigManagerTest
   }
 
   @Test
-  public void testSetConfigWithoutNull()
+  public void testSetWithInvalidConfigForConfigSerdeFromTypeReference()
   {
-    TestConfig config = new TestConfig("version", "string", 3);
-    AuditInfo auditInfo = new AuditInfo("maytas", "hello world", "111");
-    String auditKey = "key";
-    jacksonConfigManager.set(auditKey, config, auditInfo);
-    ArgumentCaptor<AuditEntry> auditEntryCapture = ArgumentCaptor.forClass(
-        AuditEntry.class);
-    Mockito.verify(mockAuditManager).doAudit(
-        auditEntryCapture.capture()
-    );
-    AuditEntry actual = auditEntryCapture.getValue();
-    Assert.assertEquals(auditKey, actual.getKey());
-    Assert.assertEquals(auditKey, actual.getType());
-    Assert.assertEquals(auditInfo, actual.getAuditInfo());
-    Assert.assertEquals("{\"version\":\"version\",\"settingString\":\"string\",\"settingInt\":3}", actual.getPayload());
+    ConfigSerde<ClassThatJacksonCannotSerialize> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<ClassThatJacksonCannotSerialize>()
+    {
+    }, null);
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("InvalidDefinitionException");
+    configConfigSerdeFromTypeReference.serializeToString(new ClassThatJacksonCannotSerialize(), false);
   }
 
   @Test
-  public void testSetWithInvalidConfig()
+  public void testSetWithInvalidConfigForConfigSerdeFromClass()
   {
-    AuditInfo auditInfo = new AuditInfo("maytas", "hello world", "111");
-    String auditKey = "key";
+    ConfigSerde<ClassThatJacksonCannotSerialize> configConfigSerdeFromClass = jacksonConfigManager.create(ClassThatJacksonCannotSerialize.class, null);
     exception.expect(RuntimeException.class);
     exception.expectMessage("InvalidDefinitionException");
-    jacksonConfigManager.set(auditKey, new ClassThatJacksonCannotSerialize(), auditInfo);
+    configConfigSerdeFromClass.serializeToString(new ClassThatJacksonCannotSerialize(), false);
   }
+
 
   static class TestConfig
   {

@@ -35,6 +35,9 @@ public class SQLAuditManagerConfig
   @JsonProperty
   private HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
 
+  @JsonProperty
+  private boolean skipNullField = false;
+
   public long getAuditHistoryMillis()
   {
     return auditHistoryMillis;
@@ -49,4 +52,10 @@ public class SQLAuditManagerConfig
   {
     return maxPayloadSizeBytes.getBytes();
   }
+
+  public boolean isSkipNullField()
+  {
+    return skipNullField;
+  }
+
 }
