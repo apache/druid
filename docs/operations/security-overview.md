@@ -51,7 +51,7 @@ The following recommendations apply to the network where Druid runs:
 
 The following recommendation applies to Druids authorization and authentication model:
 * Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid Console process. 
-* Only grant `STATE READ`, `STATE WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allows users to access resources on behalf of the Druid server process regardless of the datasource.
+* Only grant `STATE READ`, `STATE WRITE`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
 
 
@@ -326,7 +326,7 @@ Congratulations, you have configured permissions for user-assigned roles in Drui
 
 ## Druid security trust model
 Within Druid's trust model there users can have different authorization levels:
-- Users with resource write permissions can are allowed to do anything that the druid process can do.
+- Users with resource write permissions are allowed to do anything that the druid process can do.
 - Authenticated read only users can execute queries against resources to which they have permissions.
 - An authenticated user without any permissions is allowed to execute queries that don't require access to a resource.
 
@@ -336,7 +336,7 @@ From the inner most layer:
 1. Druid processes have the same access to the local files granted to the specified system user running the process.
 2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
-> Note: Only grant the permission to submit ingestion tasks to trusted users because they can  act as the Druid process.
+> Note: Only grant the `DATASOURCE WRITE` to trusted users because they can act as the Druid process.
 
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.
