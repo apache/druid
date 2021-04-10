@@ -360,7 +360,7 @@ public class SQLAuditManagerTest
     AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
     Assert.assertEquals(entry1Key, dbEntry.getKey());
     Assert.assertNotEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(StringUtils.format(AuditManager.PAYLOAD_SKIP_MESSAGE, maxPayloadSize), dbEntry.getPayload());
+    Assert.assertEquals(StringUtils.format(AuditManager.PAYLOAD_SKIP_MSG_FORMAT, maxPayloadSize), dbEntry.getPayload());
     Assert.assertEquals(entry1Type, dbEntry.getType());
     Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
   }
