@@ -34,10 +34,8 @@ import java.util.Objects;
  */
 public class S3InputSourceConfig
 {
-  @Nullable
   @JsonProperty
   private String assumeRoleArn;
-  @Nullable
   @JsonProperty
   private String assumeRoleExternalId;
   @JsonProperty
@@ -73,11 +71,13 @@ public class S3InputSourceConfig
     return assumeRoleExternalId;
   }
 
+  @Nullable
   public PasswordProvider getAccessKeyId()
   {
     return accessKeyId;
   }
 
+  @Nullable
   public PasswordProvider getSecretAccessKey()
   {
     return secretAccessKey;
