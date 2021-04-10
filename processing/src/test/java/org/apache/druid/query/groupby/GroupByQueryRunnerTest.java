@@ -10837,7 +10837,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    System.out.println(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "virtual column filter on inner query");
   }
 
