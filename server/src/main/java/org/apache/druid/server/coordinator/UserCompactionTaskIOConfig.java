@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,37 +27,23 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * IOConfig for {@link ClientCompactionTaskQuery}.
- *
- * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIOConfig.
+ * Spec containing IO configs for Auto Compaction.
+ * This class mimics JSON field names for fields supported in auto compaction with
+ * the corresponding fields in {@link IOConfig}.
+ * This is done for end-user ease of use. Basically, end-user will use the same syntax / JSON structure to set
+ * IO configs for Auto Compaction as they would for any other ingestion task.
+ * Note that this class simply holds IO configs and pass it to compaction task spec.
  */
-public class ClientCompactionIOConfig
+public class UserCompactionTaskIOConfig
 {
-  private static final String TYPE = "compact";
-
-  private final ClientCompactionIntervalSpec inputSpec;
   private final boolean dropExisting;
 
   @JsonCreator
-  public ClientCompactionIOConfig(
-      @JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec,
+  public UserCompactionTaskIOConfig(
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
-    this.inputSpec = inputSpec;
     this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
-  }
-
-  @JsonProperty
-  public String getType()
-  {
-    return TYPE;
-  }
-
-  @JsonProperty
-  public ClientCompactionIntervalSpec getInputSpec()
-  {
-    return inputSpec;
   }
 
   @JsonProperty
@@ -75,23 +61,21 @@ public class ClientCompactionIOConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ClientCompactionIOConfig that = (ClientCompactionIOConfig) o;
-    return dropExisting == that.dropExisting &&
-           Objects.equals(inputSpec, that.inputSpec);
+    UserCompactionTaskIOConfig that = (UserCompactionTaskIOConfig) o;
+    return dropExisting == that.dropExisting;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec, dropExisting);
+    return Objects.hash(dropExisting);
   }
 
   @Override
   public String toString()
   {
-    return "ClientCompactionIOConfig{" +
-           "inputSpec=" + inputSpec +
-           ", dropExisting=" + dropExisting +
+    return "UserCompactionTaskIOConfig{" +
+           "dropExisting=" + dropExisting +
            '}';
   }
 }

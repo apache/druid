@@ -54,7 +54,7 @@ See [Setting up a manual compaction task](#setting-up-manual-compaction) for mor
 ## Data handling with compaction
 During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
-For compaction tasks, `dropExisting` for underlying ingestion tasks is "true". This means that Druid can drop (mark unused) all the existing segments fully within interval for the compaction task. For an example of why this is important, see the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations). 
+For compaction tasks, `dropExisting` in `ioConfig` can be set to "true" for Druid to drop (mark unused) all existing segments fully contained by the interval of the compaction task. For an example of why this is important, see the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations). WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the compaction task interval.
 
 If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
 
@@ -158,10 +158,12 @@ This task doesn't specify a `granularitySpec` so Druid retains the original segm
 
 The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `compact`|Yes|
-|`inputSpec`|Input specification|Yes|
+|Field|Description|Default|Required?|
+|-----|-----------|-------|--------|
+|`type`|Task type. Should be `compact`|none|Yes|
+|`inputSpec`|Input specification|none|Yes|
+|`dropExisting`|If `true`, then the compaction task drops (mark unused) all existing segments fully contained by either the `interval` in the `interval` type `inputSpec` or the umbrella interval of the `segments` in the `segment` type `inputSpec` when the task publishes new compacted segments. If compaction fails, Druid does not drop or mark unused any segments. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the compaction task interval.|false|no|
+
 
 There are two supported `inputSpec`s for now.
 
