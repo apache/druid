@@ -236,7 +236,7 @@ public class JsonParserIteratorTest
     public ExpectedException expectedException = ExpectedException.none();
 
     @Test
-    public void testTimeoutBeforeCallingFuture() throws JsonProcessingException
+    public void testTimeoutBeforeCallingFuture()
     {
       JsonParserIterator<?> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
