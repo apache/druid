@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.GenericColumnSerializer;
@@ -34,15 +33,17 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
- * The class serializes a Pair<Long, ?> object for double/float/longFirst and double/float/longLast aggregators
+ * The class serializes/deserializes a Pair<Long, ?> object for double/float/longFirst and double/float/longLast aggregators
  */
-public abstract class AbstractSerializablePairSerde<T extends SerializablePair<Long, ?>> extends ComplexMetricSerde
+public abstract class AbstractSerializableLongObjectPairSerde<T extends SerializablePair<Long, ?>>
+    extends ComplexMetricSerde
 {
   private final Class<T> pairClassObject;
 
-  public AbstractSerializablePairSerde(Class<T> pairClassObject)
+  public AbstractSerializableLongObjectPairSerde(Class<T> pairClassObject)
   {
     this.pairClassObject = pairClassObject;
   }
@@ -81,7 +82,7 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
       @Override
       public int compare(@Nullable T o1, @Nullable T o2)
       {
-        return Longs.compare(o1.lhs, o2.lhs);
+        return getLongObjectPairComparator().compare(o1, o2);
       }
 
       @Override
@@ -93,13 +94,17 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
       @Override
       public T fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        return toPairObject(buffer);
+        return toLongObjectPair(buffer);
       }
 
       @Override
-      public byte[] toBytes(T val)
+      public byte[] toBytes(@Nullable T val)
       {
-        return pairToBytes(val);
+        if (val == null) {
+          return new byte[]{};
+        }
+
+        return longObjectPairToBytes(val);
       }
     };
   }
@@ -110,7 +115,20 @@ public abstract class AbstractSerializablePairSerde<T extends SerializablePair<L
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 
-  protected abstract T toPairObject(ByteBuffer buffer);
+  /**
+   * get comparator for Pair<Long, ?> object
+   * It's recommended to use {@link SerializablePair#createNullHandlingComparator(Comparator, boolean)} to instance a concret comparator.
+   *
+   */
+  protected abstract Comparator getLongObjectPairComparator();
 
-  protected abstract byte[] pairToBytes(T val);
+  /**
+   * deserialize a Pair<Long, ?> object from buffer
+   */
+  protected abstract T toLongObjectPair(ByteBuffer buffer);
+
+  /**
+   * serialize a Pair<Long, ?> object to byte array
+   */
+  protected abstract byte[] longObjectPairToBytes(T longObjectPair);
 }

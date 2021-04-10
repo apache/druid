@@ -19,9 +19,11 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
  * The class serializes a Long-Float pair (SerializablePair<Long, Float>).
@@ -30,9 +32,18 @@ import java.nio.ByteBuffer;
  * The class is used on first/last Float aggregators to store the time and the first/last Float.
  * Long:Float -> Timestamp:Float
  */
-public class SerializablePairLongFloatSerde extends AbstractSerializablePairSerde<SerializablePairLongFloat>
+public class SerializablePairLongFloatSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongFloat>
 {
   public static final String TYPE_NAME = "serializablePairLongFloat";
+
+  /**
+   * Since SerializablePairLongFloat is subclass of SerializablePair<Long,Float>,
+   * it's safe to declare the generic type of comparator as SerializablePair<Long,Float>.
+   */
+  public static Comparator<SerializablePair<Long, Float>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
+      Float::compare,
+      true
+  );
 
   public SerializablePairLongFloatSerde()
   {
@@ -46,7 +57,13 @@ public class SerializablePairLongFloatSerde extends AbstractSerializablePairSerd
   }
 
   @Override
-  protected SerializablePairLongFloat toPairObject(ByteBuffer buffer)
+  protected Comparator getLongObjectPairComparator()
+  {
+    return VALUE_COMPARATOR;
+  }
+
+  @Override
+  protected SerializablePairLongFloat toLongObjectPair(ByteBuffer buffer)
   {
     final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
     long lhs = readOnlyBuffer.getLong();
@@ -59,15 +76,15 @@ public class SerializablePairLongFloatSerde extends AbstractSerializablePairSerd
   }
 
   @Override
-  protected byte[] pairToBytes(SerializablePairLongFloat val)
+  protected byte[] longObjectPairToBytes(SerializablePairLongFloat longObjectPair)
   {
     ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Float.BYTES);
-    bbuf.putLong(val.lhs);
-    if (val.rhs == null) {
+    bbuf.putLong(longObjectPair.lhs);
+    if (longObjectPair.rhs == null) {
       bbuf.put(NullHandling.IS_NULL_BYTE);
     } else {
       bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-      bbuf.putFloat(val.rhs);
+      bbuf.putFloat(longObjectPair.rhs);
     }
     return bbuf.array();
   }

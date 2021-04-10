@@ -19,9 +19,11 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
  * The class serializes a Long-Long pair (SerializablePair<Long, Long>).
@@ -30,9 +32,18 @@ import java.nio.ByteBuffer;
  * The class is used on first/last Long aggregators to store the time and the first/last Long.
  * Long:Long -> Timestamp:Long
  */
-public class SerializablePairLongLongSerde extends AbstractSerializablePairSerde<SerializablePairLongLong>
+public class SerializablePairLongLongSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongLong>
 {
   public static final String TYPE_NAME = "serializablePairLongLong";
+
+  /**
+   * Since SerializablePairLongFloat is subclass of SerializablePair<Long,Float>,
+   * it's safe to declare the generic type of comparator as SerializablePair<Long,Float>.
+   */
+  public static Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
+      Long::compare,
+      true
+  );
 
   public SerializablePairLongLongSerde()
   {
@@ -46,7 +57,13 @@ public class SerializablePairLongLongSerde extends AbstractSerializablePairSerde
   }
 
   @Override
-  protected SerializablePairLongLong toPairObject(ByteBuffer buffer)
+  protected Comparator getLongObjectPairComparator()
+  {
+    return VALUE_COMPARATOR;
+  }
+
+  @Override
+  protected SerializablePairLongLong toLongObjectPair(ByteBuffer buffer)
   {
     final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
     long lhs = readOnlyBuffer.getLong();
@@ -59,15 +76,15 @@ public class SerializablePairLongLongSerde extends AbstractSerializablePairSerde
   }
 
   @Override
-  protected byte[] pairToBytes(SerializablePairLongLong val)
+  protected byte[] longObjectPairToBytes(SerializablePairLongLong longObjectPair)
   {
     ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Long.BYTES);
-    bbuf.putLong(val.lhs);
-    if (val.rhs == null) {
+    bbuf.putLong(longObjectPair.lhs);
+    if (longObjectPair.rhs == null) {
       bbuf.put(NullHandling.IS_NULL_BYTE);
     } else {
       bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-      bbuf.putLong(val.rhs);
+      bbuf.putLong(longObjectPair.rhs);
     }
     return bbuf.array();
   }
