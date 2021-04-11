@@ -29,6 +29,7 @@ import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
+import org.apache.druid.data.input.avro.SchemaRegistryBasedAvroBytesDecoder;
 import org.apache.druid.data.input.avro.SchemaRepoBasedAvroBytesDecoder;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -124,6 +125,21 @@ public class AvroStreamInputFormatTest
         NestedInputFormat.class
     );
 
+    Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
+  public void testSerdeForSchemaRegistry() throws IOException
+  {
+    AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
+        flattenSpec,
+        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null),
+        false
+    );
+    NestedInputFormat inputFormat2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(inputFormat),
+        NestedInputFormat.class
+    );
     Assert.assertEquals(inputFormat, inputFormat2);
   }
 
