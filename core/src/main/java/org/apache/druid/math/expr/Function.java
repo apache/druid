@@ -1311,7 +1311,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
-      if (NullHandling.sqlCompatible() && value1.isNumericNull()) {
+      if (value1.isNumericNull()) {
         return ExprEval.of(null);
       }
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {

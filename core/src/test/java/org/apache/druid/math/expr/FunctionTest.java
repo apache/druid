@@ -408,11 +408,22 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRoundWithNullValue()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("null", "STRING"),
+        Pair.of("x", "STRING")
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+    }
+  }
+
+  @Test
   public void testRoundWithInvalidFirstArgument()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("b", "LONG_ARRAY"),
-        Pair.of("x", "STRING"),
         Pair.of("c", "DOUBLE_ARRAY"),
         Pair.of("a", "STRING_ARRAY")
 
