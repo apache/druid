@@ -91,7 +91,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   }
 
   @JsonProperty
-  public Map<String, ?> geConfig()
+  public Map<String, ?> getConfig()
   {
     return config;
   }
