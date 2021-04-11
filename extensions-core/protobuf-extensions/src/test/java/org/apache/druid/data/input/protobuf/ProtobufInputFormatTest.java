@@ -98,6 +98,20 @@ public class ProtobufInputFormatTest
   }
 
   @Test
+  public void testSerdeForSchemaRegistry() throws IOException
+  {
+    ProtobufInputFormat inputFormat = new ProtobufInputFormat(
+        flattenSpec,
+        new SchemaRegistryBasedProtobufBytesDecoder("http://test:8081", 100, null, null, null)
+    );
+    NestedInputFormat inputFormat2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(inputFormat),
+        NestedInputFormat.class
+    );
+    Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
   public void testParseNestedData() throws Exception
   {
     //configure parser with desc file

@@ -149,7 +149,8 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 
     FileBasedProtobufBytesDecoder that = (FileBasedProtobufBytesDecoder) o;
 
-    return Objects.equals(descriptorFilePath, that.descriptorFilePath);
+    return Objects.equals(descriptorFilePath, that.descriptorFilePath) &&
+        Objects.equals(protoMessageType, that.protoMessageType);
   }
 
   @Override
