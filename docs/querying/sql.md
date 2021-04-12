@@ -153,8 +153,8 @@ top-level and table-level. Queries that use UNION ALL in any other way will not 
 #### Top-level
 
 UNION ALL can be used at the very top outer layer of a SQL query (not in a subquery, and not in the FROM clause). In
-this case, the underlying queries will be run separately, back to back, and their results will all be returned in
-one result set.
+this case, the underlying queries will be run separately, back to back. Their results will be concatenated together
+and appear one after the other.
 
 For example:
 
@@ -164,14 +164,15 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-When UNION ALL occurs at the top level of a query like this, the results from the unioned queries are concatenated
-together and appear one after the other.
+With top-level UNION ALL, no further processing can be done after the UNION ALL. For example, the results of the
+UNION ALL cannot have GROUP BY, ORDER BY, or any other operators applied to them.
 
 #### Table-level
 
 UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in a subquery in the
-FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs
-(no expressions, column aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
+FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs.
+Features like expressions, column aliasing, JOIN, GROUP BY, ORDER BY, and so on cannot be used. The query will run
+natively using a [union datasource](datasource.md#union).
 
 The same columns must be selected from each table in the same order, and those columns must either have the same types,
 or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
@@ -190,7 +191,7 @@ FROM (
 GROUP BY col1
 ```
 
-When UNION ALL occurs at the table level, the rows from the unioned tables are not guaranteed to be processed in
+With table-level UNION ALL, the rows from the unioned tables are not guaranteed to be processed in
 any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
 use [ORDER BY](#order-by) on the outer query.
 
