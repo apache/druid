@@ -62,6 +62,12 @@ public class AvroStreamInputFormat extends NestedInputFormat
     return avroBytesDecoder;
   }
 
+  @JsonProperty
+  public Boolean getBinaryAsString()
+  {
+    return binaryAsString;
+  }
+
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
