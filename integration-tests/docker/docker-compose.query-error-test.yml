@@ -50,15 +50,6 @@ services:
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-historical:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-historical
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    depends_on:
-      - druid-zookeeper-kafka
-
   druid-broker:
     extends:
       file: docker-compose.base.yml
@@ -67,7 +58,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
-      - druid-historical
+      - druid-historical-for-query-error-test
 
   druid-router:
     extends:
@@ -80,9 +71,9 @@ services:
       - druid-coordinator
       - druid-broker
 
-  druid-historical-for-query-retry-test:
+  druid-historical-for-query-error-test:
     image: druid/cluster
-    container_name: druid-historical-for-query-retry-test
+    container_name: druid-historical-for-query-error-test
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.14
