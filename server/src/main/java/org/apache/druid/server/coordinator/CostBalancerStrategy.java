@@ -212,7 +212,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
 
   @Override
-  public BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
+  public BalancerSegmentHolder pickSegmentToMove(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider

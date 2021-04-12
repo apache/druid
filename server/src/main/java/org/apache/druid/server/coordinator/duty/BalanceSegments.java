@@ -240,7 +240,7 @@ public class BalanceSegments implements CoordinatorDuty
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMoveHolder;
       if (!balanceGuildViolatorsOnly) {
-        segmentToMoveHolder = strategy.pickGuildReplicationViolatingSegmentToMove(
+        segmentToMoveHolder = strategy.pickSegmentToMove(
             toMoveFrom,
             params.getBroadcastDatasources(),
             params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()

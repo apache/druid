@@ -54,7 +54,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
+  public BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider

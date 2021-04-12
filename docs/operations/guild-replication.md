@@ -75,3 +75,5 @@ Yes! When upgrading to a version of Druid with this functionality for the first 
 ## Known Shortfalls
 
 * Segments whose applicable `LoadRule` only calls for one replicant can still be selected by the cluster balancing process when prioritizing segments who are only located on one Guild. This is not the most ideal situation because in this prioritized balancing the goal is to increase the number of segments that are replicated across Guilds. This situation does not help work towards that goal.
+
+* `LoadRule#dropSegmentFromServers` does not account for guild replication counts within the method itself. When being called for a segment with > 1 replicants loaded on some specified set of guilds, it will drop segments based solely of calculated cost by the `BalancerStrategy`. This means we could make a sub-optimal drop when it comes to maximizing guild replication factors. If replication is reduced to a single guild, the Coordinator should rectify the sub-optimal drop during an upcoming segment balancing run.

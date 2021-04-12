@@ -72,7 +72,7 @@ public interface BalancerStrategy
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
   @Nullable
-  BalancerSegmentHolder pickGuildReplicationViolatingSegmentToMove(
+  BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider
