@@ -17,34 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.writer
 
-
-import java.io.Closeable
-import java.util.{List => JList}
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.data.input.MapBasedInputRow
-import org.apache.druid.java.util.common.{DateTimes, FileUtils, Intervals}
 import org.apache.druid.java.util.common.io.Closer
 import org.apache.druid.java.util.common.parsers.TimestampParser
+import org.apache.druid.java.util.common.{DateTimes, FileUtils, Intervals}
 import org.apache.druid.segment.column.ValueType
 import org.apache.druid.segment.data.{BitmapSerdeFactory, CompressionFactory, CompressionStrategy,
   ConciseBitmapSerdeFactory, RoaringBitmapSerdeFactory}
-import org.apache.druid.segment.{IndexSpec, IndexableAdapter, QueryableIndexIndexableAdapter}
-import org.apache.druid.segment.incremental.{IncrementalIndex, IncrementalIndexSchema, OnheapIncrementalIndex}
+import org.apache.druid.segment.incremental.{IncrementalIndex, IncrementalIndexSchema,
+  OnheapIncrementalIndex}
 import org.apache.druid.segment.indexing.DataSchema
 import org.apache.druid.segment.loading.DataSegmentPusher
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory
+import org.apache.druid.segment.{IndexSpec, IndexableAdapter, QueryableIndexIndexableAdapter}
 import org.apache.druid.spark.MAPPER
-import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentWriterRegistry, ShardSpecRegistry}
-import org.apache.druid.spark.utils.{DruidConfigurationKeys, DruidDataWriterConfig, Logging}
+import org.apache.druid.spark.configuration.{DruidConfigurationKeys, DruidDataWriterConfig}
+import org.apache.druid.spark.mixins.Logging
+import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentWriterRegistry,
+  ShardSpecRegistry}
+import org.apache.druid.spark.v2.{INDEX_IO, INDEX_MERGER_V9}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeArrayData
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, WriterCommitMessage}
 import org.apache.spark.sql.types.ArrayType
 
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
+import java.io.Closeable
+import java.util.{List => JList}
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter,
+  seqAsJavaListConverter}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 

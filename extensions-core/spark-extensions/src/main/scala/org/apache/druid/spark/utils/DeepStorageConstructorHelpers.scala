@@ -30,6 +30,8 @@ import org.apache.druid.common.gcp.GcpModule
 import org.apache.druid.java.util.common.{IAE, StringUtils}
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.TryWithResources
 import org.apache.druid.storage.azure.blob.{ListBlobItemHolder, ListBlobItemHolderFactory}
 import org.apache.druid.storage.azure.{AzureAccountConfig, AzureCloudBlobIterable,
   AzureCloudBlobIterableFactory, AzureCloudBlobIterator, AzureCloudBlobIteratorFactory,
@@ -45,7 +47,6 @@ import org.apache.hadoop.conf.{Configuration => HConf}
 import java.io.{ByteArrayInputStream, DataInputStream}
 import java.lang.{Iterable => JIterable}
 import java.net.URI
-
 import scala.collection.JavaConverters.{asJavaIterableConverter, collectionAsScalaIterableConverter}
 
 object DeepStorageConstructorHelpers extends TryWithResources {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.spark.utils
 
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

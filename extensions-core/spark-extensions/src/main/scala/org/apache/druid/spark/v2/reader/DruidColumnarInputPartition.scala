@@ -17,32 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.reader
 
+import org.apache.druid.query.filter.DimFilter
 import org.apache.druid.spark.MAPPER
-import org.apache.druid.spark.utils.SerializableHadoopConfiguration
+import org.apache.druid.spark.configuration.SerializableHadoopConfiguration
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.vectorized.ColumnarBatch
 
 /**
   * Defines a single partition in the dataframe's underlying RDD. This object is generated in the driver and then
   * serialized to the executors where it is responsible for creating the actual ([[InputPartitionReader]]) which
   * does the actual reading.
-  *
-  * @param location
-  * @param schema
   */
-class DruidInputPartition(
-                           segment: DataSegment,
-                           schema: StructType,
-                           filters: Array[Filter],
-                           columnTypes: Option[Set[String]] = None,
-                           useCompactSketches: Boolean = false
-                         ) extends InputPartition[InternalRow] {
+class DruidColumnarInputPartition(
+                              segment: DataSegment,
+                              schema: StructType,
+                              filter: Option[DimFilter],
+                              columnTypes: Option[Set[String]],
+                              useCompactSketches: Boolean,
+                              useDefaultNullHandling: Boolean,
+                              batchSize: Int
+                            ) extends InputPartition[ColumnarBatch] {
   // There's probably a better way to do this
   private val session = SparkSession.getActiveSession.get // We're running on the driver, it exists
   private val broadcastConf =
@@ -50,7 +49,16 @@ class DruidInputPartition(
       new SerializableHadoopConfiguration(session.sparkContext.hadoopConfiguration))
   private val serializedSegment: String = MAPPER.writeValueAsString(segment)
 
-  override def createPartitionReader(): InputPartitionReader[InternalRow] = {
-    new DruidInputPartitionReader(serializedSegment, schema, filters, columnTypes, broadcastConf, useCompactSketches)
+  override def createPartitionReader(): InputPartitionReader[ColumnarBatch] = {
+    new DruidColumnarInputPartitionReader(
+      serializedSegment,
+      schema,
+      filter,
+      columnTypes,
+      broadcastConf,
+      useCompactSketches,
+      useDefaultNullHandling,
+      batchSize
+    )
   }
 }

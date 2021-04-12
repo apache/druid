@@ -17,16 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.writer
 
-import org.apache.druid.data.input.impl.{DimensionSchema, DoubleDimensionSchema,
-  FloatDimensionSchema, LongDimensionSchema, StringDimensionSchema}
-import org.apache.druid.java.util.common.IAE
+import org.apache.druid.data.input.impl.{DimensionSchema, FloatDimensionSchema,
+  LongDimensionSchema, StringDimensionSchema}
 import org.apache.druid.java.util.common.granularity.Granularities
 import org.apache.druid.spark.SparkFunSuite
-import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys}
-import org.apache.spark.sql.types.{ArrayType, BinaryType, DoubleType, FloatType, IntegerType,
-  LongType, StringType, StructField, StructType}
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
+import org.apache.spark.sql.types.{ArrayType, FloatType, LongType, StringType, StructField,
+  StructType}
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -43,56 +43,12 @@ class DruidDataWriterFactorySuite extends SparkFunSuite with Matchers with Druid
   private val writerPropsWithDataSource = writerProps +
     (s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.tableKey}" -> dataSource)
 
-  test("convertStructTypeToDruidDimensionSchema should convert dimensions from a well-formed StructType") {
-    val updatedSchema = schema
-      .add("id3", LongType)
-      .add("dim3", FloatType)
-      .add("dim4", DoubleType)
-      .add("dim5", IntegerType)
-    val updatedDimensions = dimensions.asScala ++ Seq("id3", "dim3", "dim4", "dim5")
-
-    val dimensionSchema =
-      DruidDataWriterFactory.convertStructTypeToDruidDimensionSchema(updatedDimensions, updatedSchema)
-
-    val expectedDimensions = expectedBaseDimensions ++ Seq[DimensionSchema](
-      new LongDimensionSchema("id3"),
-      new FloatDimensionSchema("dim3"),
-      new DoubleDimensionSchema("dim4"),
-      new LongDimensionSchema("dim5")
-    )
-
-    dimensionSchema should contain theSameElementsInOrderAs expectedDimensions
-  }
-
-  test("convertStructTypeToDruidDimensionSchema should only process schema fields specified in dimensions") {
-    val updatedSchema = schema
-      .add("id3", LongType)
-      .add("dim3", FloatType)
-      .add("dim4", DoubleType)
-      .add("dim5", IntegerType)
-      .add("bin1", BinaryType) // Incompatible types are ok in the schema if they aren't dimensions
-
-    val dimensionSchema =
-      DruidDataWriterFactory.convertStructTypeToDruidDimensionSchema(dimensions.asScala, updatedSchema)
-
-    dimensionSchema should contain theSameElementsInOrderAs expectedBaseDimensions
-  }
-
-  test("convertStructTypeToDruidDimensionSchema should error when incompatible Spark types are present") {
-    val updatedSchema = schema
-      .add("bin1", BinaryType)
-    val updatedDimensions = dimensions.asScala :+ "bin1"
-
-    an[IAE] should be thrownBy
-      DruidDataWriterFactory.convertStructTypeToDruidDimensionSchema(updatedDimensions, updatedSchema)
-  }
-
   test("createDataSchemaFromConfiguration should handle empty dimensions") {
     val updatedWriterProps = writerPropsWithDataSource -
       s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.dimensionsKey}"
     val writerConf = Configuration(updatedWriterProps).dive(DruidConfigurationKeys.writerPrefix)
 
-    val dataSchema =DruidDataWriterFactory.createDataSchemaFromConfiguration(writerConf, schema)
+    val dataSchema = DruidDataWriterFactory.createDataSchemaFromConfiguration(writerConf, schema)
     dataSchema.getDimensionsSpec.getDimensions.asScala should contain theSameElementsInOrderAs expectedBaseDimensions
   }
 
@@ -193,39 +149,5 @@ class DruidDataWriterFactorySuite extends SparkFunSuite with Matchers with Druid
 
     dataSchema.getGranularitySpec.getQueryGranularity should equal(Granularities.NONE)
     dataSchema.getGranularitySpec.getSegmentGranularity should equal(Granularities.DAY)
-  }
-
-  test("validateDimensionSpecAgainstSparkSchema should return true for valid dimension schemata") {
-    val dimensions = Seq[DimensionSchema](
-      new StringDimensionSchema("testStringDim"),
-      new LongDimensionSchema("testLongDim"),
-      new StringDimensionSchema("testStringDim2", DimensionSchema.MultiValueHandling.ARRAY, false),
-      new FloatDimensionSchema("testFloatDim"),
-      new DoubleDimensionSchema("testDoubleDim"),
-      new LongDimensionSchema("testLongDim2")
-    )
-
-    val schema = StructType(Seq[StructField](
-      StructField("testStringDim", ArrayType(StringType)),
-      StructField("testLongDim", LongType),
-      StructField("testStringDim2", StringType),
-      StructField("testFloatDim", FloatType),
-      StructField("tesDoubleDim", DoubleType),
-      StructField("testLongDim2", IntegerType)
-    ))
-
-    DruidDataWriterFactory.validateDimensionSpecAgainstSparkSchema(dimensions, schema) should be(true)
-  }
-
-  test("validateDimensionSpecAgainstSparkSchema should throw an IAE for an invalid set of dimensions") {
-    val dimensions = Seq[DimensionSchema](
-      new StringDimensionSchema("testStringDim")
-    )
-
-    val schema = StructType(Seq[StructField](
-      StructField("testStringDim", LongType)
-    ))
-
-    an[IAE] should be thrownBy DruidDataWriterFactory.validateDimensionSpecAgainstSparkSchema(dimensions, schema)
   }
 }

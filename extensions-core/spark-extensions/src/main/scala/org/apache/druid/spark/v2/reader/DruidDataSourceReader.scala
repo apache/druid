@@ -17,30 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
-
-import java.util
-import java.util.{List => JList}
+package org.apache.druid.spark.v2.reader
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.java.util.common.{DateTimes, Intervals, JodaUtils}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.clients.{DruidClient, DruidMetadataClient}
-import org.apache.druid.spark.registries.ComplexMetricRegistry
-import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.Logging
+import org.apache.druid.spark.utils.{FilterUtils, SchemaUtils}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.{And, EqualNullSafe, EqualTo, Filter, GreaterThan,
-  GreaterThanOrEqual, In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains,
-  StringEndsWith, StringStartsWith}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition,
   SupportsPushDownFilters, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch}
-import org.apache.spark.sql.types.{ArrayType, BinaryType, DoubleType, FloatType, LongType,
-  StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.sources.Filter
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.joda.time.Interval
 
+import java.util.{List => JList}
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 
 /**
@@ -59,7 +55,7 @@ class DruidDataSourceReader(
                              var schema: Option[StructType] = None,
                              conf: Configuration
                            ) extends DataSourceReader
-  with SupportsPushDownRequiredColumns with SupportsPushDownFilters with SupportsScanColumnarBatch {
+  with SupportsPushDownRequiredColumns with SupportsPushDownFilters with SupportsScanColumnarBatch with Logging {
   private lazy val metadataClient =
     DruidDataSourceReader.createDruidMetaDataClient(conf)
   private lazy val druidClient = DruidDataSourceReader.createDruidClient(conf)
@@ -76,7 +72,7 @@ class DruidDataSourceReader(
       // TODO: Optionally accept a granularity so that if lowerBound to upperBound spans more than
       //  twice the granularity duration, we can send a list with two disjoint intervals and
       //  minimize the load on the broker from having to merge large numbers of segments
-      val (lowerBound, upperBound) = getTimeFilterBounds
+      val (lowerBound, upperBound) = FilterUtils.getTimeFilterBounds(filters)
       val columnMap = druidClient.getSchema(
         conf.getString(DruidConfigurationKeys.tableKey),
         List[Interval](Intervals.utc(
@@ -84,45 +80,50 @@ class DruidDataSourceReader(
           upperBound.getOrElse(JodaUtils.MAX_INSTANT)
         ))
       )
-      schema = Option(DruidDataSourceReader.convertDruidSchemaToSparkSchema(columnMap))
+      schema = Option(SchemaUtils.convertDruidSchemaToSparkSchema(columnMap))
       druidColumnTypes = Option(columnMap.map(_._2._1).toSet)
       schema.get
     }
   }
 
-  override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
+  override def planInputPartitions(): JList[InputPartition[InternalRow]] = {
     // For now, one partition for each Druid segment partition
     // Future improvements can use information from SegmentAnalyzer results to do smart things
     if (schema.isEmpty) {
       readSchema()
     }
-    println(conf.toString) // scalastyle:ignore println
     val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
     val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
+    val filter = FilterUtils.mapFilters(filters, schema.get)
+    val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
+
     // Allow passing hard-coded list of segments to load
     if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
       val segments: JList[DataSegment] = MAPPER.readValue(
         readerConf.getString(DruidConfigurationKeys.segmentsKey),
-        new TypeReference[JList[DataSegment]]() {})
+        new TypeReference[JList[DataSegment]]() {}
+      )
       segments.asScala
         .map(segment =>
           new DruidInputPartition(
             segment,
             schema.get,
-            filters,
+            filter,
             druidColumnTypes,
-            useCompactSketches
+            useCompactSketches,
+            useDefaultNullHandling
           ): InputPartition[InternalRow]
         ).asJava
     } else {
       getSegments
-        .map(segment=>
+        .map(segment =>
           new DruidInputPartition(
             segment,
             schema.get,
-            filters,
+            filter,
             druidColumnTypes,
-            useCompactSketches
+            useCompactSketches,
+            useDefaultNullHandling
           ): InputPartition[InternalRow]
         ).asJava
     }
@@ -133,7 +134,8 @@ class DruidDataSourceReader(
   }
 
   override def pushFilters(filters: Array[Filter]): Array[Filter] = {
-    filters.partition(isSupportedFilter) match {
+    readSchema()
+    filters.partition(FilterUtils.isSupportedFilter(_, schema.get)) match {
       case (supported, unsupported) =>
         this.filters = supported
         unsupported
@@ -142,33 +144,13 @@ class DruidDataSourceReader(
 
   override def pushedFilters(): Array[Filter] = filters
 
-  private def isSupportedFilter(filter: Filter): Boolean = filter match {
-    case _: And => true
-    case _: Or => true
-    case _: Not => true
-    case _: IsNull => false // Setting null-related filters to false for now
-    case _: IsNotNull => false // Setting null-related filters to false for now
-    case _: In => true
-    case _: StringContains => true
-    case _: StringStartsWith => true
-    case _: StringEndsWith => true
-    case _: EqualTo => true
-    case _: EqualNullSafe => false // Setting null-related filters to false for now
-    case _: LessThan => true
-    case _: LessThanOrEqual => true
-    case _: GreaterThan => true
-    case _: GreaterThanOrEqual => true
-
-    case _ => false
-  }
-
   private[v2] def getSegments: Seq[DataSegment] = {
     require(conf.isPresent(DruidConfigurationKeys.tableKey),
       s"Must set ${DruidConfigurationKeys.tableKey}!")
 
     // Check filters for any bounds on __time
     // Otherwise, we'd need to full scan the segments table
-    val (lowerTimeBound, upperTimeBound) = getTimeFilterBounds
+    val (lowerTimeBound, upperTimeBound) = FilterUtils.getTimeFilterBounds(filters)
 
     metadataClient.getSegmentPayloads(conf.getString(DruidConfigurationKeys.tableKey),
       lowerTimeBound.map(bound =>
@@ -180,22 +162,68 @@ class DruidDataSourceReader(
     )
   }
 
-  private[v2] def getTimeFilterBounds: (Option[Long], Option[Long]) = {
-    val timeFilters = filters
-      .filter(_.references.contains("__time"))
-      .flatMap(DruidDataSourceReader.decomposeTimeFilters)
-      .partition(_._1 == DruidDataSourceReader.LOWER)
-    (timeFilters._1.map(_._2).reduceOption(_ max _ ),
-      timeFilters._2.map(_._2).reduceOption(_ min _ ))
-  }
-
-  // Stubs for columnar reads; for now always return false for enableBatchRead, meaning this will
-  // never be called
   override def planBatchInputPartitions(): JList[InputPartition[ColumnarBatch]] = {
-    List.empty[InputPartition[ColumnarBatch]].asJava
+    if (schema.isEmpty) {
+      readSchema()
+    }
+    val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
+    val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
+    val filter = FilterUtils.mapFilters(filters, schema.get)
+    val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
+    val batchSize = readerConf.getInt(DruidConfigurationKeys.batchSizeDefaultKey)
+
+    // Allow passing hard-coded list of segments to load
+    if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
+      val segments: JList[DataSegment] = MAPPER.readValue(
+        readerConf.getString(DruidConfigurationKeys.segmentsKey),
+        new TypeReference[JList[DataSegment]]() {}
+      )
+      segments.asScala
+        .map(segment =>
+          new DruidColumnarInputPartition(
+            segment,
+            schema.get,
+            filter,
+            druidColumnTypes,
+            useCompactSketches,
+            useDefaultNullHandling,
+            batchSize
+          ): InputPartition[ColumnarBatch]
+        ).asJava
+    } else {
+      getSegments
+        .map(segment =>
+          new DruidColumnarInputPartition(
+            segment,
+            schema.get,
+            filter,
+            druidColumnTypes,
+            useCompactSketches,
+            useDefaultNullHandling,
+            batchSize
+          ): InputPartition[ColumnarBatch]
+        ).asJava
+    }
   }
 
-  override def enableBatchRead(): Boolean = false
+  override def enableBatchRead(): Boolean = {
+    // Fail fast
+    if (!conf.dive(DruidConfigurationKeys.readerPrefix).getBoolean(DruidConfigurationKeys.vectorizeDefaultKey)) {
+      false
+    } else {
+      if (schema.isEmpty) {
+        readSchema()
+      }
+      val filterOpt = FilterUtils.mapFilters(filters, schema.get)
+      filterOpt.fold(true) { filter =>
+        val canVectorize = filter.toOptimizedFilter.canVectorizeMatcher
+        if (!canVectorize) {
+          logWarn("Vectorization enabled in config but pushed-down filters are not vectorizable! Reading rows.")
+        }
+        canVectorize
+      }
+    }
+  }
 }
 
 object DruidDataSourceReader {
@@ -248,85 +276,4 @@ object DruidDataSourceReader {
   def createDruidClient(conf: Configuration): DruidClient = {
     DruidClient(conf)
   }
-
-  /**
-    * Convert a COLUMNMAP representing a Druid datasource's schema as returned by
-    * DruidMetadataClient.getClient into a Spark StructType.
-    *
-    * @param columnMap The Druid schema to convert into a corresponding Spark StructType.
-    * @return The StructType equivalent of the Druid schema described by COLUMNMAP.
-    */
-  def convertDruidSchemaToSparkSchema(columnMap: Map[String, (String, Boolean)]): StructType = {
-    StructType.apply(
-      columnMap.map { case (name, (colType, hasMultipleValues)) =>
-        val sparkType = colType match {
-          case "LONG" => LongType
-          case "STRING" => StringType
-          case "DOUBLE" => DoubleType
-          case "FLOAT" => FloatType
-          case "TIMESTAMP" => TimestampType
-          case complexType: String if ComplexMetricRegistry.getRegisteredMetricNames.contains(complexType) =>
-            BinaryType
-          // Add other supported types later
-          case _ => throw new IllegalArgumentException(s"Unrecognized type $colType!")
-        }
-        if (hasMultipleValues) {
-          StructField(name, new ArrayType(sparkType, false))
-        } else {
-          StructField(name, sparkType)
-        }
-      }.toSeq
-    )
-  }
-
-  private val emptyBoundSeq = Seq.empty[(Bound, Long)]
-
-  private[v2] def decomposeTimeFilters(filter: Filter): Seq[(Bound, Long)] = {
-    filter match {
-      case And(left, right) =>
-        Seq(left, right).filter(_.references.contains("__time")).flatMap(decomposeTimeFilters)
-      case Or(left, right) => // TODO: Support
-        emptyBoundSeq
-      case Not(condition) => // TODO: Support
-        emptyBoundSeq
-      case EqualTo(field, value) =>
-        if (field == "__time") {
-          Seq(
-            (LOWER, value.asInstanceOf[Long]),
-            (UPPER, value.asInstanceOf[Long])
-          )
-        } else {
-          emptyBoundSeq
-        }
-      case LessThan(field, value) =>
-        if (field == "__time") {
-          Seq((UPPER, value.asInstanceOf[Long] - 1))
-        } else {
-          emptyBoundSeq
-        }
-      case LessThanOrEqual(field, value) =>
-        if (field == "__time") {
-          Seq((UPPER, value.asInstanceOf[Long]))
-        } else {
-          emptyBoundSeq
-        }
-      case GreaterThan(field, value) =>
-        if (field == "__time") {
-          Seq((LOWER, value.asInstanceOf[Long] + 1))
-        } else {
-          emptyBoundSeq
-        }
-      case GreaterThanOrEqual(field, value) =>
-        if (field == "__time") {
-          Seq((LOWER, value.asInstanceOf[Long]))
-        } else {
-          emptyBoundSeq
-        }
-      case _ => emptyBoundSeq
-    }
-  }
-
-  private[v2] sealed trait Bound
-  case object LOWER extends Bound
-  case object UPPER extends Bound
 }

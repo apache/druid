@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
+package org.apache.druid.spark.configuration
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

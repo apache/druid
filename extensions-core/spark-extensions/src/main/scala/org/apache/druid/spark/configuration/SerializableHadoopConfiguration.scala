@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
+package org.apache.druid.spark.configuration
 
-import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
-
+import org.apache.druid.spark.mixins.Logging
 import org.apache.hadoop.conf.{Configuration => HConf}
 
+import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
 import scala.util.control.NonFatal
 
 /**

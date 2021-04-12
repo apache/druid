@@ -27,7 +27,7 @@ import org.apache.druid.spark.MAPPER
   * A registry for password providers. Similarly to the {@link AggregatorFactoryRegistry}, we can shadow the usual Druid
   * pattern and let Jackson handle the polymorphism for our current use cases.
   */
-class PasswordProviderRegistry {
+object PasswordProviderRegistry {
   /**
     * Register a password provider with the given name. NAME must match the Jackson sub-type for PASSWORDPROVIDER.
     *

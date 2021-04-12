@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.writer
 
 import org.apache.druid.java.util.common.{FileUtils, StringUtils}
-import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.spark.clients.DruidMetadataClient
-import org.apache.druid.spark.utils.Configuration
+import org.apache.druid.spark.configuration.Configuration
+import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
+import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.apache.spark.sql.SaveMode

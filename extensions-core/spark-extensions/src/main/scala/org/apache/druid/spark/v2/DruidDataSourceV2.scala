@@ -20,7 +20,9 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.common.config.NullHandling
-import org.apache.druid.spark.utils.Configuration
+import org.apache.druid.spark.configuration.Configuration
+import org.apache.druid.spark.v2.reader.DruidDataSourceReader
+import org.apache.druid.spark.v2.writer.DruidDataSourceWriter
 
 import java.util.Optional
 import org.apache.spark.internal.Logging

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
+package org.apache.druid.spark.configuration
 
 import org.apache.druid.java.util.common.StringUtils
 import org.apache.spark.sql.sources.v2.DataSourceOptions

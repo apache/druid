@@ -27,15 +27,15 @@ import org.apache.druid.java.util.common.StringUtils
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
   PasswordProvider, SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.SQLConnectorRegistry
-import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging}
 import org.apache.druid.timeline.DataSegment
 import org.skife.jdbi.v2.{DBI, Handle}
 
 import java.io.ByteArrayInputStream
 import java.util.Properties
-
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter}
 
 class DruidMetadataClient(
                            metadataDbType: String,
@@ -54,8 +54,9 @@ class DruidMetadataClient(
     // Jackson doesn't like deserializing empty strings
     passwordProviderSer
   } else {
-    MAPPER.readValue[PasswordProvider](passwordProviderSer,
-      new TypeReference[PasswordProvider] {}).getPassword
+    MAPPER.readValue[PasswordProvider](
+      passwordProviderSer, new TypeReference[PasswordProvider] {}
+    ).getPassword
   }
 
   private lazy val connectorConfig: MetadataStorageConnectorConfig =
@@ -79,20 +80,24 @@ class DruidMetadataClient(
                            intervalEnd: Option[String]
                          ): Seq[DataSegment] = {
     val dbi: DBI = connector.getDBI
-    val startTime = intervalStart.getOrElse("1970-01-01T00:00:00.000Z")
-    val endTime = intervalEnd.getOrElse("2100-01-01T00:00:00.000Z")
+    val startClause = if (intervalStart.isDefined) " AND start >= :start" else ""
+    val endClause = if (intervalEnd.isDefined) " AND \"end\" <= :end" else ""
     dbi.withHandle((handle: Handle) => {
       val statement =
         s"""
           |SELECT payload FROM ${druidMetadataTableConfig.getSegmentsTable}
-          |WHERE datasource = :datasource AND start >= :start AND \"end\" <= :end AND used = true
+          |WHERE datasource = :datasource AND used = true$startClause$endClause
         """.stripMargin
+
+      val bindMap = Seq(Some("datasource" -> datasource),
+        intervalStart.map("start" -> _),
+        intervalEnd.map("end" -> _)
+      ).flatten.toMap
+
       val query = handle.createQuery(statement)
       val result = query
-          .bind("datasource", datasource)
-          .bind("start", startTime)
-          .bind("end", endTime)
-          .mapTo(classOf[Array[Byte]]).list().asScala
+        .bindFromMap(bindMap.asJava)
+        .mapTo(classOf[Array[Byte]]).list().asScala
       result.map(blob =>
         MAPPER.readValue[DataSegment](
           StringUtils.fromUtf8(blob), new TypeReference[DataSegment] {}

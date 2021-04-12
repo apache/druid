@@ -21,30 +21,33 @@ package org.apache.druid.spark.v2
 
 import com.google.common.base.{Supplier, Suppliers}
 import org.apache.commons.dbcp2.BasicDataSource
-import org.apache.druid.java.util.common.granularity.GranularityType
-
-import java.io.File
-import java.util
 import org.apache.druid.java.util.common.{FileUtils, Intervals, StringUtils}
+import org.apache.druid.java.util.common.granularity.GranularityType
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
   SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.configuration.DruidConfigurationKeys
 import org.apache.druid.spark.registries.SQLConnectorRegistry
-import org.apache.druid.spark.utils.DruidConfigurationKeys
+import org.apache.druid.spark.utils.SchemaUtils
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
+import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 import org.apache.spark.sql.types.{ArrayType, BinaryType, DoubleType, FloatType, LongType,
   StringType, StructField, StructType}
+import org.apache.spark.sql.vectorized.ColumnarBatch
+import org.apache.spark.unsafe.types.UTF8String
 import org.joda.time.Interval
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException
 import org.skife.jdbi.v2.{DBI, Handle}
 
-import java.util.{Properties, UUID}
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsJavaMapConverter,
-  seqAsJavaListConverter}
+import java.io.File
+import java.util.{Properties, UUID, List => JList, Map => JMap}
+import scala.collection.JavaConverters.{asScalaIteratorConverter,
+  collectionAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 import scala.collection.mutable.ArrayBuffer
 
 trait DruidDataSourceV2TestUtils {
@@ -60,10 +63,10 @@ trait DruidDataSourceV2TestUtils {
     makePath("spark_druid_test", "2020-01-01T00:00:00.000Z_2020-01-02T00:00:00.000Z", "0", "1", "index.zip")
   val thirdSegmentPath: String =
     makePath("spark_druid_test", "2020-01-02T00:00:00.000Z_2020-01-03T00:00:00.000Z", "0", "0", "index.zip")
-  val loadSpec: String => util.Map[String, AnyRef] = (path: String) =>
+  val loadSpec: String => JMap[String, AnyRef] = (path: String) =>
     Map[String, AnyRef]("type" -> "local", "path" -> path).asJava
-  val dimensions: util.List[String] = List("dim1", "dim2", "id1", "id2").asJava
-  val metrics: util.List[String] = List(
+  val dimensions: JList[String] = List("dim1", "dim2", "id1", "id2").asJava
+  val metrics: JList[String] = List(
     "count", "sum_metric1","sum_metric2","sum_metric3","sum_metric4","uniq_id1").asJava
   val metricsSpec: String =
     """[
@@ -230,8 +233,57 @@ trait DruidDataSourceV2TestUtils {
     res
   }
 
-  def compareInternalRows(left: InternalRow, right: InternalRow, schema: StructType): Boolean = {
-    left.numFields == right.numFields && !left.toSeq(schema).forall(right.toSeq(schema).contains(_))
+  def columnarPartitionReaderToSeq(reader: InputPartitionReader[ColumnarBatch]): Seq[InternalRow] = {
+    val res = new ArrayBuffer[InternalRow]()
+    // ColumnarBatches return MutableColumnarRows, so we need to copy them before we close
+    while (reader.next()) {
+      val batch = reader.get()
+      batch.rowIterator().asScala.foreach { row =>
+        // MutableColumnarRows don't support copying ArrayTypes, we can't use row.copy()
+        val finalizedRow = new GenericInternalRow(batch.numCols())
+        (0 until batch.numCols()).foreach{ col =>
+          if (row.isNullAt(col)) {
+            finalizedRow.setNullAt(col)
+          } else {
+            val dataType = batch.column(col).dataType()
+            dataType match {
+              case _: ArrayType =>
+                // Druid only supports multiple values for Strings, hard-code that assumption here for now
+                val finalizedArr = row.getArray(col).array.map(el => el.asInstanceOf[UTF8String].copy())
+                finalizedRow.update(col, ArrayData.toArrayData(finalizedArr))
+              case _ =>
+                finalizedRow.update(col, row.get(col, dataType))
+            }
+          }
+        }
+        res += finalizedRow
+      }
+    }
+    reader.close()
+    res
+  }
+
+  def wrapSeqToInternalRow(seq: Seq[Any], schema: StructType): InternalRow = {
+    InternalRow.fromSeq(seq.zipWithIndex.map{case (elem, i) =>
+      if (elem == null) { // scalastyle:ignore null
+        null // scalastyle:ignore null
+      } else {
+        schema(i).dataType match {
+          case _: ArrayType =>
+            val baseType = schema(i).dataType.asInstanceOf[ArrayType].elementType
+            elem match {
+              case collection: Traversable[_] =>
+                ArrayData.toArrayData(collection.map { elem =>
+                  SchemaUtils.parseToScala(elem, baseType)
+                })
+              case _ =>
+                // Single-element arrays
+                ArrayData.toArrayData(List(SchemaUtils.parseToScala(elem, baseType)))
+            }
+          case _ => SchemaUtils.parseToScala(elem, schema(i).dataType)
+        }
+      }
+    })
   }
 
   def makePath(components: String*): String = {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.spark.utils
 
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.ShardSpecRegistry
 import org.apache.druid.timeline.DataSegment
 

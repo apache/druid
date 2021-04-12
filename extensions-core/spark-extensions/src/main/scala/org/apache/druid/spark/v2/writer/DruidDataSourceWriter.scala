@@ -17,21 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.writer
 
-import java.util.Optional
 import org.apache.druid.java.util.common.ISE
 import org.apache.druid.segment.loading.DataSegmentKiller
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.clients.DruidMetadataClient
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.SegmentWriterRegistry
-import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging, SegmentRationalizer}
+import org.apache.druid.spark.utils.SegmentRationalizer
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.types.StructType
 
+import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**

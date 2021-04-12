@@ -51,7 +51,7 @@ sparkSession
   .load()
 ```
 
-Filters should be applied to the read-in data frame before any [Spark actions](http://spark.apache.org/docs/2.4.5/api/scala/index.html#org.apache.spark.sql.Dataset)
+Filters should be applied to the read-in data frame before any [Spark actions](http://spark.apache.org/docs/2.4.7/api/scala/index.html#org.apache.spark.sql.Dataset)
 are triggered, to allow predicates to be pushed down to the reader and avoid full scans of the underlying Druid data.
 
 ## Writer
@@ -144,6 +144,17 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |`table`|The Druid data source to read from|Yes||
 |`reader.segments`|A hard-coded list of Druid segments to read. If set, all other configurations are ignored and the specified segments are read directly. Must be deserializable into Druid DataSegment instances|No|
 |`reader.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
+|`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
+|`reader.vectorize`|**Experimental!** If true, reads data from segments in batches if possible|No|False|
+|`reader.batchSize`|**Experimental!** The number of rows to read in one batch if `reader.vectorize` is set to true|No|512|
+
+#### Vectorized Reads
+**Experimental!** The DataSourceReader can optionally attempt to read data from segments in batches.
+Spark 2.4 does not take full advantage of the capability, but vectorized reads may speed up data load
+times considerably. The default value for `reader.batchSize` isn't much more than a SWAG, so please
+test your workload with a few different batch sizes to determine the value that best balances speed
+and memory usage for your use case (and then let us know what worked best for you so we can improve
+the documentation!).
 
 
 ### Writer Configs

@@ -23,9 +23,10 @@ import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.java.util.common.IAE
 import org.apache.druid.segment.loading.{DataSegmentKiller, DataSegmentPusher,
   LocalDataSegmentKiller, LocalDataSegmentPusher}
-import org.apache.druid.spark.utils.{Configuration, DeepStorageConstructorHelpers,
-  DruidConfigurationKeys, Logging}
+import org.apache.druid.spark.utils.DeepStorageConstructorHelpers
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.storage.azure.{AzureCloudBlobIterableFactory, AzureDataSegmentKiller,
   AzureDataSegmentPusher}
 import org.apache.druid.storage.google.{GoogleDataSegmentKiller, GoogleDataSegmentPusher}

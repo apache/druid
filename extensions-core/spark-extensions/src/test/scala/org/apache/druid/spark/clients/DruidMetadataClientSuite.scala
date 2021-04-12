@@ -20,18 +20,20 @@
 package org.apache.druid.spark.clients
 
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.spark.{MAPPER, SparkFunSuite}
-import org.apache.druid.spark.utils.{Configuration, TryWithResources}
+import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.configuration.Configuration
+import org.apache.druid.spark.mixins.TryWithResources
 import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, collectionAsScalaIterableConverter,
   mapAsJavaMapConverter, seqAsJavaListConverter}
 
-class DruidMetadataClientSuite extends SparkFunSuite with Matchers with DruidDataSourceV2TestUtils
+class DruidMetadataClientSuite extends AnyFunSuite with Matchers with DruidDataSourceV2TestUtils
   with BeforeAndAfterEach with TryWithResources {
   private var uri: String = _
 

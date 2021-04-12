@@ -23,11 +23,11 @@ import com.google.common.base.Supplier
 import org.apache.druid.java.util.common.IAE
 import org.apache.druid.metadata.storage.derby.{DerbyConnector, DerbyMetadataStorage}
 import org.apache.druid.metadata.storage.mysql.{MySQLConnector, MySQLConnectorConfig}
-import org.apache.druid.metadata.storage.postgresql.{PostgreSQLConnector, PostgreSQLConnectorConfig,
-  PostgreSQLTablesConfig}
+import org.apache.druid.metadata.storage.postgresql.{PostgreSQLConnector,
+  PostgreSQLConnectorConfig, PostgreSQLTablesConfig}
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
   SQLMetadataConnector}
-import org.apache.druid.spark.utils.Logging
+import org.apache.druid.spark.mixins.Logging
 
 import scala.collection.mutable
 

@@ -30,7 +30,8 @@ import org.apache.druid.query.Druids
 import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis,
   SegmentMetadataQuery}
 import org.apache.druid.spark.MAPPER
-import org.apache.druid.spark.utils.{Configuration, DruidConfigurationKeys, Logging}
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
+import org.apache.druid.spark.mixins.Logging
 import org.jboss.netty.handler.codec.http.{HttpMethod, HttpResponseStatus}
 import org.joda.time.{Duration, Interval}
 
@@ -103,24 +104,6 @@ class DruidClient(
     segments.asScala.head.getColumns.asScala.map{ case (name: String, col: ColumnAnalysis) =>
       name -> (col.getType, col.isHasMultipleValues)
     }.toMap
-  }
-
-  /**
-    * Check if DATASOURCE is present on a cluster. This could also be done via SQL queries to the
-    * INFORMATION_SCHEMA.TABLES table.
-    *
-    * @param dataSource The dataSource to check for existance.
-    * @return True iff DATASOURCE exists on the cluster
-    */
-  def checkIfDataSourceExists(dataSource: String): Boolean = {
-    val response = sendRequestWithRetry(
-      s"${druidBaseQueryURL(hostAndPort)}datasources", RETRY_COUNT
-    )
-    val dataSources = objectMapper.readValue[JList[String]](
-      response.getContent, new TypeReference[JList[String]] {}
-    )
-    logInfo(s"Found dataSources [${dataSources.asScala.mkString(", ")}]")
-    dataSources.contains(dataSource)
   }
 
   private def sendRequestWithRetry(

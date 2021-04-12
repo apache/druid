@@ -21,8 +21,8 @@ package org.apache.druid.spark.registries
 
 import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver
 import org.apache.druid.java.util.common.IAE
-import org.apache.druid.spark.utils.Logging
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.timeline.partition.{HashBasedNumberedShardSpec, HashPartitionFunction,
   LinearShardSpec, NumberedShardSpec, ShardSpec, SingleDimensionShardSpec}
 

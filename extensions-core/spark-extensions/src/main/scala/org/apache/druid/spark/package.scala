@@ -19,6 +19,7 @@
 
 package org.apache.druid
 
+import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.{InjectableValues, Module, ObjectMapper}
 import org.apache.druid.jackson.DefaultObjectMapper
@@ -56,6 +57,10 @@ package object spark {
 
   def serialize(obj: AnyRef): String = {
     MAPPER.writeValueAsString(obj)
+  }
+
+  def deserialize[T](json: String, typeReference: TypeReference[T]): T = {
+    MAPPER.readValue[T](json, typeReference)
   }
 
   def registerModules(modules: Module*): ObjectMapper = {

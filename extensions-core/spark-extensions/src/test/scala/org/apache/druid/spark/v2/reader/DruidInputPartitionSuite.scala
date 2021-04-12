@@ -17,8 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.reader
 
-import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage
+import org.apache.druid.spark.SparkFunSuite
+import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
+import org.apache.spark.sql.sources.Filter
+import org.scalatest.matchers.should.Matchers
 
-case class DruidWriterCommitMessage(serializedSegments: Seq[String]) extends WriterCommitMessage
+
+class DruidInputPartitionSuite extends SparkFunSuite with Matchers with DruidDataSourceV2TestUtils {
+  test("DruidInputPartition should correctly serialize tasks") {
+    val reader =
+      new DruidInputPartition(firstSegment, schema, None, None, false, false).createPartitionReader()
+    reader.next() shouldBe true
+    reader.close()
+  }
+
+}

@@ -24,8 +24,8 @@ import org.apache.druid.guice.LocalDataStorageDruidModule
 import java.net.{URI, URISyntaxException}
 import java.util.{Map => JMap}
 import org.apache.druid.java.util.common.{IAE, ISE, StringUtils}
-import org.apache.druid.spark.utils.Logging
 import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.storage.s3.S3StorageDruidModule
 
 import scala.collection.mutable
@@ -40,9 +40,13 @@ object SegmentReaderRegistry extends Logging {
     new mutable.HashMap()
 
   /**
+    * Register functions to extract URIs from segment LoadSpecs. Functions should take a loadSpec (i.e. a Java Map from
+    * String to AnyRef) and return a URI that can be used to pull the corresponding segment from deep storage.
     *
-    * @param loadSpecType
-    * @param loadFunc
+    * @param loadSpecType The load spec type to register a load function for. Must match the value for the key
+    *                     `loadSpecType` in the loadSpec map.
+    * @param loadFunc A function that takes as its input a Java Map<String, Object> and returns a URI pointing to the
+    *                 corresponding segment on deep storage.
     */
   def register(loadSpecType: String, loadFunc: JMap[String, AnyRef] => URI): Unit = {
     registeredSegmentLoaderFunctions(loadSpecType) = loadFunc

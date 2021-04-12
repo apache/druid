@@ -35,9 +35,9 @@
     </parent>
 
     <properties>
-        <scala.version>2.12.11</scala.version>
+        <scala.version>2.12.12</scala.version>
         <scala.major.version>2.12</scala.major.version>
-        <spark.version>2.4.5</spark.version>
+        <spark.version>2.4.7</spark.version>
     </properties>
 
     <dependencyManagement>
@@ -273,7 +273,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-scala_2.12</artifactId>
-            <version>2.10.2</version>
+            <version>2.10.5</version>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>

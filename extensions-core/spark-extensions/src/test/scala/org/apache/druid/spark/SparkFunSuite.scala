@@ -32,7 +32,6 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
 import scala.reflect.io.Directory
 
 class SparkFunSuite extends AnyFunSuite with BeforeAndAfterEach {
-  // TODO: Figure out how turn off logging by package in slf4j to quiet unnecessarily verbose logs
 
   private val localSparkContext = new ThreadLocal[SparkContext]
   private val localSparkSession = new ThreadLocal[SparkSession]

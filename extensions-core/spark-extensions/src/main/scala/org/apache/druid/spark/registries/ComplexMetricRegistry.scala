@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.histogram.{ApproximateHistogram,
   ApproximateHistogramDruidModule, FixedBucketsHistogram, FixedBucketsHistogramAggregator}
 import org.apache.druid.query.aggregation.variance.{VarianceAggregatorCollector, VarianceSerde}
 import org.apache.druid.segment.serde.ComplexMetrics
-import org.apache.druid.spark.utils.Logging
+import org.apache.druid.spark.mixins.Logging
 
 import scala.collection.mutable
 

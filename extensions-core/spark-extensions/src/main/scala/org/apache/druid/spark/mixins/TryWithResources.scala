@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.spark.utils
+package org.apache.druid.spark.mixins
 
 import scala.util.control.{ControlThrowable, NonFatal}
 
@@ -42,13 +42,13 @@ trait TryWithResources {
     * A helper function to duplicate Java's try-with-resources construction. Mix in this trait and then call like so:
     * val resource = new ResourceImplementingAutoCloseable()
     * tryWithResources(resource){r =>
-    * r.doSomething()
+    *   r.doSomething()
     * }
     *
     * or, if desired,
     *
     * tryWithResources(new ResourceImplementingAutoCloseable()){ resouce =>
-    * resource.doSomething()
+    *   resource.doSomething()
     * }
     *
     * @param resource The AutoCloseable resource to use in FUNC.
@@ -93,9 +93,9 @@ trait TryWithResources {
     * val fileResource = new ResourceImplementingAutoCloseable()
     * val writerResource = new OtherAutoCloseable()
     * tryWithResources(Seq(fileResource, writerResource)){resources =>
-    * val file = resources(0)
-    * val writer = resources(1)
-    * writer.write(file, data)
+    *   val file = resources(0)
+    *   val writer = resources(1)
+    *   writer.write(file, data)
     * }
     *
     * @param resources A list of AutoCloseable resources to use in FUNC.
@@ -120,17 +120,17 @@ trait TryWithResources {
     * A helper function to duplicate Java's try-with-resources construction. Mix in this trait and then call like so:
     * val resources = (new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable())
     * tryWithResources(resources){
-    * case (first, second) =>
-    * first.doSomething()
-    * second.doSomething()
+    *   case (first, second) =>
+    *     first.doSomething()
+    *     second.doSomething()
     * }
     *
     * or, if desired,
     *
     * tryWithResources(new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable){
-    * case (first, second) =>
-    * first.doSomething()
-    * second.doSomething
+    *   case (first, second) =>
+    *     first.doSomething()
+    *     second.doSomething
     * }
     *
     * @param resources A tuple of AutoCloseable resources to use in FUNC.
@@ -156,19 +156,19 @@ trait TryWithResources {
     * A helper function to duplicate Java's try-with-resources construction. Mix in this trait and then call like so:
     * val resources = (new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable(), ...)
     * tryWithResources(resources){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * or, if desired,
     *
     * tryWithResources(new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable, ...){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * @param resources A tuple of AutoCloseable resources to use in FUNC.
@@ -194,19 +194,19 @@ trait TryWithResources {
     * A helper function to duplicate Java's try-with-resources construction. Mix in this trait and then call like so:
     * val resources = (new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable(), ...)
     * tryWithResources(resources){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * or, if desired,
     *
     * tryWithResources(new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable, ...){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * @param resources A tuple of AutoCloseable resources to use in FUNC.
@@ -232,19 +232,19 @@ trait TryWithResources {
     * A helper function to duplicate Java's try-with-resources construction. Mix in this trait and then call like so:
     * val resources = (new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable(), ...)
     * tryWithResources(resources){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * or, if desired,
     *
     * tryWithResources(new ResourceImplementingAutoCloseable(), new ResourceImplementingAutoCloseable, ...){
-    * case (first, second, ...) =>
-    * first.doSomething()
-    * second.doSomething()
-    * ...
+    *   case (first, second, ...) =>
+    *     first.doSomething()
+    *     second.doSomething()
+    *     ...
     * }
     *
     * @param resources A tuple of AutoCloseable resources to use in FUNC.

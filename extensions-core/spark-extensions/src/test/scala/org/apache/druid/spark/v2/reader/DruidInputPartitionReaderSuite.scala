@@ -17,19 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.spark.v2
+package org.apache.druid.spark.v2.reader
 
+import org.apache.druid.common.config.NullHandling
 import org.apache.druid.spark.SparkFunSuite
-import org.apache.spark.sql.sources.Filter
-import org.scalatest.matchers.should.Matchers
+import org.apache.druid.spark.configuration.SerializableHadoopConfiguration
+import org.apache.spark.sql.catalyst.InternalRow
 
+class DruidInputPartitionReaderSuite extends SparkFunSuite with InputPartitionReaderBehaviors[InternalRow] {
 
-class DruidInputPartitionSuite extends SparkFunSuite with Matchers with DruidDataSourceV2TestUtils {
-  test("DruidInputPartition should correctly serialize tasks") {
-    val reader =
-      new DruidInputPartition(firstSegment, schema, Array.empty[Filter], None).createPartitionReader()
-    reader.next() shouldBe true
-    reader.close()
+  private val conf = () => sparkContext.broadcast(new SerializableHadoopConfiguration(sparkContext.hadoopConfiguration))
+  private val sutName = "DruidInputPartitionReader"
+
+  // Run InputPartitionReader tests for DruidInputPartitionReader
+  testsFor(inputPartitionReader(
+    sutName,
+    conf,
+    new DruidInputPartitionReader(_, _, _, _, _, _, _),
+    partitionReaderToSeq
+  ))
+
+  override def beforeEach(): Unit = {
+    NullHandling.initializeForTests()
+    super.beforeEach()
   }
-
 }
