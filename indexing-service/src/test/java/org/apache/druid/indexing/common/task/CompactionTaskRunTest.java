@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
@@ -56,6 +57,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -480,6 +482,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -799,6 +802,107 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Test
+  public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompact() throws Exception
+  {
+    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    // This creates HOUR segments with intervals of
+    // - 2014-01-01T00:00:00/2014-01-01T01:00:00
+    // - 2014-01-01T01:00:00/2014-01-01T02:00:00
+    // - 2014-01-01T02:00:00/2014-01-01T03:00:00
+    runIndexTask();
+
+    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+
+    // Segments that did not belong in the compaction interval are expected unchanged
+    final Set<DataSegment> expectedSegments = new HashSet<>();
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask partialCompactionTask = builder
+        .interval(compactionPartialInterval)
+        .segmentGranularity(Granularities.MINUTE)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+
+    // New segments that was compacted are expected. However, old segments of the compacted interval should be drop
+    // regardless of the new segments fully overshadow the old segments or not. Hence, we do not expect old segments
+    // of the 2014-01-01T01:00:00/2014-01-01T02:00:00 interval post-compaction
+    expectedSegments.addAll(partialCompactionResult.rhs);
+
+    final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+
+    final CompactionTask fullCompactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .segmentGranularity(null)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
+
+    final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    segmentsAfterFullCompaction.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
+    );
+
+    Assert.assertEquals(3, segmentsAfterFullCompaction.size());
+    // Full Compaction with null segmentGranularity meaning that the original segmentGrnaularity is perserved
+    // For the intervals, 2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z and 2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z
+    // the original segmentGranularity is HOUR from the initial ingestion.
+    // For the interval, 2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z, the original segmentGranularity is
+    // MINUTE from the partial compaction done earlier.
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z"),
+        segmentsAfterFullCompaction.get(0).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z"),
+        segmentsAfterFullCompaction.get(1).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
+        segmentsAfterFullCompaction.get(2).getInterval()
+    );
+  }
+
+  @Test
   public void testRunIndexAndCompactForSameSegmentAtTheSameTime() throws Exception
   {
     runIndexTask();
@@ -975,6 +1079,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
+                false,
                 false
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
@@ -1051,7 +1156,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
-            appendToExisting
+            appendToExisting,
+            false
         ),
         null
     );
@@ -1114,7 +1220,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     return new TaskToolbox(
-        null,
+        new TaskConfig(null, null, null, null, null, false, null, null, null, false),
         null,
         createActionClient(task),
         null,

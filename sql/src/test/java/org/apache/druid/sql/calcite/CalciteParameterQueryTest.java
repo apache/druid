@@ -244,7 +244,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testParamsTuckedInACast() throws Exception
   {
-    cannotVectorize();
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - CAST(? as INT) = dim1 GROUP BY dim1, m1",
         ImmutableList.of(

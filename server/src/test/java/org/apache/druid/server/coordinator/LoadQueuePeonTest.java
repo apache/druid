@@ -225,6 +225,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertEquals(6000, loadQueuePeon.getLoadQueueSize());
     Assert.assertEquals(5, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(5, loadQueuePeon.getSegmentsToDrop().size());
+    Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
 
     for (DataSegment segment : segmentToDrop) {
       String dropRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getId().toString());
@@ -268,12 +269,63 @@ public class LoadQueuePeonTest extends CuratorTestBase
   }
 
   @Test
-  public void testFailAssign() throws Exception
+  public void testFailAssignForNonTimeoutFailures() throws Exception
+  {
+    final DataSegment segment = dataSegmentWithInterval("2014-10-22T00:00:00Z/P1D");
+
+    final CountDownLatch segmentLoadedSignal = new CountDownLatch(1);
+
+    loadQueuePeon = new CuratorLoadQueuePeon(
+        curator,
+        LOAD_QUEUE_PATH,
+        // This will fail inside SegmentChangeProcessor.run()
+        null,
+        Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
+        Execs.singleThreaded("test_load_queue_peon-%d"),
+        // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            null,
+            new Duration(1),
+            null,
+            null,
+            10,
+            new Duration("PT1s")
+        )
+    );
+
+    loadQueuePeon.start();
+
+    loadQueueCache.start();
+
+    loadQueuePeon.loadSegment(
+        segment,
+        new LoadPeonCallback()
+        {
+          @Override
+          public void execute()
+          {
+            segmentLoadedSignal.countDown();
+          }
+        }
+    );
+
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
+    Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
+    Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
+
+  }
+
+  @Test
+  public void testFailAssignForLoadDropTimeout() throws Exception
   {
     final DataSegment segment = dataSegmentWithInterval("2014-10-22T00:00:00Z/P1D");
 
     final CountDownLatch loadRequestSignal = new CountDownLatch(1);
     final CountDownLatch segmentLoadedSignal = new CountDownLatch(1);
+    final CountDownLatch delayedSegmentLoadedSignal = new CountDownLatch(2);
     final CountDownLatch loadRequestRemoveSignal = new CountDownLatch(1);
 
     loadQueuePeon = new CuratorLoadQueuePeon(
@@ -326,11 +378,13 @@ public class LoadQueuePeonTest extends CuratorTestBase
           public void execute()
           {
             segmentLoadedSignal.countDown();
+            delayedSegmentLoadedSignal.countDown();
           }
         }
     );
 
     String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getId().toString());
+
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal));
     Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
     Assert.assertEquals(
@@ -340,14 +394,20 @@ public class LoadQueuePeonTest extends CuratorTestBase
             .getSegment()
     );
 
-    // don't simulate completion of load request here
+    // simulate incompletion of load request since request has timed out
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
-    Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
-    Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(1, loadQueuePeon.getSegmentsToLoad().size());
+    Assert.assertEquals(1200L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(1, loadQueuePeon.getTimedOutSegments().size());
+
+    // simulate completion of load request by historical after time out on coordinator
     curator.delete().guaranteed().forPath(loadRequestPath);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(delayedSegmentLoadedSignal));
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestRemoveSignal));
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
+
   }
 
   private DataSegment dataSegmentWithInterval(String intervalStr)

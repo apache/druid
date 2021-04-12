@@ -17,34 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter.vector;
+package org.apache.druid.sql.avatica;
 
-import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.vector.VectorSizeInspector;
+import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.DruidNode;
 
-import javax.annotation.Nullable;
-
-/**
- * Treats all rows as null.
- */
-public class NilVectorValueMatcher implements VectorValueMatcherFactory
+public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
 {
-  private final VectorSizeInspector vectorInspector;
-
-  public NilVectorValueMatcher(final VectorSizeInspector vectorInspector)
+  @Override
+  protected String getJdbcConnectionString(final int port)
   {
-    this.vectorInspector = vectorInspector;
+    return StringUtils.format(
+            "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
+            port,
+            DruidAvaticaJsonHandler.AVATICA_PATH
+    );
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(@Nullable String value)
+  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
-    return BooleanVectorValueMatcher.of(vectorInspector, value == null);
-  }
-
-  @Override
-  public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
-  {
-    return BooleanVectorValueMatcher.of(vectorInspector, predicateFactory.makeStringPredicate().apply(null));
+    return new DruidAvaticaJsonHandler(
+            druidMeta,
+            new DruidNode("dummy", "dummy", false, 1, null, true, false),
+            new AvaticaMonitor()
+    );
   }
 }

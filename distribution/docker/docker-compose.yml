@@ -42,6 +42,8 @@ services:
   zookeeper:
     container_name: zookeeper
     image: zookeeper:3.5
+    ports:
+      - "2181:2181"
     environment:
       - ZOO_MY_ID=1
 
@@ -106,6 +108,7 @@ services:
       - coordinator
     ports:
       - "8091:8091"
+      - "8100-8105:8100-8105"
     command:
       - middleManager
     env_file:

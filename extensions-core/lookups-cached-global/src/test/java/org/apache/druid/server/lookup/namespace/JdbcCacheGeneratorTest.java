@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -42,7 +43,7 @@ import java.util.Collections;
 public class JdbcCacheGeneratorTest
 {
   private static final MetadataStorageConnectorConfig MISSING_METADATA_STORAGE_CONNECTOR_CONFIG =
-      createMetadataStorageConnectorConfig("postgresql");
+      createMetadataStorageConnectorConfig("mydb");
 
   private static final CacheScheduler.EntryImpl<JdbcExtractionNamespace> KEY =
       EasyMock.mock(CacheScheduler.EntryImpl.class);
@@ -127,7 +128,8 @@ public class JdbcCacheGeneratorTest
         "valueColumn",
         tsColumn,
         "filter",
-        Period.ZERO
+        Period.ZERO,
+        new JdbcAccessSecurityConfig()
     );
   }
 }

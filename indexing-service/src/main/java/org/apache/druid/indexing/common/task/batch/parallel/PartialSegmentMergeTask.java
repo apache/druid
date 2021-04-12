@@ -329,7 +329,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         });
       }
       if (maxNumSegmentsToMerge >= indexes.size()) {
-        dimensionNames = IndexMerger.getMergedDimensionsFromQueryableIndexes(indexesToMerge);
+        dimensionNames = IndexMerger.getMergedDimensionsFromQueryableIndexes(indexesToMerge, dataSchema.getDimensionsSpec());
       }
       final File outDir = new File(baseOutDir, StringUtils.format("merged_%d", suffix++));
       mergedFiles.add(

@@ -429,6 +429,12 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
+  public Set<DataSegment> getTimedOutSegments()
+  {
+    return Collections.emptySet();
+  }
+
+  @Override
   public long getLoadQueueSize()
   {
     return queuedSize.get();

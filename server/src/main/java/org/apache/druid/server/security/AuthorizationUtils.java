@@ -271,6 +271,9 @@ public class AuthorizationUtils
           if (resourceActions == null) {
             return false;
           }
+          if (authorizer instanceof AllowAllAuthorizer) {
+            return true;
+          }
           for (ResourceAction resourceAction : resourceActions) {
             Access access = resultCache.computeIfAbsent(
                 resourceAction,

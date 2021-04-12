@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -61,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -141,8 +144,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final AggregatorFactory[] metricsSpec;
   @Nullable
-  private final Granularity segmentGranularity;
-  @Nullable
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
   private final ParallelIndexTuningConfig tuningConfig;
@@ -206,7 +207,20 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
-    this.segmentGranularity = segmentGranularity;
+    // Prior to apache/druid#10843 users could specify segmentGranularity using `segmentGranularity`
+    // Now users should prefer to use `granularitySpec`
+    // In case users accidentally specify both, and they are conflicting, warn the user instead of proceeding
+    // by picking one or another.
+    if (granularitySpec != null
+        && segmentGranularity != null
+        && !segmentGranularity.equals(granularitySpec.getSegmentGranularity())) {
+      throw new IAE(StringUtils.format(
+          "Conflicting segment granularities found %s(segmentGranularity) and %s(granularitySpec.segmentGranularity).\n"
+          + "Remove `segmentGranularity` and set the `granularitySpec.segmentGranularity` to the expected granularity",
+          segmentGranularity,
+          granularitySpec.getSegmentGranularity()
+      ));
+    }
     if (granularitySpec == null && segmentGranularity != null) {
       this.granularitySpec = new ClientCompactionTaskGranularitySpec(segmentGranularity, null);
     } else {
@@ -293,6 +307,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return metricsSpec;
   }
 
+  @JsonInclude(Include.NON_NULL)
   @JsonProperty
   @Nullable
   @Override
@@ -544,7 +559,9 @@ public class CompactionTask extends AbstractBatchIndexTask
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            granularitySpec == null ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null) : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
+            granularitySpec == null
+            ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null)
+            : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
         specs.add(
@@ -607,15 +624,17 @@ public class CompactionTask extends AbstractBatchIndexTask
             interval,
             null,
             null,
-            dataSchema.getDimensionsSpec().getDimensionNames(),
-            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null,
+            null,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
-            retryPolicyFactory
+            retryPolicyFactory,
+            toolbox.getConfig()
         ),
         null,
-        false
+        false,
+        true
     );
   }
 
@@ -658,7 +677,10 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Generate compaction task spec with segments original query granularity [%s]", queryGranularityToUse);
     } else {
       queryGranularityToUse = granularitySpec.getQueryGranularity();
-      log.info("Generate compaction task spec with new query granularity overrided from input [%s]", queryGranularityToUse);
+      log.info(
+          "Generate compaction task spec with new query granularity overrided from input [%s]",
+          queryGranularityToUse
+      );
     }
 
     final GranularitySpec uniformGranularitySpec = new UniformGranularitySpec(
@@ -679,7 +701,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return new
         DataSchema(
         dataSource,
-        new TimestampSpec(null, null, null),
+        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
