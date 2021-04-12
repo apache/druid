@@ -185,6 +185,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 
 ## Apply functions
+Apply functions allow for special 'lambda' expressions to be defined and applied to array inputs to enable free-form transformations.
 
 | function | description |
 | --- | --- |
@@ -196,6 +197,26 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
+
+### Lambda expressions syntax
+Lambda expressions are a sort of function definition, where new identifiers can be defined and passed as input to the expression body
+```
+(identifier1 ...) -> expr
+```
+e.g.
+```
+(x, y) -> x + y 
+```
+The identifier arguments of a lambda expression correspond to the elements of the array it is being applied to. For example:
+```
+map((x) -> x + 1, some_multi_value_column)
+```
+will map each element of `some_multi_value_column` to the identifier `x` so that the lambda expression body can be evaluated for each `x`. The scoping rules are that lambda arguments will override identifiers which are defined externally from the lambda expression body. Using the same example:
+
+```
+map((x) -> x + 1, x)
+```
+in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
 
 ## Reduction functions
 

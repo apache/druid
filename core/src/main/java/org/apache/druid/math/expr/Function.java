@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -450,8 +451,11 @@ public interface Function
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
 
-      if (arrayExpr1.asArray() == null || arrayExpr2.asArray() == null) {
-        return ExprEval.of(null);
+      if (arrayExpr1.asArray() == null) {
+        return arrayExpr1;
+      }
+      if (arrayExpr2.asArray() == null) {
+        return arrayExpr2;
       }
 
       return doApply(arrayExpr1, arrayExpr2);
@@ -3287,6 +3291,75 @@ public interface Function
     private <T> Stream<T> cat(T[] array1, T[] array2)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array1));
+      l.addAll(Arrays.asList(array2));
+      return l.stream();
+    }
+  }
+
+  class ArraySetConcatFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_set_concat";
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExprType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+
+      if (array1 == null) {
+        return ExprEval.of(null);
+      }
+      if (array2 == null) {
+        return lhsExpr;
+      }
+
+      switch (lhsExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(
+              cat(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
+          );
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              cat(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              cat(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
+          );
+      }
+      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
+    }
+
+    private <T> Stream<T> cat(T[] array1, T[] array2)
+    {
+      Set<T> l = new HashSet<>(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }

@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -35,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.antlr.ExprLexer;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,16 +98,32 @@ public class Parser
   }
 
   /**
-   * Parse a string into a flattened {@link Expr}. There is some overhead to this, and these objects are all immutable,
-   * so re-use instead of re-creating whenever possible.
+   * Create a memoized lazy supplier to parse a string into a flattened {@link Expr}. There is some overhead to this,
+   * and these objects are all immutable, so this assists in the goal of re-using instead of re-creating whenever
+   * possible.
+   *
+   * Lazy form of {@link #parse(String, ExprMacroTable)}
+   *
    * @param in expression to parse
    * @param macroTable additional extensions to expression language
-   * @return
+   */
+  public static Supplier<Expr> lazyParse(@Nullable String in, ExprMacroTable macroTable)
+  {
+    return Suppliers.memoize(() -> in == null ? null : Parser.parse(in, macroTable));
+  }
+
+  /**
+   * Parse a string into a flattened {@link Expr}. There is some overhead to this, and these objects are all immutable,
+   * so re-use instead of re-creating whenever possible.
+   *
+   * @param in expression to parse
+   * @param macroTable additional extensions to expression language
    */
   public static Expr parse(String in, ExprMacroTable macroTable)
   {
     return parse(in, macroTable, true);
   }
+
 
   @VisibleForTesting
   public static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
