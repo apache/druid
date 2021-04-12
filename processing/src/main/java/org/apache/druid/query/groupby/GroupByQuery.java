@@ -345,6 +345,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   /**
    * If this query has a single universal timestamp, return it. Otherwise return null.
    *
+   * If {@link #getIntervals()} is empty, there are no results (or timestamps) so this method returns null.
+   *
    * This method will return a nonnull timestamp in the following two cases:
    *
    * 1) CTX_KEY_FUDGE_TIMESTAMP is set (in which case this timestamp will be returned).
@@ -715,7 +717,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     if (!timestampStringFromContext.isEmpty()) {
       return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(granularity)) {
-      final DateTime timeStart = getIntervals().get(0).getStart();
+      final List<Interval> intervals = getIntervals();
+      if (intervals.isEmpty()) {
+        // null, the "universal timestamp" of nothing
+        return null;
+      }
+      final DateTime timeStart = intervals.get(0).getStart();
       return granularity.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;

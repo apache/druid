@@ -74,7 +74,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -130,7 +130,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -185,7 +185,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -241,7 +241,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -296,7 +296,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -351,7 +351,7 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return inspector.areNumeric(left, right) && inspector.canVectorize(left, right);
+    return inspector.canVectorize(left, right);
   }
 
   @Override

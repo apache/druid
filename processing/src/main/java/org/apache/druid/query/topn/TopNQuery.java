@@ -73,6 +73,10 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     super(dataSource, querySegmentSpec, false, context, granularity);
 
+    Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
+    Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
+    Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
@@ -88,10 +92,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
             : postAggregatorSpecs
     );
 
-    Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
-    Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
-
-    Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 

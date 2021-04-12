@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.math.expr.vector.VectorStringProcessors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -1084,8 +1085,10 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.integerMathFunction(args.get(0).getOutputType(inspector), args.get(1).getOutputType(
-          inspector));
+      return ExprTypeConversion.integerMathFunction(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
     }
 
     @Override
@@ -2188,6 +2191,21 @@ public interface Function
     public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExprType.STRING;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areScalar(args) && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(
+        Expr.VectorInputBindingInspector inspector,
+        List<Expr> args
+    )
+    {
+      return VectorStringProcessors.concat(inspector, args);
     }
   }
 

@@ -90,7 +90,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.34.v20201102</jetty.version>
+        <jetty.version>9.4.39.v20210325</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
@@ -101,18 +101,18 @@
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.48.Final</netty4.version>
-        <node.version>v10.14.2</node.version>
-        <npm.version>6.5.0</npm.version>
+        <node.version>v10.24.0</node.version>
+        <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
-        <mockito.version>3.2.4</mockito.version>
-        <powermock.version>2.0.2</powermock.version>
+        <mockito.version>3.8.0</mockito.version>
+        <powermock.version>2.0.9</powermock.version>
         <aws.sdk.version>1.11.884</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
-        <jacoco.version>0.8.5</jacoco.version>
+        <jacoco.version>0.8.6</jacoco.version>
         <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
              If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
              see http://curator.apache.org/zk-compatibility.html -->
@@ -198,6 +198,7 @@
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
         <module>extensions-contrib/aliyun-oss-extensions</module>
+        <module>extensions-contrib/prometheus-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -958,6 +959,11 @@
                 <version>4.5.1</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.2</version>
+            </dependency>
+            <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
@@ -1042,7 +1048,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>4.0.2</version>
+                <version>4.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1107,7 +1113,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.13.2</version>
+                <version>3.19.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1225,7 +1231,14 @@
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.14.3</version>
+                <version>7.3.0</version>
+                <!-- testng ships guice 4.2, which requires a newer version of guava -->
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.inject</groupId>
+                        <artifactId>guice</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -1254,7 +1267,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.1.11</version>
+                <version>3.5.5</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1351,13 +1364,13 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12</version>
+                <version>4.2.0</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>3.1.12</version>
+                        <version>4.2.2</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -1367,7 +1380,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.8</version>
+                <version>3.14.0</version>
                 <configuration>
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
@@ -1390,7 +1403,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>2.6</version>
+                <version>3.1</version>
                 <configuration>
                     <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
@@ -1469,7 +1482,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>1.4.1</version>
+                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1478,6 +1491,9 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <requireMavenVersion>
+                                    <version>3.0.0</version>
+                                </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>1.8.0</version>
                                 </requireJavaVersion>
@@ -1723,10 +1739,10 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.6</version>
+                    <version>1.11.3</version>
                     <configuration>
-                        <nodeVersion>v10.13.0</nodeVersion>
-                        <npmVersion>6.4.1</npmVersion>
+                        <nodeVersion>${node.version}</nodeVersion>
+                        <npmVersion>${npm.version}</npmVersion>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1944,6 +1960,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>

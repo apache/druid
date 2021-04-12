@@ -74,6 +74,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -101,6 +102,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
+  private final long awaitSegmentAvailabilityTimeoutMillis;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -130,7 +132,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("allowedHadoopPrefix") @Nullable List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
   )
   {
     this.workingPath = workingPath;
@@ -176,6 +179,12 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+
+    if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+      this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+    } else {
+      this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+    }
   }
 
   @Nullable
@@ -334,6 +343,12 @@ public class HadoopTuningConfig implements TuningConfig
     return useYarnRMJobStatusFallback;
   }
 
+  @JsonProperty
+  public long getAwaitSegmentAvailabilityTimeoutMillis()
+  {
+    return awaitSegmentAvailabilityTimeoutMillis;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -361,7 +376,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -392,7 +408,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -423,7 +440,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 }

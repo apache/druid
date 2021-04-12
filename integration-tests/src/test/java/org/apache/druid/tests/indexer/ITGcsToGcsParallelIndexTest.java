@@ -45,6 +45,6 @@ public class ITGcsToGcsParallelIndexTest extends AbstractGcsInputSourceParallelI
   @Test(dataProvider = "resources")
   public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception
   {
-    doTest(gcsInputSource);
+    doTest(gcsInputSource, new Pair<>(false, false));
   }
 }

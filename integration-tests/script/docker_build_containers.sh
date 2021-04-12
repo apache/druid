@@ -28,11 +28,11 @@ else
   case "${DRUID_INTEGRATION_TEST_JVM_RUNTIME}" in
   8)
     echo "Build druid-cluster with Java 8"
-    docker build -t druid/cluster --build-arg JDK_VERSION=8-slim --build-arg MYSQL_VERSION $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=8-slim --build-arg MYSQL_VERSION --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   11)
     echo "Build druid-cluster with Java 11"
-    docker build -t druid/cluster --build-arg JDK_VERSION=11-slim --build-arg MYSQL_VERSION $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=11-slim --build-arg MYSQL_VERSION --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   *)
     echo "Invalid JVM Runtime given. Stopping"
@@ -44,5 +44,5 @@ fi
 # Build Hadoop docker if needed
 if [ -n "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" == true ]
 then
-  docker build -t druid-it/hadoop:2.8.5 $HADOOP_DOCKER_DIR
+  docker build -t druid-it/hadoop:2.8.5  --build-arg APACHE_ARCHIVE_MIRROR_HOST $HADOOP_DOCKER_DIR
 fi

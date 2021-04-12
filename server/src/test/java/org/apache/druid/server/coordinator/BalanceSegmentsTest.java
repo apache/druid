@@ -1094,7 +1094,7 @@ public class BalanceSegmentsTest
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)
         .withGuildReplicationDirective(guildReplicationEnabled)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, guildReplicationEnabled));
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false, guildReplicationEnabled));
   }
 
   private static void mockDruidServer(

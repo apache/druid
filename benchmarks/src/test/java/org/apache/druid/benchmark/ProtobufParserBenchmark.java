@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -73,6 +74,7 @@ public class ProtobufParserBenchmark
   private ProtobufInputRowParser flatParser;
   private byte[] protoInputs;
   private String protoFilePath;
+  private FileBasedProtobufBytesDecoder decoder;
 
   @Setup
   public void setup()
@@ -109,11 +111,12 @@ public class ProtobufParserBenchmark
             null,
             null
     );
+    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
 
     protoFilePath = "ProtoFile";
     protoInputs = getProtoInputs(protoFilePath);
-    nestedParser = new ProtobufInputRowParser(nestedParseSpec, "prototest.desc", "ProtoTestEvent");
-    flatParser = new ProtobufInputRowParser(flatParseSpec, "prototest.desc", "ProtoTestEvent");
+    nestedParser = new ProtobufInputRowParser(nestedParseSpec, decoder, null, null);
+    flatParser = new ProtobufInputRowParser(flatParseSpec, decoder, null, null);
   }
 
   @Benchmark

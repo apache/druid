@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -41,6 +42,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
@@ -53,9 +55,12 @@ import java.util.stream.Collectors;
 
 public class DruidJoinRule extends RelOptRule
 {
-  private static final DruidJoinRule INSTANCE = new DruidJoinRule();
+  private static final DruidJoinRule INSTANCE = new DruidJoinRule(true);
+  private static final DruidJoinRule LEFT_SCAN_AS_QUERY = new DruidJoinRule(false);
 
-  private DruidJoinRule()
+  private final boolean enableLeftScanDirect;
+
+  private DruidJoinRule(final boolean enableLeftScanDirect)
   {
     super(
         operand(
@@ -64,11 +69,12 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
+    this.enableLeftScanDirect = enableLeftScanDirect;
   }
 
-  public static DruidJoinRule instance()
+  public static DruidJoinRule instance(boolean enableLeftScanDirect)
   {
-    return INSTANCE;
+    return enableLeftScanDirect ? INSTANCE : LEFT_SCAN_AS_QUERY;
   }
 
   @Override
@@ -97,18 +103,21 @@ public class DruidJoinRule extends RelOptRule
 
     final DruidRel<?> newLeft;
     final DruidRel<?> newRight;
+    final Filter leftFilter;
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
+    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && left.getPartialDruidQuery().getWhereFilter() == null) {
+        && (isLeftDirectAccessPossible || left.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the join, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode leftScan = left.getPartialDruidQuery().getScan();
       final Project leftProject = left.getPartialDruidQuery().getSelectProject();
+      leftFilter = left.getPartialDruidQuery().getWhereFilter();
 
       // Left-side projection expressions rewritten to be on top of the join.
       newProjectExprs.addAll(leftProject.getProjects());
@@ -121,6 +130,7 @@ public class DruidJoinRule extends RelOptRule
       }
 
       newLeft = left;
+      leftFilter = null;
     }
 
     if (right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
@@ -163,6 +173,7 @@ public class DruidJoinRule extends RelOptRule
             join.getJoinType(),
             join.isSemiJoinDone()
         ),
+        leftFilter,
         left.getQueryMaker()
     );
 

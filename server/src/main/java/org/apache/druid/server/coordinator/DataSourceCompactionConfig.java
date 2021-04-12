@@ -22,9 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.granularity.BaseGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -49,7 +46,8 @@ public class DataSourceCompactionConfig
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
-  private final GranularitySpec granularitySpec;
+  private final UserCompactionTaskGranularityConfig granularitySpec;
+  private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -60,7 +58,8 @@ public class DataSourceCompactionConfig
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
-      @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
+      @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
+      @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -74,22 +73,11 @@ public class DataSourceCompactionConfig
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
+    this.ioConfig = ioConfig;
     if (granularitySpec != null) {
       Preconditions.checkArgument(
-          granularitySpec instanceof UniformGranularitySpec,
-          "Auto compaction granularitySpec only supports uniform type"
-      );
-      Preconditions.checkArgument(
-          granularitySpec.isRollup() == BaseGranularitySpec.DEFAULT_ROLLUP,
-          "Auto compaction granularitySpec only supports default rollup value"
-      );
-      Preconditions.checkArgument(
-          granularitySpec.getQueryGranularity().equals(BaseGranularitySpec.DEFAULT_QUERY_GRANULARITY),
-          "Auto compaction granularitySpec only supports default query granularity value");
-      Preconditions.checkArgument(
-          granularitySpec.inputIntervals().isEmpty(),
-          "Auto compaction granularitySpec does not supports interval value"
-      );
+          granularitySpec.getQueryGranularity() == null,
+          "Auto compaction granularitySpec does not support query granularity value");
     }
     this.granularitySpec = granularitySpec;
     this.taskContext = taskContext;
@@ -136,7 +124,14 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public GranularitySpec getGranularitySpec()
+  public UserCompactionTaskIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskGranularityConfig getGranularitySpec()
   {
     return granularitySpec;
   }
@@ -165,6 +160,7 @@ public class DataSourceCompactionConfig
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -179,6 +175,7 @@ public class DataSourceCompactionConfig
         skipOffsetFromLatest,
         tuningConfig,
         granularitySpec,
+        ioConfig,
         taskContext
     );
   }

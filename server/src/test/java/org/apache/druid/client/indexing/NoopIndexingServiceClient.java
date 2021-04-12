@@ -50,7 +50,8 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
-      @Nullable ClientCompactionTaskQueryGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
   {

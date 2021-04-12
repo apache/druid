@@ -63,6 +63,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String middleManagerHost;
   private String zookeeperHosts;        // comma-separated list of host:port
   private String kafkaHost;
+  private String schemaRegistryHost;
   private Map<String, String> props = null;
   private String username;
   private String password;
@@ -222,6 +223,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
 
     zookeeperHosts = props.get("zookeeper_hosts");
     kafkaHost = props.get("kafka_host") + ":" + props.get("kafka_port");
+    schemaRegistryHost = props.get("schema_registry_host") + ":" + props.get("schema_registry_port");
 
     username = props.get("username");
 
@@ -497,6 +499,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getStreamEndpoint()
       {
         return streamEndpoint;
+      }
+
+      @Override
+      public String getSchemaRegistryHost()
+      {
+        return schemaRegistryHost;
       }
 
       @Override

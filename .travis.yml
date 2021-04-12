@@ -153,12 +153,6 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
     
-    - <<: *package
-      name: "Build and test on ARM64 CPU architecture"
-      stage: Tests - phase 2
-      arch: arm64
-      jdk: openjdk11
-
     - &test_processing_module
       name: "(openjdk8) processing module test"
       stage: Tests - phase 1

@@ -182,6 +182,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
     };
     hashJoinSegment = new HashJoinSegment(
         testWrapper,
+        null,
         joinableClauses,
         null
     )
@@ -210,6 +211,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
 
     final HashJoinSegment ignored = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClauses,
         null
     );

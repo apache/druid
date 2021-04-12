@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -154,8 +155,9 @@ public interface Filter
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.
+   * @param inspector Supplies type information for the selectors this filter will match against
    */
-  default boolean canVectorizeMatcher()
+  default boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return false;
   }

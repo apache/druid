@@ -37,6 +37,7 @@ export interface CoordinatorDynamicConfig {
   decommissioningNodes?: string[];
   decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
+  replicateAfterLoadTimeout?: boolean;
   guildReplicationMaxPercentOfMaxSegmentsToMove?: number;
   emitGuildReplicationMetrics?: boolean;
 }
@@ -221,6 +222,18 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         Boolean flag for whether or not the coordinator should execute its various duties of
         coordinating the cluster. Setting this to true essentially pauses all coordination work
         while allowing the API to remain up.
+      </>
+    ),
+  },
+  {
+    name: 'replicateAfterLoadTimeout',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether or not additional replication is needed for segments that have
+        failed to load due to the expiry of coordinator load timeout. If this is set to true, the
+        coordinator will attempt to replicate the failed segment on a different historical server.
       </>
     ),
   },

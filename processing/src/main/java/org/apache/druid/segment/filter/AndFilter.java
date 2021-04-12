@@ -36,6 +36,7 @@ import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -132,9 +133,9 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
-    return filters.stream().allMatch(Filter::canVectorizeMatcher);
+    return filters.stream().allMatch(filter -> filter.canVectorizeMatcher(inspector));
   }
 
   @Override

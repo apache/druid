@@ -131,4 +131,18 @@ public class QueryContextsTest
     );
     Assert.assertTrue(QueryContexts.isSecondaryPartitionPruningEnabled(query));
   }
+
+  @Test
+  public void testGetEnableJoinLeftScanDirect()
+  {
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
+    Assert.assertTrue(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        true
+    )));
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        false
+    )));
+  }
 }

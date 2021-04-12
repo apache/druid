@@ -468,6 +468,45 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
   }
 
+  @Test
+  public void testGetAvaticaProtobufConnectionId()
+  {
+    final String query = "SELECT someColumn FROM druid.someTable WHERE someColumn IS NOT NULL";
+    final String connectionId = "000000-0000-0000-00000000";
+    final int statementId = 1337;
+    final int maxNumRows = 1000;
+
+    final List<? extends Service.Request> avaticaRequests = ImmutableList.of(
+            new Service.CatalogsRequest(connectionId),
+            new Service.SchemasRequest(connectionId, "druid", null),
+            new Service.TablesRequest(connectionId, "druid", "druid", null, null),
+            new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null),
+            new Service.PrepareAndExecuteRequest(
+                    connectionId,
+                    statementId,
+                    query,
+                    maxNumRows
+            ),
+            new Service.PrepareRequest(connectionId, query, maxNumRows),
+            new Service.ExecuteRequest(
+                    new Meta.StatementHandle(connectionId, statementId, null),
+                    ImmutableList.of(),
+                    maxNumRows
+            ),
+            new Service.CloseStatementRequest(connectionId, statementId),
+            new Service.CloseConnectionRequest(connectionId)
+    );
+
+
+    for (Service.Request request : avaticaRequests) {
+      Assert.assertEquals(
+              "failed",
+              connectionId,
+              AsyncQueryForwardingServlet.getAvaticaProtobufConnectionId(request)
+      );
+    }
+  }
+
   private static Map<String, Object> asMap(String json, ObjectMapper mapper) throws JsonProcessingException
   {
     return mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);

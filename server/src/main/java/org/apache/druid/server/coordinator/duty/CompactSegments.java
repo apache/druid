@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -310,15 +310,19 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
-        ClientCompactionTaskQueryGranularitySpec queryGranularitySpec;
+        ClientCompactionTaskGranularitySpec queryGranularitySpec;
         if (config.getGranularitySpec() != null) {
-          queryGranularitySpec = new ClientCompactionTaskQueryGranularitySpec(
+          queryGranularitySpec = new ClientCompactionTaskGranularitySpec(
               config.getGranularitySpec().getSegmentGranularity(),
-              config.getGranularitySpec().getQueryGranularity(),
-              config.getGranularitySpec().isRollup()
+              config.getGranularitySpec().getQueryGranularity()
           );
         } else {
           queryGranularitySpec = null;
+        }
+
+        Boolean dropExisting = null;
+        if (config.getIoConfig() != null) {
+          dropExisting = config.getIoConfig().isDropExisting();
         }
 
         // make tuningConfig
@@ -328,6 +332,7 @@ public class CompactSegments implements CoordinatorDuty
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             queryGranularitySpec,
+            dropExisting,
             newAutoCompactionContext(config.getTaskContext())
         );
 

@@ -399,7 +399,7 @@ public class RowBasedGrouperHelper
 
     final SettableSupplier<ResultRow> rowSupplier = new SettableSupplier<>();
     final ColumnSelectorFactory columnSelectorFactory =
-        RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier);
+        query.getVirtualColumns().wrap(RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier));
 
     final ValueMatcher filterMatcher = filter == null
                                        ? BooleanValueMatcher.of(true)
