@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -415,7 +416,24 @@ public class FunctionTest extends InitializedNullHandlingTest
         Pair.of("x", "STRING")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+      if (NullHandling.sqlCompatible()) {
+        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+      } else {
+        try {
+          assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+          Assert.fail("Did not throw IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) {
+          Assert.assertEquals(
+              String.format(
+                  Locale.ENGLISH,
+                  "The first argument to the function[round] should be integer or double type but got the type: %s",
+                  argAndType.rhs
+              ),
+              e.getMessage()
+          );
+        }
+      }
     }
   }
 

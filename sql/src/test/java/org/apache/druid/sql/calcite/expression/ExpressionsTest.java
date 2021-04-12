@@ -904,7 +904,7 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    if(!NullHandling.sqlCompatible()) {
+    if (!NullHandling.sqlCompatible()) {
       expectException(
           IAE.class,
           "The first argument to the function[round] should be integer or double type but got the type: STRING"
