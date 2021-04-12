@@ -645,7 +645,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
       Thread.currentThread().interrupt();
       return false;
-    } finally {
+    }
+    finally {
       segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
     }
   }

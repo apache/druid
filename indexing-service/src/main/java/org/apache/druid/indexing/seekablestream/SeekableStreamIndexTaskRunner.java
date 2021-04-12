@@ -827,7 +827,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              .addData("taskId", task.getId())
              .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
              .emit();
-        } finally {
+        }
+        finally {
           handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         }
       }
