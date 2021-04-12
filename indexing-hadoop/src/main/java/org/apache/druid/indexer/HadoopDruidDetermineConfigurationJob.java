@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
+import org.apache.hadoop.mapreduce.Job;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -59,7 +60,12 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     if (config.isDeterminingPartitions()) {
       job = createPartitionJob(config);
       config.setHadoopJobIdFileName(hadoopJobIdFile);
-      return JobHelper.runSingleJob(job);
+      boolean jobSucceeded = JobHelper.runSingleJob(job);
+      JobHelper.maybeDeleteIntermediatePath(
+          jobSucceeded,
+          config.getSchema()
+      );
+      return jobSucceeded;
     } else {
       final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
       final int shardsPerInterval;
