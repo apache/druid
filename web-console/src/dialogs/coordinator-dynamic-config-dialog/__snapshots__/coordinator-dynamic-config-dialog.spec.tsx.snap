@@ -194,7 +194,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": 0,
           "info": <React.Fragment>
-            Only used if
+            Only used if 
             <Unknown>
               druid.coordinator.guildReplication.on=true
             </Unknown>
@@ -206,7 +206,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": false,
           "info": <React.Fragment>
-            Only used if
+            Only used if 
             <Unknown>
               druid.coordinator.guildReplication.on=true
             </Unknown>

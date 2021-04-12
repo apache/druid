@@ -85,6 +85,9 @@ public class CoordinatorDynamicConfigTest
     assertConfig(actual, 1, 1, 1, 1, 10, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, false, 40, true);
 
     actual = CoordinatorDynamicConfig.builder().withReplicateAfterLoadTimeout(true).build(actual);
+    assertConfig(actual, 1, 1, 1, 1, 10, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, true, 40, true);
+
+    actual = CoordinatorDynamicConfig.builder().withGuildReplicationMaxPercentOfMaxSegmentsToMove(90.0).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 10, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, true, 90, true);
 
     actual = CoordinatorDynamicConfig.builder().withEmitGuildReplicationMetrics(false).build(actual);
