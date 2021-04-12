@@ -21,6 +21,7 @@ import * as playwright from 'playwright-chromium';
 import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 import { ConfigureSchemaConfig } from './config/configure-schema';
+import { ConfigureTimestampConfig } from './config/configure-timestamp';
 import { PartitionConfig } from './config/partition';
 import { PublishConfig } from './config/publish';
 import { DataConnector } from './data-connector/data-connector';
@@ -45,7 +46,7 @@ export class DataLoader {
     await this.connect(this.connector, this.connectValidator);
     if (this.connector.needParse) {
       await this.parseData();
-      await this.parseTime();
+      await this.parseTime(this.configureTimestampConfig);
     }
     await this.transform();
     await this.filter();
@@ -81,8 +82,11 @@ export class DataLoader {
     await clickButton(this.page, 'Next: Parse time');
   }
 
-  private async parseTime() {
+  private async parseTime(configureTimestampConfig?: ConfigureTimestampConfig) {
     await this.page.waitForSelector('.parse-time-table');
+    if (configureTimestampConfig) {
+      await this.applyConfigureTimestampConfig(configureTimestampConfig);
+    }
     await clickButton(this.page, 'Next: Transform');
   }
 
@@ -100,6 +104,12 @@ export class DataLoader {
     await this.page.waitForSelector('.schema-table');
     await this.applyConfigureSchemaConfig(configureSchemaConfig);
     await clickButton(this.page, 'Next: Partition');
+  }
+
+  private async applyConfigureTimestampConfig(configureTimestampConfig: ConfigureTimestampConfig) {
+    await clickButton(this.page, 'Expression');
+    await setLabeledInput(this.page, 'Expression', configureTimestampConfig.timestampExpression);
+    await clickButton(this.page, 'Apply');
   }
 
   private async applyConfigureSchemaConfig(configureSchemaConfig: ConfigureSchemaConfig) {
@@ -161,6 +171,7 @@ interface DataLoaderProps {
   readonly unifiedConsoleUrl: string;
   readonly connector: DataConnector;
   readonly connectValidator: (preview: string) => void;
+  readonly configureTimestampConfig?: ConfigureTimestampConfig;
   readonly configureSchemaConfig: ConfigureSchemaConfig;
   readonly partitionConfig: PartitionConfig;
   readonly publishConfig: PublishConfig;

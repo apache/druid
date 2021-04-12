@@ -22,17 +22,15 @@ import * as playwright from 'playwright-chromium';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import { SegmentGranularity } from './component/load-data/config/partition';
-import { PartitionConfig } from './component/load-data/config/partition';
+import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
+import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
 import { PublishConfig } from './component/load-data/config/publish';
 import { LocalFileDataConnector } from './component/load-data/data-connector/local-file';
 import { DataLoader } from './component/load-data/data-loader';
 import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
-import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowser } from './util/playwright';
-import { createPage } from './util/playwright';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, UNIFIED_CONSOLE_URL } from './util/druid';
+import { createBrowser, createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
 
@@ -60,26 +58,24 @@ describe('Tutorial: Loading a file', () => {
   it('Loads data from local disk', async () => {
     const testName = 'load-data-from-local-disk-';
     const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
-    const dataConnector = new LocalFileDataConnector(page, {
-      baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-      fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
-    });
-    const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
-    const partitionConfig = new PartitionConfig({
-      segmentGranularity: SegmentGranularity.DAY,
-      timeIntervals: null,
-      partitionsSpec: null,
-    });
-    const publishConfig = new PublishConfig({ datasourceName: datasourceName });
-
     const dataLoader = new DataLoader({
       page: page,
       unifiedConsoleUrl: UNIFIED_CONSOLE_URL,
-      connector: dataConnector,
+      connector: new LocalFileDataConnector(page, {
+        baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
+        fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
+      }),
       connectValidator: validateConnectLocalData,
-      configureSchemaConfig: configureSchemaConfig,
-      partitionConfig: partitionConfig,
-      publishConfig: publishConfig,
+      configureTimestampConfig: new ConfigureTimestampConfig({
+        timestampExpression: 'timestamp_parse("time") + 1',
+      }),
+      configureSchemaConfig: new ConfigureSchemaConfig({ rollup: false }),
+      partitionConfig: new PartitionConfig({
+        segmentGranularity: SegmentGranularity.DAY,
+        timeIntervals: null,
+        partitionsSpec: null,
+      }),
+      publishConfig: new PublishConfig({ datasourceName: datasourceName }),
     });
 
     await saveScreenshotIfError(testName, page, async () => {
@@ -176,7 +172,7 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]).toStrictEqual([
-    /* __time */ '2015-09-12T00:46:58.771Z',
+    /* __time */ '2015-09-12T00:46:58.772Z',
     /* added */ '36',
     /* channel */ '#en.wikipedia',
     /* cityName */ 'null',
@@ -195,6 +191,7 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
     /* page */ 'Talk:Oswald Tilghman',
     /* regionIsoCode */ 'null',
     /* regionName */ 'null',
+    /* time */ '2015-09-12T00:46:58.771Z',
     /* user */ 'GELongstreet',
   ]);
 }

@@ -10768,6 +10768,79 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testVirtualColumnFilterOnInnerQuery()
+  {
+    GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Collections.singletonList(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING)),
+                12
+            )
+        )
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(
+            new MultipleIntervalSegmentSpec(
+                ImmutableList.of(
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                )
+            )
+        ).setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v",
+                "case_searched(idx > 1000, 1, 0)",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setDimFilter(
+            new BoundDimFilter(
+                "v",
+                "0",
+                null,
+                true,
+                false,
+                null,
+                null,
+                StringComparators.NUMERIC
+            )
+        )
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Collections.singletonList(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING)),
+                15
+            )
+        )
+        .setAggregatorSpecs(
+            new LongSumAggregatorFactory("rows", "rows"),
+            new LongSumAggregatorFactory("idx", "idx")
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "virtual column filter on inner query");
+  }
+
+  @Test
   public void testRejectForceLimitPushDownWithHaving()
   {
     expectedException.expect(IAE.class);
