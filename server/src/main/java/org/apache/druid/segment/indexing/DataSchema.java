@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 
 /**
@@ -240,13 +241,23 @@ public class DataSchema
 
     final List<String> errors = new ArrayList<>();
 
-    for (Map.Entry<String, Multiset<String>> entry : fields.entrySet()) {
-      if (entry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
+    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+      if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
         errors.add(
             StringUtils.format(
                 "[%s] seen in %s",
-                entry.getKey(),
-                String.join(", ", entry.getValue().elementSet())
+                fieldEntry.getKey(),
+                fieldEntry.getValue().entrySet().stream().map(
+                    entry ->
+                        StringUtils.format(
+                            "%s%s",
+                            entry.getElement(),
+                            entry.getCount() == 1 ? "" : StringUtils.format(
+                                " (%d occurrences)",
+                                entry.getCount()
+                            )
+                        )
+                ).collect(Collectors.joining(", "))
             )
         );
       }

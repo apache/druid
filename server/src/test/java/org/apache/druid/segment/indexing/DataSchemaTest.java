@@ -328,7 +328,8 @@ public class DataSchemaTest extends InitializedNullHandlingTest
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
-        "Cannot specify a column more than once: [metric1] seen in metricsSpec list; [metric3] seen in metricsSpec list"
+        "Cannot specify a column more than once: [metric1] seen in metricsSpec list (2 occurrences); "
+        + "[metric3] seen in metricsSpec list (2 occurrences)"
     );
 
     DataSchema schema = new DataSchema(
