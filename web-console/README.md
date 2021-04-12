@@ -85,6 +85,8 @@ when the test fails. For example, if `e2e-tests/tutorial-batch.spec.ts` fails, i
 Disabling headless mode while running the tests can be helpful. This can be done via the `DRUID_E2E_TEST_HEADLESS`
 environment variable, which defaults to `true`.
 
+Like so: `DRUID_E2E_TEST_HEADLESS=false npm run test-e2e`
+
 #### Running against alternate web console
 
 The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to target a web console running on a
