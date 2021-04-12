@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
@@ -43,24 +44,31 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -68,6 +76,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DruidSegmentReaderTest extends NullHandlingTest
 {
@@ -76,7 +85,9 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
   private File segmentDirectory;
 
-  private final IndexIO indexIO = TestHelper.getTestIndexIO();
+  private final AtomicLong indexOpens = new AtomicLong();
+  private final AtomicLong indexCloses = new AtomicLong();
+  private final IndexIO indexIO = makeIndexIO();
 
   @Before
   public void setUp() throws IOException
@@ -140,9 +151,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     }
   }
 
+  @After
+  public void tearDown()
+  {
+    Assert.assertTrue("at least one open during test", indexOpens.get() > 0);
+    Assert.assertEquals("equal number of opens and closes during test", indexOpens.get(), indexCloses.get());
+  }
+
   @Test
   public void testReader() throws IOException
   {
+    final File tmpDir = temporaryFolder.newFolder();
+
     final DruidSegmentReader reader = new DruidSegmentReader(
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
@@ -155,7 +175,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        temporaryFolder.newFolder()
+        tmpDir
     );
 
     Assert.assertEquals(
@@ -185,6 +205,9 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+
+    // Confirm that the files in the tmpDir were cleaned up.
+    Assert.assertEquals(0, tmpDir.list().length);
   }
 
   @Test
@@ -636,6 +659,92 @@ public class DruidSegmentReaderTest extends NullHandlingTest
       }
     }
     return rows;
+  }
+
+  /**
+   * Makes an {@link IndexIO} that increments {@link #indexOpens} and {@link #indexCloses} as indexes open and close.
+   */
+  private IndexIO makeIndexIO()
+  {
+    return new IndexIO(TestHelper.makeJsonMapper(), () -> 0)
+    {
+      @Override
+      public QueryableIndex loadIndex(File inDir) throws IOException
+      {
+        return loadIndex(inDir, false, SegmentLazyLoadFailCallback.NOOP);
+      }
+
+      @Override
+      public QueryableIndex loadIndex(
+          final File inDir,
+          final boolean lazy,
+          final SegmentLazyLoadFailCallback loadFailed
+      ) throws IOException
+      {
+        indexOpens.incrementAndGet();
+        final QueryableIndex index = super.loadIndex(inDir, lazy, loadFailed);
+
+        return new QueryableIndex()
+        {
+          @Override
+          public Interval getDataInterval()
+          {
+            return index.getDataInterval();
+          }
+
+          @Override
+          public int getNumRows()
+          {
+            return index.getNumRows();
+          }
+
+          @Override
+          public Indexed<String> getAvailableDimensions()
+          {
+            return index.getAvailableDimensions();
+          }
+
+          @Override
+          public BitmapFactory getBitmapFactoryForDimensions()
+          {
+            return index.getBitmapFactoryForDimensions();
+          }
+
+          @Nullable
+          @Override
+          public Metadata getMetadata()
+          {
+            return index.getMetadata();
+          }
+
+          @Override
+          public Map<String, DimensionHandler> getDimensionHandlers()
+          {
+            return index.getDimensionHandlers();
+          }
+
+          @Override
+          public void close()
+          {
+            index.close();
+            indexCloses.incrementAndGet();
+          }
+
+          @Override
+          public List<String> getColumnNames()
+          {
+            return index.getColumnNames();
+          }
+
+          @Nullable
+          @Override
+          public ColumnHolder getColumnHolder(String columnName)
+          {
+            return index.getColumnHolder(columnName);
+          }
+        };
+      }
+    };
   }
 
   private static HyperLogLogCollector makeHLLC(final String... values)
