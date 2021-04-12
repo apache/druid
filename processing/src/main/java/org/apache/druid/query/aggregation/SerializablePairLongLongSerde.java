@@ -37,10 +37,10 @@ public class SerializablePairLongLongSerde extends AbstractSerializableLongObjec
   public static final String TYPE_NAME = "serializablePairLongLong";
 
   /**
-   * Since SerializablePairLongFloat is subclass of SerializablePair<Long,Float>,
-   * it's safe to declare the generic type of comparator as SerializablePair<Long,Float>.
+   * Since SerializablePairLongLong is subclass of SerializablePair<Long,Long>,
+   * it's safe to declare the generic type of comparator as SerializablePair<Long,Long>.
    */
-  public static Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
+  public static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
       Long::compare,
       true
   );

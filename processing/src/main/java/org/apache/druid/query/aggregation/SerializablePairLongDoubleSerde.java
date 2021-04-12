@@ -40,7 +40,7 @@ public class SerializablePairLongDoubleSerde extends AbstractSerializableLongObj
    * Since SerializablePairLongDouble is subclass of SerializablePair<Long,Double>,
    * it's safe to declare the generic type of comparator as SerializablePair<Long,Double>.
    */
-  public static Comparator<SerializablePair<Long, Double>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
+  public static final Comparator<SerializablePair<Long, Double>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
       Double::compare,
       true
   );
