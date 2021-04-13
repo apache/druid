@@ -370,7 +370,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
       query = scheduler.prioritizeAndLaneQuery(queryPlus, segmentServers);
       queryPlus = queryPlus.withQuery(query);
 
-      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> originalSegmentsByServer =
+          groupSegmentsByServer(segmentServers);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer;
+      String allowedServerKeyword = QueryContexts.getAllowedServerKeyword(query);
+      if (allowedServerKeyword != null && !allowedServerKeyword.isEmpty()) {
+        segmentsByServer = new TreeMap<>();
+        originalSegmentsByServer.forEach(
+            (k, v) -> {
+              if (k.getHost().contains(allowedServerKeyword)) {
+                segmentsByServer.put(k, v);
+
+              }
+            }
+        );
+      } else {
+        segmentsByServer = originalSegmentsByServer;
+      }
+
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);

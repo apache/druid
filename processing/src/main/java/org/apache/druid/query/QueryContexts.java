@@ -47,6 +47,7 @@ public class QueryContexts
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+  public static final String BROKER_ALLOWED_SERVER_KEYWORD = "allowedServerKeyword";
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
@@ -274,6 +275,12 @@ public class QueryContexts
   {
     return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
+
+  public static <T> String getAllowedServerKeyword(Query<T> query)
+  {
+    return query.getContextValue(BROKER_ALLOWED_SERVER_KEYWORD, null);
+  }
+
   public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
   {
     return parseBoolean(
