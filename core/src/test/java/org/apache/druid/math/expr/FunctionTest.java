@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -416,10 +417,10 @@ public class FunctionTest extends InitializedNullHandlingTest
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       if (NullHandling.sqlCompatible()) {
-        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
       } else {
         try {
-          assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+          assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
           Assert.fail("Did not throw IllegalArgumentException");
         }
         catch (IllegalArgumentException e) {
