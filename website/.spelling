@@ -1098,6 +1098,7 @@ arr1
 arr2
 array_append
 array_concat
+array_set_concat
 array_contains
 array_length
 array_offset
