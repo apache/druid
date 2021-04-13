@@ -290,6 +290,16 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArraySetConcat()
+  {
+    assertArrayExpr("array_set_concat([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 4L, 6L});
+    assertArrayExpr("array_set_concat([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_concat(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertArrayExpr("array_set_concat(map(y -> y * 3, b), [1, 2, 3])", new Long[]{1L, 2L, 3L, 6L, 9L, 12L, 15L});
+    assertArrayExpr("array_set_concat(0, 1)", new Long[]{0L, 1L});
+  }
+
+  @Test
   public void testArrayToString()
   {
     assertExpr("array_to_string([1, 2, 3], ',')", "1,2,3");
