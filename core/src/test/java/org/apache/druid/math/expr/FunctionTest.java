@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -408,11 +409,39 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRoundWithNullValue()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("null", "STRING"),
+        Pair.of("x", "STRING")
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      if (NullHandling.sqlCompatible()) {
+        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+      } else {
+        try {
+          assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+          Assert.fail("Did not throw IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) {
+          Assert.assertEquals(
+              String.format(
+                  Locale.ENGLISH,
+                  "The first argument to the function[round] should be integer or double type but got the type: %s",
+                  argAndType.rhs
+              ),
+              e.getMessage()
+          );
+        }
+      }
+    }
+  }
+
+  @Test
   public void testRoundWithInvalidFirstArgument()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("b", "LONG_ARRAY"),
-        Pair.of("x", "STRING"),
         Pair.of("c", "DOUBLE_ARRAY"),
         Pair.of("a", "STRING_ARRAY")
 

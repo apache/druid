@@ -17552,4 +17552,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testRoundFuc() throws Exception
+  {
+
+    testQuery(
+        "SELECT f1, round(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "round(\"f1\")", ValueType.FLOAT)
+                )
+                .columns("f1", "v0")
+                .legacy(false)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{1.0f, 1.0f},
+            new Object[]{0.1f, 0.0f},
+            new Object[]{0.0f, 0.0f},
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{null, null}
+        )
+        : ImmutableList.of(
+            new Object[]{1.0f, 1.0f},
+            new Object[]{0.1f, 0.0f},
+            new Object[]{0.0f, 0.0f},
+            new Object[]{0.0f, 0.0f},
+            new Object[]{0.0f, 0.0f},
+            new Object[]{0.0f, 0.0f}
+        )
+    );
+  }
 }
