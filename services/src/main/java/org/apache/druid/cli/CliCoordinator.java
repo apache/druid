@@ -69,7 +69,7 @@ import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.KillAuditLog;
+import org.apache.druid.server.coordinator.duty.KillAuditLog;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;

@@ -183,8 +183,8 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
-      @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
-      @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> indexingServiceDuties,
+      @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
+      @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
@@ -708,7 +708,7 @@ public class DruidCoordinator
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
     duties.addAll(makeCompactSegmentsDuty());
 
-    log.debug(
+    log.info(
         "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
@@ -720,7 +720,7 @@ public class DruidCoordinator
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.addAll(metadataStoreManagementDuties);
 
-    log.debug(
+    log.info(
         "Done making metadata store management duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );

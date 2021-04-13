@@ -211,6 +211,77 @@ public class SQLAuditManagerTest
   }
 
   @Test(timeout = 60_000L)
+  public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
+  {
+    AuditEntry entry = new AuditEntry(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        DateTimes.of("2013-01-01T00:00:00Z")
+    );
+    auditManager.doAudit(entry);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry, dbEntry);
+    // Do delete
+    auditManager.removeAuditLogsOlderThan(System.currentTimeMillis());
+    // Verify the delete
+    payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    Assert.assertNull(payload);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
+  {
+    AuditEntry entry = new AuditEntry(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        DateTimes.of("2013-01-01T00:00:00Z")
+    );
+    auditManager.doAudit(entry);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry, dbEntry);
+    // Do delete
+    auditManager.removeAuditLogsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+    // Verify that entry was not delete
+    payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry, dbEntry);
+  }
+
+  @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
     AuditEntry entry1 = new AuditEntry(

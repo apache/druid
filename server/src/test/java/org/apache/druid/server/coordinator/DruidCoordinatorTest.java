@@ -215,7 +215,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
-        null,
+        new HashSet<>(),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -25,8 +25,8 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.server.audit.SQLAuditManager;
-import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
 public class KillAuditLog implements CoordinatorDuty
 {
@@ -40,14 +40,14 @@ public class KillAuditLog implements CoordinatorDuty
 
   @Inject
   public KillAuditLog(
-      SQLAuditManager auditManager,
+      AuditManager auditManager,
       DruidCoordinatorConfig config
   )
   {
     this.period = config.getCoordinatorAuditKillPeriod().getMillis();
     Preconditions.checkArgument(
-        this.period > config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
-        "coordinator audit kill period must be greater than druid.coordinator.period.metadataStoreManagementPeriod"
+        this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
+        "coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
     );
     this.retainDuration = config.getCoordinatorAuditKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator audit kill retainDuration must be >= 0");
@@ -63,6 +63,7 @@ public class KillAuditLog implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     if ((lastKillTime + period) < System.currentTimeMillis()) {
+      log.info("Running KillAuditLog duty");
       lastKillTime = System.currentTimeMillis();
 
       long timestamp = System.currentTimeMillis() - retainDuration;
