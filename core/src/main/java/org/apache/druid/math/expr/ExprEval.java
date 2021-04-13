@@ -78,7 +78,7 @@ public abstract class ExprEval<T>
         for (int i = 0; i < longArrayLength; i++) {
           final byte isNull = buffer.get(offset);
           offset += Byte.BYTES;
-          if (isNull == 0) {
+          if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
             longs[i] = buffer.getLong(offset);
             offset += Long.BYTES;
           } else {
@@ -96,7 +96,7 @@ public abstract class ExprEval<T>
         for (int i = 0; i < doubleArrayLength; i++) {
           final byte isNull = buffer.get(offset);
           offset += Byte.BYTES;
-          if (isNull == 0) {
+          if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
             doubles[i] = buffer.getDouble(offset);
             offset += Double.BYTES;
           } else {
