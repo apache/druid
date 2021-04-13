@@ -109,6 +109,8 @@ public class KillUnusedSegmentsTest
             new Duration(1),
             Duration.parse("PT86400S"),
             Duration.parse("PT86400S"),
+            null,
+            null,
             1000,
             Duration.ZERO
         )

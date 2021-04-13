@@ -144,6 +144,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new Duration(COORDINATOR_PERIOD),
         null,
+        null,
+        null,
         10,
         new Duration("PT0s")
     );
