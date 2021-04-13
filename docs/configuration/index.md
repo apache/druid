@@ -875,7 +875,7 @@ An example of compaction config is:
 {
   "dataSource": "wikiticker",
   "granularitySpec" : {
-    "segmentGranularity : "none"
+    "segmentGranularity" : "none"
   }
 }
 ```
