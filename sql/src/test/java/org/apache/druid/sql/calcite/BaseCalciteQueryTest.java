@@ -439,10 +439,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(
-        conglomerate,
-        temporaryFolder.newFolder()
-    );
+    walker = createQuerySegmentWalker();
   }
 
   @After
@@ -450,6 +447,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  {
+    return CalciteTests.createMockWalker(
+        conglomerate,
+        temporaryFolder.newFolder()
+    );
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -718,13 +723,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-    for (int i = 0; i < results.size(); i++) {
-      Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
-          expectedResults.get(i),
-          results.get(i)
-      );
-    }
+    assertResultsEquals(sql, expectedResults, results);
 
     if (expectedQueries != null) {
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
@@ -741,6 +740,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             recordedQueries.get(i)
         );
       }
+    }
+  }
+
+  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+  {
+    for (int i = 0; i < results.size(); i++) {
+      Assert.assertArrayEquals(
+          StringUtils.format("result #%d: %s", i + 1, sql),
+          expectedResults.get(i),
+          results.get(i)
+      );
     }
   }
 

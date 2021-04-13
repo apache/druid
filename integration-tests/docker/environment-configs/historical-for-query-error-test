@@ -17,8 +17,8 @@
 # under the License.
 #
 
-DRUID_SERVICE=historical-for-query-retry-test
-DRUID_LOG_PATH=/shared/logs/historical-for-query-retry-test.log
+DRUID_SERVICE=historical-for-query-error-test
+DRUID_LOG_PATH=/shared/logs/historical-for-query-error-test.log
 
 # JAVA OPTS
 SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010
@@ -27,6 +27,6 @@ SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=tr
 druid_processing_buffer_sizeBytes=25000000
 druid_processing_numThreads=2
 druid_query_groupBy_maxOnDiskStorage=300000000
-druid_segmentCache_locations=[{"path":"/shared/druid/indexCache-query-retry-test","maxSize":5000000000}]
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical-query-retry-test
+druid_segmentCache_locations=[{"path":"/shared/druid/indexCache-query-error-test","maxSize":5000000000}]
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical-query-error-test
 druid_server_https_crlPath=/tls/revocations.crl

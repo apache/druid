@@ -59,6 +59,7 @@ import java.util.stream.IntStream;
 public class TestHelper
 {
   public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ColumnConfig NO_CACHE_COLUMN_CONFIG = () -> 0;
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -67,8 +68,7 @@ public class TestHelper
 
   public static IndexIO getTestIndexIO()
   {
-    ColumnConfig noCacheColumnConfig = () -> 0;
-    return getTestIndexIO(noCacheColumnConfig);
+    return getTestIndexIO(NO_CACHE_COLUMN_CONFIG);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)

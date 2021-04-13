@@ -124,7 +124,7 @@ public class JoinAndLookupBenchmark
   {
     tmpDir = FileUtils.createTempDir();
     ColumnConfig columnConfig = () -> columnCacheSizeBytes;
-    index = JoinTestHelper.createFactIndexBuilder(tmpDir, rows).buildMMappedIndex(columnConfig);
+    index = JoinTestHelper.createFactIndexBuilder(columnConfig, tmpDir, rows).buildMMappedIndex();
 
     final String prefix = "c.";
 

@@ -22,29 +22,16 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregator;
@@ -56,119 +43,79 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(JUnitParamsRunner.class)
-public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
+public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTH_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final String DATA_SOURCE = "numfoo";
+  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
+      ImmutableSet.of(
+          new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
+          new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
+          new BaseVarianceSqlAggregator.VarianceSqlAggregator(),
+          new BaseVarianceSqlAggregator.StdDevPopSqlAggregator(),
+          new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
+          new BaseVarianceSqlAggregator.StdDevSqlAggregator()
+      ),
+      ImmutableSet.of()
+  );
 
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
-
-  private SqlLifecycle sqlLifecycle;
-
-  @BeforeClass
-  public static void setUpClass()
+  @Override
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
-
-  @Before
-  public void setUp() throws Exception
-  {
-    InputRowParser parser = new MapInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec("t", "iso", null),
-            new DimensionsSpec(
-                ImmutableList.<DimensionSchema>builder()
-                    .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                    .add(new DoubleDimensionSchema("d1"))
-                    .add(new FloatDimensionSchema("f1"))
-                    .add(new LongDimensionSchema("l1"))
-                    .build(),
-                null,
-                null
-            )
-        ));
-
     final QueryableIndex index =
         IndexBuilder.create()
                     .tmpDir(temporaryFolder.newFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
+                            .withDimensionsSpec(
+                                new DimensionsSpec(
+                                    ImmutableList.<DimensionSchema>builder()
+                                                 .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                                                 .add(new DoubleDimensionSchema("d1"))
+                                                 .add(new FloatDimensionSchema("f1"))
+                                                 .add(new LongDimensionSchema("l1"))
+                                                 .build(),
+                                    null,
+                                    null
+                                )
+                            )
                             .withMetrics(
                                 new CountAggregatorFactory("cnt"),
                                 new DoubleSumAggregatorFactory("m1", "m1")
                             )
-                            .withDimensionsSpec(parser)
                             .withRollup(false)
                             .build()
                     )
                     .rows(CalciteTests.ROWS1_WITH_NUMERIC_DIMS)
                     .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -178,43 +125,39 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                    .build(),
         index
     );
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(
-            new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
-            new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
-            new BaseVarianceSqlAggregator.VarianceSqlAggregator(),
-            new BaseVarianceSqlAggregator.StdDevPopSqlAggregator(),
-            new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
-            new BaseVarianceSqlAggregator.StdDevSqlAggregator()
-        ),
-        ImmutableSet.of()
-    );
-    SchemaPlus rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-
-    sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
-        new PlannerFactory(
-            rootSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            CalciteTests.createExprMacroTable(),
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper(),
-            CalciteTests.DRUID_SCHEMA_NAME
-        )
-    );
-    queryLogHook.clearRecordedQueries();
-    sqlLifecycle = sqlLifecycleFactory.factorize();
   }
 
-  @After
-  public void tearDown() throws Exception
+  @Override
+  public List<Object[]> getResults(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final String sql,
+      final AuthenticationResult authenticationResult
+  ) throws Exception
   {
-    walker.close();
-    walker = null;
+    return getResults(
+        plannerConfig,
+        queryContext,
+        parameters,
+        sql,
+        authenticationResult,
+        OPERATOR_TABLE,
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    );
+  }
+
+  private SqlLifecycle getSqlLifecycle()
+  {
+    return getSqlLifecycleFactory(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        OPERATOR_TABLE,
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    ).factorize();
   }
 
   public void addToHolder(VarianceAggregatorCollector holder, Object raw)
@@ -255,11 +198,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
@@ -281,7 +224,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             holder3.getVariance(true).longValue()
         }
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -311,11 +254,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
@@ -337,7 +280,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             holder3.getVariance(false).longValue(),
             }
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -367,11 +310,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
@@ -393,7 +336,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(true)),
             }
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -430,11 +373,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
@@ -456,7 +399,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(false)),
             }
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -491,11 +434,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
@@ -517,7 +460,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(false)),
             }
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -554,11 +497,11 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     queryLogHook.clearRecordedQueries();
     final String sql = "select dim2, VARIANCE(f1) from druid.numfoo group by 1 order by 2 desc";
     final List<Object[]> results =
-        sqlLifecycle.runSimple(
+        getSqlLifecycle().runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
             CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
+            AUTH_RESULT
         ).toList();
     List<Object[]> expectedResults = NullHandling.sqlCompatible()
                                      ? ImmutableList.of(
@@ -571,7 +514,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         new Object[]{"", 0.0033333334f},
         new Object[]{"abc", 0f}
     );
-    assertResultsEquals(expectedResults, results);
+    assertResultsEquals(sql, expectedResults, results);
 
     Assert.assertEquals(
         GroupByQuery.builder()
@@ -600,52 +543,48 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     );
   }
 
-  public Object[] timeseriesQueryRunners()
-  {
-    return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeseriesQueryRunnerFactory(
-            new TimeseriesQueryQueryToolChest(),
-            new TimeseriesQueryEngine(),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
-    ).toArray();
-  }
-
   @Test
-  @Parameters(method = "timeseriesQueryRunners")
-  public void testEmptyTimeseries(QueryRunner<Result<TimeseriesResultValue>> runner)
+  public void testVariancesOnCastedString() throws Exception
   {
-    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-                                  .granularity(QueryRunnerTestHelper.ALL_GRAN)
-                                  .intervals(QueryRunnerTestHelper.EMPTY_INTERVAL)
-                                  .aggregators(
-                                      Arrays.asList(
-                                          QueryRunnerTestHelper.ROWS_COUNT,
-                                          QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          new VarianceAggregatorFactory("variance", "index", null, null)
-                                      )
-                                  )
-                                  .descending(true)
-                                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-                                  .build();
-    Map<String, Object> resultMap = new HashMap<>();
-    resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandling.defaultDoubleValue());
-    resultMap.put("variance", NullHandling.defaultDoubleValue());
-    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
-        new Result<>(
-            DateTimes.of("2020-04-02"),
-            new TimeseriesResultValue(
-                resultMap
+    testQuery(
+        "SELECT\n"
+        + "STDDEV_POP(CAST(dim1 AS DOUBLE)),\n"
+        + "STDDEV_SAMP(CAST(dim1 AS DOUBLE)),\n"
+        + "STDDEV(CAST(dim1 AS DOUBLE)),\n"
+        + "VARIANCE(CAST(dim1 AS DOUBLE))\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .virtualColumns(
+                new ExpressionVirtualColumn("v0", "CAST(\"dim1\", 'DOUBLE')", ValueType.DOUBLE, ExprMacroTable.nil())
             )
+            .granularity(Granularities.ALL)
+            .aggregators(
+                new VarianceAggregatorFactory("a0:agg", "v0", "population", "double"),
+                new VarianceAggregatorFactory("a1:agg", "v0", "sample", "double"),
+                new VarianceAggregatorFactory("a2:agg", "v0", "sample", "double"),
+                new VarianceAggregatorFactory("a3:agg", "v0", "sample", "double")
+            )
+            .postAggregators(
+                new StandardDeviationPostAggregator("a0", "a0:agg", "population"),
+                new StandardDeviationPostAggregator("a1", "a1:agg", "sample"),
+                new StandardDeviationPostAggregator("a2", "a2:agg", "sample")
+            )
+            .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
+            .build()
+        ),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault()
+            ? new Object[]{3.61497656362466, 3.960008417499471, 3.960008417499471, 15.681666666666667}
+            : new Object[]{4.074582459862878, 4.990323970779185, 4.990323970779185, 24.903333333333332}
         )
     );
-    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
-    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
-  private static void assertResultsEquals(List<Object[]> expectedResults, List<Object[]> results)
+  @Override
+  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
     Assert.assertEquals(expectedResults.size(), results.size());
     for (int i = 0; i < expectedResults.size(); i++) {
