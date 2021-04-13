@@ -111,18 +111,14 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     if (combineExpression != null) {
       this.combineExpressionString = combineExpression;
     } else {
-      // if the combine expression is null, allow 0 or single input aggregator expressions to be rewritten to replace
-      // the field with the aggregator name. Fields is null for the combining/merging aggregator, but the expression should
+      // if the combine expression is null, allow single input aggregator expressions to be rewritten to replace the
+      // field with the aggregator name. Fields is null for the combining/merging aggregator, but the expression should
       // already be set with the rewritten value at that point
-      if (fields == null) {
-        this.combineExpressionString = foldExpressionString;
-      } else {
-        Preconditions.checkArgument(
-            fields.size() == 1,
-            "Must have a single input field if no combine expression is supplied"
-        );
-        this.combineExpressionString = StringUtils.replace(foldExpression, Iterables.getOnlyElement(fields), name);
-      }
+      Preconditions.checkArgument(
+          fields != null && fields.size() == 1,
+          "Must have a single input field if no combine expression is supplied"
+      );
+      this.combineExpressionString = StringUtils.replace(foldExpression, Iterables.getOnlyElement(fields), name);
     }
     this.compareExpressionString = compareExpression;
     this.finalizeExpressionString = finalizeExpression;
