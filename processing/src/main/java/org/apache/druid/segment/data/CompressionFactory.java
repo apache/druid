@@ -287,6 +287,11 @@ public class CompressionFactory
 
     int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit);
 
+    /**
+     * Duplicates this reader, creating a new reader that does not share any state. Important to achieve thread-safety,
+     * because a common pattern is to duplicate a reader multiple times and then call {@link #setBuffer} on the
+     * various duplicates.
+     */
     LongEncodingReader duplicate();
   }
 
