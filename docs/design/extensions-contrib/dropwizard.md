@@ -252,6 +252,30 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
     ],
     "type": "counter"
   },
+  "ingest/rows/inMemory": {
+    "dimensions": [
+      "dataSource"
+    ],
+    "type": "gauge"
+  },
+  "ingest/rows/maxInMemory": {
+    "dimensions": [
+      "dataSource"
+    ],
+    "type": "gauge"
+  },
+  "ingest/bytes/inMemory": {
+    "dimensions": [
+      "dataSource"
+    ],
+    "type": "gauge"
+  },
+  "ingest/bytes/maxInMemory": {
+    "dimensions": [
+      "dataSource"
+    ],
+    "type": "gauge"
+  },
   "ingest/persist/counter": {
     "dimensions": [
       "dataSource"

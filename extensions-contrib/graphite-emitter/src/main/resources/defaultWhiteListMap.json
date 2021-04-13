@@ -3,6 +3,10 @@
   "ingest/handoff/failed": [],
   "ingest/persists": [],
   "ingest/rows/output": [],
+  "ingest/rows/inMemory": [],
+  "ingest/rows/maxInMemory": [],
+  "ingest/bytes/inMemory": [],
+  "ingest/bytes/maxInMemory": [],
   "jvm/gc": [],
   "jvm/mem": [],
   "query/cpu/time": [

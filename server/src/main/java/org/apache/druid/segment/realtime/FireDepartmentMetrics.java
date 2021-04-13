@@ -48,6 +48,10 @@ public class FireDepartmentMetrics
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicLong messageProcessingCompletionTime = new AtomicLong(DEFAULT_PROCESSING_COMPLETION_TIME);
+  private final AtomicLong rowsInMemory = new AtomicLong(0);
+  private final AtomicLong bytesInMemory = new AtomicLong(0);
+  private final AtomicLong maxRowsInMemory = new AtomicLong(0);
+  private final AtomicLong maxBytesInMemory = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -143,6 +147,26 @@ public class FireDepartmentMetrics
   void markProcessingDone(long timestamp)
   {
     this.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, timestamp);
+  }
+
+  public void setRowsInMemory(long rowsInMemory)
+  {
+    this.rowsInMemory.set(rowsInMemory);
+  }
+
+  public void setBytesInMemory(long bytesInMemory)
+  {
+    this.bytesInMemory.set(bytesInMemory);
+  }
+
+  public void setMaxBytesInMemory(long maxBytesInMemory)
+  {
+    this.maxBytesInMemory.set(maxBytesInMemory);
+  }
+
+  public void setMaxRowsInMemory(long maxRowsInMemory)
+  {
+    this.maxRowsInMemory.set(maxRowsInMemory);
   }
 
   @VisibleForTesting
@@ -241,6 +265,26 @@ public class FireDepartmentMetrics
     return messageGap.get();
   }
 
+  public long rowsInMemory()
+  {
+    return rowsInMemory.get();
+  }
+
+  public long bytesInMemory()
+  {
+    return bytesInMemory.get();
+  }
+
+  public long maxRowsInMemory()
+  {
+    return maxRowsInMemory.get();
+  }
+
+  public long maxBytesInMemory()
+  {
+    return maxBytesInMemory.get();
+  }
+
   public FireDepartmentMetrics snapshot()
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
@@ -264,6 +308,10 @@ public class FireDepartmentMetrics
     retVal.messageProcessingCompletionTime.set(messageProcessingCompletionTime.get());
     retVal.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, System.currentTimeMillis());
     retVal.messageGap.set(retVal.messageProcessingCompletionTime.get() - messageMaxTimestamp.get());
+    retVal.rowsInMemory.set(rowsInMemory.get());
+    retVal.bytesInMemory.set(bytesInMemory.get());
+    retVal.maxRowsInMemory.set(maxRowsInMemory.get());
+    retVal.maxBytesInMemory.set(maxBytesInMemory.get());
     return retVal;
   }
 }

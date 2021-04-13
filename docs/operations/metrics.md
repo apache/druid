@@ -169,6 +169,10 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|dataSource, taskId, taskType.|0|
 |`ingest/events/processed`|Number of events successfully processed per emission period.|dataSource, taskId, taskType.|Equal to your # of events per emission period.|
 |`ingest/rows/output`|Number of Druid rows persisted.|dataSource, taskId, taskType.|Your # of events with rollup.|
+|`ingest/rows/inMemory`|Number of Druid rows currently in memory.|dataSource.|Your # of events with rollup that are currently in memory.|
+|`ingest/rows/MaxInMemory`|Max number of Druid rows configured to be in memory before triggering persistence.|dataSource.|maxRowsInMemory in tuningConfig.|
+|`ingest/bytes/inMemory`|Number of bytes of Druid rows currently in memory.|dataSource.|Bytes of your events with rollup that are currently in memory.|
+|`ingest/bytes/maxInMemory`|Max number of bytes of Druid rows configured to be in memory before triggering persistence.|dataSource.|maxBytesInMemory in tuningConfig.|
 |`ingest/persists/count`|Number of times persist occurred.|dataSource, taskId, taskType.|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|

@@ -209,6 +209,8 @@ public class AppenderatorImpl implements Appenderator
     }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
+    this.metrics.setMaxBytesInMemory(maxBytesTuningConfig);
+    this.metrics.setMaxRowsInMemory(tuningConfig.getMaxRowsInMemory());
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
   }
 
@@ -292,8 +294,8 @@ public class AppenderatorImpl implements Appenderator
     }
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
-    rowsCurrentlyInMemory.addAndGet(numAddedRows);
-    bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
+    metrics.setRowsInMemory(rowsCurrentlyInMemory.addAndGet(numAddedRows));
+    metrics.setBytesInMemory(bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd));
     totalRows.addAndGet(numAddedRows);
 
     boolean isPersistRequired = false;

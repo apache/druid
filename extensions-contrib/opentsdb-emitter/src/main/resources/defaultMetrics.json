@@ -61,6 +61,18 @@
   "ingest/rows/output": [
     "dataSource"
   ],
+  "ingest/rows/inMemory": [
+    "dataSource"
+  ],
+  "ingest/rows/maxInMemory": [
+    "dataSource"
+  ],
+  "ingest/bytes/inMemory": [
+    "dataSource"
+  ],
+  "ingest/bytes/maxInMemory": [
+    "dataSource"
+  ],
   "ingest/persists/count": [
     "dataSource"
   ],
