@@ -717,8 +717,9 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
   {
-    List<CoordinatorDuty> duties = new ArrayList<>();
-    duties.addAll(metadataStoreManagementDuties);
+    List<CoordinatorDuty> duties = ImmutableList.<CoordinatorDuty>builder()
+                                                .addAll(metadataStoreManagementDuties)
+                                                .build();
 
     log.info(
         "Done making metadata store management duties %s",
