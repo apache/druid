@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -48,6 +47,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -96,25 +96,31 @@ public class ExpressionVectorSelectorsTest
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
 
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
   @BeforeClass
   public static void setupClass()
   {
     CLOSER = Closer.create();
 
-    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
+    // Do not run the tests on ARM64.
+    // SegmentGenerator#generate() fails with OutOfMemoryError on TravisCI ARM64
+    if (!"aarch64".equals(CPU_ARCH)) {
+      final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
-                                               .shardSpec(new LinearShardSpec(0))
-                                               .size(0)
-                                               .build();
+      final DataSegment dataSegment = DataSegment.builder()
+                                                 .dataSource("foo")
+                                                 .interval(schemaInfo.getDataInterval())
+                                                 .version("1")
+                                                 .shardSpec(new LinearShardSpec(0))
+                                                 .size(0)
+                                                 .build();
 
-    final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
-    INDEX = CLOSER.register(
-        segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, ROWS_PER_SEGMENT)
-    );
+      final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
+      INDEX = CLOSER.register(
+          segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, ROWS_PER_SEGMENT)
+      );
+    }
   }
 
   @AfterClass
@@ -140,6 +146,9 @@ public class ExpressionVectorSelectorsTest
   @Before
   public void setup()
   {
+    // Don't run the tests on ARM64. @BeforeClass fails with OutOfMemoryError on TravisCI
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     outputType = parsed.getOutputType(
         new ColumnInspector()
@@ -269,7 +278,7 @@ public class ExpressionVectorSelectorsTest
           int rows = 0;
           while (!nonVectorized.isDone()) {
             Assert.assertEquals(
-                StringUtils.format("Failed at row %s", rows),
+                "Failed at row " + rows,
                 nonSelector.getObject(),
                 results.get(rows)
             );
