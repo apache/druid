@@ -63,6 +63,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.initialization.AuthenticatorMapperModule;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
+import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
@@ -411,7 +412,8 @@ public class Initialization
         new EscalatorModule(),
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
-        new StartupLoggingModule()
+        new StartupLoggingModule(),
+        new ExternalStorageAccessSecurityModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);
