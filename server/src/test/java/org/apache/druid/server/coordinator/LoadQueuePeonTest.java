@@ -95,6 +95,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             null,
+            null,
             10,
             Duration.millis(0)
         )
@@ -287,6 +288,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             null,
+            null,
             new Duration(1),
             null,
             null,
@@ -336,6 +338,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
         new TestDruidCoordinatorConfig(
+            null,
             null,
             null,
             null,
