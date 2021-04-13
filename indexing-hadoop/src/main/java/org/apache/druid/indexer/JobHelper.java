@@ -406,7 +406,7 @@ public class JobHelper
   }
 
   public static void maybeDeleteIntermediatePath(
-      boolean indexerGeneratorJobSucceeded,
+      boolean jobSucceeded,
       HadoopIngestionSpec indexerSchema)
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
@@ -414,13 +414,12 @@ public class JobHelper
     config.addJobProperties(configuration);
     JobHelper.injectDruidProperties(configuration, config);
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (indexerGeneratorJobSucceeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+      if (jobSucceeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          Configuration conf = injectSystemProperties(new Configuration(), config);
-          config.addJobProperties(conf);
-          workingPath.getFileSystem(conf).delete(workingPath, true);
+          config.addJobProperties(configuration);
+          workingPath.getFileSystem(configuration).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);
