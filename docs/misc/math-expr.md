@@ -179,6 +179,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_set_concat(arr1,arr2) | concatenates the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
