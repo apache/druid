@@ -145,19 +145,19 @@ public abstract class ExprEval<T>
     switch (eval.type()) {
       case LONG:
         if (eval.isNumericNull()) {
-          buffer.put(offset++, NullHandling.IS_NULL_BYTE);
+          buffer.put(offset, NullHandling.IS_NULL_BYTE);
         } else {
           buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
+          buffer.putLong(offset, eval.asLong());
         }
-        buffer.putLong(offset, eval.asLong());
         break;
       case DOUBLE:
         if (eval.isNumericNull()) {
-          buffer.put(offset++, NullHandling.IS_NULL_BYTE);
+          buffer.put(offset, NullHandling.IS_NULL_BYTE);
         } else {
           buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
+          buffer.putDouble(offset, eval.asDouble());
         }
-        buffer.putDouble(offset, eval.asDouble());
         break;
       case STRING:
         final byte[] stringBytes = StringUtils.toUtf8Nullable(eval.asString());
