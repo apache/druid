@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
@@ -428,6 +429,62 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         return inspector.getType(name);
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExpressionLambdaAggregatorFactory that = (ExpressionLambdaAggregatorFactory) o;
+    return maxSizeBytes == that.maxSizeBytes
+           && name.equals(that.name)
+           && Objects.equals(fields, that.fields)
+           && accumulatorId.equals(that.accumulatorId)
+           && foldExpressionString.equals(that.foldExpressionString)
+           && initialValueExpressionString.equals(that.initialValueExpressionString)
+           && initialCombineValueExpressionString.equals(that.initialCombineValueExpressionString)
+           && combineExpressionString.equals(that.combineExpressionString)
+           && Objects.equals(compareExpressionString, that.compareExpressionString)
+           && Objects.equals(finalizeExpressionString, that.finalizeExpressionString);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        name,
+        fields,
+        accumulatorId,
+        foldExpressionString,
+        initialValueExpressionString,
+        initialCombineValueExpressionString,
+        combineExpressionString,
+        compareExpressionString,
+        finalizeExpressionString,
+        maxSizeBytes
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ExpressionLambdaAggregatorFactory{" +
+           "name='" + name + '\'' +
+           ", fields=" + fields +
+           ", accumulatorId='" + accumulatorId + '\'' +
+           ", foldExpressionString='" + foldExpressionString + '\'' +
+           ", initialValueExpressionString='" + initialValueExpressionString + '\'' +
+           ", initialCombineValueExpressionString='" + initialCombineValueExpressionString + '\'' +
+           ", combineExpressionString='" + combineExpressionString + '\'' +
+           ", compareExpressionString='" + compareExpressionString + '\'' +
+           ", finalizeExpressionString='" + finalizeExpressionString + '\'' +
+           ", maxSizeBytes=" + maxSizeBytes +
+           '}';
   }
 
   private class FactorizePlan
