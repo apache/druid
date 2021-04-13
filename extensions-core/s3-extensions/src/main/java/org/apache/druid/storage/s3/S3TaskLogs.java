@@ -134,6 +134,14 @@ public class S3TaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskGcLog(String taskid, File gcLogFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, gcLogFile.getName());
+    log.info("Pushing task gc log %s to: %s", gcLogFile, taskKey);
+    pushTaskFile(gcLogFile, taskKey);
+  }
+
+  @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "report.json");

@@ -35,6 +35,18 @@ public class ForkingTaskRunnerConfig
                                                   + ".javaOpts";
   public static final String JAVA_OPTS_ARRAY_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                                   + ".javaOptsArray";
+  public static final List<String> JAVA_DEFAULT_GC_LOGGING_OPTS_ARRAY = ImmutableList.of(
+      "-verbosegc",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+UseGCLogFileRotation",
+      "-XX:NumberOfGCLogFiles=25",
+      "-XX:GCLogFileSize=2M",
+      "-XX:+PrintGCDetails",
+      "-XX:+PrintGCTimeStamps",
+      "-XX:+PrintGCDateStamps",
+      "-XX:+PrintGCApplicationStoppedTime",
+      "-XX:+PrintGCApplicationConcurrentTime"
+  );
 
   @JsonProperty
   @NotNull
