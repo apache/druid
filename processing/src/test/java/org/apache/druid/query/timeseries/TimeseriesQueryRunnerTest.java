@@ -2950,12 +2950,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           new ExpressionLambdaAggregatorFactory(
                                               "diy_count",
-                                              Collections.emptySet(),
+                                              null,
                                               null,
                                               "0",
                                               null,
                                               "__acc + 1",
-                                              "__acc + diy_count",
+                                              null,
                                               null,
                                               null,
                                               null,
