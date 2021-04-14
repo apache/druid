@@ -11417,8 +11417,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "acc",
                 "[]",
                 null,
-                "array_set_concat(acc, market)",
-                "array_set_concat(acc, array_agg_distinct)",
+                "array_set_add(acc, market)",
+                "array_set_add_all(acc, array_agg_distinct)",
                 null,
                 null,
                 null,
@@ -11645,6 +11645,192 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             126.411364d,
             "array_agg_distinct",
             new String[] {"spot"}
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByExpressionAggregatorArrayMultiValue()
+  {
+    // expression agg not yet vectorized
+    cannotVectorize();
+
+    // array types don't work with group by v1
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(IllegalStateException.class);
+      expectedException.expectMessage("Unable to handle type[STRING_ARRAY] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            new ExpressionLambdaAggregatorFactory(
+                "array_agg_distinct",
+                ImmutableSet.of(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION),
+                "acc",
+                "[]",
+                null,
+                "array_set_add(acc, placementish)",
+                "array_set_add_all(acc, array_agg_distinct)",
+                null,
+                null,
+                null,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "automotive",
+            "array_agg_distinct",
+            new String[] {"a", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "business",
+            "array_agg_distinct",
+            new String[] {"b", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "entertainment",
+            "array_agg_distinct",
+            new String[] {"e", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "health",
+            "array_agg_distinct",
+            new String[] {"h", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "mezzanine",
+            "array_agg_distinct",
+            new String[] {"m", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "news",
+            "array_agg_distinct",
+            new String[] {"n", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "premium",
+            "array_agg_distinct",
+            new String[] {"p", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "technology",
+            "array_agg_distinct",
+            new String[] {"t", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "travel",
+            "array_agg_distinct",
+            new String[] {"t", "preferred"}
+        ),
+
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "automotive",
+            "array_agg_distinct",
+            new String[] {"a", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "business",
+            "array_agg_distinct",
+            new String[] {"b", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "entertainment",
+            "array_agg_distinct",
+            new String[] {"e", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "health",
+            "array_agg_distinct",
+            new String[] {"h", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "mezzanine",
+            "array_agg_distinct",
+            new String[] {"m", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "news",
+            "array_agg_distinct",
+            new String[] {"n", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "premium",
+            "array_agg_distinct",
+            new String[] {"p", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "technology",
+            "array_agg_distinct",
+            new String[] {"t", "preferred"}
+        ),
+        makeRow(
+            query,
+            "2011-04-02",
+            "alias",
+            "travel",
+            "array_agg_distinct",
+            new String[] {"t", "preferred"}
         )
     );
 

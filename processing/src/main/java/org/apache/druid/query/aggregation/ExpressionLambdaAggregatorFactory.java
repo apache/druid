@@ -242,7 +242,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   {
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
-        thePlan.getPlan().getExpression(),
+        thePlan.getExpression(),
         thePlan.getBindings()
     );
   }
@@ -252,7 +252,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   {
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaBufferAggregator(
-        thePlan.getPlan().getExpression(),
+        thePlan.getExpression(),
         thePlan.getInitialValue(),
         thePlan.getBindings(),
         maxSizeBytes
@@ -483,6 +483,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
            '}';
   }
 
+  /**
+   * Determine how to factorize the aggregator
+   */
   private class FactorizePlan
   {
     private final ExpressionPlan plan;
@@ -511,6 +514,16 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
           accumulatorId,
           seed
       );
+    }
+
+    public Expr getExpression()
+    {
+      if (fields == null) {
+        return plan.getExpression();
+      }
+      // for fold expressions, check to see if it needs transformation due to scalar use of multi-valued or unknown
+      // inputs
+      return plan.getAppliedFoldExpression(accumulatorId);
     }
 
     public ExpressionPlan getPlan()

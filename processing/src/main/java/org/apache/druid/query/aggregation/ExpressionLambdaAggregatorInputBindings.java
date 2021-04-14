@@ -24,6 +24,12 @@ import org.apache.druid.math.expr.ExprEval;
 
 import javax.annotation.Nullable;
 
+/**
+ * Special {@link Expr.ObjectBinding} for use with {@link ExpressionLambdaAggregatorFactory}.
+ * This value binding holds a value for a special 'accumulator' variable, in addition to the 'normal' bindings to the
+ * underlying selector inputs for other identifiers, which allows for easy forward feeding of the results of an
+ * expression evaluation to use in the bindings of the next evaluation.
+ */
 public class ExpressionLambdaAggregatorInputBindings implements Expr.ObjectBinding
 {
   private final Expr.ObjectBinding inputBindings;
