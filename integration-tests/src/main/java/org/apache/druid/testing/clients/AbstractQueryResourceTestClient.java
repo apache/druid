@@ -21,17 +21,22 @@ package org.apache.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -39,33 +44,57 @@ import java.util.concurrent.Future;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
-  private final ObjectMapper jsonMapper;
-  private final HttpClient httpClient;
+  protected boolean requestSmileEncoding = false;
+  protected boolean responseSmileEncoding = false;
+
+  final ObjectMapper jsonMapper;
+  final ObjectMapper smileMapper;
+  final HttpClient httpClient;
   final String routerUrl;
 
   @Inject
   AbstractQueryResourceTestClient(
       ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
       @TestClient HttpClient httpClient,
-      IntegrationTestingConfig config
+      String routerUrl
   )
   {
     this.jsonMapper = jsonMapper;
+    this.smileMapper = smileMapper;
     this.httpClient = httpClient;
-    this.routerUrl = config.getRouterUrl();
+    this.routerUrl = routerUrl;
   }
 
   public abstract String getBrokerURL();
 
+  protected Request buildRequest(String url, QueryType query) throws IOException
+  {
+    Request request = new Request(HttpMethod.POST, new URL(url));
+    if (requestSmileEncoding) {
+      request.setContent(
+          SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+          smileMapper.writeValueAsBytes(query)
+      );
+    } else {
+      request.setContent(
+          MediaType.APPLICATION_JSON,
+          smileMapper.writeValueAsBytes(query)
+      );
+    }
+
+    if (responseSmileEncoding) {
+      request.addHeader("Accpet", SmileMediaTypes.APPLICATION_JACKSON_SMILE);
+    }
+    return request;
+  }
+
   public List<Map<String, Object>> query(String url, QueryType query)
   {
     try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(url)).setContent(
-              "application/json",
-              jsonMapper.writeValueAsBytes(query)
-          ),
-          StatusResponseHandler.getInstance()
+      BytesFullResponseHolder response = httpClient.go(
+          buildRequest(url, query),
+          new BytesFullResponseHandler()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -77,7 +106,8 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
         );
       }
 
-      return jsonMapper.readValue(
+      ObjectMapper responseMapper = this.responseSmileEncoding ? smileMapper : jsonMapper;
+      return responseMapper.readValue(
           response.getContent(), new TypeReference<List<Map<String, Object>>>()
           {
           }
@@ -92,10 +122,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
   {
     try {
       return httpClient.go(
-          new Request(HttpMethod.POST, new URL(url)).setContent(
-              "application/json",
-              jsonMapper.writeValueAsBytes(query)
-          ),
+          buildRequest(url, query),
           StatusResponseHandler.getInstance()
       );
     }

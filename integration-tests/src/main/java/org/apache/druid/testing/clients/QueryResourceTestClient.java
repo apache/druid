@@ -22,6 +22,7 @@ package org.apache.druid.testing.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.Query;
@@ -34,11 +35,22 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
   @Inject
   QueryResourceTestClient(
       ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    super(jsonMapper, smileMapper, httpClient, config.getRouterUrl());
+  }
+
+  private QueryResourceTestClient(
+      ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
+      @TestClient HttpClient httpClient,
+      String routerUrl
+  )
+  {
+    super(jsonMapper, smileMapper, httpClient, routerUrl);
   }
 
   @Override
@@ -50,4 +62,11 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
     );
   }
 
+  public QueryResourceTestClient withEncoding(boolean requestSmileEncoding, boolean responseSmileEncoding)
+  {
+    QueryResourceTestClient client = new QueryResourceTestClient(this.jsonMapper, this.smileMapper, this.httpClient, this.routerUrl);
+    client.requestSmileEncoding = requestSmileEncoding;
+    client.responseSmileEncoding = responseSmileEncoding;
+    return client;
+  }
 }

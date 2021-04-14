@@ -38,10 +38,40 @@ public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
     super(jsonMapper, queryClient, config);
   }
 
+  private TestQueryHelper(
+      ObjectMapper jsonMapper,
+      QueryResourceTestClient queryResourceTestClient,
+      String broker,
+      String brokerTLS,
+      String router,
+      String routerTLS
+  )
+  {
+    super(
+        jsonMapper,
+        queryResourceTestClient,
+        broker,
+        brokerTLS,
+        router,
+        routerTLS
+    );
+  }
+
   @Override
   public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);
   }
 
+  public TestQueryHelper withEncoding(boolean requestSmileEncoding, boolean responseSmileEncoding)
+  {
+    return new TestQueryHelper(
+        this.jsonMapper,
+        ((QueryResourceTestClient) this.queryClient).withEncoding(requestSmileEncoding, responseSmileEncoding),
+        this.broker,
+        this.brokerTLS,
+        this.router,
+        this.routerTLS
+    );
+  }
 }

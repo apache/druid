@@ -36,6 +36,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -79,6 +80,22 @@ public class ITWikipediaQueryTest
   @Test
   public void testWikipediaQueriesFromFile() throws Exception
   {
+    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
+  }
+
+  @Test
+  @Parameters(
+      {
+          "true, true",
+          "true, false",
+          "false, true",
+          "false, false",
+      }
+  )
+  public void testWikipediaQueriesFromFileWithSmileEncoding(boolean requestSmileEncoding, boolean responseSmileEncoding)
+      throws Exception
+  {
+    TestQueryHelper queryHelper = this.queryHelper.withEncoding(requestSmileEncoding, responseSmileEncoding);
     queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
   }
 

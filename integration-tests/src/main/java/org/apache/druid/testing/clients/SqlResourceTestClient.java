@@ -37,7 +37,9 @@ public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQu
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    // currently smile encoding is not supported on SQL endpoint
+    // so no need to pass smile ObjectMapper
+    super(jsonMapper, null, httpClient, config.getRouterUrl());
   }
 
   @Override
