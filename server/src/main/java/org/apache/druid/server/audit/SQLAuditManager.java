@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigSerde;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
@@ -76,8 +78,15 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public void doAudit(final AuditEntry auditEntry)
+  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
   {
+    AuditEntry auditEntry = AuditEntry.builder()
+                                      .key(key)
+                                      .type(type)
+                                      .auditInfo(auditInfo)
+                                      .payload(configSerde.serializeToString(payload, config.isSkipNullField()))
+                                      .build();
+
     dbi.withHandle(
         new HandleCallback<Void>()
         {
@@ -114,6 +123,20 @@ public class SQLAuditManager implements AuditManager
   {
     emitter.emit(getAuditMetricEventBuilder(auditEntry).build("config/audit", 1));
 
+    AuditEntry auditEntryToStore = auditEntry;
+    if (config.getMaxPayloadSizeBytes() >= 0) {
+      int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
+      if (payloadSize > config.getMaxPayloadSizeBytes()) {
+        auditEntryToStore = AuditEntry.builder()
+                                      .key(auditEntry.getKey())
+                                      .type(auditEntry.getType())
+                                      .auditInfo(auditEntry.getAuditInfo())
+                                      .payload(StringUtils.format(PAYLOAD_SKIP_MSG_FORMAT, config.getMaxPayloadSizeBytes()))
+                                      .auditTime(auditEntry.getAuditTime())
+                                      .build();
+      }
+    }
+
     handle.createStatement(
         StringUtils.format(
             "INSERT INTO %s ( audit_key, type, author, comment, created_date, payload) VALUES (:audit_key, :type, :author, :comment, :created_date, :payload)",
@@ -125,7 +148,7 @@ public class SQLAuditManager implements AuditManager
           .bind("author", auditEntry.getAuditInfo().getAuthor())
           .bind("comment", auditEntry.getAuditInfo().getComment())
           .bind("created_date", auditEntry.getAuditTime().toString())
-          .bind("payload", jsonMapper.writeValueAsBytes(auditEntry))
+          .bind("payload", jsonMapper.writeValueAsBytes(auditEntryToStore))
           .execute();
   }
 

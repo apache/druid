@@ -17,21 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.common.config;
+package org.apache.druid.guice.annotations;
+
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
-*/
-public interface ConfigSerde<T>
+ * The ObjectMapper of this annotation will skip serialization of any field with null value.
+ */
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+@PublicApi
+public @interface JsonNonNull
 {
-  byte[] serialize(T obj);
-  /**
-   * Serialize object to String
-   *
-   * @param obj to be serialize
-   * @param skipNull if true, then skip serialization of any field with null value.
-   *                 This can be used to reduce the size of the resulting String.
-   * @return String serialization of the input
-   */
-  String serializeToString(T obj, boolean skipNull);
-  T deserialize(byte[] bytes);
 }
