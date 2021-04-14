@@ -54,9 +54,4 @@ class DruidColumnarInputPartitionReaderSuite extends SparkFunSuite with InputPar
       columnarPartitionReaderToSeq
     )
   )
-
-  override def beforeEach(): Unit = {
-    NullHandling.initializeForTests()
-    super.beforeEach()
-  }
 }

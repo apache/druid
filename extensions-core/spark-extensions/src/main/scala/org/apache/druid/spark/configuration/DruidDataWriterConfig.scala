@@ -31,6 +31,7 @@ class DruidDataWriterConfig(
                              val deepStorageType: String,
                              val properties: Configuration,
                              val version: String,
-                             val partitionMap: Option[Map[Int, Map[String, String]]] = None,
-                             val writeCompactSketches: Boolean = false
+                             val partitionMap: Option[Map[Int, Map[String, String]]],
+                             val writeCompactSketches: Boolean,
+                             val useDefaultNullHandling: Boolean
                            ) extends Serializable

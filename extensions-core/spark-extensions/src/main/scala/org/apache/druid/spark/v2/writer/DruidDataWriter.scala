@@ -38,6 +38,7 @@ import org.apache.druid.spark.configuration.{DruidConfigurationKeys, DruidDataWr
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentWriterRegistry,
   ShardSpecRegistry}
+import org.apache.druid.spark.utils.NullHandlingUtils
 import org.apache.druid.spark.v2.{INDEX_IO, INDEX_MERGER_V9}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.catalyst.InternalRow
@@ -65,6 +66,8 @@ import scala.collection.mutable.ArrayBuffer
   *               from the driver.
   */
 class DruidDataWriter(config: DruidDataWriterConfig) extends DataWriter[InternalRow] with Logging {
+  NullHandlingUtils.initializeDruidNullHandling(config.useDefaultNullHandling)
+
   private val tmpPersistDir = FileUtils.createTempDir("persist")
   private val tmpMergeDir = FileUtils.createTempDir("merge")
   private val closer = Closer.create()

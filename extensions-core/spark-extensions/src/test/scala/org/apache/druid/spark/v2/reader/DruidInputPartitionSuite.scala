@@ -21,7 +21,6 @@ package org.apache.druid.spark.v2.reader
 
 import org.apache.druid.spark.SparkFunSuite
 import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
-import org.apache.spark.sql.sources.Filter
 import org.scalatest.matchers.should.Matchers
 
 

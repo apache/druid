@@ -19,7 +19,6 @@
 
 package org.apache.druid.spark.v2
 
-import org.apache.druid.common.config.NullHandling
 import org.apache.druid.spark.configuration.Configuration
 import org.apache.druid.spark.v2.reader.DruidDataSourceReader
 import org.apache.druid.spark.v2.writer.DruidDataSourceWriter
@@ -35,8 +34,6 @@ import org.apache.spark.sql.types.StructType
 
 class DruidDataSourceV2 extends DataSourceV2 with ReadSupport with WriteSupport
   with DataSourceRegister with Logging {
-  // We don't have Guice injections for modules so we need to initialize NullHandling ourselves, same as for Druid tests
-  NullHandling.initializeForTests()
 
   override def shortName(): String = DruidDataSourceV2ShortName
 

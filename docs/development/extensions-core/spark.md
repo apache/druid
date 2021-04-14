@@ -178,6 +178,8 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |`writer.rollUpSegments`|Whether or not to roll up segments produced|No|True|
 |`writer.rowsPerPersist`|How many rows to hold in memory before flushing intermediate indices to disk|No|2000000|
 |`writer.rationalizeSegments`|Whether or not to rationalize segments to ensure contiguity and completeness|No|True if `partitionMap` is not set, False otherwise|
+|`writer.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
+|`writer.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 
 `writer.dimensions` may be either a comma-delimited list of column names _or_ a JSON list of Druid DimensionSchema
 objects (i.e. the `dimensions` section of a `DimensionSpec`). If DimensionSchemas are provided, dimension types must

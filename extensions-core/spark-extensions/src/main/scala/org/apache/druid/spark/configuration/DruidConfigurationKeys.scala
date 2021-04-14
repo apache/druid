@@ -46,15 +46,17 @@ object DruidConfigurationKeys {
   private[spark] val brokerHostDefaultKey: (String, String) = (brokerHostKey, "localhost")
   private[spark] val brokerPortDefaultKey: (String, Int) = (brokerPortKey, 8082)
 
+  // Common configs
+  val useCompactSketchesKey: String = "useCompactSketches" // Default: false
+  val useDefaultValueForNull: String = "useDefaultValueForNull" // Default: true
+  private[spark] val useCompactSketchesDefaultKey: (String, Boolean) = (useCompactSketchesKey, false)
+  private[spark] val useDefaultValueForNullDefaultKey: (String, Boolean) = (useDefaultValueForNull, true)
+
   // Reader Configs
   val readerPrefix: String = "reader"
   val segmentsKey: String = "segments"
-  val useCompactSketchesKey: String = "useCompactSketches" // Default: false
-  val useDefaultValueForNull: String = "useDefaultValueForNull" // Default: true
   val vectorizeKey: String = "vectorize" // Default: false, experimental key!
   val batchSizeKey: String = "batchSize" // Default: 512
-  private[spark] val useCompactSketchesDefaultKey: (String, Boolean) = (useCompactSketchesKey, false)
-  private[spark] val useDefaultValueForNullDefaultKey: (String, Boolean) = (useDefaultValueForNull, true)
   private[spark] val vectorizeDefaultKey: (String, Boolean) = (vectorizeKey, false)
   private[spark] val batchSizeDefaultKey: (String, Int) = (batchSizeKey, 512)
 

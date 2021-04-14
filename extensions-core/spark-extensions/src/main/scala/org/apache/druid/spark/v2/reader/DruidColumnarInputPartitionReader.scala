@@ -30,6 +30,7 @@ import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.SerializableHadoopConfiguration
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentReaderRegistry}
+import org.apache.druid.spark.utils.NullHandlingUtils
 import org.apache.druid.spark.v2.INDEX_IO
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.utils.CompressionUtils
@@ -54,6 +55,8 @@ class DruidColumnarInputPartitionReader(
                                          batchSize: Int
                                        )
   extends InputPartitionReader[ColumnarBatch] with Logging {
+  // Need to initialize Druid's internal null handling as well for filters etc.
+  NullHandlingUtils.initializeDruidNullHandling(useDefaultNullHandling)
 
   if (columnTypes.isDefined) {
     // Callers will need to explicitly register any complex metrics not known to ComplexMetricRegistry by default

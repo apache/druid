@@ -243,30 +243,26 @@ object DruidDataSourceReader {
    * since the `sys.segments` table prunes load specs.
    *
    * Data source schemata can be determined via querying the `INFORMATION_SCHEMA.COLUMNS` table, via
-   * SegmentMetadataQueries, or via pulling segments into memory and analyzing them. However,
+   * SegmentMetadataQueries, or via pulling segments into memory and analyzing them.
    * SegmentMetadataQueries can be expensive and time-consuming for large numbers of segments. This
    * could be worked around by only checking the first and last segments for an interval, which
    * would catch schema evolution that spans the interval to query, but not schema evolution within
    * the interval and would prevent determining accurate statistics. Likewise, pulling segments into
    * memory on the driver to check their schema is expensive and inefficient and has the same schema
-   * evolution and accurate statistics problem. The downside of querying the
-   * `INFORMATION_SCHEMA.COLUMNS` table is that unlike sending a SegmentMetadataQuery or pulling a
-   * segment into memory, we wouldn't have access to possibly useful statistics about the segments
+   * evolution and accurate statistics problem.
+   * The `INFORMATION_SCHEMA.COLUMNS` table does not contain information about whether or not a column
+   * could contain multiple values and does not know the actual metric type for complex metrics. Less
+   * relevantly, we wouldn't have access to possibly useful statistics about the segments
    * that could be used to perform more efficient reading, and the Druid cluster to read from would
    * need to have sql querying initialized and be running a version of Druid >= 0.14. Since we're
-   * not currently doing any intelligent partitioning for reads, concerns about statistics are
-   * mostly irrelevant.
+   * not currently doing any intelligent partitioning for reads, this doesn't really matter.
    *
    * Publishing segments can only be done via direct interaction with the metadata server.
    *
    * Since there's no way to satisfy these constraints with a single method of interaction, we will
    * need to use a metadata client and a druid client. The metadata client can fetch segment
-   * locations and publish segments, and the druid client will issue sql queries to determine
-   * datasource schemata. If there's concerns around performance issues due to "dumb" readers or
-   * a need to support non-sql enabled Druid clusters, the druid client can instead be used to send
-   * SegmentMetadataQueries. In order to allow growth in this direction and avoid requiring users
-   * to include avatica jars in their Spark cluster, this client uses HTTP requests instead of the
-   * JDBC protocol.
+   * locations and publish segments, and the druid client will issue SegmentMetadata queries to determine
+   * datasource schemata.
    */
 
   def createDruidMetaDataClient(conf: Configuration): DruidMetadataClient = {

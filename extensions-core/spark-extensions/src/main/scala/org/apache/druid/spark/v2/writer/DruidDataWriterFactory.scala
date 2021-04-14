@@ -80,7 +80,9 @@ class DruidDataWriterFactory(
         conf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
         conf,
         version,
-        partitionIdToDruidPartitionsMap
+        partitionIdToDruidPartitionsMap,
+        writerConf.getBoolean(DruidConfigurationKeys.useCompactSketchesDefaultKey),
+        writerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
       )
     )
   }
