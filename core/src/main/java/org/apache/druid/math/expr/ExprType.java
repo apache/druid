@@ -42,6 +42,11 @@ public enum ExprType
     return isNumeric(this);
   }
 
+  public boolean isScalar()
+  {
+    return isScalar(this);
+  }
+
   /**
    * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, and
    * cannot currently handle {@link ValueType#COMPLEX} inputs. This method will convert {@link ValueType#FLOAT} to
@@ -129,6 +134,11 @@ public enum ExprType
   public static boolean isNumeric(@Nullable ExprType type)
   {
     return LONG.equals(type) || DOUBLE.equals(type);
+  }
+
+  public static boolean isScalar(@Nullable ExprType exprType)
+  {
+    return !isArray(exprType);
   }
 
   public static boolean isArray(@Nullable ExprType type)

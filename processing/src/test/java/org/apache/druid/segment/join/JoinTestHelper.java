@@ -52,6 +52,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -171,15 +172,19 @@ public class JoinTestHelper
 
   public static IndexBuilder createFactIndexBuilder(final File tmpDir) throws IOException
   {
-    return createFactIndexBuilder(tmpDir, -1);
+    return createFactIndexBuilder(TestHelper.NO_CACHE_COLUMN_CONFIG, tmpDir, -1);
   }
 
-  public static IndexBuilder createFactIndexBuilder(final File tmpDir, final int numRows) throws IOException
+  public static IndexBuilder createFactIndexBuilder(
+      final ColumnConfig columnConfig,
+      final File tmpDir,
+      final int numRows
+  ) throws IOException
   {
     return withRowsFromResource(
         "/wikipedia/data.json",
         rows -> IndexBuilder
-            .create()
+            .create(columnConfig)
             .tmpDir(tmpDir)
             .schema(
                 new IncrementalIndexSchema.Builder()

@@ -45,10 +45,13 @@ import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -72,6 +75,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -86,6 +92,8 @@ import java.util.stream.Collectors;
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
+
+  protected boolean segmentAvailabilityConfirmationCompleted = false;
 
   @GuardedBy("this")
   private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
@@ -577,6 +585,63 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
           )
       );
+    }
+  }
+
+  /**
+   * Wait for segments to become available on the cluster. If waitTimeout is reached, giveup on waiting. This is a
+   * QoS method that can be used to make Batch Ingest tasks wait to finish until their ingested data is available on
+   * the cluster. Doing so gives an end user assurance that a Successful task status means their data is available
+   * for querying.
+   *
+   * @param toolbox {@link TaskToolbox} object with for assisting with task work.
+   * @param segmentsToWaitFor {@link List} of segments to wait for availability.
+   * @param waitTimeout Millis to wait before giving up
+   * @return True if all segments became available, otherwise False.
+   */
+  protected boolean waitForSegmentAvailability(
+      TaskToolbox toolbox,
+      List<DataSegment> segmentsToWaitFor,
+      long waitTimeout
+  )
+  {
+    if (segmentsToWaitFor.isEmpty()) {
+      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments.");
+      return true;
+    } else if (waitTimeout < 0) {
+      log.warn("Asked to wait for availability for < 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
+      return false;
+    }
+    log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
+
+    try (
+        SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+    ) {
+
+      ExecutorService exec = Execs.directExecutor();
+      CountDownLatch doneSignal = new CountDownLatch(segmentsToWaitFor.size());
+
+      notifier.start();
+      for (DataSegment s : segmentsToWaitFor) {
+        notifier.registerSegmentHandoffCallback(
+            new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
+            exec,
+            () -> {
+              log.debug(
+                  "Confirmed availability for [%s]. Removing from list of segments to wait for",
+                  s.getId()
+              );
+              doneSignal.countDown();
+            }
+        );
+      }
+      return doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 

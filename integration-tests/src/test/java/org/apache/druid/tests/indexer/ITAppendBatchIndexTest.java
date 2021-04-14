@@ -25,6 +25,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -96,11 +97,11 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       // Submit initial ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false, new Pair<>(false, false));
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(0));
       doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE);
       // Submit append ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true, new Pair<>(false, false));
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(1));
       doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE);
       // Submit compaction task
@@ -115,7 +116,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
   private void submitIngestionTaskAndVerify(
       String indexDatasource,
       PartitionsSpec partitionsSpec,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws Exception
   {
     InputFormatDetails inputFormatDetails = InputFormatDetails.JSON;
@@ -180,7 +182,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         null,
         false,
         false,
-        true
+        true,
+        segmentAvailabilityConfirmationPair
     );
   }
 }

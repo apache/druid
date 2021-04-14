@@ -20,6 +20,7 @@
 package org.apache.druid.audit;
 
 
+import org.apache.druid.common.config.ConfigSerde;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 
@@ -28,15 +29,25 @@ import java.util.List;
 
 public interface AuditManager
 {
+  /**
+   * This String is the default message stored instead of the actual audit payload if the audit payload size
+   * exceeded the maximum size limit configuration
+   */
+  String PAYLOAD_SKIP_MSG_FORMAT = "Payload was not stored as its size exceeds the limit [%d] configured by druid.audit.manager.maxPayloadSizeBytes";
+
   String X_DRUID_AUTHOR = "X-Druid-Author";
 
   String X_DRUID_COMMENT = "X-Druid-Comment";
 
   /**
-   * inserts an audit Entry in the Audit Table
-   * @param auditEntry
+   * inserts an audit entry in the Audit Table
+   * @param key of the audit entry
+   * @param type of the audit entry
+   * @param auditInfo of the audit entry
+   * @param payload of the audit entry
+   * @param configSerde of the payload of the audit entry
    */
-  void doAudit(AuditEntry auditEntry);
+  <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde);
 
   /**
    * inserts an audit Entry in audit table using the handler provided

@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
@@ -150,7 +151,8 @@ public class ITOverwriteBatchIndexTest extends AbstractITBatchIndexTest
         null,
         false,
         false,
-        true
+        true,
+        new Pair<>(false, false)
     );
   }
 }

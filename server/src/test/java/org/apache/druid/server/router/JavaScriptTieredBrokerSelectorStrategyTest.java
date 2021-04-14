@@ -32,10 +32,13 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.script.ScriptEngineManager;
 import java.util.LinkedHashMap;
 
 public class JavaScriptTieredBrokerSelectorStrategyTest
@@ -47,6 +50,13 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
       "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }",
       JavaScriptConfig.getEnabledInstance()
   );
+
+  @Before
+  public void checkJdkCompatibility()
+  {
+    // skip tests for newer JDKs without javascript support
+    Assume.assumeNotNull(new ScriptEngineManager().getEngineByName("javascript"));
+  }
 
   @Test
   public void testSerde() throws Exception

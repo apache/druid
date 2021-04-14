@@ -21,11 +21,14 @@ package org.apache.druid.benchmark.compression;
 
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.segment.BitmapOffset;
+import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.VectorOffset;
@@ -34,14 +37,14 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
-import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -51,6 +54,8 @@ public class BaseColumnarLongsBenchmark
 {
   static final int VECTOR_SIZE = 512;
 
+  Map<String, ColumnarLongs> decoders = new HashMap<>();
+  Map<String, Integer> encodedSize = new HashMap<>();
   /**
    * Name of the long encoding strategy. For longs, this is a composite of both byte level block compression and
    * encoding of values within the block.
@@ -68,40 +73,156 @@ public class BaseColumnarLongsBenchmark
   long minValue;
   long maxValue;
 
-  @Nullable
-  BitSet filter;
-
+  Offset offset;
   VectorOffset vectorOffset;
 
-  void setupFilters(int rows, double filteredRowCountPercentage)
+
+  void scan(Blackhole blackhole)
   {
-    // todo: filter set distributions to simulate different select patterns?
-    //  (because benchmarks don't take long enough already..)
-    filter = null;
+    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
+    ColumnarLongs encoder = decoders.get(encoding);
+    while (offset.withinBounds()) {
+      blackhole.consume(encoder.get(offset.getOffset()));
+      offset.increment();
+    }
+    offset.reset();
+    blackhole.consume(offset);
+  }
+
+  void scanVectorized(Blackhole blackhole)
+  {
+    EncodingSizeProfiler.encodedSize = encodedSize.get(encoding);
+    ColumnarLongs columnDecoder = decoders.get(encoding);
+    long[] vector = new long[VECTOR_SIZE];
+    while (!vectorOffset.isDone()) {
+      if (vectorOffset.isContiguous()) {
+        columnDecoder.get(vector, vectorOffset.getStartOffset(), vectorOffset.getCurrentVectorSize());
+      } else {
+        columnDecoder.get(vector, vectorOffset.getOffsets(), vectorOffset.getCurrentVectorSize());
+      }
+      for (int i = 0; i < vectorOffset.getCurrentVectorSize(); i++) {
+        blackhole.consume(vector[i]);
+      }
+      vectorOffset.advance();
+    }
+    blackhole.consume(vector);
+    blackhole.consume(vectorOffset);
+    vectorOffset.reset();
+    columnDecoder.close();
+  }
+
+  void setupFilters(int rows, double filteredRowCountPercentage, String filterDistribution)
+  {
     final int filteredRowCount = (int) Math.floor(rows * filteredRowCountPercentage);
 
+
     if (filteredRowCount < rows) {
-      // setup bitset filter
-      filter = new BitSet();
-      MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
-      for (int i = 0; i < filteredRowCount; i++) {
-        int rowToAccess = rand.nextInt(rows);
-        // Skip already selected rows if any
-        while (filter.get(rowToAccess)) {
-          rowToAccess = rand.nextInt(rows);
-        }
-        filter.set(rowToAccess);
-        bitmap.add(rowToAccess);
+      switch (filterDistribution) {
+        case "random":
+          setupRandomFilter(rows, filteredRowCount);
+          break;
+        case "contiguous-start":
+          offset = new SimpleAscendingOffset(rows);
+          vectorOffset = new NoFilterVectorOffset(VECTOR_SIZE, 0, filteredRowCount);
+          break;
+        case "contiguous-end":
+          offset = new SimpleAscendingOffset(rows);
+          vectorOffset = new NoFilterVectorOffset(VECTOR_SIZE, rows - filteredRowCount, rows);
+          break;
+        case "contiguous-bitmap-start":
+          setupContiguousBitmapFilter(rows, filteredRowCount, 0);
+          break;
+        case "contiguous-bitmap-end":
+          setupContiguousBitmapFilter(rows, filteredRowCount, rows - filteredRowCount);
+          break;
+        case "chunky-1000":
+          setupChunkyFilter(rows, filteredRowCount, 1000);
+          break;
+        case "chunky-10000":
+          setupChunkyFilter(rows, filteredRowCount, 10000);
+          break;
+        default:
+          throw new IllegalArgumentException("unknown filter distribution");
       }
-      vectorOffset = new BitmapVectorOffset(
-          VECTOR_SIZE,
-          new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
-          0,
-          rows
-      );
     } else {
+      offset = new SimpleAscendingOffset(rows);
       vectorOffset = new NoFilterVectorOffset(VECTOR_SIZE, 0, rows);
     }
+  }
+
+  private void setupRandomFilter(int rows, int filteredRowCount)
+  {
+    MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+    for (int i = 0; i < filteredRowCount; i++) {
+      int rowToAccess = rand.nextInt(rows);
+      // Skip already selected rows if any
+      while (bitmap.contains(rowToAccess)) {
+        rowToAccess = rand.nextInt(rows);
+      }
+      bitmap.add(rowToAccess);
+    }
+    offset = BitmapOffset.of(
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        false,
+        rows
+    );
+    vectorOffset = new BitmapVectorOffset(
+        VECTOR_SIZE,
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        0,
+        rows
+    );
+  }
+
+  private void setupContiguousBitmapFilter(int rows, int filterRowCount, int startOffset)
+  {
+    MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+    for (int i = startOffset; i < filterRowCount; i++) {
+      bitmap.add(i);
+    }
+    offset = BitmapOffset.of(
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        false,
+        rows
+    );
+    vectorOffset = new BitmapVectorOffset(
+        VECTOR_SIZE,
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        startOffset,
+        rows
+    );
+  }
+
+  private void setupChunkyFilter(int rows, int filteredRowCount, int chunkSize)
+  {
+    MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+    for (int count = 0; count < filteredRowCount; ) {
+      int chunkOffset = rand.nextInt(rows - chunkSize);
+      // Skip already selected rows if any
+      while (bitmap.contains(chunkOffset)) {
+        chunkOffset = rand.nextInt(rows - chunkSize);
+      }
+      int numAdded = 0;
+      for (; numAdded < chunkSize && count + numAdded < filteredRowCount; numAdded++) {
+        // break if we run into an existing contiguous section
+        if (bitmap.contains(numAdded)) {
+          break;
+        }
+        bitmap.add(chunkOffset + numAdded);
+      }
+      count += numAdded;
+    }
+    offset = BitmapOffset.of(
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        false,
+        rows
+    );
+    vectorOffset = new BitmapVectorOffset(
+        VECTOR_SIZE,
+        new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap()),
+        0,
+        rows
+    );
   }
 
   static int encodeToFile(long[] vals, String encoding, FileChannel output)throws IOException

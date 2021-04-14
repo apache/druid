@@ -269,7 +269,8 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1L
             )
         ),
         null
@@ -307,6 +308,7 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
+    Assert.assertEquals(taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(), task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
   }
 
   @Test
@@ -345,6 +347,7 @@ public class TaskSerdeTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,

@@ -26,7 +26,7 @@ import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.util.BitSet;
 
-public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTest
+public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTestBase
 {
 
   public static final double DENSITY = 0.001;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
@@ -46,7 +47,8 @@ public class ITHttpInputSourceTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
     }
   }

@@ -41,17 +41,22 @@ public class IngestionStatsAndErrorsTaskReportData
   @Nullable
   private String errorMsg;
 
+  @JsonProperty
+  private boolean segmentAvailabilityConfirmed;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
-      @JsonProperty("errorMsg") @Nullable String errorMsg
+      @JsonProperty("errorMsg") @Nullable String errorMsg,
+      @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed
   )
   {
     this.ingestionState = ingestionState;
     this.unparseableEvents = unparseableEvents;
     this.rowStats = rowStats;
     this.errorMsg = errorMsg;
+    this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
   }
 
   @JsonProperty
@@ -79,6 +84,12 @@ public class IngestionStatsAndErrorsTaskReportData
     return errorMsg;
   }
 
+  @JsonProperty
+  public boolean isSegmentAvailabilityConfirmed()
+  {
+    return segmentAvailabilityConfirmed;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -100,13 +111,20 @@ public class IngestionStatsAndErrorsTaskReportData
     return getIngestionState() == that.getIngestionState() &&
            Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
            Objects.equals(getRowStats(), that.getRowStats()) &&
-           Objects.equals(getErrorMsg(), that.getErrorMsg());
+           Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
+           Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getIngestionState(), getUnparseableEvents(), getRowStats(), getErrorMsg());
+    return Objects.hash(
+        getIngestionState(),
+        getUnparseableEvents(),
+        getRowStats(),
+        getErrorMsg(),
+        isSegmentAvailabilityConfirmed()
+    );
   }
 
   @Override
@@ -117,6 +135,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", unparseableEvents=" + unparseableEvents +
            ", rowStats=" + rowStats +
            ", errorMsg='" + errorMsg + '\'' +
+           ", segmentAvailabilityConfirmed=" + segmentAvailabilityConfirmed +
            '}';
   }
 }

@@ -214,6 +214,36 @@ public interface Expr
     }
 
     /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * value of true.
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     */
+    default boolean areScalar(List<Expr> args)
+    {
+      boolean scalar = true;
+      for (Expr arg : args) {
+        ExprType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        scalar &= argType.isScalar();
+      }
+      return scalar;
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * value of true.
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     */
+    default boolean areScalar(Expr... args)
+    {
+      return areScalar(Arrays.asList(args));
+    }
+
+    /**
      * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingInspector)} to a value of true
      */
     default boolean canVectorize(List<Expr> args)

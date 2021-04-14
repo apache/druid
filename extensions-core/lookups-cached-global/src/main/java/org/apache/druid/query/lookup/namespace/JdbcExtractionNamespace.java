@@ -19,17 +19,28 @@
 
 package org.apache.druid.query.lookup.namespace;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
+import com.mysql.jdbc.NonRegisteringDriver;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.utils.ConnectionUriUtils;
+import org.apache.druid.utils.Throwables;
 import org.joda.time.Period;
+import org.postgresql.Driver;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.sql.SQLException;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -61,17 +72,104 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @NotNull @JsonProperty(value = "valueColumn", required = true) final String valueColumn,
       @JsonProperty(value = "tsColumn", required = false) @Nullable final String tsColumn,
       @JsonProperty(value = "filter", required = false) @Nullable final String filter,
-      @Min(0) @JsonProperty(value = "pollPeriod", required = false) @Nullable final Period pollPeriod
+      @Min(0) @JsonProperty(value = "pollPeriod", required = false) @Nullable final Period pollPeriod,
+      @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
-    Preconditions.checkNotNull(connectorConfig.getConnectURI(), "connectorConfig.connectURI");
+    // Check the properties in the connection URL. Note that JdbcExtractionNamespace doesn't use
+    // MetadataStorageConnectorConfig.getDbcpProperties(). If we want to use them,
+    // those DBCP properties should be validated using the same logic.
+    checkConnectionURL(connectorConfig.getConnectURI(), securityConfig);
     this.table = Preconditions.checkNotNull(table, "table");
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
     this.tsColumn = tsColumn;
     this.filter = filter;
     this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
+  }
+
+  /**
+   * Check the given URL whether it contains non-allowed properties.
+   *
+   * This method should be in sync with the following methods:
+   *
+   * - {@code org.apache.druid.server.lookup.jdbc.JdbcDataFetcher.checkConnectionURL()}
+   * - {@code org.apache.druid.firehose.sql.MySQLFirehoseDatabaseConnector.findPropertyKeysFromConnectURL()}
+   * - {@code org.apache.druid.firehose.sql.PostgresqlFirehoseDatabaseConnector.findPropertyKeysFromConnectURL()}
+   *
+   * @see JdbcAccessSecurityConfig#getAllowedProperties()
+   */
+  private static void checkConnectionURL(String url, JdbcAccessSecurityConfig securityConfig)
+  {
+    Preconditions.checkNotNull(url, "connectorConfig.connectURI");
+
+    if (!securityConfig.isEnforceAllowedProperties()) {
+      // You don't want to do anything with properties.
+      return;
+    }
+
+    @Nullable final Properties properties; // null when url has an invalid format
+
+    if (url.startsWith(ConnectionUriUtils.MYSQL_PREFIX)) {
+      try {
+        NonRegisteringDriver driver = new NonRegisteringDriver();
+        properties = driver.parseURL(url, null);
+      }
+      catch (SQLException e) {
+        throw new RuntimeException(e);
+      }
+      catch (Throwable e) {
+        if (Throwables.isThrowable(e, NoClassDefFoundError.class)
+            || Throwables.isThrowable(e, ClassNotFoundException.class)) {
+          if (e.getMessage().contains("com/mysql/jdbc/NonRegisteringDriver")) {
+            throw new RuntimeException(
+                "Failed to find MySQL driver class. Please check the MySQL connector version 5.1.48 is in the classpath",
+                e
+            );
+          }
+        }
+        throw new RuntimeException(e);
+      }
+    } else if (url.startsWith(ConnectionUriUtils.POSTGRES_PREFIX)) {
+      try {
+        properties = Driver.parseURL(url, null);
+      }
+      catch (Throwable e) {
+        if (Throwables.isThrowable(e, NoClassDefFoundError.class)
+            || Throwables.isThrowable(e, ClassNotFoundException.class)) {
+          if (e.getMessage().contains("org/postgresql/Driver")) {
+            throw new RuntimeException(
+                "Failed to find PostgreSQL driver class. "
+                + "Please check the PostgreSQL connector version 42.2.14 is in the classpath",
+                e
+            );
+          }
+        }
+        throw new RuntimeException(e);
+      }
+    } else {
+      if (securityConfig.isAllowUnknownJdbcUrlFormat()) {
+        properties = new Properties();
+      } else {
+        // unknown format but it is not allowed
+        throw new IAE("Unknown JDBC connection scheme: %s", url.split(":")[1]);
+      }
+    }
+
+    if (properties == null) {
+      // There is something wrong with the URL format.
+      throw new IAE("Invalid URL format [%s]", url);
+    }
+
+    final Set<String> propertyKeys = Sets.newHashSetWithExpectedSize(properties.size());
+    properties.forEach((k, v) -> propertyKeys.add((String) k));
+
+    ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
+        propertyKeys,
+        securityConfig.getSystemPropertyPrefixes(),
+        securityConfig.getAllowedProperties()
+    );
   }
 
   public MetadataStorageConnectorConfig getConnectorConfig()

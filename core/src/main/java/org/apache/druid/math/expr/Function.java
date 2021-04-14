@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.math.expr.vector.VectorStringProcessors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -1310,6 +1311,9 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
+      if (NullHandling.sqlCompatible() && value1.isNumericNull()) {
+        return ExprEval.of(null);
+      }
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
         throw new IAE(
             "The first argument to the function[%s] should be integer or double type but got the type: %s",
@@ -2190,6 +2194,21 @@ public interface Function
     public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExprType.STRING;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areScalar(args) && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(
+        Expr.VectorInputBindingInspector inspector,
+        List<Expr> args
+    )
+    {
+      return VectorStringProcessors.concat(inspector, args);
     }
   }
 

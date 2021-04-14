@@ -17,34 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.server.initialization.jetty;
 
-import com.google.inject.Inject;
-import org.apache.druid.client.coordinator.CoordinatorClient;
+import com.google.common.collect.ImmutableMap;
 
-public class CoordinatorBasedSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
+
+@Provider
+public class ServiceUnavailableExceptionMapper implements ExceptionMapper<ServiceUnavailableException>
 {
-
-  private final CoordinatorClient client;
-  private final CoordinatorBasedSegmentHandoffNotifierConfig config;
-
-  @Inject
-  public CoordinatorBasedSegmentHandoffNotifierFactory(
-      CoordinatorClient client,
-      CoordinatorBasedSegmentHandoffNotifierConfig config
-  )
-  {
-    this.client = client;
-    this.config = config;
-  }
-
   @Override
-  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+  public Response toResponse(ServiceUnavailableException exception)
   {
-    return new CoordinatorBasedSegmentHandoffNotifier(
-        dataSource,
-        client,
-        config
-    );
+    return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of("error", exception.getMessage()))
+                   .build();
   }
 }

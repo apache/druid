@@ -64,7 +64,6 @@ Globally cached lookups can be specified as part of the [cluster wide config for
     "extractionNamespace": {
        "type": "jdbc",
        "connectorConfig": {
-         "createTables": true,
          "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
          "user": "druid",
          "password": "diurd"
@@ -107,7 +106,6 @@ In a simple case where only one [tier](../../querying/lookups.md#dynamic-configu
         "extractionNamespace": {
           "type": "jdbc",
           "connectorConfig": {
-            "createTables": true,
             "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
             "user": "druid",
             "password": "diurd"
@@ -136,7 +134,6 @@ Where the Coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
     "extractionNamespace": {
       "type": "jdbc",
       "connectorConfig": {
-        "createTables": true,
         "connectURI": "jdbc:mysql://localhost:3306/druid",
         "user": "druid",
         "password": "diurd"
@@ -347,7 +344,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`connectorConfig`|The connector config to use|Yes||
+|`connectorConfig`|The connector config to use. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes||
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
@@ -359,7 +356,6 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 {
   "type":"jdbc",
   "connectorConfig":{
-    "createTables":true,
     "connectURI":"jdbc:mysql://localhost:3306/druid",
     "user":"druid",
     "password":"diurd"
