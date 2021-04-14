@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.io.File;
 import java.util.Map;
 import java.util.Objects;

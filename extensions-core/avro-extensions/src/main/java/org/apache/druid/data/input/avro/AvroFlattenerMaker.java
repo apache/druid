@@ -99,7 +99,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
 
-    this.avroJsonProvider= new GenericAvroJsonProvider(explodeUnions);
+    this.avroJsonProvider = new GenericAvroJsonProvider(explodeUnions);
     this.jsonPathConfiguration =
         Configuration.builder()
                      .jsonProvider(avroJsonProvider)

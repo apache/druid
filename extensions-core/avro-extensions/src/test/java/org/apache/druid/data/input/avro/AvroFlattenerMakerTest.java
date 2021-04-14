@@ -224,7 +224,8 @@ public class AvroFlattenerMakerTest
   }
 
   @Test
-  public void jsonPathExtractorExplodeUnions() {
+  public void jsonPathExtractorExplodeUnions()
+  {
     final SomeAvroDatum record = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
 

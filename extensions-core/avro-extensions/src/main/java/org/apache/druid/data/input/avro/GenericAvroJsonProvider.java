@@ -46,7 +46,9 @@ import java.util.stream.Collectors;
 public class GenericAvroJsonProvider implements JsonProvider
 {
   private final boolean explodeUnions;
-  GenericAvroJsonProvider(final boolean explodeUnions) {
+
+  GenericAvroJsonProvider(final boolean explodeUnions)
+  {
     this.explodeUnions = explodeUnions;
   }
 
@@ -209,7 +211,8 @@ public class GenericAvroJsonProvider implements JsonProvider
     return o;
   }
 
-  private boolean isExplodableUnion(final Schema.Field field) {
+  private boolean isExplodableUnion(final Schema.Field field)
+  {
     return field.schema().isUnion() &&
            field.schema().getTypes().stream().filter(type -> type.getType() != Schema.Type.NULL).count() > 1;
   }
