@@ -361,7 +361,7 @@ public class AvroStreamInputRowParserTest
     Assert.assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
-  public static SomeAvroDatum buildSomeAvroDatum()
+  private static SomeAvroDatum.Builder createSomeAvroDatumBuilderDefaults()
   {
     return SomeAvroDatum.newBuilder()
                         .setTimestamp(DATE_TIME.toInstant().toEpochMilli())
@@ -383,7 +383,18 @@ public class AvroStreamInputRowParserTest
                         .setSomeNull(null)
                         .setSomeEnum(MyEnum.ENUM1)
                         .setSomeRecord(SOME_RECORD_VALUE)
-                        .setSomeRecordArray(SOME_RECORD_ARRAY_VALUE)
-                        .build();
+                        .setSomeRecordArray(SOME_RECORD_ARRAY_VALUE);
+  }
+
+  public static SomeAvroDatum buildSomeAvroDatum()
+  {
+    return createSomeAvroDatumBuilderDefaults().build();
+  }
+
+  public static SomeAvroDatum buildSomeAvroDatumWithUnionValue(Object unionValue)
+  {
+    return createSomeAvroDatumBuilderDefaults()
+        .setSomeMultiMemberUnion(unionValue)
+        .build();
   }
 }
