@@ -523,11 +523,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       return plan.getAppliedFoldExpression(accumulatorId);
     }
 
-    public ExpressionPlan getPlan()
-    {
-      return plan;
-    }
-
     public ExprEval<?> getInitialValue()
     {
       return seed;
