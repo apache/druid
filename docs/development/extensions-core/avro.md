@@ -42,8 +42,8 @@ Druid supports most Avro types natively, there are however some exceptions which
 #### Unions
 Druid has two modes for supporting `union` types. The original legacy mode can only support unions of the form `[null, otherType]`.
 The newer mode can be enabled by setting `explodeUnions` on the Avro parser in which case unions will be expanded according to the following rules:
-* Primitive types and unnamed complex types are keyed their type name. i.e `int`, ``
-* Complex named types are keyed by their names.
+* Primitive types and unnamed complex types are keyed their type name. i.e `int`, `string`
+* Complex named types are keyed by their names, this includes `record`, `fixed` and `enum`.
 * The Avro null type is elided as it's value can only ever be null
 
 This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed. i.e only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
