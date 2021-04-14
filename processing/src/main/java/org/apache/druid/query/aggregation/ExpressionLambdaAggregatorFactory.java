@@ -352,8 +352,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     return object;
   }
 
-
-
   @Override
   public List<String> requiredFields()
   {
@@ -378,7 +376,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public ValueType getFinalizedType()
   {
-
     if (fields == null) {
       if (finalizeExpressionString != null) {
         // finalize the initial combining value to see what type it is...
