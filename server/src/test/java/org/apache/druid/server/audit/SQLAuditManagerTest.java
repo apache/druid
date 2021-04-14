@@ -128,15 +128,15 @@ public class SQLAuditManagerTest
   public void testAuditMetricEventBuilderConfig()
   {
     AuditEntry entry = new AuditEntry(
-            "testKey",
-            "testType",
-            new AuditInfo(
-                    "testAuthor",
-                    "testComment",
-                    "127.0.0.1"
-            ),
-            "testPayload",
-            DateTimes.of("2013-01-01T00:00:00Z")
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
 
     SQLAuditManager auditManagerWithPayloadAsDimension = new SQLAuditManager(
@@ -259,18 +259,16 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
   {
-    AuditEntry entry = new AuditEntry(
-        "testKey",
-        "testType",
-        new AuditInfo(
-            "testAuthor",
-            "testComment",
-            "127.0.0.1"
-        ),
-        "testPayload",
-        DateTimes.of("2013-01-01T00:00:00Z")
+    String entry1Key = "testKey";
+    String entry1Type = "testType";
+    AuditInfo entry1AuditInfo = new AuditInfo(
+        "testAuthor",
+        "testComment",
+        "127.0.0.1"
     );
-    auditManager.doAudit(entry);
+    String entry1Payload = "testPayload";
+
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
         "audit_key",
@@ -278,7 +276,11 @@ public class SQLAuditManagerTest
         "testKey"
     );
     AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry, dbEntry);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+
     // Do delete
     auditManager.removeAuditLogsOlderThan(System.currentTimeMillis());
     // Verify the delete
@@ -294,18 +296,16 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
   {
-    AuditEntry entry = new AuditEntry(
-        "testKey",
-        "testType",
-        new AuditInfo(
-            "testAuthor",
-            "testComment",
-            "127.0.0.1"
-        ),
-        "testPayload",
-        DateTimes.of("2013-01-01T00:00:00Z")
+    String entry1Key = "testKey";
+    String entry1Type = "testType";
+    AuditInfo entry1AuditInfo = new AuditInfo(
+        "testAuthor",
+        "testComment",
+        "127.0.0.1"
     );
-    auditManager.doAudit(entry);
+    String entry1Payload = "testPayload";
+
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
         "audit_key",
@@ -313,7 +313,10 @@ public class SQLAuditManagerTest
         "testKey"
     );
     AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry, dbEntry);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
     // Do delete
     auditManager.removeAuditLogsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
     // Verify that entry was not delete
@@ -324,7 +327,10 @@ public class SQLAuditManagerTest
         "testKey"
     );
     dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry, dbEntry);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
   }
 
   @Test(timeout = 60_000L)
