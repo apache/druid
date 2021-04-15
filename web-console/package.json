@@ -129,7 +129,7 @@
     "jest": "^26.6.3",
     "license-checker": "^25.0.1",
     "node-sass": "^5.0.0",
-    "playwright-chromium": "^1.4.2",
+    "playwright-chromium": "^1.10.0",
     "postcss": "^8.2.10",
     "postcss-loader": "^5.2.0",
     "postcss-preset-env": "^6.7.0",
