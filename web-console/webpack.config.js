@@ -18,8 +18,8 @@
 
 const process = require('process');
 const path = require('path');
-const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const webpack = require('webpack');
 
 const { version } = require('./package.json');
 
@@ -39,7 +39,15 @@ module.exports = env => {
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
   const useBabel = process.env.babel || mode === 'production';
-  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : 'Wont'} use babel.`);
+  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : "Won't"} use babel.`);
+
+  const plugins = [
+    new webpack.DefinePlugin({
+      'process.env': JSON.stringify({ NODE_ENV: mode }),
+      global: {},
+      NODE_ENV: JSON.stringify(mode),
+    }),
+  ];
 
   function babelTest(s) {
     // https://github.com/zloirock/core-js/issues/514
@@ -147,6 +155,9 @@ module.exports = env => {
     performance: {
       hints: false,
     },
-    plugins: process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE' ? [new BundleAnalyzerPlugin()] : [],
+    plugins:
+      process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE'
+        ? [...plugins, new BundleAnalyzerPlugin()]
+        : plugins,
   };
 };
