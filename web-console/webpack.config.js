@@ -57,7 +57,7 @@ module.exports = env => {
 
   return {
     mode: mode,
-    devtool: 'hidden-source-map',
+    devtool: mode === 'production' ? 'hidden-source-map' : 'eval-cheap-module-source-map',
     entry: {
       'web-console': './src/entry.ts',
     },
