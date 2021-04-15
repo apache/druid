@@ -58,6 +58,17 @@
     <cve>CVE-2020-12691</cve>
   </suppress>
 
+
+  <suppress>
+    <!-- Not much for us to do as a user of the client lib, and no patch is available,
+     see https://github.com/kubernetes/kubernetes/issues/97076 -->
+    <notes><![CDATA[
+   file name: client-java-10.0.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.kubernetes/client\-java.*@10.0.1$</packageUrl>
+    <cve>CVE-2020-8554</cve>
+  </suppress>
+
   <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
   <suppress>
     <!--
@@ -287,5 +298,49 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
+     <cve>CVE-2020-9492</cve>
+  </suppress>
+  <suppress>
+    <!-- We don't use scala compilation daemon. -->
+    <notes><![CDATA[
+     file name: kafka-clients-2.7.0.jar
+     ]]></notes>
+    <cve>CVE-2017-15288</cve>
+  </suppress>
+  <suppress until="2021-04-30">
+    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
+    <notes><![CDATA[
+     This vulnerability should be fixed soon and the suppression should be removed.
+     ]]></notes>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
+
+  <suppress>
+    <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
+    <notes><![CDATA[
+     file name: velocity-engine-core-2.2.jar:
+     ]]></notes>
+    <cve>CVE-2020-13936</cve>
+  </suppress>
+
+  <suppress>
+     <!-- (ranger, ambari, and aliyun-oss) these vulnerabilities are legit, but their latest releases still use the vulnerable jackson version -->
+     <notes><![CDATA[
+     file name: jackson-xc-1.9.x.jar or jackson-jaxrs-1.9.x.jar
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson-(xc|jaxrs)@1.9.*$</packageUrl>
+     <cve>CVE-2018-14718</cve>
+     <cve>CVE-2018-7489</cve>
+  </suppress>
+
+  <suppress>
+     <notes><![CDATA[
+     file name: solr-solrj-7.7.1.jar
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
+     <cve>CVE-2020-13957</cve>
+     <cve>CVE-2019-17558</cve>
+     <cve>CVE-2019-0193</cve>
+     <cve>CVE-2020-13941</cve>
   </suppress>
 </suppressions>
