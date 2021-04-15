@@ -62,6 +62,9 @@ module.exports = env => {
     target: 'web',
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
+      fallback: {
+        os: false,
+      },
     },
     devServer: {
       publicPath: '/public',
@@ -117,13 +120,14 @@ module.exports = env => {
             {
               loader: 'postcss-loader',
               options: {
-                ident: 'postcss',
-                plugins: () => [
-                  postcssPresetEnv({
-                    autoprefixer: { grid: "no-autoplace" },
-                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
-                  }),
-                ],
+                postcssOptions: {
+                  plugins: {
+                    'postcss-preset-env': {
+                      autoprefixer: { grid: 'no-autoplace' },
+                      browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
+                    },
+                  },
+                },
               },
             },
             { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
@@ -134,10 +138,10 @@ module.exports = env => {
           use: {
             loader: 'file-loader',
             options: {
-              name: '[name].[ext]'
-            }
-          }
-        }
+              name: '[name].[ext]',
+            },
+          },
+        },
       ],
     },
     performance: {
