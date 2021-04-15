@@ -131,9 +131,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
           <p className="no-rules-message">
             This datasource currently has no rules, it will use the cluster defaults.
           </p>
-        ) : (
-          undefined
-        )}
+        ) : undefined}
         <div>
           <Button icon={IconNames.PLUS} onClick={addRule}>
             New rule

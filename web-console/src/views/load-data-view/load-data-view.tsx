@@ -62,8 +62,8 @@ import {
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
-  FILTER_FIELDS,
   FILTERS_FIELDS,
+  FILTER_FIELDS,
   FLATTEN_FIELD_FIELDS,
   getDimensionSpecName,
   getIssueWithSpec,
@@ -76,8 +76,8 @@ import {
   METRIC_SPEC_FIELDS,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
-  TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
+  TIMESTAMP_SPEC_FIELDS,
   Transform,
   TRANSFORM_FIELDS,
   updateSchemaWithSample,
@@ -1445,9 +1445,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             </FormGroup>
-          ) : (
-            undefined
-          )}
+          ) : undefined}
         </div>
         {this.renderNextBar({
           disabled: !parserQueryState.data,

@@ -30,7 +30,8 @@
     "semi": true,
     "singleQuote": true,
     "printWidth": 100,
-    "endOfLine": "lf"
+    "endOfLine": "lf",
+    "arrowParens": "avoid"
   },
   "scripts": {
     "compile": "./script/build",
@@ -87,7 +88,7 @@
     "react-splitter-layout": "^4.0.0",
     "react-table": "~6.10.3",
     "regenerator-runtime": "^0.13.3",
-    "tslib": "^1.10.0"
+    "tslib": "^2.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.6.4",
@@ -115,7 +116,7 @@
     "@types/react-table": "6.8.5",
     "@types/uuid": "^7.0.2",
     "autoprefixer": "^9.7.0",
-    "awesome-code-style": "^1.4.3",
+    "awesome-code-style": "^2.1.0",
     "babel-loader": "^8.0.6",
     "codecov": "^3.6.1",
     "css-loader": "^3.2.0",
@@ -134,18 +135,19 @@
     "postcss-cli": "^6.1.3",
     "postcss-loader": "^3.0.0",
     "postcss-preset-env": "^6.7.0",
+    "prettier": "^2.2.1",
     "sass-loader": "^8.0.0",
     "style-loader": "^1.0.0",
-    "stylelint": "^11.1.1",
+    "stylelint": "^13.12.0",
     "stylelint-config-recommended-scss": "^4.0.0",
     "stylelint-scss": "^3.12.0",
     "stylus": "^0.54.7",
     "ts-jest": "^24.1.0",
     "ts-loader": "^6.2.1",
     "ts-node": "^8.4.1",
-    "tslint": "^5.20.0",
+    "tslint": "^6.1.3",
     "tslint-loader": "^3.5.4",
-    "typescript": "^3.7.2",
+    "typescript": "^4.2.4",
     "uuid": "^7.0.2",
     "webpack": "^4.41.2",
     "webpack-bundle-analyzer": "^3.6.0",

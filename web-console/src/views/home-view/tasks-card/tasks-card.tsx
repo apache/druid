@@ -53,7 +53,11 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
 FROM sys.tasks
 GROUP BY 1`,
         });
-        return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+        return lookupBy(
+          taskCountsFromQuery,
+          x => x.status,
+          x => x.count,
+        );
       } else if (capabilities.hasOverlordAccess()) {
         const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks')).data;
         return {

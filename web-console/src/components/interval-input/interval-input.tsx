@@ -48,18 +48,8 @@ function stringifyDateRange(localRange: DateRange): string {
   // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
   const [localStartDate, localEndDate] = localRange;
   return `${
-    localStartDate
-      ? removeLocalTimezone(localStartDate)
-          .toISOString()
-          .substring(0, 19)
-      : ''
-  }/${
-    localEndDate
-      ? removeLocalTimezone(localEndDate)
-          .toISOString()
-          .substring(0, 19)
-      : ''
-  }`;
+    localStartDate ? removeLocalTimezone(localStartDate).toISOString().substring(0, 19) : ''
+  }/${localEndDate ? removeLocalTimezone(localEndDate).toISOString().substring(0, 19) : ''}`;
 }
 
 export interface IntervalInputProps {
