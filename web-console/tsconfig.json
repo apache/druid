@@ -7,7 +7,7 @@
     "importHelpers": true,
     "jsx": "react",
     "lib": ["dom", "es2016", "esnext"],
-    "module": "commonjs",
+    "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
