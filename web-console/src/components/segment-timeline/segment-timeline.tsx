@@ -499,7 +499,7 @@ ORDER BY "start" DESC`;
         svgHeight={chartHeight}
         svgWidth={chartWidth}
         margin={this.chartMargin}
-        changeActiveDatasource={(datasource: string) =>
+        changeActiveDatasource={(datasource: string | null) =>
           this.setState(prevState => ({
             activeDatasource: prevState.activeDatasource ? null : datasource,
           }))
