@@ -21,8 +21,7 @@ import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorCounts {

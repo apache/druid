@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 
-export * from './use-interval';
 export * from './use-global-event-listener';
+export * from './use-interval';
 export * from './use-query-manager';

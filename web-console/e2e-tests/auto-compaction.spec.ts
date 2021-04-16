@@ -24,11 +24,12 @@ import { Datasource } from './component/datasources/datasource';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { HashedPartitionsSpec } from './component/load-data/config/partition';
 import { saveScreenshotIfError } from './util/debug';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
-import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { runIndexTask } from './util/druid';
-import { createBrowser } from './util/playwright';
-import { createPage } from './util/playwright';
+import {
+  DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
+  runIndexTask,
+  UNIFIED_CONSOLE_URL,
+} from './util/druid';
+import { createBrowser, createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
 

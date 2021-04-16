@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import { CancelToken } from 'axios';
+import axios, { CancelToken } from 'axios';
 import debounce from 'lodash.debounce';
 
 import { QueryState } from './query-state';

@@ -20,8 +20,7 @@ import * as playwright from 'playwright-chromium';
 
 import { setLabeledInput } from '../../../util/playwright';
 
-import { clickApplyButton } from './data-connector';
-import { DataConnector } from './data-connector';
+import { clickApplyButton, DataConnector } from './data-connector';
 
 /**
  * Local file connector for data loader input data.

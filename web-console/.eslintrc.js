@@ -21,6 +21,7 @@ module.exports = {
     'eslint-plugin-react',
     'eslint-plugin-unicorn',
     'eslint-plugin-import',
+    'simple-import-sort',
     '@typescript-eslint',
   ],
   settings: {
@@ -48,13 +49,6 @@ module.exports = {
     'prefer-object-spread': 'warn',
     'quote-props': 'off',
     'radix': 'error',
-    'sort-imports': [
-      'warn',
-      {
-        ignoreCase: true,
-        ignoreDeclarationSort: true, // covered by import/order
-      },
-    ],
     'spaced-comment': [
       'error',
       'always',
@@ -115,8 +109,34 @@ module.exports = {
       { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
     ],
 
-    // eslint-plugin-import
-    'import/order': ['warn', { alphabetize: { order: 'asc', caseInsensitive: true } }],
+    // eslint-plugin-simple-import-sort, eslint-plugin-import
+    'simple-import-sort/imports': [
+      'error',
+      {
+        groups: [
+          // Side effect imports (except (s)css files)
+          ['^\\u0000(?!.+.s?css)'],
+          // Packages.
+          // Things that start with a letter (or digit or underscore), or `@` followed by a letter.
+          ['^@?\\w'],
+          // Absolute imports and other imports such as Vue-style `@/foo`.
+          // Anything not matched in another group.
+          ['^'],
+          // Relative parent imports.
+          // Anything that starts with two dots.
+          ['^\\.\\.'],
+          // Relative local imports.
+          // Anything that starts with one dot.
+          ['^\\.'],
+          // (s)css imports
+          ['^\\u0000.+.s?css$'],
+        ],
+      },
+    ],
+    'simple-import-sort/exports': 'error',
+    'import/first': 'error',
+    'import/newline-after-import': 'error',
+    'import/no-duplicates': 'error',
 
     // eslint-plugin-jsdoc
     'jsdoc/check-alignment': 'warn',

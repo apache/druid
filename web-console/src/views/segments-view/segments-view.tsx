@@ -39,6 +39,8 @@ import { Api } from '../../singletons';
 import {
   addFilter,
   booleanCustomTableFilter,
+  Capabilities,
+  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
@@ -52,7 +54,6 @@ import {
   QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
-import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 

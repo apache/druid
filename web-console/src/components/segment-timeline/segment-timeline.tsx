@@ -22,8 +22,7 @@ import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
 import { Api } from '../../singletons';
-import { Capabilities } from '../../utils';
-import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
+import { Capabilities, formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
 import { Loader } from '../loader/loader';
 
@@ -223,6 +222,7 @@ export class SegmentTimeline extends React.PureComponent<
     { capabilities: Capabilities; timeSpan: number },
     any
   >;
+
   private readonly chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {

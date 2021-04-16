@@ -20,13 +20,13 @@ import { Button, Divider, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { SnitchDialog } from '..';
 import { ExternalLink, RuleEditor } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api } from '../../singletons';
 import { swapElements } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
+import { SnitchDialog } from '..';
 
 import './retention-dialog.scss';
 

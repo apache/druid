@@ -305,6 +305,7 @@ ORDER BY 1`;
     DatasourceQuery,
     DatasourcesAndDefaultRules
   >;
+
   private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {

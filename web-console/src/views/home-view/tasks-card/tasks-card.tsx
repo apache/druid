@@ -22,8 +22,7 @@ import React from 'react';
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 function getTaskStatus(d: any) {

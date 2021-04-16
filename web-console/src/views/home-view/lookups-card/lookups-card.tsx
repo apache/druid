@@ -22,8 +22,7 @@ import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface LookupsCardProps {

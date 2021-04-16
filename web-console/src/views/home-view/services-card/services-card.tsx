@@ -22,8 +22,7 @@ import React from 'react';
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { lookupBy, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, lookupBy, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServiceCounts {

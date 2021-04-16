@@ -20,8 +20,7 @@ import { render } from '@testing-library/react';
 import { mount } from 'enzyme';
 import React from 'react';
 
-import { QueryManager } from '../../utils';
-import { Capabilities } from '../../utils';
+import { Capabilities, QueryManager } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 

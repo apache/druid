@@ -20,8 +20,7 @@ import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintj
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -44,6 +43,7 @@ import {
   addFilter,
   addFilterRaw,
   booleanCustomTableFilter,
+  Capabilities,
   deepGet,
   formatDuration,
   getDruidErrorMessage,
@@ -55,7 +55,6 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import { Capabilities } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
