@@ -756,7 +756,7 @@ public class DruidCoordinator
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
     duties.addAll(makeCompactSegmentsDuty());
 
-    log.info(
+    log.debug(
         "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
@@ -769,7 +769,7 @@ public class DruidCoordinator
                                                 .addAll(metadataStoreManagementDuties)
                                                 .build();
 
-    log.info(
+    log.debug(
         "Done making metadata store management duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );

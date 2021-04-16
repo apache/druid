@@ -51,7 +51,7 @@ public class KillAuditLog implements CoordinatorDuty
     );
     this.retainDuration = config.getCoordinatorAuditKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator audit kill retainDuration must be >= 0");
-    log.info(
+    log.debug(
         "Audit Kill Task scheduling enabled with period [%s], retainDuration [%s]",
         this.period,
         this.retainDuration
@@ -63,7 +63,6 @@ public class KillAuditLog implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     if ((lastKillTime + period) < System.currentTimeMillis()) {
-      log.info("Running KillAuditLog duty");
       lastKillTime = System.currentTimeMillis();
 
       long timestamp = System.currentTimeMillis() - retainDuration;
@@ -75,6 +74,7 @@ public class KillAuditLog implements CoordinatorDuty
               auditRemoved
           )
       );
+      log.info("Finished running KillAuditLog duty. Removed %,d audit logs", auditRemoved);
     }
     return params;
   }

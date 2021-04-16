@@ -40,7 +40,7 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorIndexingPeriod();
 
   @Config("druid.coordinator.period.metadataStoreManagementPeriod")
-  @Default("PT3600s")
+  @Default("PT1H")
   public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
 
   @Config("druid.coordinator.kill.period")
