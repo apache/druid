@@ -342,8 +342,7 @@ ORDER BY "start" DESC`;
       prevProps.chartHeight !== this.props.chartHeight
     ) {
       const scales: BarChartScales | undefined = this.calculateScales();
-      let dataToRender: BarUnitData[] | undefined;
-      dataToRender = activeDatasource
+      const dataToRender: BarUnitData[] | undefined = activeDatasource
         ? singleDatasourceData
           ? singleDatasourceData[activeDataType][activeDatasource]
           : undefined

@@ -39,6 +39,7 @@ export class QueryManager<Q, R> {
     cancelToken: CancelToken,
     setIntermediateQuery: (intermediateQuery: any) => void,
   ) => Promise<R>;
+
   private onStateChange?: (queryResolve: QueryState<R>) => void;
 
   private terminated = false;

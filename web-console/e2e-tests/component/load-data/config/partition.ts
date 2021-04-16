@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
+/* eslint-disable max-classes-per-file */
+
 import * as playwright from 'playwright-chromium';
 
 import { getLabeledInput, selectSuggestibleInput, setLabeledInput } from '../../../util/playwright';
-
-/* tslint:disable max-classes-per-file */
 
 /**
  * Possible values for partition step segment granularity.

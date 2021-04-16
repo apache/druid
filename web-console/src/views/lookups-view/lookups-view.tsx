@@ -114,7 +114,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
-        const lookupEntries: {}[] = [];
+        const lookupEntries: Record<string, string>[] = [];
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
