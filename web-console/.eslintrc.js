@@ -137,6 +137,7 @@ module.exports = {
     'import/first': 'error',
     'import/newline-after-import': 'error',
     'import/no-duplicates': 'error',
+    'import/no-extraneous-dependencies': 'error',
 
     // eslint-plugin-jsdoc
     'jsdoc/check-alignment': 'warn',
