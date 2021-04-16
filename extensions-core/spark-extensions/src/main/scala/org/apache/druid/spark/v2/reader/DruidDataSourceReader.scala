@@ -75,10 +75,10 @@ class DruidDataSourceReader(
       val (lowerBound, upperBound) = FilterUtils.getTimeFilterBounds(filters)
       val columnMap = druidClient.getSchema(
         conf.getString(DruidConfigurationKeys.tableKey),
-        List[Interval](Intervals.utc(
+        Some(List[Interval](Intervals.utc(
           lowerBound.getOrElse(JodaUtils.MIN_INSTANT),
           upperBound.getOrElse(JodaUtils.MAX_INSTANT)
-        ))
+        )))
       )
       schema = Option(SchemaUtils.convertDruidSchemaToSparkSchema(columnMap))
       druidColumnTypes = Option(columnMap.map(_._2._1).toSet)

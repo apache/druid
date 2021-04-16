@@ -22,7 +22,7 @@ package org.apache.druid.spark.clients
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.net.HostAndPort
-import org.apache.druid.java.util.common.{ISE, StringUtils}
+import org.apache.druid.java.util.common.{ISE, Intervals, JodaUtils, StringUtils}
 import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler,
   StringFullResponseHolder}
 import org.apache.druid.java.util.http.client.{HttpClient, Request}
@@ -49,19 +49,22 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConv
   * likely substantial room for improvement.
   *
   * @param httpClient
-  * @param objectMapper
   * @param hostAndPort
   */
 class DruidClient(
                    val httpClient: HttpClient,
-                   val objectMapper: ObjectMapper,
                    val hostAndPort: HostAndPort
                  ) extends Logging {
-  private val RETRY_COUNT = 5
-  private val RETRY_WAIT_SECONDS = 5
-  private val TIMEOUT_MILLISECONDS = 300000
+  private val RetryCount = 5
+  private val RetryWaitSeconds = 5
+  private val TimeoutMilliseconds = 300000
   private val druidBaseQueryURL: HostAndPort => String =
     (hostAndPort: HostAndPort) => s"http://$hostAndPort/druid/v2/"
+
+  private val DefaultSegmentMetadataInterval = List[Interval](Intervals.utc(
+    JodaUtils.MIN_INSTANT,
+    JodaUtils.MAX_INSTANT
+  ))
 
   /**
     * The SQL system catalog tables are incorrect for multivalue columns and don't have accurate
@@ -72,25 +75,25 @@ class DruidClient(
     * starting and ending intervals instead of over a larger interval.
     *
     * @param dataSource The Druid dataSource to fetch the schema for.
-    * @param intervals  The intervals to return the schema for.
+    * @param intervals  The intervals to return the schema for, or None to query all segments.
     * @return A map from column name to data type and whether or not the column is multi-value
     *         for the schema of DATASOURCE.
     */
-  def getSchema(dataSource: String, intervals: List[Interval]): Map[String, (String, Boolean)] = {
+  def getSchema(dataSource: String, intervals: Option[List[Interval]]): Map[String, (String, Boolean)] = {
     val body = Druids.newSegmentMetadataQueryBuilder()
       .dataSource(dataSource)
-      .intervals(intervals.asJava)
+      .intervals(intervals.getOrElse(DefaultSegmentMetadataInterval).asJava)
       .analysisTypes(SegmentMetadataQuery.AnalysisType.SIZE)
       .merge(true)
       .context(Map[String, AnyRef](
-        "timeout" -> Int.box(TIMEOUT_MILLISECONDS)
+        "timeout" -> Int.box(TimeoutMilliseconds)
       ).asJava)
       .build()
     val response = sendRequestWithRetry(
-      druidBaseQueryURL(hostAndPort), RETRY_COUNT, Option(objectMapper.writeValueAsBytes(body))
+      druidBaseQueryURL(hostAndPort), RetryCount, Option(MAPPER.writeValueAsBytes(body))
     )
     val segments =
-      objectMapper.readValue[JList[SegmentAnalysis]](
+      MAPPER.readValue[JList[SegmentAnalysis]](
         response.getContent, new TypeReference[JList[SegmentAnalysis]]() {})
     if (segments.size() == 0) {
       throw new ISE(
@@ -99,8 +102,14 @@ class DruidClient(
     }
     // Since we're setting merge to true, there should only be one item in the list
     if (segments.size() > 1) {
-      logWarn("Segment metadata response had more than one row, problem?")
+      throw new ISE("Merged segment metadata response had more than one row!")
     }
+    log.debug(segments.asScala.map(_.toString).mkString("SegmentAnalysis: [", ", ", "]"))
+    /*
+     * If a dimension has multiple types within the spanned interval, the resulting column
+     * analysis will have the type "STRING" and be an error message. We abuse that here to infer
+     * a string type for the dimension and widen the type for the resulting DataFrame.
+     */
     segments.asScala.head.getColumns.asScala.map{ case (name: String, col: ColumnAnalysis) =>
       name -> (col.getType, col.isHasMultipleValues)
     }.toMap
@@ -117,7 +126,7 @@ class DruidClient(
       case e: Exception =>
         if (retryCount > 0) {
           logInfo(s"Got exception: ${e.getMessage}, retrying ...")
-          Thread sleep RETRY_WAIT_SECONDS * 1000
+          Thread.sleep(RetryWaitSeconds * 1000)
           sendRequestWithRetry(url, retryCount - 1, content)
         } else {
           throw e
@@ -131,7 +140,7 @@ class DruidClient(
       var response = httpClient.go(
         request,
         new StringFullResponseHandler(StringUtils.UTF8_CHARSET),
-        Duration.millis(TIMEOUT_MILLISECONDS)
+        Duration.millis(TimeoutMilliseconds)
       ).get
       if (response.getStatus == HttpResponseStatus.TEMPORARY_REDIRECT) {
         val newUrl = response.getResponse.headers().get("Location")
@@ -172,7 +181,6 @@ object DruidClient {
     val brokerConf = conf.dive(DruidConfigurationKeys.brokerPrefix)
     new DruidClient(
       HttpClientHolder.create.get,
-      MAPPER,
       HostAndPort.fromParts(
         brokerConf.get(DruidConfigurationKeys.brokerHostDefaultKey),
         brokerConf.getInt(DruidConfigurationKeys.brokerPortDefaultKey)))
