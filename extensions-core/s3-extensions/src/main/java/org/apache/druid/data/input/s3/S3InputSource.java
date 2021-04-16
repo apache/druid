@@ -21,6 +21,7 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -28,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -63,7 +65,7 @@ public class S3InputSource extends CloudObjectInputSource
   /**
    * Constructor for S3InputSource
    * @param s3Client                The default ServerSideEncryptingAmazonS3 client built with all default configs
-   *                                from Guice. This injected singleton client is use when {@param s3InputSourceConfig}
+   *                                from Guice. This injected singleton client is used when {@param s3InputSourceConfig}
    *                                is not provided and hence, we can skip building a new client from
    *                                {@param s3ClientBuilder}
    * @param s3ClientBuilder         Use for building a new s3Client to use instead of the default injected
@@ -102,6 +104,10 @@ public class S3InputSource extends CloudObjectInputSource
                   )
               );
               s3ClientBuilder.getAmazonS3ClientBuilder().withCredentials(credentials);
+            }
+            if (StringUtils.isNotEmpty(s3InputSourceConfig.getEndpointUrl())) {
+              s3ClientBuilder.getAmazonS3ClientBuilder().setEndpointConfiguration(
+                new EndpointConfiguration(s3InputSourceConfig.getEndpointUrl(), s3ClientBuilder.getAmazonS3ClientBuilder().getEndpoint().getSigningRegion()));
             }
             return s3ClientBuilder.build();
           } else {

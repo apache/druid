@@ -120,7 +120,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   );
 
   private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES = new S3InputSourceConfig(
-      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
+          null, new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
       ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));

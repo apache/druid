@@ -36,10 +36,13 @@ public class S3InputSourceConfig
 {
   @JsonCreator
   public S3InputSourceConfig(
+      // TODO: Maybe an AWSEndpointConfig
+      @JsonProperty("endpointUrl") @Nullable String endpointUrl,
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
   )
   {
+    this.endpointUrl = endpointUrl;
     if (accessKeyId != null || secretAccessKey != null) {
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
@@ -47,11 +50,18 @@ public class S3InputSourceConfig
   }
 
   @JsonProperty
+  private final String endpointUrl;
+
+  @JsonProperty
   private PasswordProvider accessKeyId;
 
   @JsonProperty
   private PasswordProvider secretAccessKey;
 
+  public String getEndpointUrl()
+  {
+    return endpointUrl;
+  }
 
   public PasswordProvider getAccessKeyId()
   {
@@ -74,6 +84,7 @@ public class S3InputSourceConfig
   public String toString()
   {
     return "S3InputSourceConfig{" +
+            "endpointUrl=" + endpointUrl +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
@@ -89,13 +100,15 @@ public class S3InputSourceConfig
       return false;
     }
     S3InputSourceConfig that = (S3InputSourceConfig) o;
-    return Objects.equals(accessKeyId, that.accessKeyId) &&
+    return this.endpointUrl.equals(that.endpointUrl) &&
+            Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(accessKeyId, secretAccessKey);
+    // TODO: Revisit
+    return Objects.hash(accessKeyId, secretAccessKey) * endpointUrl.hashCode();
   }
 }
