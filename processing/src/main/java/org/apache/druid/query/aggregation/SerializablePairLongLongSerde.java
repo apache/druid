@@ -30,7 +30,7 @@ import java.util.Comparator;
  * The serialization structure is: Long:Long
  * <p>
  * The class is used on first/last Long aggregators to store the time and the first/last Long.
- * Long:Long -> Timestamp:Long
+ * (Long:timestamp, Long:value)
  */
 public class SerializablePairLongLongSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongLong>
 {
