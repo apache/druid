@@ -36,6 +36,7 @@ module.exports = {
     },
   },
   rules: {
+    // @typescript-eslint
     '@typescript-eslint/adjacent-overload-signatures': 'error',
     '@typescript-eslint/array-type': 'off',
     '@typescript-eslint/ban-types': [
@@ -92,6 +93,49 @@ module.exports = {
     ],
     '@typescript-eslint/type-annotation-spacing': 'off',
     '@typescript-eslint/unified-signatures': 'error',
+
+    // eslint-plugin-header
+    'header/header': [
+      2,
+      'block',
+      { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
+    ],
+
+    // eslint-plugin-import
+    'import/order': ['warn', { alphabetize: { order: 'asc', caseInsensitive: true } }],
+
+    // eslint-plugin-jsdoc
+    'jsdoc/check-alignment': 'warn',
+    'jsdoc/check-indentation': 'off',
+    'jsdoc/newline-after-description': 'off',
+
+    // eslint-plugin-react
+    'react/jsx-boolean-value': ['error', 'never'],
+    'react/jsx-curly-brace-presence': ['warn', 'never'],
+    'react/jsx-curly-spacing': [
+      'error',
+      {
+        when: 'never',
+      },
+    ],
+    'react/jsx-equals-spacing': 'off',
+    'react/jsx-key': 'error',
+    'react/jsx-no-bind': ['error', { allowArrowFunctions: true }],
+    'react/jsx-tag-spacing': [
+      'off',
+      {
+        afterOpening: 'allow',
+        closingSlash: 'allow',
+      },
+    ],
+    'react/jsx-wrap-multilines': 'off',
+    'react/no-string-refs': 'error',
+    'react/self-closing-comp': 'error',
+
+    // eslint-plugin-unicorn
+    'unicorn/filename-case': 'error',
+
+    // eslint core
     'arrow-body-style': 'off',
     'arrow-parens': ['off', 'always'],
     'brace-style': ['error', '1tbs'],
@@ -102,17 +146,8 @@ module.exports = {
     'eol-last': 'off',
     eqeqeq: ['error', 'smart'],
     'guard-for-in': 'off',
-    'header/header': [
-      2,
-      'block',
-      { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
-    ],
     'id-blacklist': 'off',
     'id-match': 'off',
-    'import/order': ['warn', { alphabetize: { order: 'asc', caseInsensitive: true } }],
-    'jsdoc/check-alignment': 'warn',
-    'jsdoc/check-indentation': 'off',
-    'jsdoc/newline-after-description': 'off',
     'linebreak-style': 'off',
     'max-classes-per-file': ['error', 1],
     'max-len': 'off',
@@ -153,27 +188,6 @@ module.exports = {
     ],
     'quote-props': 'off',
     radix: 'error',
-    'react/jsx-boolean-value': ['error', 'never'],
-    'react/jsx-curly-brace-presence': ['warn', 'never'],
-    'react/jsx-curly-spacing': [
-      'error',
-      {
-        when: 'never',
-      },
-    ],
-    'react/jsx-equals-spacing': 'off',
-    'react/jsx-key': 'error',
-    'react/jsx-no-bind': ['error', { allowArrowFunctions: true }],
-    'react/jsx-tag-spacing': [
-      'off',
-      {
-        afterOpening: 'allow',
-        closingSlash: 'allow',
-      },
-    ],
-    'react/jsx-wrap-multilines': 'off',
-    'react/no-string-refs': 'error',
-    'react/self-closing-comp': 'error',
     'sort-imports': [
       'warn',
       {
@@ -190,7 +204,6 @@ module.exports = {
         markers: ['/'],
       },
     ],
-    'unicorn/filename-case': 'error',
     'use-isnan': 'error',
     'valid-typeof': 'error',
   },
