@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/apache/druid"
   },
+  "engines": {
+    "node": ">=10"
+  },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
