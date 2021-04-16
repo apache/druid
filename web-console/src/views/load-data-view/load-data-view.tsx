@@ -418,13 +418,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initTaskId, initSupervisorId } = this.props;
     const { spec } = this.state;
 
-    this.getOverlordModules();
+    void this.getOverlordModules();
     if (initTaskId) {
       this.updateStep('loading');
-      this.getTaskJson();
+      void this.getTaskJson();
     } else if (initSupervisorId) {
       this.updateStep('loading');
-      this.getSupervisorJson();
+      void this.getSupervisorJson();
     } else if (isEmptyIngestionSpec(spec)) {
       this.updateStep('welcome');
     } else {
@@ -1011,7 +1011,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           Please make sure that the
-          <Code>"{requiredModule}"</Code> extension is included in the <Code>loadList</Code>.
+          <Code>&quot;{requiredModule}&quot;</Code> extension is included in the{' '}
+          <Code>loadList</Code>.
         </p>
         <p>
           For more information please refer to the{' '}
@@ -1105,7 +1106,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (inlineMode) {
       mainFill = (
         <TextArea
@@ -1355,7 +1356,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const canFlatten = inputFormatCanFlatten(inputFormat);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (parserQueryState.isInit()) {
       mainFill = (
         <CenterMessage>
@@ -1624,7 +1625,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (timestampQueryState.isInit()) {
       mainFill = (
         <CenterMessage>
@@ -1820,7 +1821,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (transformQueryState.isInit()) {
       mainFill = <CenterMessage>Please fill in the previous steps</CenterMessage>;
     } else {
@@ -2064,7 +2065,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, specPreview, columnFilter, filterQueryState, selectedFilter } = this.state;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (filterQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else {
@@ -2255,13 +2256,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedMetricSpec,
       selectedMetricSpecIndex,
     } = this.state;
-    const rollup: boolean = Boolean(deepGet(spec, 'spec.dataSchema.granularitySpec.rollup'));
+    const rollup = Boolean(deepGet(spec, 'spec.dataSchema.granularitySpec.rollup'));
     const somethingSelected = Boolean(
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
     const dimensionMode = getDimensionMode(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else {

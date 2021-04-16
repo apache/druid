@@ -154,6 +154,6 @@ async function waitForCompaction(
 
 async function getNumSegment(page: playwright.Page, datasourceName: string): Promise<number> {
   const datasource = await getDatasource(page, datasourceName);
-  const currNumSegmentString = datasource!.availability.match(/(\d+)/)![0];
+  const currNumSegmentString = /(\d+)/.exec(datasource.availability)![0];
   return Number(currNumSegmentString);
 }

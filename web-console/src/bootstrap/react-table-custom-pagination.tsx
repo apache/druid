@@ -56,8 +56,10 @@ export class ReactTableCustomPagination extends React.PureComponent<
     };
   }
 
-  componentWillReceiveProps(nextProps: ReactTableCustomPaginationProps) {
-    this.setState({ page: nextProps.page });
+  static getDerivedStateFromProps(nextProps: ReactTableCustomPaginationProps) {
+    return {
+      page: nextProps.page,
+    };
   }
 
   getSafePage = (page: any) => {

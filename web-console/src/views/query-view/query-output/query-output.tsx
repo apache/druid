@@ -402,7 +402,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                   },
             headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
-            Cell: row => {
+            Cell: function QueryOutputTableCell(row) {
               const value = row.value;
               return (
                 <div>

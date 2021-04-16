@@ -438,14 +438,15 @@ ORDER BY "rank" DESC, "service" DESC`;
             },
             Aggregated: row => {
               switch (row.row._pivotVal) {
-                case 'historical':
+                case 'historical': {
                   const originalHistoricals = row.subRows.map(r => r._original);
                   const totalCurr = sum(originalHistoricals, s => s.curr_size);
                   const totalMax = sum(originalHistoricals, s => s.max_size);
                   return fillIndicator(totalCurr / totalMax);
+                }
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
@@ -456,6 +457,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
+                }
 
                 default:
                   return '';
@@ -469,7 +471,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return fillIndicator(row.value);
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
@@ -477,6 +479,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   } else {
                     return '- / -';
                   }
+                }
 
                 default:
                   return '';
@@ -511,7 +514,7 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
-                case 'historical':
+                case 'historical': {
                   const {
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -524,6 +527,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     segmentsToDrop,
                     segmentsToDropSize,
                   );
+                }
 
                 case 'indexer':
                 case 'middle_manager':

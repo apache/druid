@@ -28,7 +28,7 @@ module.exports = {
     },
   },
   rules: {
-    // eslint (added to 'recommended' rules)
+    // eslint (adds)
     'eqeqeq': ['error', 'smart'],
     'max-classes-per-file': ['error', 1],
     'no-bitwise': 'error',
@@ -61,7 +61,7 @@ module.exports = {
       },
     ],
 
-    // eslint (overrides 'recommended' rules)
+    // eslint (overrides)
     'no-empty': 'off',
     'no-fallthrough': 'off',
     'prefer-const': [
@@ -71,7 +71,7 @@ module.exports = {
       },
     ],
 
-    // @typescript-eslint (added to 'recommended' rules)
+    // @typescript-eslint (adds)
     '@typescript-eslint/consistent-type-assertions': 'error',
     '@typescript-eslint/lines-between-class-members': [
       'warn',
@@ -85,7 +85,7 @@ module.exports = {
     '@typescript-eslint/prefer-for-of': 'off', // TODO: use?
     '@typescript-eslint/unified-signatures': 'error',
 
-    // @typescript-eslint (overriding 'recommended' rules)
+    // @typescript-eslint (overrides)
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-empty-function': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
@@ -94,7 +94,7 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/prefer-function-type': 'error',
 
-    // @typescript-eslint with type checking (overriding 'recommended' rules)
+    // @typescript-eslint with type checking (overrides)
     '@typescript-eslint/no-unsafe-assignment': 'off', // TODO: use?
     '@typescript-eslint/no-unsafe-call': 'off', // TODO: use?
     '@typescript-eslint/no-unsafe-member-access': 'off', // TODO: use?
@@ -118,7 +118,7 @@ module.exports = {
     'jsdoc/check-indentation': 'off',
     'jsdoc/newline-after-description': 'off',
 
-    // eslint-plugin-react (added to 'recommended' rules)
+    // eslint-plugin-react (adds)
     'react/jsx-boolean-value': ['error', 'never'],
     'react/jsx-curly-brace-presence': ['warn', 'never'],
     'react/jsx-curly-spacing': [
@@ -130,7 +130,7 @@ module.exports = {
     'react/jsx-no-bind': ['error', { allowArrowFunctions: true }],
     'react/self-closing-comp': 'error',
 
-    // eslint-plugin-react (overriding 'recommended' rules)
+    // eslint-plugin-react (overrides)
     'react/prop-types': 'off',
 
     // eslint-plugin-unicorn

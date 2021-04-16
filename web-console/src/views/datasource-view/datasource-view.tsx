@@ -749,7 +749,7 @@ ORDER BY 1`;
     }
   };
 
-  private deleteCompaction = async () => {
+  private deleteCompaction = () => {
     const { compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;

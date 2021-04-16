@@ -163,7 +163,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               <HTMLSelect
                 value={rule.type}
                 onChange={(e: any) =>
-                  onChange(RuleUtil.changeRuleType(rule, e.target.value as any))
+                  onChange(RuleUtil.changeRuleType(rule, e.target.value ))
                 }
               >
                 {RuleUtil.TYPES.map(type => {
@@ -201,7 +201,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 <InputGroup
                   value={rule.interval || ''}
                   onChange={(e: any) =>
-                    onChange(RuleUtil.changeInterval(rule, e.target.value as any))
+                    onChange(RuleUtil.changeInterval(rule, e.target.value ))
                   }
                   placeholder="2010-01-01/2020-01-01"
                 />

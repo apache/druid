@@ -74,7 +74,7 @@ FROM sys.supervisors`,
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}
     >
-      {!Boolean(running + suspended) && <p>No supervisors</p>}
+      {!(running + suspended) && <p>No supervisors</p>}
       {Boolean(running) && <p>{pluralIfNeeded(running, 'running supervisor')}</p>}
       {Boolean(suspended) && <p>{pluralIfNeeded(suspended, 'suspended supervisor')}</p>}
     </HomeViewCard>

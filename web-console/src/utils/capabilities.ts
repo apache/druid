@@ -108,7 +108,7 @@ export class Capabilities {
 
   static async detectCapabilities(): Promise<Capabilities | undefined> {
     const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride as any);
+    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride );
 
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;

@@ -54,7 +54,7 @@ const tableColumns: string[] = [
   ACTION_COLUMN_LABEL,
 ];
 
-const DEFAULT_LOOKUP_TIER: string = '__default';
+const DEFAULT_LOOKUP_TIER = '__default';
 
 function tierNameCompare(a: string, b: string) {
   return a.localeCompare(b);
@@ -163,7 +163,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private async openLookupEditDialog(tier: string, id: string) {
+  private openLookupEditDialog(tier: string, id: string) {
     const { lookupEntriesAndTiersState } = this.state;
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     if (!lookupEntriesAndTiers) return;

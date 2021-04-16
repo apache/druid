@@ -32,14 +32,14 @@ export function parsePath(path: string): string[] {
   const parts: string[] = [];
   let rest = path;
   while (rest) {
-    const escapedMatch = rest.match(/^\{([^{}]*)\}(?:\.(.*))?$/);
+    const escapedMatch = /^\{([^{}]*)\}(?:\.(.*))?$/.exec(rest);
     if (escapedMatch) {
       parts.push(escapedMatch[1]);
       rest = escapedMatch[2];
       continue;
     }
 
-    const normalMatch = rest.match(/^([^.]*)(?:\.(.*))?$/);
+    const normalMatch = /^([^.]*)(?:\.(.*))?$/.exec(rest);
     if (normalMatch) {
       parts.push(normalMatch[1]);
       rest = normalMatch[2];

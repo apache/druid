@@ -284,7 +284,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           throw new Error(getDruidErrorMessage(e));
         }
 
-        return parseQueryPlan(result!.rows[0][0]);
+        return parseQueryPlan(result.rows[0][0]);
       },
       onStateChange: explainResultState => {
         this.setState({
@@ -330,7 +330,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (!queryResult) return;
 
     let lines: string[] = [];
-    let separator: string = '';
+    let separator = '';
 
     if (format === 'csv' || format === 'tsv') {
       separator = format === 'csv' ? ',' : '\t';

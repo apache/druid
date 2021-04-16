@@ -319,7 +319,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     });
   };
 
-  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  private static onSecondaryPaneSizeChange(secondaryPaneSize: number) {
     localStorageSet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
@@ -1067,7 +1067,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           }
           primaryMinSize={30}
           secondaryMinSize={30}
-          onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+          onSecondaryPaneSizeChange={IngestionView.onSecondaryPaneSizeChange}
         >
           <div className="top-pane">
             <ViewControlBar label="Supervisors">

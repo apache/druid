@@ -138,9 +138,9 @@ export class SegmentTimeline extends React.PureComponent<
           total: segmentSize,
         };
       } else {
-        const countDataEntry = countData[day][datasource];
+        const countDataEntry: number | undefined = countData[day][datasource];
         countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
-        const sizeDataEntry = sizeData[day][datasource];
+        const sizeDataEntry: number | undefined = sizeData[day][datasource];
         sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
         countData[day].total += count;
         sizeData[day].total += segmentSize;
