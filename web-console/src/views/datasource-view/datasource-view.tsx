@@ -1417,7 +1417,7 @@ ORDER BY 1`;
           />
         </ViewControlBar>
         {showChart && (
-          <div className={'chart-container'}>
+          <div className="chart-container">
             <SegmentTimeline
               capabilities={capabilities}
               chartHeight={chartHeight}

@@ -558,11 +558,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
     return (
-      <Card className={'spec-card'} interactive onClick={onClick} elevation={1}>
+      <Card className="spec-card" interactive onClick={onClick} elevation={1}>
         <Icon className="spec-card-icon" icon={icon} iconSize={30} />
-        <div className={'spec-card-header'}>
+        <div className="spec-card-header">
           {title}
-          <div className={'spec-card-caption'}>{caption}</div>
+          <div className="spec-card-caption">{caption}</div>
         </div>
       </Card>
     );
@@ -1822,7 +1822,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let mainFill: JSX.Element | string = '';
     if (transformQueryState.isInit()) {
-      mainFill = <CenterMessage>{`Please fill in the previous steps`}</CenterMessage>;
+      mainFill = <CenterMessage>Please fill in the previous steps</CenterMessage>;
     } else {
       const data = transformQueryState.getSomeData();
       mainFill = (

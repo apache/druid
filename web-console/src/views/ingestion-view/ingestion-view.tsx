@@ -1059,7 +1059,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <SplitterLayout
-          customClassName={'ingestion-view app-view'}
+          customClassName="ingestion-view app-view"
           vertical
           percentage
           secondaryInitialSize={
@@ -1069,7 +1069,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           secondaryMinSize={30}
           onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
         >
-          <div className={'top-pane'}>
+          <div className="top-pane">
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
@@ -1088,7 +1088,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             </ViewControlBar>
             {this.renderSupervisorTable()}
           </div>
-          <div className={'bottom-pane'}>
+          <div className="bottom-pane">
             <ViewControlBar label="Tasks">
               <Label>Group by</Label>
               <ButtonGroup>

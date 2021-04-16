@@ -84,9 +84,9 @@ GROUP BY 1`,
   return (
     <HomeViewCard
       className="tasks-card"
-      href={'#ingestion'}
+      href="#ingestion"
       icon={IconNames.GANTT_CHART}
-      title={'Tasks'}
+      title="Tasks"
       loading={taskCountState.loading}
       error={taskCountState.error}
     >

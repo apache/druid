@@ -390,7 +390,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
+                      <Popover className="clickable-cell" content={getHeaderMenu(h, i)}>
                         <div>
                           {h}
                           {hasFilterOnHeader(h, i) && (

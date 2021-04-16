@@ -154,6 +154,7 @@ module.exports = {
     'quote-props': 'off',
     radix: 'error',
     'react/jsx-boolean-value': ['error', 'never'],
+    'react/jsx-curly-brace-presence': ['warn', 'never'],
     'react/jsx-curly-spacing': [
       'error',
       {

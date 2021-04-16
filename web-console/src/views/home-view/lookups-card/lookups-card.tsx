@@ -47,9 +47,9 @@ export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardPro
   return (
     <HomeViewCard
       className="lookups-card"
-      href={'#lookups'}
+      href="#lookups"
       icon={IconNames.PROPERTIES}
-      title={'Lookups'}
+      title="Lookups"
       loading={lookupsCountState.loading}
       error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}
     >

@@ -79,9 +79,9 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
   return (
     <HomeViewCard
       className="services-card"
-      href={'#services'}
+      href="#services"
       icon={IconNames.DATABASE}
-      title={'Services'}
+      title="Services"
       loading={serviceCountState.loading}
       error={serviceCountState.error}
     >

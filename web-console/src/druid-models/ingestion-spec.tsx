@@ -886,7 +886,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href={`https://docs.aws.amazon.com/general/latest/gr/ak.html`}>
+              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak.html">
                 here
               </ExternalLink>
               .

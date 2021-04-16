@@ -69,10 +69,10 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
       rightElement={
         <div>
           <Popover
-            popoverClassName={'calendar'}
+            popoverClassName="calendar"
             content={
               <DateRangePicker
-                timePrecision={'second'}
+                timePrecision="second"
                 value={parseInterval(interval)}
                 contiguousCalendarMonths={false}
                 onChange={(selectedRange: DateRange) => {

@@ -36,7 +36,7 @@ describe('Visualization', () => {
   it('action barGroup', () => {
     const barGroup = (
       <svg>
-        <ChartAxis transform={'value'} scale={() => null} />
+        <ChartAxis transform="value" scale={() => null} />
       </svg>
     );
     const { container } = render(barGroup);

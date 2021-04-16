@@ -68,9 +68,9 @@ FROM sys.supervisors`,
   return (
     <HomeViewCard
       className="supervisors-card"
-      href={'#ingestion'}
+      href="#ingestion"
       icon={IconNames.LIST_COLUMNS}
-      title={'Supervisors'}
+      title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}
     >

@@ -455,7 +455,7 @@ ORDER BY "start" DESC`;
     if (error) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when loading data: {error.message}</span>
+          <span className="no-data-text">Error when loading data: {error.message}</span>
         </div>
       );
     }
@@ -463,7 +463,7 @@ ORDER BY "start" DESC`;
     if (xScale === null || yScale === null) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when calculating scales</span>
+          <span className="no-data-text">Error when calculating scales</span>
         </div>
       );
     }
@@ -471,7 +471,7 @@ ORDER BY "start" DESC`;
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className={'no-data-text'}>No data available for the time span selected</span>
+          <span className="no-data-text">No data available for the time span selected</span>
         </div>
       );
     }
@@ -482,7 +482,7 @@ ORDER BY "start" DESC`;
     ) {
       return (
         <div>
-          <span className={'no-data-text'}>
+          <span className="no-data-text">
             No data available for <i>{activeDatasource}</i>
           </span>
         </div>
@@ -516,20 +516,20 @@ ORDER BY "start" DESC`;
     const { datasources, activeDataType, activeDatasource, timeSpan } = this.state;
 
     return (
-      <div className={'segment-timeline app-view'}>
+      <div className="segment-timeline app-view">
         {this.renderStackedBarChart()}
-        <div className={'side-control'}>
+        <div className="side-control">
           <FormGroup>
             <RadioGroup
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Total size'} value={'sizeData'} />
-              <Radio label={'Segment count'} value={'countData'} />
+              <Radio label="Total size" value="sizeData" />
+              <Radio label="Segment count" value="countData" />
             </RadioGroup>
           </FormGroup>
 
-          <FormGroup label={'Datasource:'}>
+          <FormGroup label="Datasource:">
             <HTMLSelect
               onChange={(e: any) =>
                 this.setState({
@@ -539,7 +539,7 @@ ORDER BY "start" DESC`;
               value={activeDatasource == null ? 'all' : activeDatasource}
               fill
             >
-              <option value={'all'}>Show all</option>
+              <option value="all">Show all</option>
               {datasources.map(d => {
                 return (
                   <option key={d} value={d}>
@@ -550,7 +550,7 @@ ORDER BY "start" DESC`;
             </HTMLSelect>
           </FormGroup>
 
-          <FormGroup label={'Period:'}>
+          <FormGroup label="Period:">
             <HTMLSelect
               onChange={(e: any) => this.onTimeSpanChange(e.target.value)}
               value={timeSpan}
