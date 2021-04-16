@@ -231,7 +231,7 @@ END AS "partitioning"`,
     return 'Sub minute';
   }
 
-  private segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
 
   private lastTableState: TableState | undefined;
 
@@ -424,7 +424,7 @@ END AS "partitioning"`,
     this.segmentsQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
     const { hiddenColumns } = this.state;
     if (tableState) this.lastTableState = tableState;

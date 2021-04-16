@@ -46,9 +46,9 @@ export class Capabilities {
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
 
-  private queryType: QueryType;
-  private coordinator: boolean;
-  private overlord: boolean;
+  private readonly queryType: QueryType;
+  private readonly coordinator: boolean;
+  private readonly overlord: boolean;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint

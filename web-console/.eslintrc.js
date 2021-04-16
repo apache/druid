@@ -94,6 +94,9 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/prefer-function-type': 'error',
 
+    // @typescript-eslint with type checking (adds)
+    '@typescript-eslint/prefer-readonly': 'warn',
+
     // @typescript-eslint with type checking (overrides)
     '@typescript-eslint/no-unsafe-assignment': 'off', // TODO: use?
     '@typescript-eslint/no-unsafe-call': 'off', // TODO: use?

@@ -29,7 +29,7 @@ import { DataConnector } from './data-connector';
 export class LocalFileDataConnector implements DataConnector {
   readonly name: string;
   readonly needParse: boolean;
-  private page: playwright.Page;
+  private readonly page: playwright.Page;
 
   constructor(page: playwright.Page, props: LocalFileDataConnectorProps) {
     Object.assign(this, props);

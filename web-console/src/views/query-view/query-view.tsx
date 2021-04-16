@@ -157,14 +157,14 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
-  private metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
-  private queryManager: QueryManager<QueryWithContext, QueryResult>;
-  private explainQueryManager: QueryManager<
+  private readonly metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
+  private readonly queryManager: QueryManager<QueryWithContext, QueryResult>;
+  private readonly explainQueryManager: QueryManager<
     QueryWithContext,
     BasicQueryExplanation | SemiJoinQueryExplanation | string
   >;
 
-  private queryInputRef: RefObject<QueryInput>;
+  private readonly queryInputRef: RefObject<QueryInput>;
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
@@ -545,7 +545,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     currentQueryInput.goToPosition(position);
   }
 
-  private handleQueryChange = (query: SqlQuery, preferablyRun?: boolean): void => {
+  private readonly handleQueryChange = (query: SqlQuery, preferablyRun?: boolean): void => {
     this.handleQueryStringChange(query.toString(), preferablyRun);
 
     // Possibly move the cursor of the QueryInput to the empty literal position
@@ -558,26 +558,29 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   };
 
-  private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
+  private readonly handleQueryStringChange = (
+    queryString: string,
+    preferablyRun?: boolean,
+  ): void => {
     const parsedQuery = parser(queryString);
     const newSate = { queryString, parsedQuery };
     this.setState(newSate, preferablyRun ? this.handleRunIfLive : undefined);
   };
 
-  private handleQueryContextChange = (queryContext: QueryContext) => {
+  private readonly handleQueryContextChange = (queryContext: QueryContext) => {
     this.setState({ queryContext });
   };
 
-  private handleLiveQueryModeChange = (liveQueryMode: LiveQueryMode) => {
+  private readonly handleLiveQueryModeChange = (liveQueryMode: LiveQueryMode) => {
     this.setState({ liveQueryMode });
     localStorageSetJson(LocalStorageKeys.LIVE_QUERY_MODE, liveQueryMode);
   };
 
-  private handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
+  private readonly handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
     this.setState({ wrapQueryLimit });
   };
 
-  private handleRun = () => {
+  private readonly handleRun = () => {
     const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
@@ -604,14 +607,14 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private handleRunIfLive = () => {
+  private readonly handleRunIfLive = () => {
     const { liveQueryMode } = this.state;
     if (liveQueryMode === 'off') return;
     if (liveQueryMode === 'auto' && !this.autoLiveQueryModeShouldRun()) return;
     this.handleRun();
   };
 
-  private handleExplain = () => {
+  private readonly handleExplain = () => {
     const { queryString, queryContext, wrapQueryLimit } = this.state;
 
     this.setState({ explainDialogOpen: true });
@@ -622,11 +625,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
   };
 
-  private handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
+  private readonly handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
-  private getParsedQuery = () => {
+  private readonly getParsedQuery = () => {
     const { parsedQuery } = this.state;
     return parsedQuery;
   };

@@ -152,7 +152,7 @@ interface ServiceResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8

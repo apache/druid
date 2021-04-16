@@ -75,7 +75,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
     );
   }
 
-  private handleRun = () => {
+  private readonly handleRun = () => {
     const { onRun } = this.props;
     if (!onRun) return;
     onRun();

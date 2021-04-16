@@ -219,8 +219,11 @@ export class SegmentTimeline extends React.PureComponent<
     return singleDatasourceData;
   }
 
-  private dataQueryManager: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
-  private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
+  private readonly dataQueryManager: QueryManager<
+    { capabilities: Capabilities; timeSpan: number },
+    any
+  >;
+  private readonly chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {
     super(props);

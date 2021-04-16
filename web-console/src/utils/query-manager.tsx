@@ -34,13 +34,13 @@ export interface QueryManagerOptions<Q, R> {
 }
 
 export class QueryManager<Q, R> {
-  private processQuery: (
+  private readonly processQuery: (
     query: Q,
     cancelToken: CancelToken,
     setIntermediateQuery: (intermediateQuery: any) => void,
   ) => Promise<R>;
 
-  private onStateChange?: (queryResolve: QueryState<R>) => void;
+  private readonly onStateChange?: (queryResolve: QueryState<R>) => void;
 
   private terminated = false;
   private nextQuery: Q | undefined;
@@ -50,8 +50,8 @@ export class QueryManager<Q, R> {
   private state: QueryState<R> = QueryState.INIT;
   private currentQueryId = 0;
 
-  private runWhenIdle: () => void;
-  private runWhenLoading: () => void;
+  private readonly runWhenIdle: () => void;
+  private readonly runWhenLoading: () => void;
 
   constructor(options: QueryManagerOptions<Q, R>) {
     this.processQuery = options.processQuery;

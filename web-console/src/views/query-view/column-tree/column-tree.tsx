@@ -462,7 +462,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+  private readonly handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const { columnTree } = this.state;
 
     const selectedTreeIndex = Number(e.target.value);
@@ -478,12 +478,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
-  private handleNodeCollapse = (nodeData: ITreeNode) => {
+  private readonly handleNodeCollapse = (nodeData: ITreeNode) => {
     nodeData.isExpanded = false;
     this.bounceState();
   };
 
-  private handleNodeExpand = (nodeData: ITreeNode) => {
+  private readonly handleNodeExpand = (nodeData: ITreeNode) => {
     nodeData.isExpanded = true;
     this.bounceState();
   };

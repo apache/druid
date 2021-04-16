@@ -29,7 +29,7 @@ import { DataConnector } from './data-connector';
 export class ReindexDataConnector implements DataConnector {
   readonly name: string;
   readonly needParse: boolean;
-  private page: playwright.Page;
+  private readonly page: playwright.Page;
 
   constructor(page: playwright.Page, props: ReindexDataConnectorProps) {
     Object.assign(this, props);

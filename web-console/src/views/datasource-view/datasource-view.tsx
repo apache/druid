@@ -301,8 +301,11 @@ ORDER BY 1`;
     }
   }
 
-  private datasourceQueryManager: QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>;
-  private tiersQueryManager: QueryManager<Capabilities, string[]>;
+  private readonly datasourceQueryManager: QueryManager<
+    DatasourceQuery,
+    DatasourcesAndDefaultRules
+  >;
+  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -454,14 +457,14 @@ ORDER BY 1`;
     });
   }
 
-  private handleResize = () => {
+  private readonly handleResize = () => {
     this.setState({
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
     });
   };
 
-  private refresh = (auto: any): void => {
+  private readonly refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
   };
@@ -695,7 +698,7 @@ ORDER BY 1`;
     );
   }
 
-  private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
+  private readonly saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
       await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
@@ -718,7 +721,7 @@ ORDER BY 1`;
     this.fetchDatasourceData();
   };
 
-  private editDefaultRules = () => {
+  private readonly editDefaultRules = () => {
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState(state => {
@@ -735,7 +738,7 @@ ORDER BY 1`;
     }, 50);
   };
 
-  private saveCompaction = async (compactionConfig: any) => {
+  private readonly saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
       await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
@@ -749,7 +752,7 @@ ORDER BY 1`;
     }
   };
 
-  private deleteCompaction = () => {
+  private readonly deleteCompaction = () => {
     const { compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;

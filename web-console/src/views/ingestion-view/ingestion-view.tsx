@@ -183,8 +183,8 @@ function stateToColor(status: string): string {
 }
 
 export class IngestionView extends React.PureComponent<IngestionViewProps, IngestionViewState> {
-  private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
+  private readonly supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
+  private readonly taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -335,14 +335,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.taskQueryManager.terminate();
   }
 
-  private closeSpecDialogs = () => {
+  private readonly closeSpecDialogs = () => {
     this.setState({
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
     });
   };
 
-  private submitSupervisor = async (spec: JSON) => {
+  private readonly submitSupervisor = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
@@ -360,7 +360,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.supervisorQueryManager.rerunLastQuery();
   };
 
-  private submitTask = async (spec: JSON) => {
+  private readonly submitTask = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/task', spec);
     } catch (e) {

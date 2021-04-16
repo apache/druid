@@ -486,11 +486,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   }
 
-  private updateStep = (newStep: Step) => {
+  private readonly updateStep = (newStep: Step) => {
     this.setState(state => ({ step: newStep, specPreview: state.spec }));
   };
 
-  private updateSpec = (newSpec: IngestionSpec) => {
+  private readonly updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
@@ -501,18 +501,18 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(newSpec));
   };
 
-  private updateSpecPreview = (newSpecPreview: IngestionSpec) => {
+  private readonly updateSpecPreview = (newSpecPreview: IngestionSpec) => {
     this.setState({ specPreview: newSpecPreview });
   };
 
-  private applyPreviewSpec = () => {
+  private readonly applyPreviewSpec = () => {
     this.setState(({ spec, specPreview }) => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(specPreview));
       return { spec: spec === specPreview ? Object.assign({}, specPreview) : specPreview }; // If applying again, make a shallow copy to force a refresh
     });
   };
 
-  private revertPreviewSpec = () => {
+  private readonly revertPreviewSpec = () => {
     this.setState(({ spec }) => ({ specPreview: spec }));
   };
 
@@ -1025,17 +1025,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private handleResetConfirm = () => {
+  private readonly handleResetConfirm = () => {
     this.setState({ showResetConfirm: true });
   };
 
-  private handleResetSpec = () => {
+  private readonly handleResetSpec = () => {
     this.setState({ showResetConfirm: false, continueToSpec: true });
     this.updateSpec({} as any);
     this.updateStep('welcome');
   };
 
-  private handleContinueSpec = () => {
+  private readonly handleContinueSpec = () => {
     this.setState({ continueToSpec: true });
   };
 
@@ -1478,7 +1478,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onFlattenFieldSelect = (field: FlattenField, index: number) => {
+  private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
     this.setState({
       selectedFlattenFieldIndex: index,
       selectedFlattenField: field,
@@ -1754,7 +1754,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
+  private readonly onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
     const { specPreview } = this.state;
     this.updateSpecPreview(deepSet(specPreview, 'spec.dataSchema.timestampSpec', newTimestampSpec));
   };
@@ -1905,7 +1905,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onTransformSelect = (transform: Transform, index: number) => {
+  private readonly onTransformSelect = (transform: Transform, index: number) => {
     this.setState({
       selectedTransformIndex: index,
       selectedTransform: transform,
@@ -2056,7 +2056,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }));
   }
 
-  private getMemoizedDimensionFiltersFromSpec = memoize(spec => {
+  private readonly getMemoizedDimensionFiltersFromSpec = memoize(spec => {
     const { dimensionFilters } = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
     return dimensionFilters;
   });
@@ -2129,7 +2129,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onFilterSelect = (filter: DruidFilter, index: number) => {
+  private readonly onFilterSelect = (filter: DruidFilter, index: number) => {
     this.setState({
       selectedFilterIndex: index,
       selectedFilter: filter,
@@ -2463,7 +2463,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onAutoDimensionSelect = (selectedAutoDimension: string) => {
+  private readonly onAutoDimensionSelect = (selectedAutoDimension: string) => {
     this.setState({
       selectedAutoDimension,
       selectedDimensionSpec: undefined,
@@ -2473,7 +2473,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  private onDimensionSelect = (
+  private readonly onDimensionSelect = (
     selectedDimensionSpec: DimensionSpec | undefined,
     selectedDimensionSpecIndex: number,
   ) => {
@@ -2486,7 +2486,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  private onMetricSelect = (
+  private readonly onMetricSelect = (
     selectedMetricSpec: MetricSpec | undefined,
     selectedMetricSpecIndex: number,
   ) => {
@@ -3101,7 +3101,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   // ==================================================================
-  private getSupervisorJson = async (): Promise<void> => {
+  private readonly getSupervisorJson = async (): Promise<void> => {
     const { initSupervisorId } = this.props;
     if (!initSupervisorId) return;
 
@@ -3120,7 +3120,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   };
 
-  private getTaskJson = async (): Promise<void> => {
+  private readonly getTaskJson = async (): Promise<void> => {
     const { initTaskId } = this.props;
     if (!initTaskId) return;
 
@@ -3184,7 +3184,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private handleSubmit = async () => {
+  private readonly handleSubmit = async () => {
     const { goToIngestion } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
