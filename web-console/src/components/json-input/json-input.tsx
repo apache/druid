@@ -89,7 +89,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
       value,
       stringified: stringifyJson(value),
     });
-  }, [value]);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const internalValueError = internalValue.error;
   return (
