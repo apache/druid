@@ -100,7 +100,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
-        <netty4.version>4.1.48.Final</netty4.version>
+        <netty4.version>4.1.63.Final</netty4.version>
         <node.version>v10.24.0</node.version>
         <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
