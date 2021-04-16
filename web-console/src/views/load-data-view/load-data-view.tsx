@@ -508,7 +508,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private readonly applyPreviewSpec = () => {
     this.setState(({ spec, specPreview }) => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(specPreview));
-      return { spec: spec === specPreview ? Object.assign({}, specPreview) : specPreview }; // If applying again, make a shallow copy to force a refresh
+      return { spec: spec === specPreview ? { ...specPreview } : specPreview }; // If applying again, make a shallow copy to force a refresh
     });
   };
 

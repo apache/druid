@@ -69,12 +69,13 @@ describe('utils', () => {
   it('spec-utils applyCache', () => {
     expect(
       applyCache(
-        Object.assign({}, ingestionSpec, {
+        {
+          ...ingestionSpec,
           samplerConfig: {
             numRows: 500,
             timeoutMs: 15000,
           },
-        }),
+        },
         [
           { make: 'Honda', model: 'Accord' },
           { make: 'Toyota', model: 'Prius' },

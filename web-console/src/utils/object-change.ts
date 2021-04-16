@@ -17,7 +17,7 @@
  */
 
 export function shallowCopy(v: any): any {
-  return Array.isArray(v) ? v.slice() : Object.assign({}, v);
+  return Array.isArray(v) ? v.slice() : { ...v };
 }
 
 export function isEmpty(v: any): boolean {

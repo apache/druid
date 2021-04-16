@@ -203,7 +203,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     value: string | LookupSpec,
   ) => {
     this.setState(state => ({
-      lookupEdit: Object.assign({}, state.lookupEdit, { [field]: value }),
+      lookupEdit: { ...state.lookupEdit, [field]: value },
     }));
   };
 

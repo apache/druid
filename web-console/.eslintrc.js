@@ -44,6 +44,7 @@ module.exports = {
     'no-throw-literal': 'error',
     'no-undef-init': 'error',
     'one-var': ['error', 'never'],
+    'prefer-object-spread': 'warn',
     'quote-props': 'off',
     'radix': 'error',
     'sort-imports': [

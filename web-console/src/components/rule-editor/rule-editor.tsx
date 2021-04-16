@@ -51,10 +51,10 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   const [isOpen, setIsOpen] = useState(true);
 
   function removeTier(key: string) {
-    const newTierReplicants = Object.assign({}, rule.tieredReplicants);
+    const newTierReplicants = { ...rule.tieredReplicants };
     delete newTierReplicants[key];
 
-    const newRule = Object.assign({}, rule, { tieredReplicants: newTierReplicants });
+    const newRule = { ...rule, tieredReplicants: newTierReplicants };
     onChange(newRule);
   }
 

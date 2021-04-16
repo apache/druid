@@ -239,7 +239,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = Object.assign({}, queryContext, mandatoryQueryContext || {});
+          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
           if (typeof wrapQueryLimit !== 'undefined') {
             context.sqlOuterLimit = wrapQueryLimit;
           }
@@ -268,7 +268,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = Object.assign({}, queryContext, mandatoryQueryContext || {});
+          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
           if (typeof wrapQueryLimit !== 'undefined') {
             context.sqlOuterLimit = wrapQueryLimit;
           }
