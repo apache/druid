@@ -69,6 +69,6 @@ public class LongsLongEncodingReader implements CompressionFactory.LongEncodingR
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return this;
+    return new LongsLongEncodingReader(buffer.getByteBuffer(), buffer.getTypeByteOrder());
   }
 }

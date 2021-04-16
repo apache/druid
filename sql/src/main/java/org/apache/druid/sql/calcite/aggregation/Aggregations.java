@@ -67,7 +67,7 @@ public class Aggregations
         .getArgList()
         .stream()
         .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
-        .map(rexNode -> toDruidExpressionForSimpleAggregator(plannerContext, rowSignature, rexNode))
+        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
     if (args.stream().noneMatch(Objects::isNull)) {
@@ -77,7 +77,21 @@ public class Aggregations
     }
   }
 
-  private static DruidExpression toDruidExpressionForSimpleAggregator(
+  /**
+   * Translate a Calcite {@link RexNode} to a Druid expression for the aggregators that require numeric type inputs.
+   * The returned expression can keep an explicit cast from strings to numbers when the column consumed by
+   * the expression is the string type.
+   *
+   * Consider using {@link Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)} for projections
+   * or the aggregators that don't require numeric inputs.
+   *
+   * @param plannerContext SQL planner context
+   * @param rowSignature   signature of the rows to be extracted from
+   * @param rexNode        expression meant to be applied on top of the rows
+   *
+   * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
+   */
+  public static DruidExpression toDruidExpressionForNumericAggregator(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode

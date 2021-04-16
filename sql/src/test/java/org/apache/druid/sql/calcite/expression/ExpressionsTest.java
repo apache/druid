@@ -904,15 +904,17 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectException(
-        IAE.class,
-        "The first argument to the function[round] should be integer or double type but got the type: STRING"
-    );
+    if (!NullHandling.sqlCompatible()) {
+      expectException(
+          IAE.class,
+          "The first argument to the function[round] should be integer or double type but got the type: STRING"
+      );
+    }
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("round(\"s\")"),
-        "IAE Exception"
+        NullHandling.sqlCompatible() ? null : "IAE Exception"
     );
   }
 

@@ -307,6 +307,13 @@
      ]]></notes>
     <cve>CVE-2017-15288</cve>
   </suppress>
+  <suppress until="2021-04-30">
+    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
+    <notes><![CDATA[
+     This vulnerability should be fixed soon and the suppression should be removed.
+     ]]></notes>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
 
   <suppress>
     <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->

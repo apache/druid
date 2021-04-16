@@ -23,7 +23,7 @@ getConfPath()
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
-    historical-for-query-retry-test) echo $cluster_conf_base/data/historical ;;
+    historical-for-query-error-test) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
     indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator) echo $cluster_conf_base/master/coordinator ;;
@@ -85,14 +85,14 @@ setupData()
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ]; then
+  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ]; then
     # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
     find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid && /etc/init.d/mysql stop
     # below s3 credentials needed to access the pre-existing s3 bucket
     setKey $DRUID_SERVICE druid.s3.accessKey AKIAT2GGLKKJQCMG64V4
     setKey $DRUID_SERVICE druid.s3.secretKey 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 
-    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]; then
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]; then
       setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\",\"druid-integration-tests\"]
     else
       setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\"]
