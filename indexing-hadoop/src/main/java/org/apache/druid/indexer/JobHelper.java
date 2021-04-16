@@ -499,9 +499,12 @@ public class JobHelper
             try {
               progressable.progress();
               if (outputFS.exists(descriptorPath)) {
-                if (!outputFS.delete(descriptorPath, false)) {
-                  throw new IOE("Failed to delete descriptor at [%s]", descriptorPath);
-                }
+                // If the descriptor path already exists, don't overwrite, and risk clobbering it.
+                // If it already exists, it means that the segment data is already written to the
+                // tmp path, and the existing descriptor written should give us the information we
+                // need to rename the segment index to final path and publish it in the top level task.
+                log.info("descriptor path [%s] already exists, not overwriting", descriptorPath);
+                return -1;
               }
               try (final OutputStream descriptorOut = outputFS.create(
                   descriptorPath,
