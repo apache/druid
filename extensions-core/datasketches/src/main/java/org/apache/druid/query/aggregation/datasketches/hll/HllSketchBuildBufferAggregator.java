@@ -25,7 +25,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Lock;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -53,11 +52,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     helper.init(buf, position);
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
@@ -65,21 +59,10 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     if (value == null) {
       return;
     }
-    final Lock lock = helper.getLockForPosition(position).writeLock();
-    lock.lock();
-    try {
-      helper.updateSketchAtPosition(buf, position, value);
-    }
-    finally {
-      lock.unlock();
-    }
+
+    HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {

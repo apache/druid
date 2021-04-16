@@ -26,15 +26,12 @@ import org.apache.datasketches.memory.WritableMemory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 public class HllSketchMergeBufferAggregatorHelper
 {
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
-  private final StripedBufferLock stripedLock = new StripedBufferLock();
 
   /**
    * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
@@ -79,28 +76,12 @@ public class HllSketchMergeBufferAggregatorHelper
   /**
    * Helper for implementing {@link org.apache.druid.query.aggregation.BufferAggregator#get} and
    * {@link org.apache.druid.query.aggregation.VectorAggregator#get}.
-   *
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
    */
   public Object get(ByteBuffer buf, int position)
   {
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Lock lock = stripedLock.getLock(position).readLock();
-    lock.lock();
-    try {
-      final Union union = Union.writableWrap(mem);
-      return union.getResult(tgtHllType);
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  public ReadWriteLock getLockForPosition(final int position)
-  {
-    return stripedLock.getLock(position);
+    final Union union = Union.writableWrap(mem);
+    return union.getResult(tgtHllType);
   }
 
   public int getLgK()

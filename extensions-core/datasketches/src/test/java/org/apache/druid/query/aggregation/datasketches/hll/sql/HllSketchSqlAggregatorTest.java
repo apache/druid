@@ -124,7 +124,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     this.queryContext = ImmutableMap.of(
         PlannerContext.CTX_SQL_QUERY_ID, "dummy",
-        QueryContexts.VECTORIZE_KEY, vectorize
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
   }
 
@@ -481,9 +482,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testHllSketchPostAggs() throws Exception
   {
-    // Can't vectorize due to CONCAT expression.
-    cannotVectorize();
-
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
     final String sql = "SELECT\n"

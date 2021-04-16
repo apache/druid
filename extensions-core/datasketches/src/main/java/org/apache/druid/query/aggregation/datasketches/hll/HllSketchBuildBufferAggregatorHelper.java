@@ -25,12 +25,9 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.memory.WritableMemory;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 public class HllSketchBuildBufferAggregatorHelper
 {
@@ -38,7 +35,6 @@ public class HllSketchBuildBufferAggregatorHelper
   private final int size;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
-  private final StripedBufferLock stripedLock = new StripedBufferLock();
 
   /**
    * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
@@ -85,14 +81,7 @@ public class HllSketchBuildBufferAggregatorHelper
    */
   public Object get(ByteBuffer buf, int position)
   {
-    final Lock lock = stripedLock.getLock(position).readLock();
-    lock.lock();
-    try {
-      return sketchCache.get(buf).get(position).copy();
-    }
-    finally {
-      lock.unlock();
-    }
+    return sketchCache.get(buf).get(position).copy();
   }
 
   /**
@@ -110,23 +99,14 @@ public class HllSketchBuildBufferAggregatorHelper
     putSketchIntoCache(newBuf, newPosition, sketch);
   }
 
-  public ReadWriteLock getLockForPosition(final int position)
-  {
-    return stripedLock.getLock(position);
-  }
-
   /**
-   * Updates the sketch at a particular position. Must be called while holding a write lock from
-   * {@link #getLockForPosition} for the given position.
+   * Updates the sketch at a particular position.
    *
    * Does nothing if "o" is null.
    */
-  public void updateSketchAtPosition(final ByteBuffer buf, final int position, @Nullable final Object o)
+  public HllSketch getSketchAtPosition(final ByteBuffer buf, final int position)
   {
-    if (o != null) {
-      final HllSketch sketch = sketchCache.get(buf).get(position);
-      HllSketchBuildAggregator.updateSketch(sketch, o);
-    }
+    return sketchCache.get(buf).get(position);
   }
 
   /**

@@ -29,7 +29,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.locks.Lock;
 
 /**
  * This aggregator merges existing sketches.
@@ -57,11 +56,6 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     helper.init(buf, position);
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
@@ -73,15 +67,8 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
                                              .writableRegion(position, helper.getSize());
 
-    final Lock lock = helper.getLockForPosition(position).writeLock();
-    lock.lock();
-    try {
-      final Union union = Union.writableWrap(mem);
-      union.update(sketch);
-    }
-    finally {
-      lock.unlock();
-    }
+    final Union union = Union.writableWrap(mem);
+    union.update(sketch);
   }
 
   @Override

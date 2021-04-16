@@ -31,7 +31,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
 
 public class HllSketchMergeVectorAggregator implements VectorAggregator
@@ -70,16 +69,9 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
                                              .writableRegion(position, helper.getSize());
 
-    final Lock lock = helper.getLockForPosition(position).writeLock();
-    lock.lock();
-    try {
-      final Union union = Union.writableWrap(mem);
-      for (int i = startRow; i < endRow; i++) {
-        union.update((HllSketch) vector[i]);
-      }
-    }
-    finally {
-      lock.unlock();
+    final Union union = Union.writableWrap(mem);
+    for (int i = startRow; i < endRow; i++) {
+      union.update((HllSketch) vector[i]);
     }
   }
 
@@ -103,15 +95,8 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
         final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
                                                  .writableRegion(position, helper.getSize());
 
-        final Lock lock = helper.getLockForPosition(position).writeLock();
-        lock.lock();
-        try {
-          final Union union = Union.writableWrap(mem);
-          union.update(o);
-        }
-        finally {
-          lock.unlock();
-        }
+        final Union union = Union.writableWrap(mem);
+        union.update(o);
       }
     }
   }

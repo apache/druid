@@ -27,7 +27,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
 
 public class HllSketchBuildVectorAggregator implements VectorAggregator
@@ -62,15 +61,11 @@ public class HllSketchBuildVectorAggregator implements VectorAggregator
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final Object[] vector = objectSupplier.get();
-    final Lock lock = helper.getLockForPosition(position).writeLock();
-    lock.lock();
-    try {
-      for (int i = startRow; i < endRow; i++) {
-        helper.updateSketchAtPosition(buf, position, vector[i]);
+    for (int i = startRow; i < endRow; i++) {
+      final Object value = vector[i];
+      if (value != null) {
+        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
       }
-    }
-    finally {
-      lock.unlock();
     }
   }
 
@@ -90,15 +85,7 @@ public class HllSketchBuildVectorAggregator implements VectorAggregator
 
       if (o != null) {
         final int position = positions[i] + positionOffset;
-
-        final Lock lock = helper.getLockForPosition(position).writeLock();
-        lock.lock();
-        try {
-          helper.updateSketchAtPosition(buf, position, o);
-        }
-        finally {
-          lock.unlock();
-        }
+        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), o);
       }
     }
   }
