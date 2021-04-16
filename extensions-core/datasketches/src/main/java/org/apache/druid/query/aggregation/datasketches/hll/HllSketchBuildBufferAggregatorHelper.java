@@ -100,9 +100,7 @@ public class HllSketchBuildBufferAggregatorHelper
   }
 
   /**
-   * Updates the sketch at a particular position.
-   *
-   * Does nothing if "o" is null.
+   * Retrieves the sketch at a particular position.
    */
   public HllSketch getSketchAtPosition(final ByteBuffer buf, final int position)
   {
