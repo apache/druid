@@ -71,7 +71,7 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 import './datasource-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Datasource name',
     'Availability',
     'Availability detail',

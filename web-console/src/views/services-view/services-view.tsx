@@ -68,7 +68,7 @@ const allColumns: string[] = [
 ];
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: allColumns,
+  'full': allColumns,
   'no-sql': allColumns,
   'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
 };

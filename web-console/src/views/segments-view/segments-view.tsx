@@ -59,7 +59,7 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 import './segments-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Segment ID',
     'Datasource',
     'Start',

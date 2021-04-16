@@ -140,11 +140,11 @@ module.exports = {
     'arrow-parens': ['off', 'always'],
     'brace-style': ['error', '1tbs'],
     'comma-dangle': 'off',
-    complexity: 'off',
+    'complexity': 'off',
     'constructor-super': 'error',
-    curly: ['error', 'multi-line'],
+    'curly': ['error', 'multi-line'],
     'eol-last': 'off',
-    eqeqeq: ['error', 'smart'],
+    'eqeqeq': ['error', 'smart'],
     'guard-for-in': 'off',
     'id-blacklist': 'off',
     'id-match': 'off',
@@ -187,7 +187,7 @@ module.exports = {
       },
     ],
     'quote-props': 'off',
-    radix: 'error',
+    'radix': 'error',
     'sort-imports': [
       'warn',
       {
