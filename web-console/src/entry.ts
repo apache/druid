@@ -90,7 +90,7 @@ ReactDOM.render(
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
-  }) as any,
+  }),
   container,
 );
 
