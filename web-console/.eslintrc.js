@@ -173,6 +173,13 @@ module.exports = {
     'react/jsx-wrap-multilines': 'off',
     'react/no-string-refs': 'error',
     'react/self-closing-comp': 'error',
+    'sort-imports': [
+      'warn',
+      {
+        ignoreCase: true,
+        ignoreDeclarationSort: true, // covered by import/order
+      },
+    ],
     'space-before-function-paren': 'off',
     'space-in-parens': ['off', 'never'],
     'spaced-comment': [

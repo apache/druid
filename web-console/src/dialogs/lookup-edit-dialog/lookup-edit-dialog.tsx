@@ -29,7 +29,7 @@ import React, { useState } from 'react';
 
 import { AutoForm, JsonInput } from '../../components';
 import { FormJsonSelector, FormJsonTabs } from '../../components';
-import { isLookupInvalid, LookupSpec, LOOKUP_FIELDS } from '../../druid-models';
+import { isLookupInvalid, LOOKUP_FIELDS, LookupSpec } from '../../druid-models';
 
 import './lookup-edit-dialog.scss';
 

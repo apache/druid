@@ -23,10 +23,10 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
-  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
   BracedText,
   MoreButton,
   RefreshButton,

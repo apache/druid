@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 
 import { SnitchDialog } from '..';
 import { AutoForm, ExternalLink } from '../../components';
-import { OverlordDynamicConfig, OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
