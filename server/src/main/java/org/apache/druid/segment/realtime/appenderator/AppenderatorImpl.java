@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -163,10 +164,10 @@ public class AppenderatorImpl implements Appenderator
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   *
+   * <p>
    * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
    * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   *
+   * <p>
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
@@ -347,7 +348,8 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck
+            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -737,7 +739,8 @@ public class AppenderatorImpl implements Appenderator
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(
-        (Runnable) () -> pushExecutor.submit(() -> {})
+        (Runnable) () -> pushExecutor.submit(() -> {
+        })
     );
   }
 
@@ -748,7 +751,6 @@ public class AppenderatorImpl implements Appenderator
    * @param identifier    sink identifier
    * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
-   *
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
@@ -849,7 +851,11 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())),
+              sink.getSegment()
+                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(
+                      indexes,
+                      schema.getDimensionsSpec()
+                  )),
               useUniquePath
           ),
           exception -> exception instanceof Exception,
@@ -1374,7 +1380,6 @@ public class AppenderatorImpl implements Appenderator
    *
    * @param indexToPersist hydrant to persist
    * @param identifier     the segment this hydrant is going to be part of
-   *
    * @return the number of rows persisted
    */
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
@@ -1413,8 +1418,22 @@ public class AppenderatorImpl implements Appenderator
             numRows
         );
 
+        Supplier<QueryableIndex> memoizedIndexSupplier =
+            Suppliers.memoize(new Supplier<QueryableIndex>()
+            {
+              @Override
+              public QueryableIndex get()
+              {
+                try {
+                  return indexIO.loadIndex(persistedFile);
+                }
+                catch (IOException e) {
+                  throw new RE(e, "Error while loading index");
+                }
+              }
+            });
         indexToPersist.swapSegment(
-            new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId())
+            new QueryableIndexSegment(memoizedIndexSupplier, indexToPersist.getSegmentId())
         );
 
         return numRows;

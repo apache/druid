@@ -19,21 +19,52 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 /**
+ *
  */
 public class QueryableIndexSegment implements Segment
 {
-  private final QueryableIndex index;
-  private final QueryableIndexStorageAdapter storageAdapter;
+  private final Supplier<QueryableIndex> indexSupplier;
+  private final Supplier<QueryableIndexStorageAdapter> queryableIndexStorageAdapterSupplier;
   private final SegmentId segmentId;
 
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
-    this.index = index;
-    this.storageAdapter = new QueryableIndexStorageAdapter(index);
+    this.indexSupplier = new Supplier<QueryableIndex>()
+    {
+      @Override
+      public QueryableIndex get()
+      {
+        return index;
+      }
+    };
+    this.queryableIndexStorageAdapterSupplier = Suppliers.memoize(new Supplier<QueryableIndexStorageAdapter>()
+    {
+      @Override
+      public QueryableIndexStorageAdapter get()
+      {
+        return new QueryableIndexStorageAdapter(index);
+      }
+    });
+    this.segmentId = segmentId;
+  }
+
+  public QueryableIndexSegment(Supplier<QueryableIndex> indexSupplier, final SegmentId segmentId)
+  {
+    this.indexSupplier = indexSupplier;
+    this.queryableIndexStorageAdapterSupplier = Suppliers.memoize(new Supplier<QueryableIndexStorageAdapter>()
+    {
+      @Override
+      public QueryableIndexStorageAdapter get()
+      {
+        return new QueryableIndexStorageAdapter(indexSupplier.get());
+      }
+    });
     this.segmentId = segmentId;
   }
 
@@ -46,25 +77,25 @@ public class QueryableIndexSegment implements Segment
   @Override
   public Interval getDataInterval()
   {
-    return index.getDataInterval();
+    return indexSupplier.get().getDataInterval();
   }
 
   @Override
   public QueryableIndex asQueryableIndex()
   {
-    return index;
+    return indexSupplier.get();
   }
 
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return storageAdapter;
+    return queryableIndexStorageAdapterSupplier.get();
   }
 
   @Override
   public void close()
   {
     // this is kinda nasty
-    index.close();
+    indexSupplier.get().close();
   }
 }
