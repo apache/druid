@@ -33,27 +33,12 @@ public class QueryableIndexSegment implements Segment
   private final Supplier<QueryableIndexStorageAdapter> queryableIndexStorageAdapterSupplier;
   private final SegmentId segmentId;
 
-  public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
-  {
-    this.indexSupplier = new Supplier<QueryableIndex>()
-    {
-      @Override
-      public QueryableIndex get()
-      {
-        return index;
-      }
-    };
-    this.queryableIndexStorageAdapterSupplier = Suppliers.memoize(new Supplier<QueryableIndexStorageAdapter>()
-    {
-      @Override
-      public QueryableIndexStorageAdapter get()
-      {
-        return new QueryableIndexStorageAdapter(index);
-      }
-    });
-    this.segmentId = segmentId;
-  }
 
+  /**
+   * This constructor is to support passing a memoized supplier to have this lazily initialized.
+   * @param indexSupplier A supplier that may be memoized (or not)
+   * @param segmentId The id of the segment for the index
+   */
   public QueryableIndexSegment(Supplier<QueryableIndex> indexSupplier, final SegmentId segmentId)
   {
     this.indexSupplier = indexSupplier;
@@ -67,6 +52,24 @@ public class QueryableIndexSegment implements Segment
     });
     this.segmentId = segmentId;
   }
+
+  /**
+   *
+   * @param index The index to back this queryable index
+   * @param segmentId The id of the segment for the index
+   */
+  public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
+  {
+    this(new Supplier<QueryableIndex>()
+    {
+      @Override
+      public QueryableIndex get()
+      {
+        return index;
+      }
+    }, segmentId);
+  }
+
 
   @Override
   public SegmentId getId()

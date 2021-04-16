@@ -862,6 +862,13 @@ public class AppenderatorImpl implements Appenderator
           5
       );
 
+      // Drop the queriable indexes  behind the hydrants... they are not needed anymore and their
+      // mapped file references
+      // can generate OOMs during merge if enough of them are held back...
+      for (FireHydrant fireHydrant : sink) {
+        fireHydrant.swapSegment(null);
+      }
+
       final long pushFinishTime = System.nanoTime();
 
       objectMapper.writeValue(descriptorFile, segment);
@@ -1418,7 +1425,9 @@ public class AppenderatorImpl implements Appenderator
             numRows
         );
 
-        Supplier<QueryableIndex> memoizedIndexSupplier =
+        // Make the queryable index lazy to avoid it during segment creation for native batch ingestion
+        // (in order to ameliorate OOMs due to needing to hold too many hydrants)
+        final Supplier<QueryableIndex> memoizedIndexSupplier =
             Suppliers.memoize(new Supplier<QueryableIndex>()
             {
               @Override
@@ -1428,7 +1437,7 @@ public class AppenderatorImpl implements Appenderator
                   return indexIO.loadIndex(persistedFile);
                 }
                 catch (IOException e) {
-                  throw new RE(e, "Error while loading index");
+                  throw new RE(e, "Error while loading index fo file [%s]", persistedFile.getAbsolutePath());
                 }
               }
             });
