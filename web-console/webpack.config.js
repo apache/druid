@@ -85,6 +85,7 @@ module.exports = env => {
         '/druid': proxyTarget,
         '/proxy': proxyTarget,
       },
+      transportMode: 'ws',
     },
     module: {
       rules: [
