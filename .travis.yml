@@ -304,12 +304,13 @@ jobs:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
     - name: "web console end-to-end test"
-      node_js: 10
       before_install: *setup_generate_license
       install: web-console/script/druid build
-      before_script: web-console/script/druid start
+      before_script:
+        - nvm install 10.24.0
+        - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
-      after_script:  web-console/script/druid stop
+      after_script: web-console/script/druid stop
 
     - name: "docs"
       install: (cd website && npm install)
