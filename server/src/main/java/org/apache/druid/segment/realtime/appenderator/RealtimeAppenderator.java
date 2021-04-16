@@ -104,7 +104,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-public class AppenderatorImpl implements Appenderator
+public class RealtimeAppenderator implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
@@ -115,7 +115,7 @@ public class AppenderatorImpl implements Appenderator
   // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
 
-  private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
+  private static final EmittingLogger log = new EmittingLogger(RealtimeAppenderator.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
 
@@ -188,7 +188,7 @@ public class AppenderatorImpl implements Appenderator
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
-  AppenderatorImpl(
+  RealtimeAppenderator(
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,

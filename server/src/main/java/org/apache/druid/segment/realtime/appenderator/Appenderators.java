@@ -63,7 +63,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new AppenderatorImpl(
+    return new RealtimeAppenderator(
         id,
         schema,
         config,
@@ -108,7 +108,7 @@ public class Appenderators
       boolean batchMemoryMappedIndex
   )
   {
-    return new AppenderatorImpl(
+    return new BatchAppenderator(
         id,
         schema,
         config,
@@ -121,8 +121,7 @@ public class Appenderators
         indexMerger,
         null,
         rowIngestionMeters,
-        parseExceptionHandler,
-        batchMemoryMappedIndex // This is a task config (default false) to fallback to "old" code in case of bug with the new memory optimization code
+        parseExceptionHandler
     );
   }
 }

@@ -221,7 +221,10 @@ public interface Appenderator extends QuerySegmentWalker
    * files. In this case, the code will avoid memory mapping them thus ameliorating the occurance
    * of OOMs.
    */
-  boolean isRealTime();
+  default boolean isRealTime()
+  {
+    return false;
+  }
 
   /**
    * Result of {@link Appenderator#add} containing following information
@@ -235,7 +238,7 @@ public interface Appenderator extends QuerySegmentWalker
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
-    AppenderatorAddResult(
+    public AppenderatorAddResult(
         SegmentIdWithShardSpec identifier,
         int numRowsInSegment,
         boolean isPersistRequired

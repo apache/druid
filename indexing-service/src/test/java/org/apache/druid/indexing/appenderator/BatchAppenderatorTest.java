@@ -37,6 +37,7 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,11 +50,9 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   );
 
   @Test
-  public void testSimpleIngestionWithIndexesNotMapped() throws Exception
+  public void testSimpleIngestion() throws Exception
   {
-    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2,
-                                                                            false,
-                                                                            false)) {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -71,32 +70,34 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
 
       Assert.assertEquals(
-          2,
-          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null)
-                      .getNumRowsInSegment()
-      );
-
-      Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 2), null)
                       .getNumRowsInSegment()
       );
 
       // getSegments
-      Assert.assertEquals(IDENTIFIERS.subList(0, 2),
+      Assert.assertEquals(IDENTIFIERS.subList(0,2),
                           appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
 
-      // getRowCount
-      Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
-      Assert.assertEquals(1, appenderator.getRowCount(IDENTIFIERS.get(1)));
-      thrown = false;
-      try {
-        appenderator.getRowCount(IDENTIFIERS.get(2));
-      }
-      catch (IllegalStateException e) {
-        thrown = true;
-      }
-      Assert.assertTrue(thrown);
+      // add one more to hit max rows in memory:
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "sux", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // since we just added three rows and the max rows in memory is three, all the segments (sinks etc)
+      // above should be cleared now
+      Assert.assertEquals(Collections.emptyList(),
+                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
+
+      // add one more:
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
 
       // push all
       final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
@@ -105,7 +106,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           false
       ).get();
       Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
+          IDENTIFIERS.subList(0, 3),
               Lists.transform(
                   segmentsAndCommitMetadata.getSegments(),
                   new Function<DataSegment, SegmentIdWithShardSpec>()
@@ -126,83 +127,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
-  @Test
-  public void testSimpleIngestionWithIndexesMapped() throws Exception
-  {
-    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2,
-                                                                            false,
-                                                                            true)) {
-      final Appenderator appenderator = tester.getAppenderator();
-      boolean thrown;
-
-      // startJob
-      Assert.assertEquals(null, appenderator.startJob());
-
-      // getDataSource
-      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
-
-      // add
-      Assert.assertEquals(
-          1,
-          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
-                      .getNumRowsInSegment()
-      );
-
-      Assert.assertEquals(
-          2,
-          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null)
-                      .getNumRowsInSegment()
-      );
-
-      Assert.assertEquals(
-          1,
-          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
-                      .getNumRowsInSegment()
-      );
-
-      // getSegments
-      Assert.assertEquals(IDENTIFIERS.subList(0, 2),
-                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
-
-      // getRowCount
-      Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
-      Assert.assertEquals(1, appenderator.getRowCount(IDENTIFIERS.get(1)));
-      thrown = false;
-      try {
-        appenderator.getRowCount(IDENTIFIERS.get(2));
-      }
-      catch (IllegalStateException e) {
-        thrown = true;
-      }
-      Assert.assertTrue(thrown);
-
-      // push all
-      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
-          appenderator.getSegments(),
-          null,
-          false
-      ).get();
-      Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
-          Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
-              new Function<DataSegment, SegmentIdWithShardSpec>()
-              {
-                @Override
-                public SegmentIdWithShardSpec apply(DataSegment input)
-                {
-                  return SegmentIdWithShardSpec.fromDataSegment(input);
-                }
-              }
-          ).stream().sorted().collect(Collectors.toList())
-      );
-      Assert.assertEquals(tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-                          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList()));
-
-      appenderator.clear();
-      Assert.assertTrue(appenderator.getSegments().isEmpty());
-    }
-  }
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(

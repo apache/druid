@@ -176,7 +176,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = new AppenderatorImpl(
+      Appenderator appenderator = new RealtimeAppenderator(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -494,7 +494,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   /**
    * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by
-   * {@link AppenderatorImpl} with a shared executor service. Merge/persist methods that are not used by
+   * {@link RealtimeAppenderator} with a shared executor service. Merge/persist methods that are not used by
    * AppenderatorImpl will throw an exception if called.
    */
   public static class LimitedPoolIndexMerger implements IndexMerger
