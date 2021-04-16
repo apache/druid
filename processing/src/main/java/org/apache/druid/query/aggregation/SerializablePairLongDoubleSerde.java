@@ -21,7 +21,9 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.data.ObjectStrategy;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -30,7 +32,7 @@ import java.util.Comparator;
  * The serialization structure is: Long:Double
  * <p>
  * The class is used on first/last Double aggregators to store the time and the first/last Double.
- * Long:Double -> Timestamp:Double
+ * (Long:timestamp, Float:value)
  */
 public class SerializablePairLongDoubleSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongDouble>
 {
@@ -40,7 +42,7 @@ public class SerializablePairLongDoubleSerde extends AbstractSerializableLongObj
    * Since SerializablePairLongDouble is subclass of SerializablePair<Long,Double>,
    * it's safe to declare the generic type of comparator as SerializablePair<Long,Double>.
    */
-  public static final Comparator<SerializablePair<Long, Double>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
+  private static final Comparator<SerializablePair<Long, Double>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
       Double::compare,
       true
   );
@@ -57,35 +59,52 @@ public class SerializablePairLongDoubleSerde extends AbstractSerializableLongObj
   }
 
   @Override
-  protected Comparator getLongObjectPairComparator()
+  public ObjectStrategy getObjectStrategy()
   {
-    return VALUE_COMPARATOR;
-  }
+    return new ObjectStrategy<SerializablePairLongDouble>()
+    {
+      @Override
+      public int compare(@Nullable SerializablePairLongDouble o1, @Nullable SerializablePairLongDouble o2)
+      {
+        return VALUE_COMPARATOR.compare(o1, o2);
+      }
 
-  @Override
-  protected SerializablePairLongDouble toLongObjectPair(ByteBuffer buffer)
-  {
-    final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-    long lhs = readOnlyBuffer.getLong();
-    boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
-    if (isNotNull) {
-      return new SerializablePairLongDouble(lhs, readOnlyBuffer.getDouble());
-    } else {
-      return new SerializablePairLongDouble(lhs, null);
-    }
-  }
+      @Override
+      public Class<SerializablePairLongDouble> getClazz()
+      {
+        return SerializablePairLongDouble.class;
+      }
 
-  @Override
-  protected byte[] longObjectPairToBytes(SerializablePairLongDouble longObjectPair)
-  {
-    ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Double.BYTES);
-    bbuf.putLong(longObjectPair.lhs);
-    if (longObjectPair.rhs == null) {
-      bbuf.put(NullHandling.IS_NULL_BYTE);
-    } else {
-      bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-      bbuf.putDouble(longObjectPair.rhs);
-    }
-    return bbuf.array();
+      @Override
+      public SerializablePairLongDouble fromByteBuffer(ByteBuffer buffer, int numBytes)
+      {
+        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+        long lhs = readOnlyBuffer.getLong();
+        boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
+        if (isNotNull) {
+          return new SerializablePairLongDouble(lhs, readOnlyBuffer.getDouble());
+        } else {
+          return new SerializablePairLongDouble(lhs, null);
+        }
+      }
+
+      @Override
+      public byte[] toBytes(@Nullable SerializablePairLongDouble longObjectPair)
+      {
+        if (longObjectPair == null) {
+          return new byte[]{};
+        }
+
+        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Double.BYTES);
+        bbuf.putLong(longObjectPair.lhs);
+        if (longObjectPair.rhs == null) {
+          bbuf.put(NullHandling.IS_NULL_BYTE);
+        } else {
+          bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
+          bbuf.putDouble(longObjectPair.rhs);
+        }
+        return bbuf.array();
+      }
+    };
   }
 }
