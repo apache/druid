@@ -129,6 +129,13 @@ public class RunRules implements CoordinatorDuty
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
           stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          if (stats.getGlobalStat("totalNonPrimaryReplicantsLoaded") > Integer.MAX_VALUE) {
+            log.info(
+                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on.",
+                Integer.MAX_VALUE
+            );
+            paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
+          }
           foundMatchingRule = true;
           break;
         }
