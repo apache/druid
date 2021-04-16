@@ -43,16 +43,17 @@ public class ReplicationThrottler
   private volatile int maxLifetime;
   private volatile boolean loadPrimaryReplicantsOnly;
 
-  public ReplicationThrottler(int maxReplicants, int maxLifetime)
+  public ReplicationThrottler(int maxReplicants, int maxLifetime, boolean loadPrimaryReplicantsOnly)
   {
     this.loadPrimaryReplicantsOnly = false;
-    updateParams(maxReplicants, maxLifetime);
+    updateParams(maxReplicants, maxLifetime, loadPrimaryReplicantsOnly);
   }
 
-  public void updateParams(int maxReplicants, int maxLifetime)
+  public void updateParams(int maxReplicants, int maxLifetime, boolean loadPrimaryReplicantsOnly)
   {
     this.maxReplicants = maxReplicants;
     this.maxLifetime = maxLifetime;
+    this.loadPrimaryReplicantsOnly = loadPrimaryReplicantsOnly;
   }
 
   public void updateReplicationState(String tier)

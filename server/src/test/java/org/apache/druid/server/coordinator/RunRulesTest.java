@@ -100,7 +100,7 @@ public class RunRulesTest
       start = start.plusHours(1);
     }
 
-    ruleRunner = new RunRules(new ReplicationThrottler(24, 1), coordinator);
+    ruleRunner = new RunRules(new ReplicationThrottler(24, 1, false), coordinator);
   }
 
   @After
@@ -906,7 +906,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
-    RunRules runner = new RunRules(new ReplicationThrottler(7, 1), coordinator);
+    RunRules runner = new RunRules(new ReplicationThrottler(7, 1, false), coordinator);
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
