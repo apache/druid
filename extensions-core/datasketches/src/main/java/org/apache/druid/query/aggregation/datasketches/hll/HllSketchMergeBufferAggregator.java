@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.google.common.util.concurrent.Striped;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
@@ -30,8 +29,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * This aggregator merges existing sketches.
@@ -39,17 +36,10 @@ import java.util.concurrent.locks.ReadWriteLock;
  */
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
-
-  /**
-   * for locking per buffer position (power of 2 to make index computation faster)
-   */
-  private static final int NUM_STRIPES = 64;
-
   private final ColumnValueSelector<HllSketch> selector;
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
    * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
@@ -94,11 +84,6 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     }
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
@@ -107,35 +92,16 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
       return;
     }
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).writeLock();
-    lock.lock();
-    try {
-      final Union union = Union.writableWrap(mem);
-      union.update(sketch);
-    }
-    finally {
-      lock.unlock();
-    }
+    final Union union = Union.writableWrap(mem);
+    union.update(sketch);
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).readLock();
-    lock.lock();
-    try {
-      final Union union = Union.writableWrap(mem);
-      return union.getResult(tgtHllType);
-    }
-    finally {
-      lock.unlock();
-    }
+    final Union union = Union.writableWrap(mem);
+    return union.getResult(tgtHllType);
   }
 
   @Override

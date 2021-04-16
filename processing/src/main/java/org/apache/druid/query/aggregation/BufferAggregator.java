@@ -35,6 +35,9 @@ import java.nio.ByteBuffer;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  *
+ * Unlike {@link Aggregator}, BufferAggregators are never used by multiple threads at once. Implementations are not
+ * required to be thread safe.
+ *
  * @see VectorAggregator, the vectorized version
  */
 @ExtensionPoint

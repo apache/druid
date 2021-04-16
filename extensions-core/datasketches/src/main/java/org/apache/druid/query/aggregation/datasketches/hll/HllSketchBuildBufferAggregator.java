@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.google.common.util.concurrent.Striped;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
@@ -33,8 +32,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -42,19 +39,11 @@ import java.util.concurrent.locks.ReadWriteLock;
  */
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
-
-  /**
-   * for locking per buffer position (power of 2 to make index computation faster)
-   */
-  private static final int NUM_STRIPES = 64;
-
   private final ColumnValueSelector<Object> selector;
   private final int lgK;
-  private final TgtHllType tgtHllType;
   private final int size;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
    * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
@@ -72,7 +61,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   {
     this.selector = selector;
     this.lgK = lgK;
-    this.tgtHllType = tgtHllType;
     this.size = size;
     this.emptySketch = new byte[size];
 
@@ -99,11 +87,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
@@ -111,33 +94,15 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     if (value == null) {
       return;
     }
-    final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
-    lock.lock();
-    try {
-      final HllSketch sketch = sketchCache.get(buf).get(position);
-      HllSketchBuildAggregator.updateSketch(sketch, value);
-    }
-    finally {
-      lock.unlock();
-    }
+
+    final HllSketch sketch = sketchCache.get(buf).get(position);
+    HllSketchBuildAggregator.updateSketch(sketch, value);
   }
 
-  /**
-   * This method uses locks because it can be used during indexing,
-   * and Druid can call aggregate() and get() concurrently
-   * See https://github.com/druid-io/druid/pull/3956
-   */
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
-    lock.lock();
-    try {
-      return sketchCache.get(buf).get(position).copy();
-    }
-    finally {
-      lock.unlock();
-    }
+    return sketchCache.get(buf).get(position).copy();
   }
 
   @Override
@@ -184,31 +149,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   {
     final Int2ObjectMap<HllSketch> map = sketchCache.computeIfAbsent(buf, b -> new Int2ObjectOpenHashMap<>());
     map.put(position, sketch);
-  }
-
-  /**
-   * compute lock index to avoid boxing in Striped.get() call
-   *
-   * @param position
-   *
-   * @return index
-   */
-  static int lockIndex(final int position)
-  {
-    return smear(position) % NUM_STRIPES;
-  }
-
-  /**
-   * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
-   *
-   * @param hashCode
-   *
-   * @return smeared hashCode
-   */
-  private static int smear(int hashCode)
-  {
-    hashCode ^= (hashCode >>> 20) ^ (hashCode >>> 12);
-    return hashCode ^ (hashCode >>> 7) ^ (hashCode >>> 4);
   }
 
   @Override

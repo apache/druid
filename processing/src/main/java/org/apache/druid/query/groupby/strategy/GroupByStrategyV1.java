@@ -108,7 +108,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         query,
         null,
         configSupplier.get(),
-        bufferPool,
         baseRunner.run(
             QueryPlus.wrap(
                 new GroupByQuery.Builder(query)
@@ -217,7 +216,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         ),
         subquery,
         configSupplier.get(),
-        bufferPool,
         subqueryResult
     );
 
@@ -229,7 +227,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         outerQuery,
         null,
         configSupplier.get(),
-        bufferPool,
         Sequences.concat(
             Sequences.map(
                 Sequences.simple(outerQuery.getIntervals()),
