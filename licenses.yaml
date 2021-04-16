@@ -4984,7 +4984,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Denis Pushkarev
-version: 3.3.4
+version: 3.10.1
 license_file_path: licenses/bin/core-js.MIT
 
 ---
@@ -5162,7 +5162,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.13.1
+version: 1.13.3
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5491,7 +5491,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.11.0
+version: 16.14.0
 license_file_path: licenses/bin/react-dom.MIT
 
 ---
@@ -5581,7 +5581,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.11.0
+version: 16.14.0
 license_file_path: licenses/bin/react.MIT
 
 ---
@@ -5591,7 +5591,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ben Newman
-version: 0.13.3
+version: 0.13.7
 license_file_path: licenses/bin/regenerator-runtime.MIT
 
 ---
@@ -5631,7 +5631,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 0.17.0
+version: 0.19.1
 license_file_path: licenses/bin/scheduler.MIT
 
 ---
@@ -5669,22 +5669,10 @@ license_file_path: licenses/bin/toggle-selection.MIT
 name: "tslib"
 license_category: binary
 module: web-console
-license_name: Apache License version 2.0
+license_name: Zero-Clause BSD
 copyright: Microsoft Corp.
-version: 1.10.0
-notice: |
-  /*! *****************************************************************************
-  Copyright (c) Microsoft Corporation. All rights reserved.
-  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-  this file except in compliance with the License. You may obtain a copy of the
-  License at http://www.apache.org/licenses/LICENSE-2.0
-  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-  MERCHANTABLITY OR NON-INFRINGEMENT.
-  See the Apache Version 2.0 License for specific language governing permissions
-  and limitations under the License.
-  ***************************************************************************** */
+version: 1.13.0
+license_file_path: licenses/bin/tslib.0BSD
 
 ---
 
