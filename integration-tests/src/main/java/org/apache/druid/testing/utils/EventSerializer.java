@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testing.ProtobufEventSerializer;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,7 +44,8 @@ import java.util.List;
     @Type(name = DelimitedEventSerializer.TYPE, value = DelimitedEventSerializer.class),
     @Type(name = AvroEventSerializer.TYPE, value = AvroEventSerializer.class),
     @Type(name = AvroSchemaRegistryEventSerializer.TYPE, value = AvroSchemaRegistryEventSerializer.class),
-    @Type(name = ProtobufEventSerializer.TYPE, value = ProtobufEventSerializer.class)
+    @Type(name = ProtobufEventSerializer.TYPE, value = ProtobufEventSerializer.class),
+    @Type(name = ProtobufSchemaRegistryEventSerializer.TYPE, value = ProtobufSchemaRegistryEventSerializer.class)
 })
 public interface EventSerializer extends Closeable
 {

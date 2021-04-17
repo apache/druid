@@ -368,6 +368,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-provider</artifactId>
+            <version>5.5.1</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

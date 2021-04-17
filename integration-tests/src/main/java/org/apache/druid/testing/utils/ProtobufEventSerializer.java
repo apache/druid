@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.testing.utils;
 
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.github.os72.protobuf.dynamic.MessageDefinition;
@@ -25,7 +25,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.utils.EventSerializer;
 
 import java.io.IOException;
 import java.util.List;
