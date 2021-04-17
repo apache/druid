@@ -24,8 +24,8 @@ import { deepGet, EMPTY_ARRAY, EMPTY_OBJECT } from '../utils';
 import { IngestionSpec } from './ingestion-spec';
 import {
   BASIC_TIME_FORMATS,
-  DATE_ONLY_TIME_FORMATS,
   DATETIME_TIME_FORMATS,
+  DATE_ONLY_TIME_FORMATS,
   OTHER_TIME_FORMATS,
 } from './time';
 import { Transform } from './transform-spec';

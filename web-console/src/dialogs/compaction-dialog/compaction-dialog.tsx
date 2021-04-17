@@ -20,7 +20,7 @@ import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
-import { COMPACTION_CONFIG_FIELDS, CompactionConfig } from '../../druid-models';
+import { CompactionConfig, COMPACTION_CONFIG_FIELDS } from '../../druid-models';
 
 import './compaction-dialog.scss';
 

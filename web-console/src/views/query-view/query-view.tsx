@@ -54,9 +54,9 @@ import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
 import {
-  LIVE_QUERY_MODES,
   LiveQueryMode,
   LiveQueryModeSelector,
+  LIVE_QUERY_MODES,
 } from './live-query-mode-selector/live-query-mode-selector';
 import { QueryError } from './query-error/query-error';
 import { QueryExtraInfo } from './query-extra-info/query-extra-info';

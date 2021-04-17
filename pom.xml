@@ -1975,6 +1975,7 @@
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
+                                <exclude>.editorconfig</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
