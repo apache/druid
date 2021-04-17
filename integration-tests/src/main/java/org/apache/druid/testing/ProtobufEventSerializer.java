@@ -74,8 +74,6 @@ public class ProtobufEventSerializer implements EventSerializer
   {
     Descriptors.Descriptor msgDesc = MSG_BUILDER.getDescriptorForType();
     for (Pair<String, Object> pair : event) {
-      LOGGER.error(pair.lhs);
-      LOGGER.error(pair.rhs.toString());
       MSG_BUILDER.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
     }
     return MSG_BUILDER.build().toByteArray();

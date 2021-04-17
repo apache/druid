@@ -1,6 +1,7 @@
 {
   "type": "protobuf",
   "protoBytesDecoder": {
+    "type": "file",
     "descriptor": "/stream/data/test.desc",
     "protoMessageType": "Wikipedia"
   },
