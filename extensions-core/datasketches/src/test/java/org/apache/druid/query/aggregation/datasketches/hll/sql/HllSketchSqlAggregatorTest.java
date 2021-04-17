@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -84,33 +85,59 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
   private static final boolean ROUND = true;
-  private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, "dummy"
-  );
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
   private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create(TestHelper.JSON_MAPPER);
-  
+
+  private final Map<String, Object> queryContext;
   private SpecificSegmentsQuerySegmentWalker walker;
   private SqlLifecycleFactory sqlLifecycleFactory;
+
+  public HllSketchSqlAggregatorTest(final String vectorize)
+  {
+    this.queryContext = ImmutableMap.of(
+        PlannerContext.CTX_SQL_QUERY_ID, "dummy",
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
+  }
+
+  @Parameterized.Parameters(name = "vectorize = {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    for (String vectorize : new String[]{"false", "true", "force"}) {
+      constructors.add(new Object[]{vectorize});
+    }
+    return constructors;
+  }
 
   @BeforeClass
   public static void setUpClass()
@@ -207,6 +234,9 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testApproxCountDistinctHllSketch() throws Exception
   {
+    // Can't vectorize due to CONCAT expression.
+    cannotVectorize();
+
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
     final String sql = "SELECT\n"
@@ -222,7 +252,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        queryContext,
         DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
@@ -317,8 +347,9 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                       new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, ROUND)
                   )
               )
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-              .build(),
+              .context(queryContext)
+              .build()
+              .withOverriddenContext(ImmutableMap.of("skipEmptyBuckets", true)),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
   }
@@ -327,6 +358,9 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testAvgDailyCountDistinctHllSketch() throws Exception
   {
+    // Can't vectorize due to outer query, which runs on an inline datasource.
+    cannotVectorize();
+
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
     final String sql = "SELECT\n"
@@ -340,7 +374,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        queryContext,
         DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
@@ -379,11 +413,14 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                        new FinalizingFieldAccessPostAggregator("a0", "a0:a")
                                                    )
                                                )
-                                               .context(BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
-                                                   ImmutableMap.of("skipEmptyBuckets", true, "sqlQueryId", "dummy"),
-                                                   "d0"
-                                               ))
+                                               .context(queryContext)
                                                .build()
+                                               .withOverriddenContext(
+                                                   BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
+                                                       ImmutableMap.of("skipEmptyBuckets", true, "sqlQueryId", "dummy"),
+                                                       "d0"
+                                                   )
+                                               )
                                      )
                                  )
                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
@@ -414,7 +451,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                          )
                                      )
                                  )
-                                 .setContext(QUERY_CONTEXT_DEFAULT)
+                                 .setContext(queryContext)
                                  .build();
 
     Query actual = Iterables.getOnlyElement(queryLogHook.getRecordedQueries());
@@ -437,7 +474,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     // Verify results
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, DEFAULT_PARAMETERS, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, queryContext, DEFAULT_PARAMETERS, authenticationResult).toList();
     final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
     Assert.assertEquals(expected, results.size());
   }
@@ -466,7 +503,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        queryContext,
         DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
@@ -598,11 +635,9 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                       new HllSketchToEstimatePostAggregator("p23", new FieldAccessPostAggregator("p22", "a0"), true)
                   )
               )
-              .context(ImmutableMap.of(
-                  "skipEmptyBuckets", true,
-                  PlannerContext.CTX_SQL_QUERY_ID, "dummy"
-              ))
-              .build();
+              .context(queryContext)
+              .build()
+              .withOverriddenContext(ImmutableMap.of("skipEmptyBuckets", true));
 
     // Verify query
     Assert.assertEquals(expectedQuery, actualQuery);
@@ -619,7 +654,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql2,
-        QUERY_CONTEXT_DEFAULT,
+        queryContext,
         DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
@@ -670,13 +705,19 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                       new HllSketchToStringPostAggregator("s3", new FieldAccessPostAggregator("s2", "p0"))
                   )
               )
-              .context(ImmutableMap.of(
-                  "skipEmptyBuckets", true,
-                  PlannerContext.CTX_SQL_QUERY_ID, "dummy"
-              ))
-              .build();
+              .context(queryContext)
+              .build()
+              .withOverriddenContext(ImmutableMap.of("skipEmptyBuckets", true));
 
     // Verify query
     Assert.assertEquals(expectedQuery, actualQuery);
+  }
+
+  private void cannotVectorize()
+  {
+    if (QueryContexts.Vectorize.fromString((String) queryContext.get(QueryContexts.VECTORIZE_KEY))
+        == QueryContexts.Vectorize.FORCE) {
+      expectedException.expectMessage("Cannot vectorize");
+    }
   }
 }
