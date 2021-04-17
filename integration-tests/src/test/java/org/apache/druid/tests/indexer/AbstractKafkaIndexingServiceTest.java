@@ -117,6 +117,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             "%%STREAM_PROPERTIES_KEY%%",
             "consumerProperties"
         );
+
         spec = StringUtils.replace(
             spec,
             "%%SCHEMA_REGISTRY_HOST%%",
