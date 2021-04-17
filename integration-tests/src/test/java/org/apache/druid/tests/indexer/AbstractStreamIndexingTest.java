@@ -157,7 +157,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
    */
   protected static Map<String, String> findTestSpecs(String resourceRoot) throws IOException
   {
-    PROTOBUF_DESC_FILE_PATH=PROTOBUF_DESC_FILE_PATH+resourceRoot;
+    PROTOBUF_DESC_FILE_PATH=String.join("/", resourceRoot, PROTOBUF_DESC_FILE_PATH);
     final List<String> specDirs = listResources(resourceRoot);
     final Map<String, String> map = new HashMap<>();
     for (String eachSpec : specDirs) {
