@@ -120,6 +120,12 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
 
         spec = StringUtils.replace(
             spec,
+            "%%PROTOBUF_DESC_FILE%%",
+            PROTOBUF_DESC_FILE_PATH
+        );
+
+        spec = StringUtils.replace(
+            spec,
             "%%SCHEMA_REGISTRY_HOST%%",
             StringUtils.format("http://%s", config.getSchemaRegistryInternalHost())
         );
