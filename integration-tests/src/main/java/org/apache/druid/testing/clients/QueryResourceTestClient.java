@@ -62,11 +62,23 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
     );
   }
 
-  public QueryResourceTestClient withEncoding(boolean requestSmileEncoding, boolean responseSmileEncoding)
+  /**
+   * clone a new instance of current object with given encoding.
+   * Note: For {@link AbstractQueryResourceTestClient#queryAsync(String, Object)} operation, contentType could only be application/json
+   *
+   * @param contentType Content-Type header of request. Cannot be NULL. Both application/json and application/x-jackson-smile are allowed
+   * @param accept      Accept header of request. Both application/json and application/x-jackson-smile are allowed
+   */
+  public QueryResourceTestClient withEncoding(String contentType, String accept)
   {
-    QueryResourceTestClient client = new QueryResourceTestClient(this.jsonMapper, this.smileMapper, this.httpClient, this.routerUrl);
-    client.requestSmileEncoding = requestSmileEncoding;
-    client.responseSmileEncoding = responseSmileEncoding;
+    QueryResourceTestClient client = new QueryResourceTestClient(
+        this.jsonMapper,
+        this.smileMapper,
+        this.httpClient,
+        this.routerUrl
+    );
+    client.setContentTypeHeader(contentType);
+    client.setAcceptHeader(accept);
     return client;
   }
 }

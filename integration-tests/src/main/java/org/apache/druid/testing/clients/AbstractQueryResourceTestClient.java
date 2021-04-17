@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -32,25 +33,85 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.guice.TestClient;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
-  protected boolean requestSmileEncoding = false;
-  protected boolean responseSmileEncoding = false;
+  private String contentTypeHeader = MediaType.APPLICATION_JSON;
+
+  /**
+   * a 'null' means the Content-Type in response defaults to Content-Type of request
+   */
+  private String acceptHeader = null;
 
   final ObjectMapper jsonMapper;
   final ObjectMapper smileMapper;
   final HttpClient httpClient;
   final String routerUrl;
+  final Map<String, EncoderDecoder<QueryType>> encoderDecoderMap;
+
+  protected void setContentTypeHeader(String contentTypeHeader)
+  {
+    if (!this.encoderDecoderMap.containsKey(contentTypeHeader)) {
+      throw new IAE("Invalid Content-Type[%s]", contentTypeHeader);
+    }
+    this.contentTypeHeader = contentTypeHeader;
+  }
+
+  protected void setAcceptHeader(String acceptHeader)
+  {
+    if (acceptHeader != null) {
+      if (!this.encoderDecoderMap.containsKey(acceptHeader)) {
+        throw new IAE("Invalid Accept[%s]", acceptHeader);
+      }
+    }
+    this.acceptHeader = acceptHeader;
+  }
+
+  /**
+   * A encoder/decoder encodes/decods request/response based on value of Content-Type
+   */
+  interface EncoderDecoder<QueryType>
+  {
+    byte[] encode(QueryType content) throws IOException;
+
+    List<Map<String, Object>> decode(byte[] content) throws IOException;
+  }
+
+  static class ObjectMapperEncoderDecoder<QueryType> implements EncoderDecoder<QueryType>
+  {
+    private final ObjectMapper om;
+
+    ObjectMapperEncoderDecoder(ObjectMapper om)
+    {
+      this.om = om;
+    }
+
+    @Override
+    public byte[] encode(QueryType content) throws IOException
+    {
+      return om.writeValueAsBytes(content);
+    }
+
+    @Override
+    public List<Map<String, Object>> decode(byte[] content) throws IOException
+    {
+      return om.readValue(content, new TypeReference<List<Map<String, Object>>>()
+      {
+      });
+    }
+  }
 
   @Inject
   AbstractQueryResourceTestClient(
@@ -64,36 +125,31 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.routerUrl = routerUrl;
+
+    this.encoderDecoderMap = new HashMap<>();
+    this.encoderDecoderMap.put(MediaType.APPLICATION_JSON, new ObjectMapperEncoderDecoder<>(jsonMapper));
+    this.encoderDecoderMap.put(
+        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+        new ObjectMapperEncoderDecoder<>(smileMapper)
+    );
   }
 
   public abstract String getBrokerURL();
 
-  protected Request buildRequest(String url, QueryType query) throws IOException
-  {
-    Request request = new Request(HttpMethod.POST, new URL(url));
-    if (requestSmileEncoding) {
-      request.setContent(
-          SmileMediaTypes.APPLICATION_JACKSON_SMILE,
-          smileMapper.writeValueAsBytes(query)
-      );
-    } else {
-      request.setContent(
-          MediaType.APPLICATION_JSON,
-          smileMapper.writeValueAsBytes(query)
-      );
-    }
-
-    if (responseSmileEncoding) {
-      request.addHeader("Accpet", SmileMediaTypes.APPLICATION_JACKSON_SMILE);
-    }
-    return request;
-  }
-
   public List<Map<String, Object>> query(String url, QueryType query)
   {
     try {
+      String expectedResponseType = this.contentTypeHeader;
+
+      Request request = new Request(HttpMethod.POST, new URL(url));
+      request.setContent(this.contentTypeHeader, encoderDecoderMap.get(this.contentTypeHeader).encode(query));
+      if (this.acceptHeader != null) {
+        expectedResponseType = this.acceptHeader;
+        request.addHeader(HttpHeaders.Names.ACCEPT, this.acceptHeader);
+      }
+
       BytesFullResponseHolder response = httpClient.go(
-          buildRequest(url, query),
+          request,
           new BytesFullResponseHandler()
       ).get();
 
@@ -102,16 +158,20 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
             "Error while querying[%s] status[%s] content[%s]",
             getBrokerURL(),
             response.getStatus(),
-            response.getContent()
+            new String(response.getContent(), StandardCharsets.UTF_8)
         );
       }
 
-      ObjectMapper responseMapper = this.responseSmileEncoding ? smileMapper : jsonMapper;
-      return responseMapper.readValue(
-          response.getContent(), new TypeReference<List<Map<String, Object>>>()
-          {
-          }
-      );
+      String responseType = response.getResponse().headers().get(HttpHeaders.Names.CONTENT_TYPE);
+      if (!expectedResponseType.equals(responseType)) {
+        throw new ISE(
+            "Content-Type[%s] in HTTP response does not match the expected[%s]",
+            responseType,
+            expectedResponseType
+        );
+      }
+
+      return this.encoderDecoderMap.get(responseType).decode(response.getContent());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -121,8 +181,10 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
   public Future<StatusResponseHolder> queryAsync(String url, QueryType query)
   {
     try {
+      Request request = new Request(HttpMethod.POST, new URL(url));
+      request.setContent(MediaType.APPLICATION_JSON, encoderDecoderMap.get(MediaType.APPLICATION_JSON).encode(query));
       return httpClient.go(
-          buildRequest(url, query),
+          request,
           StatusResponseHandler.getInstance()
       );
     }
