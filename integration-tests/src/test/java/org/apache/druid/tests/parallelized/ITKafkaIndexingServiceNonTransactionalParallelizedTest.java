@@ -56,11 +56,11 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
    * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
    * and supervisor maintained and scoped within this test only
    */
-//  @Test
-//  public void testKafkaIndexDataWithWithAutoscaler() throws Exception
-//  {
-//    doTestIndexDataWithAutoscaler(false);
-//  }
+  @Test
+  public void testKafkaIndexDataWithWithAutoscaler() throws Exception
+  {
+    doTestIndexDataWithAutoscaler(false);
+  }
 
   /**
    * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
