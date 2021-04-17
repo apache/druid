@@ -1,6 +1,6 @@
 {
   "type": "protobuf",
-  "avroBytesDecoder": {
+  "protoBytesDecoder": {
     "type": "schema_registry",
     "url": "%%SCHEMA_REGISTRY_HOST%%",
     "config": {
