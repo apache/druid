@@ -54,9 +54,9 @@ public class ProtobufEventSerializer implements EventSerializer
         .addField("optional", "string", "country", 11)
         .addField("optional", "string", "region", 12)
         .addField("optional", "string", "city", 13)
-        .addField("optional", "string", "added", 14)
-        .addField("optional", "string", "deleted", 15)
-        .addField("optional", "string", "delta", 16)
+        .addField("optional", "int32", "added", 14)
+        .addField("optional", "int32", "deleted", 15)
+        .addField("optional", "int32", "delta", 16)
         .build();
     schemaBuilder.addMessageDefinition(wikiDef);
     DynamicSchema schema = null;
