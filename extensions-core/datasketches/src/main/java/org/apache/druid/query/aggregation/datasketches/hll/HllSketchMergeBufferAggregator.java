@@ -37,16 +37,7 @@ import java.nio.ByteOrder;
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
   private final ColumnValueSelector<HllSketch> selector;
-  private final int lgK;
-  private final TgtHllType tgtHllType;
-  private final int size;
-
-  /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
-   * {@link HllSketchBuildBufferAggregator} does something similar, but different enough that we don't share code. The
-   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
-   */
-  private final byte[] emptyUnion;
+  private final HllSketchMergeBufferAggregatorHelper helper;
 
   public HllSketchMergeBufferAggregator(
       final ColumnValueSelector<HllSketch> selector,
@@ -56,32 +47,13 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   )
   {
     this.selector = selector;
-    this.lgK = lgK;
-    this.tgtHllType = tgtHllType;
-    this.size = size;
-    this.emptyUnion = new byte[size];
-
-    //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptyUnion" as a side effect of construction)
-    new Union(lgK, WritableMemory.wrap(emptyUnion));
+    this.helper = new HllSketchMergeBufferAggregatorHelper(lgK, tgtHllType, size);
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    // Copy prebuilt empty union object.
-    // Not necessary to cache a Union wrapper around the initialized memory, because:
-    //  - It is cheap to reconstruct by re-wrapping the memory in "aggregate" and "get".
-    //  - Unlike the HllSketch objects used by HllSketchBuildBufferAggregator, our Union objects never exceed the
-    //    max size and therefore do not need to be potentially moved in-heap.
-
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptyUnion);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
+    helper.init(buf, position);
   }
 
   @Override
@@ -91,7 +63,10 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     if (sketch == null) {
       return;
     }
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
+
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
+                                             .writableRegion(position, helper.getSize());
+
     final Union union = Union.writableWrap(mem);
     union.update(sketch);
   }
@@ -99,9 +74,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Union union = Union.writableWrap(mem);
-    return union.getResult(tgtHllType);
+    return helper.get(buf, position);
   }
 
   @Override
@@ -117,6 +90,6 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     // lgK should be inspected because different execution paths exist in Union.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
     // See https://github.com/apache/druid/pull/6893#discussion_r250726028
-    inspector.visit("lgK", lgK);
+    inspector.visit("lgK", helper.getLgK());
   }
 }

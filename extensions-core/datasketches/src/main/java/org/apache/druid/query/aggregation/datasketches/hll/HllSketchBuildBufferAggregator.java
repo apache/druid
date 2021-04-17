@@ -19,19 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
-import org.apache.datasketches.hll.Union;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -40,17 +33,7 @@ import java.util.IdentityHashMap;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
   private final ColumnValueSelector<Object> selector;
-  private final int lgK;
-  private final int size;
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
-
-  /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
-   * {@link HllSketchMergeBufferAggregator} does something similar, but different enough that we don't share code. The
-   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
-   */
-  private final byte[] emptySketch;
+  private final HllSketchBuildBufferAggregatorHelper helper;
 
   public HllSketchBuildBufferAggregator(
       final ColumnValueSelector<Object> selector,
@@ -60,31 +43,13 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   )
   {
     this.selector = selector;
-    this.lgK = lgK;
-    this.size = size;
-    this.emptySketch = new byte[size];
-
-    //noinspection ResultOfObjectAllocationIgnored (HllSketch writes to "emptySketch" as a side effect of construction)
-    new HllSketch(lgK, tgtHllType, WritableMemory.wrap(emptySketch));
+    this.helper = new HllSketchBuildBufferAggregatorHelper(lgK, tgtHllType, size);
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    // Copy prebuilt empty sketch object.
-
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptySketch);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
-
-    // Add an HllSketch for this chunk to our sketchCache.
-    final WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
+    helper.init(buf, position);
   }
 
   @Override
@@ -95,26 +60,19 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
       return;
     }
 
-    final HllSketch sketch = sketchCache.get(buf).get(position);
-    HllSketchBuildAggregator.updateSketch(sketch, value);
+    HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
   }
 
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    return sketchCache.get(buf).get(position).copy();
+    return helper.get(buf, position);
   }
 
   @Override
   public void close()
   {
-    memCache.clear();
-    sketchCache.clear();
-  }
-
-  private WritableMemory getMemory(final ByteBuffer buf)
-  {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
+    helper.clear();
   }
 
   /**
@@ -124,19 +82,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
-    HllSketch sketch = sketchCache.get(oldBuf).get(oldPosition);
-    final WritableMemory oldMem = getMemory(oldBuf).writableRegion(oldPosition, size);
-    if (sketch.isSameResource(oldMem)) { // sketch has not moved
-      final WritableMemory newMem = getMemory(newBuf).writableRegion(newPosition, size);
-      sketch = HllSketch.writableWrap(newMem);
-    }
-    putSketchIntoCache(newBuf, newPosition, sketch);
-  }
-
-  private void putSketchIntoCache(final ByteBuffer buf, final int position, final HllSketch sketch)
-  {
-    final Int2ObjectMap<HllSketch> map = sketchCache.computeIfAbsent(buf, b -> new Int2ObjectOpenHashMap<>());
-    map.put(position, sketch);
+    helper.relocate(oldPosition, newPosition, oldBuf, newBuf);
   }
 
   @Override
@@ -146,6 +92,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
     // See https://github.com/apache/druid/pull/6893#discussion_r250726028
-    inspector.visit("lgK", lgK);
+    inspector.visit("lgK", helper.getLgK());
   }
 }
