@@ -94,9 +94,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   protected static final String INPUT_FORMAT = "inputFormat";
   protected static final String INPUT_ROW_PARSER = "parser";
 
-  protected static String PROTOBUF_DESC_FILE_PATH =
-      String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_PROTOBUF_FILE);
-
   private static final String JSON_INPUT_FORMAT_PATH =
       String.join("/", DATA_RESOURCE_ROOT, "json", INPUT_FORMAT_SPEC_DIR, "input_format.json");
 
@@ -157,7 +154,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
    */
   protected static Map<String, String> findTestSpecs(String resourceRoot) throws IOException
   {
-    PROTOBUF_DESC_FILE_PATH=String.join("/", resourceRoot, PROTOBUF_DESC_FILE_PATH);
     final List<String> specDirs = listResources(resourceRoot);
     final Map<String, String> map = new HashMap<>();
     for (String eachSpec : specDirs) {
