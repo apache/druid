@@ -46,20 +46,14 @@ public class LongConstantBufferAggregatorTest
   @Test
   public void testLong()
   {
-    Assert.assertEquals(randomVal, aggregator.getLong(byteBuffer, 0));
+    Assert.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
   }
 
   @Test
   public void testAggregate()
   {
     aggregator.aggregate(byteBuffer, 0);
-    Assert.assertEquals(randomVal, aggregator.getLong(byteBuffer, 0));
-  }
-
-  @Test
-  public void testFloat()
-  {
-    Assert.assertEquals((float) randomVal, aggregator.getFloat(byteBuffer, 0), 0.0001f);
+    Assert.assertEquals(randomVal, aggregator.get(byteBuffer, 0));
   }
 
   @Test

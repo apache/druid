@@ -81,24 +81,6 @@ public class StringAnyBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("StringAnyBufferAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("StringAnyBufferAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("StringAnyBufferAggregator does not support getDouble()");
-  }
-
-  @Override
   public void close()
   {
     // no-op

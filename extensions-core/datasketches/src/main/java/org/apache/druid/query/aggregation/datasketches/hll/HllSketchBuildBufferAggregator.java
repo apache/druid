@@ -112,18 +112,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     sketchCache.clear();
   }
 
-  @Override
-  public float getFloat(final ByteBuffer buf, final int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public long getLong(final ByteBuffer buf, final int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
   private WritableMemory getMemory(final ByteBuffer buf)
   {
     return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));

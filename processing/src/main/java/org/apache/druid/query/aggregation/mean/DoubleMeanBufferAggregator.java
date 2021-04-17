@@ -70,24 +70,6 @@ public class DoubleMeanBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("not supported");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("not supported");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("not supported");
-  }
-
-  @Override
   public void close()
   {
 

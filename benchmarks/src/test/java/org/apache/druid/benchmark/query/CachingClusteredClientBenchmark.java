@@ -369,8 +369,7 @@ public class CachingClusteredClientBenchmark
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             processingConfig,

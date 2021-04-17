@@ -228,24 +228,6 @@ public class ExpressionAggregationBenchmark
     }
 
     @Override
-    public float getFloat(final ByteBuffer buf, final int position)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long getLong(final ByteBuffer buf, final int position)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public double getDouble(ByteBuffer buf, int position)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void close()
     {
       // nothing to close

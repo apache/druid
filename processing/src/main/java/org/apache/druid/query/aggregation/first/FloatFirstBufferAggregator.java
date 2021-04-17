@@ -53,22 +53,4 @@ public class FloatFirstBufferAggregator extends NumericFirstBufferAggregator<Bas
     final boolean rhsNull = isValueNull(buf, position);
     return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
   }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return buf.getFloat(position + VALUE_OFFSET);
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return (long) buf.getFloat(position + VALUE_OFFSET);
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    return buf.getFloat(position + VALUE_OFFSET);
-  }
 }

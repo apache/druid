@@ -52,22 +52,4 @@ public class DoubleAnyBufferAggregator extends NumericAnyBufferAggregator<BaseDo
     final boolean isNull = isValueNull(buf, position);
     return isNull ? null : buf.getDouble(position + FOUND_VALUE_OFFSET);
   }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return (float) buf.getDouble(position + FOUND_VALUE_OFFSET);
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return (long) buf.getDouble(position + FOUND_VALUE_OFFSET);
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    return buf.getDouble(position + FOUND_VALUE_OFFSET);
-  }
 }

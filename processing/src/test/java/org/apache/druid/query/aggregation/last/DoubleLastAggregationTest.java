@@ -108,8 +108,6 @@ public class DoubleLastAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(times[0], result.lhs.longValue());
     Assert.assertEquals(doubles[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
   }
 
   @Test
@@ -170,8 +168,6 @@ public class DoubleLastAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
-    Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getDouble(buffer, 0), 0.0001);
   }
 
 

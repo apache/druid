@@ -30,7 +30,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -46,7 +45,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;
@@ -63,13 +61,11 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   public GroupByMergedQueryRunner(
       ExecutorService exec,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {
@@ -77,7 +73,6 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
-    this.bufferPool = bufferPool;
   }
 
   @Override

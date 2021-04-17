@@ -50,24 +50,6 @@ public abstract class SimpleFloatBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public final float getFloat(ByteBuffer buf, int position)
-  {
-    return buf.getFloat(position);
-  }
-
-  @Override
-  public final long getLong(ByteBuffer buf, int position)
-  {
-    return (long) buf.getFloat(position);
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buffer, int position)
-  {
-    return (double) buffer.getFloat(position);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

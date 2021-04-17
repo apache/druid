@@ -107,8 +107,6 @@ public class LongLastAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(times[2], result.lhs.longValue());
     Assert.assertEquals(longValues[2], result.rhs.longValue());
-    Assert.assertEquals(longValues[2], agg.getLong(buffer, 0));
-    Assert.assertEquals(longValues[2], agg.getFloat(buffer, 0), 1);
   }
 
   @Test
@@ -169,8 +167,6 @@ public class LongLastAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
-    Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 1);
   }
 
 

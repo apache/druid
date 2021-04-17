@@ -108,8 +108,6 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(times[1], result.lhs.longValue());
     Assert.assertEquals(floats[1], result.rhs, 0.0001);
-    Assert.assertEquals((long) floats[1], agg.getLong(buffer, 0));
-    Assert.assertEquals(floats[1], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -170,8 +168,6 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
-    Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
   }
 
 

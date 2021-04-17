@@ -93,8 +93,7 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
     Double result = (Double) agg.get(buffer, 0);
 
     Assert.assertEquals(doubles[0], result, 0.0001);
-    Assert.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
+    Assert.assertEquals(doubles[0], (double) agg.get(buffer, 0), 0.0001);
   }
 
   @Test
@@ -151,8 +150,7 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
     Double result = (Double) agg.get(buffer, 0);
 
     Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(objects[0], agg.getDouble(buffer, 0), 0.0001);
+    Assert.assertEquals(objects[0], (double) agg.get(buffer, 0), 0.0001);
   }
 
   @Test

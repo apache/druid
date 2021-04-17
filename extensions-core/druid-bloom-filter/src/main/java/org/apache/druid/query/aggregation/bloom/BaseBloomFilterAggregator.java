@@ -111,24 +111,6 @@ public abstract class BaseBloomFilterAggregator<TSelector>
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
-  }
-
-  @Override
   public void aggregate()
   {
     aggregate(collector, 0);

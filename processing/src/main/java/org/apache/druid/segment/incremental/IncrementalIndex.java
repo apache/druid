@@ -347,7 +347,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
 
-  protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
+  protected abstract Object getAggVal(AggregatorType agg);
 
   protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
 
@@ -690,6 +690,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return getFacts().getMaxTimeMillis();
   }
 
+  @SuppressWarnings("unused") // Potentially useful for alternative IncrementalIndex implementations
   public AggregatorType[] getAggs()
   {
     return aggs;
@@ -920,7 +921,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
             AggregatorType[] aggs = getAggsForRow(rowOffset);
             for (int i = 0; i < aggs.length; ++i) {
-              theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
+              theVals.put(metrics[i].getName(), getAggVal(aggs[i]));
             }
 
             if (postAggs != null) {

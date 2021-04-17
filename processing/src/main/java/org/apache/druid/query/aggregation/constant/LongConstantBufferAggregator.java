@@ -55,18 +55,6 @@ public class LongConstantBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return (float) value;
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return value;
-  }
-
-  @Override
   public void close()
   {
 

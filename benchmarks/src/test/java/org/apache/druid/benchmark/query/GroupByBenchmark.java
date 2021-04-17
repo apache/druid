@@ -508,8 +508,7 @@ public class GroupByBenchmark
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryBenchmarkUtil.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
