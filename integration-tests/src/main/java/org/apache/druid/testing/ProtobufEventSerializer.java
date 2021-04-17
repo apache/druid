@@ -66,7 +66,7 @@ public class ProtobufEventSerializer implements EventSerializer
     catch (Descriptors.DescriptorValidationException e) {
       LOGGER.error("Could not init protobuf builder.");
     }
-    MSG_BUILDER = schema.newMessageBuilder("wikipedia");
+    MSG_BUILDER = schema.newMessageBuilder("Wikipedia");
   }
 
   @Override
