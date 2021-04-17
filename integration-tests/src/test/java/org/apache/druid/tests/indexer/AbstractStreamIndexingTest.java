@@ -77,6 +77,8 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   private static final String QUERIES_FILE = "/stream/queries/stream_index_queries.json";
   private static final String SUPERVISOR_SPEC_TEMPLATE_FILE = "supervisor_spec_template.json";
   private static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE = "supervisor_with_autoscaler_spec_template.json";
+  private static final String SUPERVISOR_PROTOBUF_FILE = "test.desc";
+
 
   protected static final String DATA_RESOURCE_ROOT = "/stream/data";
   protected static final String SUPERVISOR_SPEC_TEMPLATE_PATH =
@@ -142,6 +144,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
         .stream()
         .filter(resource -> !SUPERVISOR_SPEC_TEMPLATE_FILE.equals(resource))
         .filter(resource -> !SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE.equals(resource))
+        .filter(resource -> !SUPERVISOR_PROTOBUF_FILE.equals(resource))
         .collect(Collectors.toList());
   }
 
