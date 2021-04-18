@@ -54,7 +54,7 @@ services:
     env_file:
       - ./environment-configs/common
     environment:
-      - ZK_VERSION
+      - ZK_VERSION=${ZK_VERSION:-3.5}
 
   druid-metadata-storage:
     image: druid/cluster
