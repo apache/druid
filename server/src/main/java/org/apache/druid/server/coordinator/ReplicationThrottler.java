@@ -45,7 +45,6 @@ public class ReplicationThrottler
 
   public ReplicationThrottler(int maxReplicants, int maxLifetime, boolean loadPrimaryReplicantsOnly)
   {
-    this.loadPrimaryReplicantsOnly = false;
     updateParams(maxReplicants, maxLifetime, loadPrimaryReplicantsOnly);
   }
 
