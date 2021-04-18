@@ -20,8 +20,10 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
@@ -35,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class IndexedTableJoinable implements Joinable
 {
@@ -89,6 +92,42 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
+  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(final String columnName, final int maxNumValues)
+  {
+    final int columnPosition = table.rowSignature().indexOf(columnName);
+
+    if (columnPosition < 0) {
+      return Optional.empty();
+    }
+
+    try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
+      // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
+      // The hopes are that this will improve locality and therefore improve performance.
+      final Set<String> allValues = new TreeSet<>();
+
+      for (int i = 0; i < table.numRows(); i++) {
+        final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
+
+        if (!NullHandling.isNullOrEquivalent(s)) {
+          if (!allValues.add(s)) {
+            // Duplicate found. Since the values are not all unique, we must return an empty Optional.
+            return Optional.empty();
+          }
+
+          if (allValues.size() > maxNumValues) {
+            return Optional.empty();
+          }
+        }
+      }
+
+      return Optional.of(allValues);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
@@ -112,7 +151,7 @@ public class IndexedTableJoinable implements Joinable
         IntList rowIndex = index.find(searchColumnValue);
         for (int i = 0; i < rowIndex.size(); i++) {
           int rowNum = rowIndex.getInt(i);
-          String correlatedDimVal = Objects.toString(reader.read(rowNum), null);
+          String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(reader.read(rowNum));
           correlatedValues.add(correlatedDimVal);
 
           if (correlatedValues.size() > maxCorrelationSetSize) {
@@ -132,7 +171,7 @@ public class IndexedTableJoinable implements Joinable
         for (int i = 0; i < table.numRows(); i++) {
           String dimVal = Objects.toString(dimNameReader.read(i), null);
           if (searchColumnValue.equals(dimVal)) {
-            String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
+            String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(correlatedColumnReader.read(i));
             correlatedValues.add(correlatedDimVal);
             if (correlatedValues.size() > maxCorrelationSetSize) {
               return Optional.empty();

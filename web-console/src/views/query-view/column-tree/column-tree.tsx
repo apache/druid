@@ -388,9 +388,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   }),
                 )
                 .sort((a, b) =>
-                  String(a.id)
-                    .toLowerCase()
-                    .localeCompare(String(b.id).toLowerCase()),
+                  String(a.id).toLowerCase().localeCompare(String(b.id).toLowerCase()),
                 ),
             }),
           ),

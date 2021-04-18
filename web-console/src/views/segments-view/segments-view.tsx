@@ -23,10 +23,10 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
+  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
-  ActionCell,
   BracedText,
   MoreButton,
   RefreshButton,
@@ -342,9 +342,9 @@ END AS "partitioning"`,
           setIntermediateQuery(sqlQuery);
           return await queryDruidSql({ query: sqlQuery });
         } else if (capabilities.hasCoordinatorAccess()) {
-          let datasourceList: string[] = (await Api.instance.get(
-            '/druid/coordinator/v1/metadata/datasources',
-          )).data;
+          let datasourceList: string[] = (
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+          ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
@@ -364,9 +364,11 @@ END AS "partitioning"`,
 
           const n = Math.min(datasourceList.length, maxResults);
           for (let i = 0; i < n && results.length < maxResults; i++) {
-            const segments = (await Api.instance.get(
-              `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
-            )).data.segments;
+            const segments = (
+              await Api.instance.get(
+                `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+              )
+            ).data.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {

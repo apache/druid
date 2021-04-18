@@ -86,6 +86,15 @@ public interface Joinable extends ReferenceCountedObject
   );
 
   /**
+   * Returns all nonnull values from a particular column if they are all unique, if there are "maxNumValues" or fewer,
+   * and if the column exists and supports this operation. Otherwise, returns an empty Optional.
+   *
+   * @param columnName   name of the column
+   * @param maxNumValues maximum number of values to return
+   */
+  Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues);
+
+  /**
    * Searches a column from this Joinable for a particular value, finds rows that match,
    * and returns values of a second column for those rows.
    *
@@ -93,9 +102,9 @@ public interface Joinable extends ReferenceCountedObject
    * @param searchColumnValue Target value of the search column. This is the value that is being filtered on.
    * @param retrievalColumnName The column to retrieve values from. This is the column that is being joined against.
    * @param maxCorrelationSetSize Maximum number of values to retrieve. If we detect that more values would be
-   *                              returned than this limit, return an empty set.
+   *                              returned than this limit, return absent.
    * @param allowNonKeyColumnSearch If true, allow searchs on non-key columns. If this is false,
-   *                                a search on a non-key column should return an empty set.
+   *                                a search on a non-key column returns absent.
    * @return The set of correlated column values. If we cannot determine correlated values, return absent.
    *
    * In case either the search or retrieval column names are not found, this will return absent.

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -38,10 +39,12 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class ScanQuery extends BaseQuery<ScanResultValue>
 {
@@ -309,6 +312,24 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
             : Comparator.<ScanResultValue>naturalOrder().reversed()
         )
     );
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    if (columns == null || columns.isEmpty()) {
+      // We don't know what columns we require. We'll find out when the segment shows up.
+      return null;
+    } else {
+      return Queries.computeRequiredColumns(
+          virtualColumns,
+          dimFilter,
+          Collections.emptyList(),
+          Collections.emptyList(),
+          columns
+      );
+    }
   }
 
   public ScanQuery withOffset(final long newOffset)

@@ -22,13 +22,11 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -49,14 +47,6 @@ import java.util.Optional;
 
 public class HashJoinSegmentTest extends InitializedNullHandlingTest
 {
-  private static final JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG =
-      new JoinFilterRewriteConfig(
-          true,
-          true,
-          true,
-          QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-      );
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -205,7 +195,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_constructor_noClauses()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
+    expectedException.expectMessage("'clauses' and 'baseFilter' are both empty, no need to create HashJoinSegment");
 
     List<JoinableClause> joinableClauses = ImmutableList.of();
 

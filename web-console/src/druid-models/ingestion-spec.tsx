@@ -1719,7 +1719,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     info: (
       <>
-        Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.
+        Milliseconds to wait for pushing segments. It must be &gt;= 0, where 0 means to wait
+        forever.
       </>
     ),
   },

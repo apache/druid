@@ -51,7 +51,11 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
         }[] = await queryDruidSql({
           query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
         });
-        return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
+        return lookupBy(
+          serviceCountsFromQuery,
+          x => x.service_type,
+          x => x.count,
+        );
       } else if (capabilities.hasCoordinatorAccess()) {
         const services = (await Api.instance.get('/druid/coordinator/v1/servers?simple')).data;
 

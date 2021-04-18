@@ -48,6 +48,12 @@ public class JoinFilterRewriteConfig
   private final boolean enableRewriteValueColumnFilters;
 
   /**
+   * Whether to enable eliminating entire inner join clauses by rewriting them into filters on the base segment.
+   * In production this should generally be {@code QueryContexts.getEnableRewriteJoinToFilter(query)}.
+   */
+  private final boolean enableRewriteJoinToFilter;
+
+  /**
    * The max allowed size of correlated value sets for RHS rewrites. In production
    * This should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
    */
@@ -57,12 +63,14 @@ public class JoinFilterRewriteConfig
       boolean enableFilterPushDown,
       boolean enableFilterRewrite,
       boolean enableRewriteValueColumnFilters,
+      boolean enableRewriteJoinToFilter,
       long filterRewriteMaxSize
   )
   {
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
     this.enableRewriteValueColumnFilters = enableRewriteValueColumnFilters;
+    this.enableRewriteJoinToFilter = enableRewriteJoinToFilter;
     this.filterRewriteMaxSize = filterRewriteMaxSize;
   }
 
@@ -72,6 +80,7 @@ public class JoinFilterRewriteConfig
         QueryContexts.getEnableJoinFilterPushDown(query),
         QueryContexts.getEnableJoinFilterRewrite(query),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getEnableRewriteJoinToFilter(query),
         QueryContexts.getJoinFilterRewriteMaxSize(query)
     );
   }
@@ -91,6 +100,11 @@ public class JoinFilterRewriteConfig
     return enableRewriteValueColumnFilters;
   }
 
+  public boolean isEnableRewriteJoinToFilter()
+  {
+    return enableRewriteJoinToFilter;
+  }
+
   public long getFilterRewriteMaxSize()
   {
     return filterRewriteMaxSize;
@@ -106,10 +120,11 @@ public class JoinFilterRewriteConfig
       return false;
     }
     JoinFilterRewriteConfig that = (JoinFilterRewriteConfig) o;
-    return enableFilterPushDown == that.enableFilterPushDown &&
-           enableFilterRewrite == that.enableFilterRewrite &&
-           enableRewriteValueColumnFilters == that.enableRewriteValueColumnFilters &&
-           filterRewriteMaxSize == that.filterRewriteMaxSize;
+    return enableFilterPushDown == that.enableFilterPushDown
+           && enableFilterRewrite == that.enableFilterRewrite
+           && enableRewriteValueColumnFilters == that.enableRewriteValueColumnFilters
+           && enableRewriteJoinToFilter == that.enableRewriteJoinToFilter
+           && filterRewriteMaxSize == that.filterRewriteMaxSize;
   }
 
   @Override
@@ -119,7 +134,20 @@ public class JoinFilterRewriteConfig
         enableFilterPushDown,
         enableFilterRewrite,
         enableRewriteValueColumnFilters,
+        enableRewriteJoinToFilter,
         filterRewriteMaxSize
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JoinFilterRewriteConfig{" +
+           "enableFilterPushDown=" + enableFilterPushDown +
+           ", enableFilterRewrite=" + enableFilterRewrite +
+           ", enableRewriteValueColumnFilters=" + enableRewriteValueColumnFilters +
+           ", enableRewriteJoinToFilter=" + enableRewriteJoinToFilter +
+           ", filterRewriteMaxSize=" + filterRewriteMaxSize +
+           '}';
   }
 }

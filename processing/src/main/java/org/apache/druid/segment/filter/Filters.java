@@ -59,6 +59,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -486,14 +487,14 @@ public class Filters
 
   /**
    * Create a filter representing an AND relationship across a list of filters. Deduplicates filters, flattens stacks,
-   * and removes literal "false" filters.
+   * and removes null filters and literal "false" filters.
    *
    * @param filters List of filters
    *
    * @return If "filters" has more than one filter remaining after processing, returns {@link AndFilter}.
    * If "filters" has a single element remaining after processing, return that filter alone.
    *
-   * @throws IllegalArgumentException if "filters" is empty
+   * @throws IllegalArgumentException if "filters" is empty or only contains nulls
    */
   public static Filter and(final List<Filter> filters)
   {
@@ -501,15 +502,18 @@ public class Filters
   }
 
   /**
-   * Like {@link #and}, but returns an empty Optional instead of throwing an exception if "filters" is empty.
+   * Like {@link #and}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
    */
   public static Optional<Filter> maybeAnd(List<Filter> filters)
   {
-    if (filters.isEmpty()) {
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
       return Optional.empty();
     }
 
-    final LinkedHashSet<Filter> filtersToUse = flattenAndChildren(filters);
+    final LinkedHashSet<Filter> filtersToUse = flattenAndChildren(nonNullFilters);
 
     if (filtersToUse.isEmpty()) {
       assert !filters.isEmpty();
@@ -527,7 +531,7 @@ public class Filters
 
   /**
    * Create a filter representing an OR relationship across a list of filters. Deduplicates filters, flattens stacks,
-   * and removes literal "false" filters.
+   * and removes null filters and literal "false" filters.
    *
    * @param filters List of filters
    *
@@ -542,18 +546,21 @@ public class Filters
   }
 
   /**
-   * Like {@link #or}, but returns an empty Optional instead of throwing an exception if "filters" is empty.
+   * Like {@link #or}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
    */
   public static Optional<Filter> maybeOr(final List<Filter> filters)
   {
-    if (filters.isEmpty()) {
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
       return Optional.empty();
     }
 
-    final LinkedHashSet<Filter> filtersToUse = flattenOrChildren(filters);
+    final LinkedHashSet<Filter> filtersToUse = flattenOrChildren(nonNullFilters);
 
     if (filtersToUse.isEmpty()) {
-      assert !filters.isEmpty();
+      assert !nonNullFilters.isEmpty();
       // Original "filters" list must have been 100% literally-false filters.
       return Optional.of(FalseFilter.instance());
     } else if (filtersToUse.stream().anyMatch(filter -> filter instanceof TrueFilter)) {
@@ -593,6 +600,20 @@ public class Filters
   {
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
     return valueMatcher.matches();
+  }
+
+
+  /**
+   * Returns a list equivalent to the input list, but with nulls removed. If the original list has no nulls,
+   * it is returned directly.
+   */
+  private static List<Filter> nonNull(final List<Filter> filters)
+  {
+    if (filters.stream().anyMatch(Objects::isNull)) {
+      return filters.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    } else {
+      return filters;
+    }
   }
 
   /**

@@ -18,8 +18,8 @@
 
 const process = require('process');
 const path = require('path');
-const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const webpack = require('webpack');
 
 const { version } = require('./package.json');
 
@@ -39,7 +39,15 @@ module.exports = env => {
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
   const useBabel = process.env.babel || mode === 'production';
-  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : 'Wont'} use babel.`);
+  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : "Won't"} use babel.`);
+
+  const plugins = [
+    new webpack.DefinePlugin({
+      'process.env': JSON.stringify({ NODE_ENV: mode }),
+      global: {},
+      NODE_ENV: JSON.stringify(mode),
+    }),
+  ];
 
   function babelTest(s) {
     // https://github.com/zloirock/core-js/issues/514
@@ -49,7 +57,7 @@ module.exports = env => {
 
   return {
     mode: mode,
-    devtool: 'hidden-source-map',
+    devtool: mode === 'production' ? undefined : 'eval-cheap-module-source-map',
     entry: {
       'web-console': './src/entry.ts',
     },
@@ -62,6 +70,9 @@ module.exports = env => {
     target: 'web',
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
+      fallback: {
+        os: false,
+      },
     },
     devServer: {
       publicPath: '/public',
@@ -74,6 +85,7 @@ module.exports = env => {
         '/druid': proxyTarget,
         '/proxy': proxyTarget,
       },
+      transportMode: 'ws',
     },
     module: {
       rules: [
@@ -117,13 +129,14 @@ module.exports = env => {
             {
               loader: 'postcss-loader',
               options: {
-                ident: 'postcss',
-                plugins: () => [
-                  postcssPresetEnv({
-                    autoprefixer: { grid: "no-autoplace" },
-                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
-                  }),
-                ],
+                postcssOptions: {
+                  plugins: {
+                    'postcss-preset-env': {
+                      autoprefixer: { grid: 'no-autoplace' },
+                      browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
+                    },
+                  },
+                },
               },
             },
             { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
@@ -134,15 +147,18 @@ module.exports = env => {
           use: {
             loader: 'file-loader',
             options: {
-              name: '[name].[ext]'
-            }
-          }
-        }
+              name: '[name].[ext]',
+            },
+          },
+        },
       ],
     },
     performance: {
       hints: false,
     },
-    plugins: process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE' ? [new BundleAnalyzerPlugin()] : [],
+    plugins:
+      process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE'
+        ? [...plugins, new BundleAnalyzerPlugin()]
+        : plugins,
   };
 };

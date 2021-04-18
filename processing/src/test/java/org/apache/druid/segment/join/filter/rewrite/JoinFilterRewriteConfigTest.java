@@ -17,21 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.common.config;
+package org.apache.druid.segment.join.filter.rewrite;
 
-/**
-*/
-public interface ConfigSerde<T>
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class JoinFilterRewriteConfigTest
 {
-  byte[] serialize(T obj);
-  /**
-   * Serialize object to String
-   *
-   * @param obj to be serialize
-   * @param skipNull if true, then skip serialization of any field with null value.
-   *                 This can be used to reduce the size of the resulting String.
-   * @return String serialization of the input
-   */
-  String serializeToString(T obj, boolean skipNull);
-  T deserialize(byte[] bytes);
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(JoinFilterRewriteConfig.class).usingGetClass().verify();
+  }
 }

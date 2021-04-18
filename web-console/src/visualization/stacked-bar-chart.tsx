@@ -32,7 +32,7 @@ interface StackedBarChartProps {
   margin: BarChartMargin;
   activeDataType?: string;
   dataToRender: BarUnitData[];
-  changeActiveDatasource: (e: string) => void;
+  changeActiveDatasource: (e: string | null) => void;
   formatTick: (e: number) => string;
   xScale: AxisScale<Date>;
   yScale: AxisScale<number>;
@@ -61,7 +61,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
     changeActiveDatasource,
     barWidth,
   } = props;
-  const [hoverOn, setHoverOn] = useState();
+  const [hoverOn, setHoverOn] = useState<HoveredBarInfo>();
 
   const width = props.svgWidth - props.margin.left - props.margin.right;
   const height = props.svgHeight - props.margin.bottom - props.margin.top;
@@ -113,7 +113,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
                 className={'hovered-bar'}
                 onClick={() => {
                   setHoverOn(undefined);
-                  changeActiveDatasource(hoverOn.datasource as string);
+                  changeActiveDatasource(hoverOn.datasource ?? null);
                 }}
               >
                 <rect
