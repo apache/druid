@@ -189,7 +189,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          true
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);

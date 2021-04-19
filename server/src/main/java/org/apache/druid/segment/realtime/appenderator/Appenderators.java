@@ -89,7 +89,8 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        true
     );
   }
 
@@ -119,7 +120,8 @@ public class Appenderators
         indexMerger,
         null,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        false
     );
   }
 }

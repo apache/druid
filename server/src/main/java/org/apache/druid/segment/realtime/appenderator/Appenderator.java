@@ -215,6 +215,13 @@ public interface Appenderator extends QuerySegmentWalker
   void closeNow();
 
   /**
+   * Flag to tell internals whether physical segments (i.e. hydrants) need to memory map their persisted
+   * files. Batch ingest does not need to memory map them thus we use this flag to avoid that
+   * reducing the possibility of OOM's.
+   */
+  boolean needsToMemoryMapIndex();
+
+  /**
    * Result of {@link Appenderator#add} containing following information
    * - {@link SegmentIdWithShardSpec} - identifier of segment to which rows are being added
    * - int - positive number indicating how many summarized rows exist in this segment so far and
