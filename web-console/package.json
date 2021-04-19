@@ -73,7 +73,7 @@
     "d3-axis": "^1.0.12",
     "d3-scale": "^3.2.0",
     "d3-selection": "^1.4.0",
-    "druid-query-toolkit": "^0.10.5",
+    "druid-query-toolkit": "^0.10.7",
     "file-saver": "^2.0.2",
     "fontsource-open-sans": "^3.0.9",
     "has-own-prop": "^2.0.0",
