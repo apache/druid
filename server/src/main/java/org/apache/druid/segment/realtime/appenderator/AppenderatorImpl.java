@@ -1002,7 +1002,8 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public boolean needsToMemoryMapIndex() {
+  public boolean needsToMemoryMapIndex()
+  {
     return memoryMapIndexes;
   }
 

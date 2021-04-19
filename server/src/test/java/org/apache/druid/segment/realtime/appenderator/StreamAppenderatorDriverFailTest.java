@@ -546,7 +546,8 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
       throw new UnsupportedOperationException();
     }
     @Override
-    public boolean needsToMemoryMapIndex() {
+    public boolean needsToMemoryMapIndex()
+    {
       return true;
     }
 
