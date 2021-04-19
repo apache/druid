@@ -38,14 +38,62 @@ public class SerializablePairLongLongSerde extends AbstractSerializableLongObjec
 {
   public static final String TYPE_NAME = "serializablePairLongLong";
 
-  /**
-   * Since SerializablePairLongLong is subclass of SerializablePair<Long,Long>,
-   * it's safe to declare the generic type of comparator as SerializablePair<Long,Long>.
-   */
-  private static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
-      Long::compare,
-      true
-  );
+  private static class ObjectStrategyImpl implements ObjectStrategy<SerializablePairLongLong>
+  {
+    /**
+     * Since SerializablePairLongLong is subclass of SerializablePair<Long,Long>,
+     * it's safe to declare the generic type of comparator as SerializablePair<Long,Long>.
+     */
+    private final Comparator<SerializablePair<Long, Long>> pairComparator = SerializablePair.createNullHandlingComparator(
+        Long::compare,
+        true
+    );
+
+    @Override
+    public int compare(@Nullable SerializablePairLongLong o1, @Nullable SerializablePairLongLong o2)
+    {
+      return pairComparator.compare(o1, o2);
+    }
+
+    @Override
+    public Class<SerializablePairLongLong> getClazz()
+    {
+      return SerializablePairLongLong.class;
+    }
+
+    @Override
+    public SerializablePairLongLong fromByteBuffer(ByteBuffer buffer, int numBytes)
+    {
+      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+      long lhs = readOnlyBuffer.getLong();
+      boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
+      if (isNotNull) {
+        return new SerializablePairLongLong(lhs, readOnlyBuffer.getLong());
+      } else {
+        return new SerializablePairLongLong(lhs, null);
+      }
+    }
+
+    @Override
+    public byte[] toBytes(@Nullable SerializablePairLongLong longObjectPair)
+    {
+      if (longObjectPair == null) {
+        return new byte[]{};
+      }
+
+      ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Long.BYTES);
+      bbuf.putLong(longObjectPair.lhs);
+      if (longObjectPair.rhs == null) {
+        bbuf.put(NullHandling.IS_NULL_BYTE);
+      } else {
+        bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
+        bbuf.putLong(longObjectPair.rhs);
+      }
+      return bbuf.array();
+    }
+  }
+
+  private static final ObjectStrategy<SerializablePairLongLong> OBJECT_STRATEGY = new ObjectStrategyImpl();
 
   public SerializablePairLongLongSerde()
   {
@@ -61,50 +109,6 @@ public class SerializablePairLongLongSerde extends AbstractSerializableLongObjec
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongLong>()
-    {
-      @Override
-      public int compare(@Nullable SerializablePairLongLong o1, @Nullable SerializablePairLongLong o2)
-      {
-        return VALUE_COMPARATOR.compare(o1, o2);
-      }
-
-      @Override
-      public Class<SerializablePairLongLong> getClazz()
-      {
-        return SerializablePairLongLong.class;
-      }
-
-      @Override
-      public SerializablePairLongLong fromByteBuffer(ByteBuffer buffer, int numBytes)
-      {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        long lhs = readOnlyBuffer.getLong();
-        boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
-        if (isNotNull) {
-          return new SerializablePairLongLong(lhs, readOnlyBuffer.getLong());
-        } else {
-          return new SerializablePairLongLong(lhs, null);
-        }
-      }
-
-      @Override
-      public byte[] toBytes(@Nullable SerializablePairLongLong longObjectPair)
-      {
-        if (longObjectPair == null) {
-          return new byte[]{};
-        }
-
-        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Long.BYTES);
-        bbuf.putLong(longObjectPair.lhs);
-        if (longObjectPair.rhs == null) {
-          bbuf.put(NullHandling.IS_NULL_BYTE);
-        } else {
-          bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-          bbuf.putLong(longObjectPair.rhs);
-        }
-        return bbuf.array();
-      }
-    };
+    return OBJECT_STRATEGY;
   }
 }

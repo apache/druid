@@ -38,14 +38,62 @@ public class SerializablePairLongFloatSerde extends AbstractSerializableLongObje
 {
   public static final String TYPE_NAME = "serializablePairLongFloat";
 
-  /**
-   * Since SerializablePairLongFloat is subclass of SerializablePair<Long,Float>,
-   * it's safe to declare the generic type of comparator as SerializablePair<Long,Float>.
-   */
-  private static final Comparator<SerializablePair<Long, Float>> VALUE_COMPARATOR = SerializablePair.createNullHandlingComparator(
-      Float::compare,
-      true
-  );
+  private static class ObjectStrategyImpl implements ObjectStrategy<SerializablePairLongFloat>
+  {
+    /**
+     * Since SerializablePairLongFloat is subclass of SerializablePair<Long,Float>,
+     * it's safe to declare the generic type of comparator as SerializablePair<Long,Float>.
+     */
+    private final Comparator<SerializablePair<Long, Float>> pairComparator = SerializablePair.createNullHandlingComparator(
+        Float::compare,
+        true
+    );
+
+    @Override
+    public int compare(@Nullable SerializablePairLongFloat o1, @Nullable SerializablePairLongFloat o2)
+    {
+      return pairComparator.compare(o1, o2);
+    }
+
+    @Override
+    public Class<SerializablePairLongFloat> getClazz()
+    {
+      return SerializablePairLongFloat.class;
+    }
+
+    @Override
+    public SerializablePairLongFloat fromByteBuffer(ByteBuffer buffer, int numBytes)
+    {
+      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+      long lhs = readOnlyBuffer.getLong();
+      boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
+      if (isNotNull) {
+        return new SerializablePairLongFloat(lhs, readOnlyBuffer.getFloat());
+      } else {
+        return new SerializablePairLongFloat(lhs, null);
+      }
+    }
+
+    @Override
+    public byte[] toBytes(@Nullable SerializablePairLongFloat longObjectPair)
+    {
+      if (longObjectPair == null) {
+        return new byte[]{};
+      }
+
+      ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Float.BYTES);
+      bbuf.putLong(longObjectPair.lhs);
+      if (longObjectPair.rhs == null) {
+        bbuf.put(NullHandling.IS_NULL_BYTE);
+      } else {
+        bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
+        bbuf.putFloat(longObjectPair.rhs);
+      }
+      return bbuf.array();
+    }
+  }
+
+  private static final ObjectStrategy<SerializablePairLongFloat> OBJECT_STRATEGY = new ObjectStrategyImpl();
 
   public SerializablePairLongFloatSerde()
   {
@@ -61,50 +109,6 @@ public class SerializablePairLongFloatSerde extends AbstractSerializableLongObje
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongFloat>()
-    {
-      @Override
-      public int compare(@Nullable SerializablePairLongFloat o1, @Nullable SerializablePairLongFloat o2)
-      {
-        return VALUE_COMPARATOR.compare(o1, o2);
-      }
-
-      @Override
-      public Class<SerializablePairLongFloat> getClazz()
-      {
-        return SerializablePairLongFloat.class;
-      }
-
-      @Override
-      public SerializablePairLongFloat fromByteBuffer(ByteBuffer buffer, int numBytes)
-      {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        long lhs = readOnlyBuffer.getLong();
-        boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
-        if (isNotNull) {
-          return new SerializablePairLongFloat(lhs, readOnlyBuffer.getFloat());
-        } else {
-          return new SerializablePairLongFloat(lhs, null);
-        }
-      }
-
-      @Override
-      public byte[] toBytes(@Nullable SerializablePairLongFloat longObjectPair)
-      {
-        if (longObjectPair == null) {
-          return new byte[]{};
-        }
-
-        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Float.BYTES);
-        bbuf.putLong(longObjectPair.lhs);
-        if (longObjectPair.rhs == null) {
-          bbuf.put(NullHandling.IS_NULL_BYTE);
-        } else {
-          bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-          bbuf.putFloat(longObjectPair.rhs);
-        }
-        return bbuf.array();
-      }
-    };
+    return OBJECT_STRATEGY;
   }
 }
