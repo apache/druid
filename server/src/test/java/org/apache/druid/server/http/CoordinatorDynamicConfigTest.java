@@ -395,6 +395,31 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
+  public void testSerdeHandleInvalidMaxNonPrimaryReplicantsToLoad() throws Exception
+  {
+    try {
+      String jsonStr = "{\n"
+                       + "  \"maxNonPrimaryReplicantsToLoad\": -1\n"
+                       + "}\n";
+
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
+
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
+  }
+
+  @Test
   public void testEqualsAndHashCodeSanity()
   {
     CoordinatorDynamicConfig config1 = CoordinatorDynamicConfig.builder().build();
