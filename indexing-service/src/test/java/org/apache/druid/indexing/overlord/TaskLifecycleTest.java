@@ -982,9 +982,49 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final TaskStatus status = runTask(neverReadyTask);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertTrue("errorMsg", status.getErrorMsg().contains("Task could not start. Not ready."));
     Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
+  public void testKilledTask() throws Exception
+  {
+    // Create a long running task
+    final Task longRunningTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"runTime\":\"20000\"}\"",
+        Task.class
+    );
+
+    final long startTime = System.currentTimeMillis();
+    startTaskQueue();
+    taskQueue.add(longRunningTask);
+
+    // Ensure that the task has started running
+    TaskStatus status;
+    while (!(status = tsqa.getStatus(longRunningTask.getId()).get()).isRunnable()) {
+      if (System.currentTimeMillis() > startTime + 10 * 1000) {
+        throw new ISE("Task taking too long to start: %s", longRunningTask.getId());
+      }
+
+      Thread.sleep(100);
+    }
+
+    // Kill the task
+    taskQueue.shutdown(longRunningTask.getId(), "Killing task");
+
+    // Get the status of the killed task
+    while ((status = tsqa.getStatus(longRunningTask.getId()).get()).isRunnable()) {
+      if (System.currentTimeMillis() > startTime + 10 * 1000) {
+        throw new ISE("Task running for too long: %s", longRunningTask.getId());
+      }
+
+      Thread.sleep(100);
+    }
+
+    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertTrue("errorMsg", status.getErrorMsg().contains("Task failed to run. CancellationException"));
   }
 
   @Test
@@ -1141,7 +1181,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
     final String taskId = realtimeIndexTask.getId();
 
-    taskQueue.start();
+    startTaskQueue();
     taskQueue.add(realtimeIndexTask);
     //wait for task to process events and publish segment
     publishCountDown.await();
@@ -1221,7 +1261,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
     final String taskId = realtimeIndexTask.getId();
 
-    taskQueue.start();
+    startTaskQueue();
     taskQueue.add(realtimeIndexTask);
 
     // Wait for realtime index task to fail
@@ -1289,7 +1329,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final long startTime = System.currentTimeMillis();
 
     // manually insert the task into TaskStorage, waiting for TaskQueue to sync from storage
-    taskQueue.start();
+    startTaskQueue();
     taskStorage.insert(indexTask, TaskStatus.running(indexTask.getId()));
 
     while (tsqa.getStatus(indexTask.getId()).get().isRunnable()) {
@@ -1416,6 +1456,18 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
   }
 
+  /**
+   * Starts the TaskQueue if not already active.
+   * <p>
+   * Since multiple tests can call this method, we need a synchronized check here.
+   */
+  private synchronized void startTaskQueue()
+  {
+    if (!taskQueue.isActive()) {
+      taskQueue.start();
+    }
+  }
+
   private TaskStatus runTask(final Task task) throws Exception
   {
     final Task dummyTask = new DefaultObjectMapper().readValue(
@@ -1426,12 +1478,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     Preconditions.checkArgument(!task.getId().equals(dummyTask.getId()));
 
-    // Since multiple tasks can be run in a single unit test using runTask(), hence this check and synchronization
-    synchronized (this) {
-      if (!taskQueue.isActive()) {
-        taskQueue.start();
-      }
-    }
+    startTaskQueue();
     taskQueue.add(dummyTask);
     taskQueue.add(task);
 

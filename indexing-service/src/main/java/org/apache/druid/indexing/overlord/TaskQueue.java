@@ -283,7 +283,12 @@ public class TaskQueue
           }
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-            notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
+            notifyStatus(
+                task,
+                TaskStatus.failure(task.getId(), "Task could not start. " + getErrorMsg(e)),
+                "failed because of exception[%s]",
+                e.getClass()
+            );
             continue;
           }
           if (taskIsReady) {
@@ -400,7 +405,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
+          notifyStatus(task, TaskStatus.failure(taskId, "Task has been killed"), reasonFormat, args);
           break;
         }
       }
@@ -544,7 +549,7 @@ public class TaskQueue
                .addData("type", task.getType())
                .addData("dataSource", task.getDataSource())
                .emit();
-            handleStatus(TaskStatus.failure(task.getId()));
+            handleStatus(TaskStatus.failure(task.getId(), "Task failed to run. " + getErrorMsg(t)));
           }
 
           private void handleStatus(final TaskStatus status)
@@ -641,6 +646,17 @@ public class TaskQueue
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Creates a task error message from the given Throwable.
+   *
+   * @return The message from the exception, if any, otherwise returns the class name.
+   */
+  private String getErrorMsg(Throwable t)
+  {
+    return t.getMessage() != null ? t.getMessage()
+                                  : t.getClass().getSimpleName();
   }
 
   private static Map<String, Task> toTaskIDMap(List<Task> taskList)
