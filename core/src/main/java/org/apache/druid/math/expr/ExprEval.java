@@ -292,6 +292,7 @@ public abstract class ExprEval<T>
    *
    * If homogenizeMultiValueStrings is true, null and [] will be converted to [null], otherwise they will retain
    */
+  @Nullable
   public static Object coerceListToArray(@Nullable List<?> val, boolean homogenizeMultiValueStrings)
   {
     // if value is not null and has at least 1 element, conversion is unambigous regardless of the selector
@@ -319,7 +320,7 @@ public abstract class ExprEval<T>
       if (val != null) {
         return val.toArray();
       }
-      return val;
+      return null;
     }
   }
 
