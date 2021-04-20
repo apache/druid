@@ -95,15 +95,11 @@ public class ExpressionVectorSelectorsTest
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
 
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
   @BeforeClass
   public static void setupClass()
   {
     CLOSER = Closer.create();
 
-    // Do not run the tests on ARM64.
-    // SegmentGenerator#generate() fails with OutOfMemoryError on TravisCI ARM64
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
     final DataSegment dataSegment = DataSegment.builder()
