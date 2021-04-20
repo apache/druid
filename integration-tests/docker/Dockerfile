@@ -47,7 +47,7 @@ RUN wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_VE
     -O /usr/local/druid/lib/mysql-connector-java.jar
 
 RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-java.jar
+    -O /usr/local/druid/lib/kafka-protobuf-provider.jar
 
 # Add sample data
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.

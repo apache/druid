@@ -22,7 +22,7 @@ set -e
 if [ -z "$DRUID_INTEGRATION_TEST_JVM_RUNTIME" ]
 then
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is not set. Building druid-cluster with default Java version"
-  docker build -t druid/cluster --build-arg MYSQL_VERSION CONFLUENT_VERSION $SHARED_DIR/docker
+  docker build -t druid/cluster --build-arg MYSQL_VERSION --build-arg CONFLUENT_VERSION $SHARED_DIR/docker
 else
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is set with value ${DRUID_INTEGRATION_TEST_JVM_RUNTIME}"
   case "${DRUID_INTEGRATION_TEST_JVM_RUNTIME}" in
