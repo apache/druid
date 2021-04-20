@@ -2,7 +2,7 @@
   "type": "protobuf",
   "protoBytesDecoder": {
     "type": "file",
-    "descriptor": "%%PROTOBUF_DESC_FILE%%",
+    "descriptor": "/shared/wikiticker-it/wikipedia.desc",
     "protoMessageType": "Wikipedia"
   },
   "parseSpec": {
