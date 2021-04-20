@@ -104,7 +104,7 @@ Returns the number of segments left to load until segments that should be loaded
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
-* `/druid/coordinator/v1/loadstatus?full?computeUsingClusterView`
+* `/druid/coordinator/v1/loadstatus?full&computeUsingClusterView`
 
 Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
 The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
