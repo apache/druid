@@ -19,57 +19,23 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 /**
- *
  */
 public class QueryableIndexSegment implements Segment
 {
-  private final Supplier<QueryableIndex> indexSupplier;
-  private final Supplier<QueryableIndexStorageAdapter> queryableIndexStorageAdapterSupplier;
+  private final QueryableIndex index;
+  private final QueryableIndexStorageAdapter storageAdapter;
   private final SegmentId segmentId;
 
-
-  /**
-   * This constructor is to support passing a memoized supplier to have this lazily initialized.
-   * @param indexSupplier A supplier that may be memoized (or not)
-   * @param segmentId The id of the segment for the index
-   */
-  public QueryableIndexSegment(Supplier<QueryableIndex> indexSupplier, final SegmentId segmentId)
-  {
-    this.indexSupplier = indexSupplier;
-    this.queryableIndexStorageAdapterSupplier = Suppliers.memoize(new Supplier<QueryableIndexStorageAdapter>()
-    {
-      @Override
-      public QueryableIndexStorageAdapter get()
-      {
-        return new QueryableIndexStorageAdapter(indexSupplier.get());
-      }
-    });
-    this.segmentId = segmentId;
-  }
-
-  /**
-   *
-   * @param index The index to back this queryable index
-   * @param segmentId The id of the segment for the index
-   */
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
-    this(new Supplier<QueryableIndex>()
-    {
-      @Override
-      public QueryableIndex get()
-      {
-        return index;
-      }
-    }, segmentId);
+    this.index = index;
+    this.storageAdapter = new QueryableIndexStorageAdapter(index);
+    this.segmentId = segmentId;
   }
-
 
   @Override
   public SegmentId getId()
@@ -80,25 +46,25 @@ public class QueryableIndexSegment implements Segment
   @Override
   public Interval getDataInterval()
   {
-    return indexSupplier.get().getDataInterval();
+    return index.getDataInterval();
   }
 
   @Override
   public QueryableIndex asQueryableIndex()
   {
-    return indexSupplier.get();
+    return index;
   }
 
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return queryableIndexStorageAdapterSupplier.get();
+    return storageAdapter;
   }
 
   @Override
   public void close()
   {
     // this is kinda nasty
-    indexSupplier.get().close();
+    index.close();
   }
 }

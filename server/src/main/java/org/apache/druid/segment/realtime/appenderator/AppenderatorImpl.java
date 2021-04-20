@@ -26,7 +26,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -60,6 +59,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -819,6 +819,24 @@ public class AppenderatorImpl implements Appenderator
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
+
+          // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
+          if (!isRealTime()) {
+            // sanity:
+            if (fireHydrant.getPersistedFile() == null) {
+              throw new ISE("Persisted file for batch hydrant is null!");
+            } else if (fireHydrant.getPersistedSegmentId() == null) {
+              throw new ISE(
+                  "Persisted segmentId for batch hydrant in file [%s] is null!",
+                  fireHydrant.getPersistedFile().getPath()
+              );
+            }
+            fireHydrant.swapSegment(new QueryableIndexSegment(
+                indexIO.loadIndex(fireHydrant.getPersistedFile()),
+                fireHydrant.getPersistedSegmentId()
+            ));
+          }
+
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
@@ -894,11 +912,13 @@ public class AppenderatorImpl implements Appenderator
 
       return segment;
     }
-    catch (Exception e) {
+    catch (
+        Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);
     }
+
   }
 
   @Override
@@ -1438,25 +1458,15 @@ public class AppenderatorImpl implements Appenderator
             numRows
         );
 
-        // Make the queryable index lazy to avoid it during segment creation for native batch ingestion
-        // (in order to ameliorate OOMs due to needing to hold too many hydrants)
-        final Supplier<QueryableIndex> memoizedIndexSupplier =
-            Suppliers.memoize(new Supplier<QueryableIndex>()
-            {
-              @Override
-              public QueryableIndex get()
-              {
-                try {
-                  return indexIO.loadIndex(persistedFile);
-                }
-                catch (IOException e) {
-                  throw new RE(e, "Error while loading index fo file [%s]", persistedFile.getAbsolutePath());
-                }
-              }
-            });
-        indexToPersist.swapSegment(
-            new QueryableIndexSegment(memoizedIndexSupplier, indexToPersist.getSegmentId())
-        );
+        // Do not map unless it is being driven by a real time task:
+        Segment segmentToSwap = null;
+        if (isRealTime()) {
+          segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
+        } else {
+          // remember file path & segment id to rebuild the queryable index for merge:
+          indexToPersist.setPersistedMetadata(persistedFile, indexToPersist.getSegmentId());
+        }
+        indexToPersist.swapSegment(segmentToSwap);
 
         return numRows;
       }
