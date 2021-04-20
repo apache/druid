@@ -231,7 +231,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertEquals(72L,stats.getTieredStat("assignedCount", "hot") + stats.getTieredStat("assignedCount", "normal"));
+    Assert.assertEquals(72L, stats.getTieredStat("assignedCount", "hot") + stats.getTieredStat("assignedCount", "normal"));
     Assert.assertEquals(48L, stats.getGlobalStat("totalNonPrimaryReplicantsLoaded"));
 
     exec.shutdown();
