@@ -25,6 +25,10 @@ import org.apache.hadoop.fs.FileSystem;
 import java.io.IOException;
 import java.net.URI;
 
+/**
+ * This class exists for testing purposes, see {@link JobHelperPowerMockTest}. Using the
+ * raw {@link FileSystem} class resulted in errors with java assist.
+ */
 public class FileSystemHelper
 {
   public static FileSystem get(URI uri, Configuration conf) throws IOException
