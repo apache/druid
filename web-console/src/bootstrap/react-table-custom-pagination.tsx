@@ -41,7 +41,7 @@ interface ReactTableCustomPaginationProps {
 }
 
 interface ReactTableCustomPaginationState {
-  page: string | number;
+  page: '' | number;
 }
 
 export class ReactTableCustomPagination extends React.PureComponent<
@@ -128,13 +128,11 @@ export class ReactTableCustomPagination extends React.PureComponent<
                   type={this.state.page === '' ? 'text' : 'number'}
                   onChange={e => {
                     const val: string = e.target.value;
-                    const page: number = parseInt(val, 10) - 1;
-                    if (val === '') {
-                      return this.setState({ page: val });
-                    }
-                    this.setState({ page: this.getSafePage(page) });
+                    this.setState({
+                      page: val === '' ? val : this.getSafePage(parseInt(val, 10) - 1),
+                    });
                   }}
-                  value={this.state.page === '' ? '' : (this.state.page as number) + 1}
+                  value={this.state.page === '' ? '' : this.state.page + 1}
                   onBlur={this.applyPage}
                   onKeyPress={e => {
                     if (e.which === 13 || e.keyCode === 13) {
