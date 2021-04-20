@@ -506,16 +506,16 @@ public interface Function
           return ExprEval.ofLongArray(
               add(
                   arrayExpr.asLongArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
-              )
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()
+              ).toArray(Long[]::new)
           );
         case DOUBLE:
         case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(
               add(
                   arrayExpr.asDoubleArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
-              )
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()
+              ).toArray(Double[]::new)
           );
       }
 

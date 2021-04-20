@@ -25,12 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
@@ -38,6 +34,8 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.SettableObjectBinding;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -49,18 +47,23 @@ import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 {
+  private static final String FINALIZE_IDENTIFIER = "o";
+  private static final String COMPARE_O1 = "o1";
+  private static final String COMPARE_O2 = "o2";
   private static final String DEFAULT_ACCUMULATOR_ID = "__acc";
-  private static final int DEFAULT_MAX_SIZE_BYTES = 1 << 13;
+
+  // minimum permitted agg size is 10 bytes so it is at least large enough to hold primitive numerics (long, double)
+  // | expression type byte | is_null byte | primitive value (8 bytes) |
+  private static final int MIN_SIZE_BYTES = 10;
+  private static final HumanReadableBytes DEFAULT_MAX_SIZE_BYTES = new HumanReadableBytes(1L << 10);
 
   private final String name;
   @Nullable
@@ -75,6 +78,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final String compareExpressionString;
   @Nullable
   private final String finalizeExpressionString;
+
   private final ExprMacroTable macroTable;
   private final Supplier<ExprEval<?>> initialValue;
   private final Supplier<ExprEval<?>> initialCombineValue;
@@ -82,7 +86,14 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final Supplier<Expr> combineExpression;
   private final Supplier<Expr> compareExpression;
   private final Supplier<Expr> finalizeExpression;
-  private final int maxSizeBytes;
+  private final HumanReadableBytes maxSizeBytes;
+
+  private final Supplier<SettableObjectBinding> compareBindings =
+      Suppliers.memoize(() -> new SettableObjectBinding(2));
+  private final Supplier<SettableObjectBinding> combineBindings =
+      Suppliers.memoize(() -> new SettableObjectBinding(2));
+  private final Supplier<SettableObjectBinding> finalizeBindings =
+      Suppliers.memoize(() -> new SettableObjectBinding(1));
 
   @JsonCreator
   public ExpressionLambdaAggregatorFactory(
@@ -95,7 +106,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       @JsonProperty("combine") @Nullable final String combineExpression,
       @JsonProperty("compare") @Nullable final String compareExpression,
       @JsonProperty("finalize") @Nullable final String finalizeExpression,
-      @JsonProperty("maxSizeBytes") @Nullable final Integer maxSizeBytes,
+      @JsonProperty("maxSizeBytes") @Nullable final HumanReadableBytes maxSizeBytes,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -139,6 +150,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     this.compareExpression = Parser.lazyParse(compareExpressionString, macroTable);
     this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
     this.maxSizeBytes = maxSizeBytes != null ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
+    Preconditions.checkArgument(this.maxSizeBytes.getBytesInInt() >= MIN_SIZE_BYTES);
   }
 
   @JsonProperty
@@ -201,7 +213,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty("maxSizeBytes")
-  public int getMaxSizeBytes()
+  public HumanReadableBytes getMaxSizeBytes()
   {
     return maxSizeBytes;
   }
@@ -209,32 +221,16 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldsBytes = StringUtils.toUtf8WithNullToEmpty(String.join(",", fields));
-    byte[] lambdaExpressionBytes = StringUtils.toUtf8WithNullToEmpty(foldExpressionString);
-    byte[] accumulatorExpressionBytes = StringUtils.toUtf8WithNullToEmpty(foldExpressionString);
-    byte[] combineExpressionBytes = StringUtils.toUtf8WithNullToEmpty(combineExpressionString);
-    byte[] compareExpressionBytes = StringUtils.toUtf8WithNullToEmpty(compareExpressionString);
-
-    final int length = 6 + Integer.BYTES // cacheId, 4 separators, maxBytes
-                       + fieldsBytes.length
-                       + lambdaExpressionBytes.length
-                       + accumulatorExpressionBytes.length
-                       + combineExpressionBytes.length
-                       + compareExpressionBytes.length;
-
-    return ByteBuffer.allocate(length)
-                     .put(AggregatorUtil.EXPRESSION_LAMBDA_CACHE_TYPE_ID)
-                     .putInt(maxSizeBytes)
-                     .put(fieldsBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(lambdaExpressionBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(accumulatorExpressionBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(combineExpressionBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(compareExpressionBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.EXPRESSION_LAMBDA_CACHE_TYPE_ID)
+        .appendStrings(fields)
+        .appendString(initialValueExpressionString)
+        .appendString(initialCombineValueExpressionString)
+        .appendString(foldExpressionString)
+        .appendString(combineExpressionString)
+        .appendString(compareExpressionString)
+        .appendString(finalizeExpressionString)
+        .appendInt(maxSizeBytes.getBytesInInt())
+        .build();
   }
 
   @Override
@@ -255,7 +251,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         thePlan.getExpression(),
         thePlan.getInitialValue(),
         thePlan.getBindings(),
-        maxSizeBytes
+        maxSizeBytes.getBytesInInt()
     );
   }
 
@@ -264,7 +260,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   {
     Expr compareExpr = compareExpression.get();
     if (compareExpr != null) {
-      return (o1, o2) -> compareExpr.eval(Parser.withMap(ImmutableMap.of("o1", o1, "o2", o2))).asInt();
+      return (o1, o2) ->
+          compareExpr.eval(compareBindings.get().withBinding(COMPARE_O1, o1).withBinding(COMPARE_O2, o2)).asInt();
     }
     switch (initialValue.get().type()) {
       case LONG:
@@ -281,18 +278,36 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
     // arbitrarily assign lhs and rhs to accumulator and aggregator name inputs to re-use combine function
-    HashMap<String, Object> map = Maps.newHashMapWithExpectedSize(2);
-    map.put(accumulatorId, lhs);
-    Expr combineExpr = combineExpression.get();
-    if (combineExpr != null) {
-      map.put(name, rhs);
-      return combineExpression.get().eval(Parser.withMap(map)).value();
-    } else {
-      // no combine expression, use input identifier as identifier
-      Set<String> args = foldExpression.get().analyzeInputs().getRequiredBindings();
-      map.put(Iterables.getOnlyElement(Sets.difference(args, ImmutableSet.of(accumulatorId))), rhs);
-      return foldExpression.get().eval(Parser.withMap(map)).value();
+    return combineExpression.get().eval(
+        combineBindings.get().withBinding(accumulatorId, lhs).withBinding(name, rhs)
+    ).value();
+  }
+
+  @Override
+  public Object deserialize(Object object)
+  {
+    return object;
+  }
+
+  @Nullable
+  @Override
+  public Object finalizeComputation(@Nullable Object object)
+  {
+    Expr finalizeExpr;
+    finalizeExpr = finalizeExpression.get();
+    if (finalizeExpr != null) {
+      return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).value();
     }
+    return object;
+  }
+
+  @Override
+  public List<String> requiredFields()
+  {
+    if (fields == null) {
+      return combineExpression.get().analyzeInputs().getRequiredBindingsList();
+    }
+    return foldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override
@@ -334,37 +349,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object deserialize(Object object)
-  {
-    return object;
-  }
-
-  @Nullable
-  @Override
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    Expr finalizeExpr = finalizeExpression.get();
-    if (finalizeExpr != null) {
-      HashMap<String, Object> map = Maps.newHashMapWithExpectedSize(1);
-      map.put("o", object);
-      return finalizeExpr.eval(Parser.withMap(map)).value();
-    }
-    return object;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    if (fields == null) {
-      if (combineExpression.get() != null) {
-        return combineExpression.get().analyzeInputs().getRequiredBindingsList();
-      }
-      return foldExpression.get().analyzeInputs().getRequiredBindingsList();
-    }
-    return ImmutableList.copyOf(fields);
-  }
-
-  @Override
   public ValueType getType()
   {
     if (fields == null) {
@@ -376,52 +360,22 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public ValueType getFinalizedType()
   {
-    if (fields == null) {
-      if (finalizeExpressionString != null) {
-        // finalize the initial combining value to see what type it is...
-        return ExprType.toValueType(finalizeExpression.get().eval(Parser.withMap(ImmutableMap.of("o", initialCombineValue.get()))).type());
-      }
-      return ExprType.toValueType(initialCombineValue.get().type());
+    Expr finalizeExpr = finalizeExpression.get();
+    ExprEval<?> initialVal = initialCombineValue.get();
+    if (finalizeExpr != null) {
+      return ExprType.toValueType(
+          finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, initialVal)).type()
+      );
     }
-    if (finalizeExpressionString != null) {
-      // finalize the initial value to see what type it is...
-      return ExprType.toValueType(finalizeExpression.get().eval(Parser.withMap(ImmutableMap.of("o", initialValue.get()))).type());
-    }
-    return ExprType.toValueType(initialValue.get().type());
+    return ExprType.toValueType(initialVal.type());
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
     // numeric expressions are either longs or doubles, with strings or arrays max size is unknown
-    // for numeric arguments, the first 2 bytes are used for expression type and is_null
-    return getType().isNumeric() ? 2 + Long.BYTES : maxSizeBytes;
-  }
-
-  private ColumnInspector inspectorWithAccumulator(ColumnInspector inspector)
-  {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        if (accumulatorId.equals(column)) {
-          return ColumnCapabilitiesImpl.createDefault().setType(ExprType.toValueType(initialValue.get().type()));
-        }
-        return inspector.getColumnCapabilities(column);
-      }
-
-      @Nullable
-      @Override
-      public ExprType getType(String name)
-      {
-        if (accumulatorId.equals(name)) {
-          return initialValue.get().type();
-        }
-        return inspector.getType(name);
-      }
-    };
+    // for numeric arguments, the first 2 bytes are used for expression type byte and is_null byte
+    return getType().isNumeric() ? 2 + Long.BYTES : maxSizeBytes.getBytesInInt();
   }
 
   @Override
@@ -434,7 +388,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       return false;
     }
     ExpressionLambdaAggregatorFactory that = (ExpressionLambdaAggregatorFactory) o;
-    return maxSizeBytes == that.maxSizeBytes
+    return maxSizeBytes.equals(that.maxSizeBytes)
            && name.equals(that.name)
            && Objects.equals(fields, that.fields)
            && accumulatorId.equals(that.accumulatorId)
@@ -531,6 +485,32 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     public ExpressionLambdaAggregatorInputBindings getBindings()
     {
       return bindings;
+    }
+
+    private ColumnInspector inspectorWithAccumulator(ColumnInspector inspector)
+    {
+      return new ColumnInspector()
+      {
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          if (accumulatorId.equals(column)) {
+            return ColumnCapabilitiesImpl.createDefault().setType(ExprType.toValueType(initialValue.get().type()));
+          }
+          return inspector.getColumnCapabilities(column);
+        }
+
+        @Nullable
+        @Override
+        public ExprType getType(String name)
+        {
+          if (accumulatorId.equals(name)) {
+            return initialValue.get().type();
+          }
+          return inspector.getType(name);
+        }
+      };
     }
   }
 }

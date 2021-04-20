@@ -37,6 +37,8 @@ import java.util.List;
  */
 public abstract class ExprEval<T>
 {
+  private static final int NULL_LENGTH = -1;
+
   /**
    * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
    *
@@ -44,20 +46,24 @@ public abstract class ExprEval<T>
    */
   public static ExprEval deserialize(ByteBuffer buffer, int position)
   {
+    // | expression type (byte) | expression bytes |
     ExprType type = ExprType.fromByte(buffer.get(position));
     int offset = position + 1;
     switch (type) {
       case LONG:
+        // | expression type (byte) | is null (byte) | long bytes |
         if (buffer.get(offset++) == NullHandling.IS_NOT_NULL_BYTE) {
           return of(buffer.getLong(offset));
         }
         return ofLong(null);
       case DOUBLE:
+        // | expression type (byte) | is null (byte) | double bytes |
         if (buffer.get(offset++) == NullHandling.IS_NOT_NULL_BYTE) {
           return of(buffer.getDouble(offset));
         }
         return ofDouble(null);
       case STRING:
+        // | expression type (byte) | string length (int) | string bytes |
         final int length = buffer.getInt(offset);
         if (length < 0) {
           return of(null);
@@ -69,6 +75,7 @@ public abstract class ExprEval<T>
         buffer.position(oldPosition);
         return of(StringUtils.fromUtf8(stringBytes));
       case LONG_ARRAY:
+        // | expression type (byte) | array length (int) | array bytes |
         final int longArrayLength = buffer.getInt(offset);
         offset += Integer.BYTES;
         if (longArrayLength < 0) {
@@ -79,14 +86,17 @@ public abstract class ExprEval<T>
           final byte isNull = buffer.get(offset);
           offset += Byte.BYTES;
           if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
+            // | is null (byte) | long bytes |
             longs[i] = buffer.getLong(offset);
             offset += Long.BYTES;
           } else {
+            // | is null (byte) |
             longs[i] = null;
           }
         }
         return ofLongArray(longs);
       case DOUBLE_ARRAY:
+        // | expression type (byte) | array length (int) | array bytes |
         final int doubleArrayLength = buffer.getInt(offset);
         offset += Integer.BYTES;
         if (doubleArrayLength < 0) {
@@ -97,14 +107,17 @@ public abstract class ExprEval<T>
           final byte isNull = buffer.get(offset);
           offset += Byte.BYTES;
           if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
+            // | is null (byte) | double bytes |
             doubles[i] = buffer.getDouble(offset);
             offset += Double.BYTES;
           } else {
+            // | is null (byte) |
             doubles[i] = null;
           }
         }
         return ofDoubleArray(doubles);
       case STRING_ARRAY:
+        // | expression type (byte) | array length (int) | array bytes |
         final int stringArrayLength = buffer.getInt(offset);
         offset += Integer.BYTES;
         if (stringArrayLength < 0) {
@@ -115,8 +128,10 @@ public abstract class ExprEval<T>
           final int stringElementLength = buffer.getInt(offset);
           offset += Integer.BYTES;
           if (stringElementLength < 0) {
+            // | string length (int) |
             stringArray[i] = null;
           } else {
+            // | string length (int) | string bytes |
             final byte[] stringElementBytes = new byte[stringElementLength];
             final int oldPosition2 = buffer.position();
             buffer.position(offset);
@@ -127,14 +142,15 @@ public abstract class ExprEval<T>
           }
         }
         return ofStringArray(stringArray);
-
       default:
         throw new UOE("how can this be?");
     }
   }
 
   /**
-   * Write an expression result to a bytebuffer
+   * Write an expression result to a bytebuffer, throwing an {@link ISE} if the data exceeds a maximum size. Primitive
+   * numeric types are not validated to be lower than max size, so it is expected to be at least 10 bytes. Callers
+   * of this method should enforce this themselves (instead of doing it here, which might be done every row)
    *
    * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
    */
@@ -162,24 +178,27 @@ public abstract class ExprEval<T>
       case STRING:
         final byte[] stringBytes = StringUtils.toUtf8Nullable(eval.asString());
         if (stringBytes != null) {
+          // | expression type (byte) | string length (int) | string bytes |
           checkMaxBytes(eval.type(), 1 + Integer.BYTES + stringBytes.length, maxSizeBytes);
           buffer.putInt(offset, stringBytes.length);
           offset += Integer.BYTES;
-          for (byte stringByte : stringBytes) {
-            buffer.put(offset++, stringByte);
-          }
+          final int oldPosition = buffer.position();
+          buffer.position(offset);
+          buffer.put(stringBytes, 0, stringBytes.length);
+          buffer.position(oldPosition);
         } else {
           checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, -1);
+          buffer.putInt(offset, NULL_LENGTH);
         }
         break;
       case LONG_ARRAY:
         Long[] longs = eval.asLongArray();
-
         if (longs == null) {
+          // | expression type (byte) | array length (int) |
           checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, -1);
+          buffer.putInt(offset, NULL_LENGTH);
         } else {
+          // | expression type (byte) | array length (int) | array bytes |
           final int sizeBytes = 1 + Integer.BYTES + (Long.BYTES * longs.length);
           checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
           buffer.putInt(offset, longs.length);
@@ -199,9 +218,11 @@ public abstract class ExprEval<T>
       case DOUBLE_ARRAY:
         Double[] doubles = eval.asDoubleArray();
         if (doubles == null) {
+          // | expression type (byte) | array length (int) |
           checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, -1);
+          buffer.putInt(offset, NULL_LENGTH);
         } else {
+          // | expression type (byte) | array length (int) | array bytes |
           final int sizeBytes = 1 + Integer.BYTES + (Double.BYTES * doubles.length);
           checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
           buffer.putInt(offset, doubles.length);
@@ -222,19 +243,23 @@ public abstract class ExprEval<T>
       case STRING_ARRAY:
         String[] strings = eval.asStringArray();
         if (strings == null) {
+          // | expression type (byte) | array length (int) |
           checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, -1);
+          buffer.putInt(offset, NULL_LENGTH);
         } else {
+          // | expression type (byte) | array length (int) | array bytes |
           buffer.putInt(offset, strings.length);
           offset += Integer.BYTES;
           int sizeBytes = 1 + Integer.BYTES;
           for (String string : strings) {
             if (string == null) {
+              // | string length (int) |
               sizeBytes += Integer.BYTES;
               checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
-              buffer.putInt(offset, -1);
+              buffer.putInt(offset, NULL_LENGTH);
               offset += Integer.BYTES;
             } else {
+              // | string length (int) | string bytes |
               final byte[] stringElementBytes = StringUtils.toUtf8(string);
               sizeBytes += Integer.BYTES + stringElementBytes.length;
               checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
@@ -262,12 +287,16 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
+   * Converts a List to an appropriate array type, optionally doing some conversion to make multi-valued strings
+   * consistent across selector types, which are not consistent in treatment of null, [], and [null].
+   *
+   * If homogenizeMultiValueStrings is true, null and [] will be converted to [null], otherwise they will retain
    */
-  public static Object coerceListToArray(@Nullable List<?> val)
+  public static Object coerceListToArray(@Nullable List<?> val, boolean homogenizeMultiValueStrings)
   {
+    // if value is not null and has at least 1 element, conversion is unambigous regardless of the selector
     if (val != null && val.size() > 0) {
-      Class coercedType = null;
+      Class<?> coercedType = null;
 
       for (Object elem : val) {
         if (elem != null) {
@@ -284,9 +313,28 @@ public abstract class ExprEval<T>
       // default to string
       return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
-    return new String[]{null};
+    if (homogenizeMultiValueStrings) {
+      return new String[]{null};
+    } else {
+      if (val != null) {
+        return val.toArray();
+      }
+      return val;
+    }
   }
 
+  /**
+   * Find the common type to use between 2 types, useful for choosing the appropriate type for an array given a set
+   * of objects with unknown type, following rules similar to Java, our own native Expr, and SQL implicit type
+   * conversions. This is used to assist in preparing native java objects for {@link Expr.ObjectBinding} which will
+   * later be wrapped in {@link ExprEval} when evaluating {@link IdentifierExpr}.
+   *
+   * If any type is string, then the result will be string because everything can be converted to a string, but a string
+   * cannot be converted to everything.
+   *
+   * For numbers, integer is the most restrictive type, only chosen if both types are integers. Longs win over integers,
+   * floats over longs and integers, and doubles win over everything.
+   */
   private static Class convertType(@Nullable Class existing, Class next)
   {
     if (Number.class.isAssignableFrom(next) || next == String.class) {
@@ -412,7 +460,10 @@ public abstract class ExprEval<T>
     }
 
     if (val instanceof List) {
-      return bestEffortOf(coerceListToArray((List<?>) val));
+      // do not convert empty lists to arrays with a single null element here, because that should have been done
+      // by the selectors preparing their ObjectBindings if necessary. If we get to this point it was legitimately
+      // empty
+      return bestEffortOf(coerceListToArray((List<?>) val, false));
     }
 
     return new StringExprEval(val == null ? null : String.valueOf(val));

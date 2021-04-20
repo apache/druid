@@ -125,62 +125,67 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   @Test
   public void test_coerceListToArray()
   {
+    Assert.assertNull(ExprEval.coerceListToArray(null, false));
+    Assert.assertArrayEquals(new Object[0], (Object[]) ExprEval.coerceListToArray(ImmutableList.of(), false));
+    Assert.assertArrayEquals(new String[]{null}, (String[]) ExprEval.coerceListToArray(null, true));
+    Assert.assertArrayEquals(new String[]{null}, (String[]) ExprEval.coerceListToArray(ImmutableList.of(), true));
+
     List<Long> longList = ImmutableList.of(1L, 2L, 3L);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(longList));
+    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(longList, false));
 
     List<Integer> intList = ImmutableList.of(1, 2, 3);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(intList));
+    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(intList, false));
 
     List<Float> floatList = ImmutableList.of(1.0f, 2.0f, 3.0f);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(floatList));
+    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(floatList, false));
 
     List<Double> doubleList = ImmutableList.of(1.0, 2.0, 3.0);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(doubleList));
+    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(doubleList, false));
 
     List<String> stringList = ImmutableList.of("a", "b", "c");
-    Assert.assertArrayEquals(new String[]{"a", "b", "c"}, (String[]) ExprEval.coerceListToArray(stringList));
+    Assert.assertArrayEquals(new String[]{"a", "b", "c"}, (String[]) ExprEval.coerceListToArray(stringList, false));
 
     List<String> withNulls = new ArrayList<>();
     withNulls.add("a");
     withNulls.add(null);
     withNulls.add("c");
-    Assert.assertArrayEquals(new String[]{"a", null, "c"}, (String[]) ExprEval.coerceListToArray(withNulls));
+    Assert.assertArrayEquals(new String[]{"a", null, "c"}, (String[]) ExprEval.coerceListToArray(withNulls, false));
 
     List<Long> withNumberNulls = new ArrayList<>();
     withNumberNulls.add(1L);
     withNumberNulls.add(null);
     withNumberNulls.add(3L);
 
-    Assert.assertArrayEquals(new Long[]{1L, null, 3L}, (Long[]) ExprEval.coerceListToArray(withNumberNulls));
+    Assert.assertArrayEquals(new Long[]{1L, null, 3L}, (Long[]) ExprEval.coerceListToArray(withNumberNulls, false));
 
     List<Object> withStringMix = ImmutableList.of(1L, "b", 3L);
     Assert.assertArrayEquals(
         new String[]{"1", "b", "3"},
-        (String[]) ExprEval.coerceListToArray(withStringMix)
+        (String[]) ExprEval.coerceListToArray(withStringMix, false)
     );
 
     List<Number> withIntsAndLongs = ImmutableList.of(1, 2L, 3);
     Assert.assertArrayEquals(
         new Long[]{1L, 2L, 3L},
-        (Long[]) ExprEval.coerceListToArray(withIntsAndLongs)
+        (Long[]) ExprEval.coerceListToArray(withIntsAndLongs, false)
     );
 
     List<Number> withFloatsAndLongs = ImmutableList.of(1, 2L, 3.0f);
     Assert.assertArrayEquals(
         new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withFloatsAndLongs)
+        (Double[]) ExprEval.coerceListToArray(withFloatsAndLongs, false)
     );
 
     List<Number> withDoublesAndLongs = ImmutableList.of(1, 2L, 3.0);
     Assert.assertArrayEquals(
         new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withDoublesAndLongs)
+        (Double[]) ExprEval.coerceListToArray(withDoublesAndLongs, false)
     );
 
     List<Number> withFloatsAndDoubles = ImmutableList.of(1L, 2.0f, 3.0);
     Assert.assertArrayEquals(
         new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withFloatsAndDoubles)
+        (Double[]) ExprEval.coerceListToArray(withFloatsAndDoubles, false)
     );
 
     List<String> withAllNulls = new ArrayList<>();
@@ -189,7 +194,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     withAllNulls.add(null);
     Assert.assertArrayEquals(
         new String[]{null, null, null},
-        (String[]) ExprEval.coerceListToArray(withAllNulls)
+        (String[]) ExprEval.coerceListToArray(withAllNulls, false)
     );
   }
 

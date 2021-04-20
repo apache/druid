@@ -107,7 +107,7 @@ public class ExpressionTransform implements Transform
     } else {
       Object raw = row.getRaw(column);
       if (raw instanceof List) {
-        return ExprEval.coerceListToArray((List) raw);
+        return ExprEval.coerceListToArray((List) raw, true);
       }
       return raw;
     }

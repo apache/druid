@@ -385,7 +385,7 @@ public class ExpressionSelectors
         if (val instanceof Number || val instanceof String || (val != null && val.getClass().isArray())) {
           return val;
         } else if (val instanceof List) {
-          return ExprEval.coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         } else {
           return null;
         }
@@ -394,7 +394,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return ExprEval.coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         }
         return null;
       };
