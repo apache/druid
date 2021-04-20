@@ -374,6 +374,11 @@
             <version>5.5.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.11.0</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
