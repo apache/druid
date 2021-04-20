@@ -79,7 +79,6 @@ module.exports = {
     '@typescript-eslint/naming-convention': 'off', // TODO: use?
     '@typescript-eslint/no-shadow': ['off', { ignoreTypeValueShadow: true }], // TODO: use?
     '@typescript-eslint/no-unused-expressions': 'error',
-    '@typescript-eslint/prefer-for-of': 'off', // TODO: use?
     '@typescript-eslint/unified-signatures': 'error',
 
     // @typescript-eslint (overrides)
