@@ -34,13 +34,19 @@ describe('spec-utils', () => {
       {
         context: { host: 'pivot', popic: 'sun' },
         tags: ['a', 'd'],
-        messages: [{ metric: 'request/time', value: 44 }, { metric: 'request/time', value: 65 }],
+        messages: [
+          { metric: 'request/time', value: 44 },
+          { metric: 'request/time', value: 65 },
+        ],
         value: 4,
       },
       {
         context: { host: 'imply', dopik: 'fun' },
         tags: ['x', 'y'],
-        messages: [{ metric: 'request/time', value: 4 }, { metric: 'request/time', value: 5 }],
+        messages: [
+          { metric: 'request/time', value: 4 },
+          { metric: 'request/time', value: 5 },
+        ],
         value: 2,
       },
     ];

@@ -45,6 +45,7 @@ exports.SQL_KEYWORDS = [
   'RIGHT',
   'OUTER',
   'FULL',
+  'CROSS',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

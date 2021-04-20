@@ -267,29 +267,33 @@ ORDER BY "start" DESC`;
             const beforeIso = before.toISOString();
 
             datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
-            intervals = (await Promise.all(
-              datasources.map(async datasource => {
-                const intervalMap = (await Api.instance.get(
-                  `/druid/coordinator/v1/datasources/${Api.encodePath(
-                    datasource,
-                  )}/intervals?simple`,
-                )).data;
+            intervals = (
+              await Promise.all(
+                datasources.map(async datasource => {
+                  const intervalMap = (
+                    await Api.instance.get(
+                      `/druid/coordinator/v1/datasources/${Api.encodePath(
+                        datasource,
+                      )}/intervals?simple`,
+                    )
+                  ).data;
 
-                return Object.keys(intervalMap)
-                  .map(interval => {
-                    const [start, end] = interval.split('/');
-                    const { count, size } = intervalMap[interval];
-                    return {
-                      start,
-                      end,
-                      datasource,
-                      count,
-                      size,
-                    };
-                  })
-                  .filter(a => beforeIso < a.start);
-              }),
-            ))
+                  return Object.keys(intervalMap)
+                    .map(interval => {
+                      const [start, end] = interval.split('/');
+                      const { count, size } = intervalMap[interval];
+                      return {
+                        start,
+                        end,
+                        datasource,
+                        count,
+                        size,
+                      };
+                    })
+                    .filter(a => beforeIso < a.start);
+                }),
+              )
+            )
               .flat()
               .sort((a, b) => b.start.localeCompare(a.start));
           } else {
@@ -495,7 +499,7 @@ ORDER BY "start" DESC`;
         svgHeight={chartHeight}
         svgWidth={chartWidth}
         margin={this.chartMargin}
-        changeActiveDatasource={(datasource: string) =>
+        changeActiveDatasource={(datasource: string | null) =>
           this.setState(prevState => ({
             activeDatasource: prevState.activeDatasource ? null : datasource,
           }))

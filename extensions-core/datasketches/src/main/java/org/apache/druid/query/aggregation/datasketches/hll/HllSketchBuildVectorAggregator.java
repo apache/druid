@@ -17,9 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.theta;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.datasketches.theta.Union;
+import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.datasketches.util.ToObjectVectorColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
@@ -29,19 +29,20 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
-public class SketchVectorAggregator implements VectorAggregator
+public class HllSketchBuildVectorAggregator implements VectorAggregator
 {
-  private final SketchBufferAggregatorHelper helper;
+  private final HllSketchBuildBufferAggregatorHelper helper;
   private final Supplier<Object[]> objectSupplier;
 
-  SketchVectorAggregator(
+  HllSketchBuildVectorAggregator(
       final VectorColumnSelectorFactory columnSelectorFactory,
       final String column,
-      final int size,
-      final int maxIntermediateSize
+      final int lgK,
+      final TgtHllType tgtHllType,
+      final int size
   )
   {
-    this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
+    this.helper = new HllSketchBuildBufferAggregatorHelper(lgK, tgtHllType, size);
     this.objectSupplier =
         ColumnProcessors.makeVectorProcessor(
             column,
@@ -59,13 +60,11 @@ public class SketchVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
-    final Union union = helper.getOrCreateUnion(buf, position);
     final Object[] vector = objectSupplier.get();
-
     for (int i = startRow; i < endRow; i++) {
-      final Object o = vector[i];
-      if (o != null) {
-        SketchAggregator.updateUnion(union, o);
+      final Object value = vector[i];
+      if (value != null) {
+        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
       }
     }
   }
@@ -86,27 +85,30 @@ public class SketchVectorAggregator implements VectorAggregator
 
       if (o != null) {
         final int position = positions[i] + positionOffset;
-        final Union union = helper.getOrCreateUnion(buf, position);
-        SketchAggregator.updateUnion(union, o);
+        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), o);
       }
     }
   }
 
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public Object get(final ByteBuffer buf, final int position)
   {
     return helper.get(buf, position);
   }
 
+  /**
+   * In very rare cases sketches can exceed given memory, request on-heap memory and move there.
+   * We need to identify such sketches and reuse the same objects as opposed to wrapping new memory regions.
+   */
   @Override
-  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
-    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+    helper.relocate(oldPosition, newPosition, oldBuf, newBuf);
   }
 
   @Override
   public void close()
   {
-    helper.close();
+    helper.clear();
   }
 }

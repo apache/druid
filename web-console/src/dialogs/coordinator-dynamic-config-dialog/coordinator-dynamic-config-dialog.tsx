@@ -28,7 +28,7 @@ import {
   FormJsonTabs,
   JsonInput,
 } from '../../components';
-import { COORDINATOR_DYNAMIC_CONFIG_FIELDS, CoordinatorDynamicConfig } from '../../druid-models';
+import { CoordinatorDynamicConfig, COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
