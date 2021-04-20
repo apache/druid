@@ -37,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
@@ -48,48 +49,30 @@ import java.util.concurrent.Future;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
-  private String contentTypeHeader = MediaType.APPLICATION_JSON;
+  final String contentTypeHeader;
 
   /**
    * a 'null' means the Content-Type in response defaults to Content-Type of request
    */
-  private String acceptHeader = null;
+  final String acceptHeader;
 
   final ObjectMapper jsonMapper;
   final ObjectMapper smileMapper;
   final HttpClient httpClient;
   final String routerUrl;
-  final Map<String, EncoderDecoder<QueryType>> encoderDecoderMap;
-
-  protected void setContentTypeHeader(String contentTypeHeader)
-  {
-    if (!this.encoderDecoderMap.containsKey(contentTypeHeader)) {
-      throw new IAE("Invalid Content-Type[%s]", contentTypeHeader);
-    }
-    this.contentTypeHeader = contentTypeHeader;
-  }
-
-  protected void setAcceptHeader(String acceptHeader)
-  {
-    if (acceptHeader != null) {
-      if (!this.encoderDecoderMap.containsKey(acceptHeader)) {
-        throw new IAE("Invalid Accept[%s]", acceptHeader);
-      }
-    }
-    this.acceptHeader = acceptHeader;
-  }
+  final Map<String, EncoderDecoder> encoderDecoderMap;
 
   /**
    * A encoder/decoder that encodes/decodes requests/responses based on Content-Type.
    */
-  interface EncoderDecoder<QueryType>
+  interface EncoderDecoder
   {
-    byte[] encode(QueryType content) throws IOException;
+    byte[] encode(Object content) throws IOException;
 
     List<Map<String, Object>> decode(byte[] content) throws IOException;
   }
 
-  static class ObjectMapperEncoderDecoder<QueryType> implements EncoderDecoder<QueryType>
+  static class ObjectMapperEncoderDecoder implements EncoderDecoder
   {
     private final ObjectMapper om;
 
@@ -99,7 +82,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     }
 
     @Override
-    public byte[] encode(QueryType content) throws IOException
+    public byte[] encode(Object content) throws IOException
     {
       return om.writeValueAsBytes(content);
     }
@@ -113,12 +96,18 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     }
   }
 
+  /**
+   * @param contentTypeHeader Content-Type header of HTTP request
+   * @param acceptHeader Accept header of HTTP request. If it's null, Content-Type in response defaults to Content-Type in request
+   */
   @Inject
   AbstractQueryResourceTestClient(
       ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       @TestClient HttpClient httpClient,
-      String routerUrl
+      String routerUrl,
+      String contentTypeHeader,
+      @Nullable String acceptHeader
   )
   {
     this.jsonMapper = jsonMapper;
@@ -127,11 +116,20 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     this.routerUrl = routerUrl;
 
     this.encoderDecoderMap = new HashMap<>();
-    this.encoderDecoderMap.put(MediaType.APPLICATION_JSON, new ObjectMapperEncoderDecoder<>(jsonMapper));
-    this.encoderDecoderMap.put(
-        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
-        new ObjectMapperEncoderDecoder<>(smileMapper)
-    );
+    this.encoderDecoderMap.put(MediaType.APPLICATION_JSON, new ObjectMapperEncoderDecoder(jsonMapper));
+    this.encoderDecoderMap.put(SmileMediaTypes.APPLICATION_JACKSON_SMILE, new ObjectMapperEncoderDecoder(smileMapper));
+
+    if (!this.encoderDecoderMap.containsKey(contentTypeHeader)) {
+      throw new IAE("Invalid Content-Type[%s]", contentTypeHeader);
+    }
+    this.contentTypeHeader = contentTypeHeader;
+
+    if (acceptHeader != null) {
+      if (!this.encoderDecoderMap.containsKey(acceptHeader)) {
+        throw new IAE("Invalid Accept[%s]", acceptHeader);
+      }
+    }
+    this.acceptHeader = acceptHeader;
   }
 
   public abstract String getBrokerURL();

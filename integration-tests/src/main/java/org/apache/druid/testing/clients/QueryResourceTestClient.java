@@ -29,6 +29,9 @@ import org.apache.druid.query.Query;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 
+import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
+
 public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
 {
 
@@ -40,17 +43,19 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, smileMapper, httpClient, config.getRouterUrl());
+    this(jsonMapper, smileMapper, httpClient, config.getRouterUrl(), MediaType.APPLICATION_JSON, null);
   }
 
   private QueryResourceTestClient(
       ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       @TestClient HttpClient httpClient,
-      String routerUrl
+      String routerUrl,
+      String contentType,
+      String accept
   )
   {
-    super(jsonMapper, smileMapper, httpClient, routerUrl);
+    super(jsonMapper, smileMapper, httpClient, routerUrl, contentType, accept);
   }
 
   @Override
@@ -69,16 +74,15 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
    * @param contentType Content-Type header of request. Cannot be NULL. Both application/json and application/x-jackson-smile are allowed
    * @param accept      Accept header of request. Both application/json and application/x-jackson-smile are allowed
    */
-  public QueryResourceTestClient withEncoding(String contentType, String accept)
+  public QueryResourceTestClient withEncoding(String contentType, @Nullable String accept)
   {
-    QueryResourceTestClient client = new QueryResourceTestClient(
+    return new QueryResourceTestClient(
         this.jsonMapper,
         this.smileMapper,
         this.httpClient,
-        this.routerUrl
+        this.routerUrl,
+        contentType,
+        accept
     );
-    client.setContentTypeHeader(contentType);
-    client.setAcceptHeader(accept);
-    return client;
   }
 }
