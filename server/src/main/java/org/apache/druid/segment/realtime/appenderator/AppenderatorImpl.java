@@ -162,7 +162,7 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile Throwable persistError;
 
-  private final boolean memoryMapIndexes;
+  private final boolean isRealTime;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -187,7 +187,7 @@ public class AppenderatorImpl implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean memoryMapIndexes
+      boolean isRealTime
   )
   {
     this.myId = id;
@@ -203,7 +203,7 @@ public class AppenderatorImpl implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-    this.memoryMapIndexes = memoryMapIndexes;
+    this.isRealTime = isRealTime;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -866,7 +866,7 @@ public class AppenderatorImpl implements Appenderator
           5
       );
 
-      if (!needsToMemoryMapIndex()) {
+      if (!isRealTime()) {
         // Drop the queriable indexes  behind the hydrants... they are not needed anymore and their
         // mapped file references
         // can generate OOMs during merge if enough of them are held back...
@@ -1002,9 +1002,9 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public boolean needsToMemoryMapIndex()
+  public boolean isRealTime()
   {
-    return memoryMapIndexes;
+    return isRealTime;
   }
 
 
