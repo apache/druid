@@ -77,7 +77,7 @@ module.exports = {
     ],
     '@typescript-eslint/member-ordering': 'off', // TODO: use?
     '@typescript-eslint/naming-convention': 'off', // TODO: use?
-    '@typescript-eslint/no-shadow': ['off', { hoist: 'all' }], // TODO: use?
+    '@typescript-eslint/no-shadow': ['off', { ignoreTypeValueShadow: true }], // TODO: use?
     '@typescript-eslint/no-unused-expressions': 'error',
     '@typescript-eslint/prefer-for-of': 'off', // TODO: use?
     '@typescript-eslint/unified-signatures': 'error',
