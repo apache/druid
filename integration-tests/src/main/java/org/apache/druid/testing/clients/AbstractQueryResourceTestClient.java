@@ -80,7 +80,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
   }
 
   /**
-   * A encoder/decoder encodes/decods request/response based on value of Content-Type
+   * A encoder/decoder that encodes/decodes requests/responses based on Content-Type.
    */
   interface EncoderDecoder<QueryType>
   {
