@@ -123,6 +123,7 @@
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",
     "autoprefixer": "^9.8.6",
+    "awesome-code-style": "^2.1.0",
     "babel-loader": "^8.2.2",
     "codecov": "^3.6.1",
     "css-loader": "^5.2.1",
