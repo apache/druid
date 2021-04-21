@@ -92,8 +92,8 @@ export interface LookupsViewState {
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
   private readonly lookupsQueryManager: QueryManager<null, LookupEntriesAndTiers>;
 
-  constructor(props: LookupsViewProps, context: any) {
-    super(props, context);
+  constructor(props: LookupsViewProps) {
+    super(props);
     this.state = {
       lookupEntriesAndTiersState: QueryState.INIT,
       isEdit: false,
@@ -198,12 +198,12 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private readonly handleChangeLookup = (
-    field: keyof LookupEditInfo,
-    value: string | LookupSpec,
+  private readonly handleChangeLookup = <K extends keyof LookupEditInfo>(
+    field: K,
+    value: LookupEditInfo[K],
   ) => {
     this.setState(state => ({
-      lookupEdit: { ...state.lookupEdit, [field]: value },
+      lookupEdit: { ...state.lookupEdit!, [field]: value },
     }));
   };
 
