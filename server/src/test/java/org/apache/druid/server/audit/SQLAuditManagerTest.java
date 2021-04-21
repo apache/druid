@@ -128,15 +128,15 @@ public class SQLAuditManagerTest
   public void testAuditMetricEventBuilderConfig()
   {
     AuditEntry entry = new AuditEntry(
-            "testKey",
-            "testType",
-            new AuditInfo(
-                    "testAuthor",
-                    "testComment",
-                    "127.0.0.1"
-            ),
-            "testPayload",
-            DateTimes.of("2013-01-01T00:00:00Z")
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
 
     SQLAuditManager auditManagerWithPayloadAsDimension = new SQLAuditManager(
@@ -254,6 +254,83 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry1Payload, auditEntries.get(0).getPayload());
     Assert.assertEquals(entry1Type, auditEntries.get(0).getType());
     Assert.assertEquals(entry1AuditInfo, auditEntries.get(0).getAuditInfo());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
+  {
+    String entry1Key = "testKey";
+    String entry1Type = "testType";
+    AuditInfo entry1AuditInfo = new AuditInfo(
+        "testAuthor",
+        "testComment",
+        "127.0.0.1"
+    );
+    String entry1Payload = "testPayload";
+
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+
+    // Do delete
+    auditManager.removeAuditLogsOlderThan(System.currentTimeMillis());
+    // Verify the delete
+    payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    Assert.assertNull(payload);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
+  {
+    String entry1Key = "testKey";
+    String entry1Type = "testType";
+    AuditInfo entry1AuditInfo = new AuditInfo(
+        "testAuthor",
+        "testComment",
+        "127.0.0.1"
+    );
+    String entry1Payload = "testPayload";
+
+    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+    // Do delete
+    auditManager.removeAuditLogsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+    // Verify that entry was not delete
+    payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
+    dbEntry = mapper.readValue(payload, AuditEntry.class);
+    Assert.assertEquals(entry1Key, dbEntry.getKey());
+    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
+    Assert.assertEquals(entry1Type, dbEntry.getType());
+    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
   }
 
   @Test(timeout = 60_000L)
