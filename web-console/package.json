@@ -42,7 +42,7 @@
     "compile": "./script/build",
     "pretest": "./script/build",
     "jest": "jest --config jest.unit.config.js src",
-    "test-base": "npm run eslint && npm run sasslint && npm run jest",
+    "test-base": "npm run eslint && npm run sasslint && npm run prettify-check && npm run jest",
     "test": "npm run test-base -- --silent 2>&1",
     "test-ci": "npm run test-base -- --coverage",
     "test-e2e": "jest --config jest.e2e.config.js e2e-tests",
@@ -58,6 +58,7 @@
     "sasslint-changed-only": "git diff --diff-filter=ACMR --name-only | grep -E \\.scss$ | xargs ./node_modules/.bin/stylelint --config sasslint.json",
     "sasslint-fix-changed-only": "npm run sasslint-changed-only -- --fix",
     "prettify": "prettier --write '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
+    "prettify-check": "prettier --check '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
     "generate-licenses-file": "license-checker --production --json --out licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;CC0-1.0' --summary",
     "start": "webpack serve --hot --open"
