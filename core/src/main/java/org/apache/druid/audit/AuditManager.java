@@ -91,4 +91,12 @@ public interface AuditManager
    * @return list of AuditEntries satisfying the passed parameters
    */
   List<AuditEntry> fetchAuditHistory(String type, int limit);
+
+  /**
+   * Remove audit logs created older than the given timestamp.
+   *
+   * @param timestamp timestamp in milliseconds
+   * @return number of audit logs removed
+   */
+  int removeAuditLogsOlderThan(long timestamp);
 }
