@@ -80,6 +80,10 @@ module.exports = {
     '@typescript-eslint/no-confusing-non-null-assertion': 'error',
     '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
     '@typescript-eslint/no-shadow': ['off', { ignoreTypeValueShadow: true }], // TODO: use?
+    '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'warn',
+    '@typescript-eslint/no-unnecessary-qualifier': 'warn',
+    '@typescript-eslint/no-unnecessary-type-arguments': 'warn',
+    '@typescript-eslint/no-unnecessary-type-constraint': 'warn',
     '@typescript-eslint/no-unused-expressions': 'error',
     '@typescript-eslint/unified-signatures': 'error',
 
