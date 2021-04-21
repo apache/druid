@@ -917,8 +917,7 @@ public class AppenderatorImpl implements Appenderator
 
       return segment;
     }
-    catch (
-        Exception e) {
+    catch (Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);

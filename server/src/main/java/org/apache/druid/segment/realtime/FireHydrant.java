@@ -58,17 +58,18 @@ public class FireHydrant
     return persistedFile;
   }
 
-  public @Nullable SegmentId getPersistedSegmentId() {
+  public @Nullable SegmentId getPersistedSegmentId()
+  {
     return persistedSegmentId;
   }
 
   /**
-   * This is to support the case of batch ingestion where the hydrant is persisted but not memory mapped,
-   * we need to remember the persisted file path in order to regenerate the memory mapped index to
+   * This is to support the case of batch ingestion where the hydrant is persisted but not memory mapped.
+   * We need to remember the persisted file path in order to regenerate the memory mapped index to
    * prepare for merging after all phyisical segmetns are built
    * @param persistedFile The file that was persisted when this hydrant was persisted
    */
-  public void setPersistedMetadata(File persistedFile,SegmentId segmentId)
+  public void setPersistedMetadata(File persistedFile, SegmentId segmentId)
   {
     this.persistedFile = persistedFile;
     this.persistedSegmentId = segmentId;
