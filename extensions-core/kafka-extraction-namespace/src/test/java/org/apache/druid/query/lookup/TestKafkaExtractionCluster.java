@@ -47,7 +47,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import scala.Some;
-import scala.collection.immutable.List$;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -96,7 +95,7 @@ public class TestKafkaExtractionCluster
           getBrokerProperties(),
           Time.SYSTEM,
           Some.apply(StringUtils.format("TestingBroker[%d]-", 1)),
-          List$.MODULE$.empty());
+          false);
 
     kafkaServer.startup();
     log.info("---------------------------Started Kafka Broker ---------------------------");
@@ -205,7 +204,9 @@ public class TestKafkaExtractionCluster
 
   private void checkServer()
   {
-    if (!kafkaServer.dataPlaneRequestProcessor().controller().isActive()) {
+    if (!kafkaServer.dataPlaneRequestProcessor().metadataSupport()
+                    .requireZkOrThrow(() -> new UnsupportedOperationException("Kafka must be runing using ZooKeeper"))
+                    .controller().isActive()) {
       throw new ISE("server is not active!");
     }
   }
