@@ -422,6 +422,7 @@ public class OverlordResource
   {
     final SetResult setResult = configManager.set(
         WorkerBehaviorConfig.CONFIG_KEY,
+        null,
         workerBehaviorConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
     );

@@ -89,6 +89,7 @@ public class CoordinatorCompactionConfigsResource
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
+        current,
         newCompactionConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
     );
@@ -122,6 +123,7 @@ public class CoordinatorCompactionConfigsResource
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
+        current,
         newCompactionConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
     );
@@ -175,6 +177,7 @@ public class CoordinatorCompactionConfigsResource
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
+        current,
         CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
         new AuditInfo(author, comment, req.getRemoteAddr())
     );

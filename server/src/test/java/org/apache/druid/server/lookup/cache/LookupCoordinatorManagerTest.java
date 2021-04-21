@@ -574,6 +574,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.eq(null),
                         EasyMock.eq(EMPTY_TIERED_LOOKUP),
                         EasyMock.eq(auditInfo)
                     )).andReturn(SetResult.ok()).once();
@@ -605,6 +606,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.eq(null),
                         EasyMock.eq(TIERED_LOOKUP_MAP_V0),
                         EasyMock.eq(auditInfo)
                     )).andReturn(SetResult.ok()).once();
@@ -654,6 +656,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                             LOOKUP_TIER + "1", ImmutableMap.of(
                                 "foo1", ignore,
@@ -717,6 +720,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                             LOOKUP_TIER + "1", ImmutableMap.of("foo", newSpec),
                             LOOKUP_TIER + "2", ImmutableMap.of("ignore", ignore)
@@ -758,6 +762,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.eq(null),
                         EasyMock.eq(TIERED_LOOKUP_MAP_V1),
                         EasyMock.eq(auditInfo)
                     )).andReturn(SetResult.ok()).once();
@@ -829,6 +834,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                             LOOKUP_TIER + "1", ImmutableMap.of("foo", newSpec),
                             LOOKUP_TIER + "2", ImmutableMap.of("ignore", ignore)
@@ -881,6 +887,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(
                 ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of()
             ),
@@ -927,6 +934,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(
                 ImmutableMap.of(
                     LOOKUP_TIER, ImmutableMap.of(
@@ -972,6 +980,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(
                 ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of()
             ),
@@ -1485,6 +1494,7 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(
         configManager.set(
             EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(null),
             EasyMock.eq(
                 ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                     "tier1",
