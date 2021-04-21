@@ -138,7 +138,6 @@
     "eslint-config-prettier": "^8.2.0",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jsdoc": "^32.3.0",
     "eslint-plugin-react": "^7.23.2",
     "eslint-plugin-react-hooks": "^4.2.0",
     "eslint-plugin-simple-import-sort": "^7.0.0",
