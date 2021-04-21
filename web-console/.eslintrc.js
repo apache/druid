@@ -92,6 +92,7 @@ module.exports = {
     '@typescript-eslint/prefer-reduce-type-parameter': 'warn',
     '@typescript-eslint/prefer-string-starts-ends-with': 'warn',
     '@typescript-eslint/prefer-ts-expect-error': 'error',
+    '@typescript-eslint/switch-exhaustiveness-check': 'error',
     '@typescript-eslint/unified-signatures': 'error',
 
     // @typescript-eslint (overrides)

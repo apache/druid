@@ -551,6 +551,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       case 'schema':
         return this.queryForSchema(initRun);
+
+      case 'loading':
+      case 'partition':
+      case 'publish':
+      case 'tuning':
+      case 'spec':
+        return;
     }
   }
 
