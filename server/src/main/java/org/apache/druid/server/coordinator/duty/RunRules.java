@@ -137,7 +137,7 @@ public class RunRules implements CoordinatorDuty
               && !paramsWithReplicationManager.getReplicationManager().isLoadPrimaryReplicantsOnly()
           ) {
             log.info(
-                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on.",
+                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on for this coordinator run cycle.",
                 paramsWithReplicationManager.getCoordinatorDynamicConfig().getMaxNonPrimaryReplicantsToLoad()
             );
             paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
