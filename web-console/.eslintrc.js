@@ -89,6 +89,9 @@ module.exports = {
     '@typescript-eslint/prefer-function-type': 'error',
     '@typescript-eslint/prefer-includes': 'warn',
     '@typescript-eslint/prefer-readonly': 'warn',
+    '@typescript-eslint/prefer-reduce-type-parameter': 'warn',
+    '@typescript-eslint/prefer-string-starts-ends-with': 'warn',
+    '@typescript-eslint/prefer-ts-expect-error': 'error',
     '@typescript-eslint/unified-signatures': 'error',
 
     // @typescript-eslint (overrides)
