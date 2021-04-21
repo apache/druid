@@ -344,7 +344,8 @@ public class AppenderatorImpl implements Appenderator
           if (sinkEntry != null) {
             bytesToBePersisted += sinkEntry.getBytesInMemory();
             if (sinkEntry.swappable()) {
-              // After swapping the sink, we use memory mapped segment instead. However, the memory mapped segment still consumes memory.
+              // After swapping the sink, we use memory mapped segment instead (but only for real time appenderators!).
+              // However, the memory mapped segment still consumes memory.
               // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
               int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
               bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
@@ -358,10 +359,14 @@ public class AppenderatorImpl implements Appenderator
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
               "Task has exceeded safe estimated heap usage limits, failing "
-              + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])",
+              + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])"
+              + "(bytesCurrentlyInMemory: [%d] - bytesToBePersisted: [%d] > maxBytesTuningConfig: [%d])",
               sinks.size(),
               sinks.values().stream().mapToInt(Iterables::size).sum(),
-              getTotalRowCount()
+              getTotalRowCount(),
+              bytesCurrentlyInMemory.get(),
+              bytesToBePersisted,
+              maxBytesTuningConfig
           );
           final String errorMessage = StringUtils.format(
               "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
@@ -1504,10 +1509,15 @@ public class AppenderatorImpl implements Appenderator
     // These calculations are approximated from actual heap dumps.
     // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
-    return Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT +
-           (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
-           (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-           ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+    int total;
+    total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
+    if (isRealTime()) {
+      // for real time ad references to byte memory mapped references..
+      total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+               (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+               ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+    }
+    return total;
   }
 
   private int calculateSinkMemoryInUsed(Sink sink)
