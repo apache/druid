@@ -91,20 +91,6 @@ module.exports = env => {
       rules: [
         {
           test: /\.tsx?$/,
-          enforce: 'pre',
-          use: [
-            {
-              loader: 'tslint-loader',
-              options: {
-                configFile: 'tslint.json',
-                emitErrors: true,
-                fix: false, // Set this to true to auto fix errors
-              },
-            },
-          ],
-        },
-        {
-          test: /\.tsx?$/,
           exclude: /node_modules/,
           use: [
             {
