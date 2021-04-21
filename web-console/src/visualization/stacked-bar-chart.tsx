@@ -137,7 +137,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
         <div>Time: {hoverOn ? hoverOn.xValue : ''}</div>
         <div>
           {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${
-            hoverOn ? formatTick(hoverOn.yValue as number) : ''
+            hoverOn ? formatTick(hoverOn.yValue!) : ''
           }`}
         </div>
       </div>

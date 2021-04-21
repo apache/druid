@@ -465,9 +465,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       <SplitterLayout
         vertical
         percentage
-        secondaryInitialSize={
-          Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60
-        }
+        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE)!) || 60}
         primaryMinSize={30}
         secondaryMinSize={30}
         onSecondaryPaneSizeChange={this.handleSecondaryPaneSizeChange}

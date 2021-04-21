@@ -1062,7 +1062,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           vertical
           percentage
           secondaryInitialSize={
-            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE) as string) || 60
+            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE)!) || 60
           }
           primaryMinSize={30}
           secondaryMinSize={30}

@@ -70,7 +70,7 @@ export function deepGet<T extends Record<string, any>>(value: T, path: string): 
 
 export function deepSet<T extends Record<string, any>>(value: T, path: string, x: any): T {
   const parts = parsePath(path);
-  let myKey = parts.shift() as string; // Must be defined
+  let myKey = parts.shift()!; // Must be defined
   const valueCopy = shallowCopy(value);
   if (Array.isArray(valueCopy) && isAppend(myKey)) myKey = String(valueCopy.length);
   if (parts.length) {
@@ -102,7 +102,7 @@ export function deepSetMulti<T extends Record<string, any>>(
 export function deepDelete<T extends Record<string, any>>(value: T, path: string): T {
   const valueCopy = shallowCopy(value);
   const parts = parsePath(path);
-  const firstKey = parts.shift() as string; // Must be defined
+  const firstKey = parts.shift()!; // Must be defined
   if (parts.length) {
     const firstKeyValue = value[firstKey];
     if (firstKeyValue) {

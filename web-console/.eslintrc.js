@@ -85,6 +85,7 @@ module.exports = {
     '@typescript-eslint/no-unnecessary-type-arguments': 'warn',
     '@typescript-eslint/no-unnecessary-type-constraint': 'warn',
     '@typescript-eslint/no-unused-expressions': 'error',
+    '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
     '@typescript-eslint/unified-signatures': 'error',
 
     // @typescript-eslint (overrides)
