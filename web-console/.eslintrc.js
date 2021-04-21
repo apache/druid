@@ -159,6 +159,7 @@ module.exports = {
 
     // eslint-plugin-react (overrides)
     'react/prop-types': 'off',
+    'react/jsx-no-target-blank': 'off',
 
     // eslint-plugin-unicorn
     'unicorn/filename-case': 'error',

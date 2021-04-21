@@ -42,7 +42,6 @@ export const HomeViewCard = React.memo(function HomeViewCard(props: HomeViewCard
       onClick={onClick}
       href={href}
       target={href && href.startsWith('/') ? '_blank' : undefined}
-      rel="noreferrer"
     >
       <Card interactive elevation={1}>
         <H5>
