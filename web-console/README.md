@@ -30,7 +30,6 @@ This is the Druid web console that servers as a data management interface for Dr
 3. Run `npm run compile` to compile the scss files (this usually needs to be done only once)
 4. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
 
-
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
@@ -60,7 +59,7 @@ To get your code into an acceptable state.
 If you change the dependencies of the console in any way please run `script/licenses` (from the web-console directory).
 It will analyze the changes and update the `../licenses` file as needed.
 
-Please be conscious of not introducing dependencies on packages with Apache incompatible licenses. 
+Please be conscious of not introducing dependencies on packages with Apache incompatible licenses.
 
 ### Running end-to-end tests
 
@@ -92,7 +91,6 @@ Like so: `DRUID_E2E_TEST_HEADLESS=false npm run test-e2e`
 The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to target a web console running on a
 non-default port (i.e., not port `8888`). For example, this environment variable can be used to target the
 development mode of the web console (started via `npm start`), which runs on port `18081`.
-
 
 ## Description of the directory structure
 
