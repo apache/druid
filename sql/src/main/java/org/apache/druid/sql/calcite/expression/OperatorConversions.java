@@ -613,33 +613,12 @@ public class OperatorConversions
         case SMALLINT:
         case INTEGER:
         case BIGINT:
-          if (isNumericFamily(toTypeFamily)) {
-            // int -> numeric
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.CHARACTER) {
-            // int -> char
-            return true;
-          }
-          if (isDateTimeFamily(toTypeFamily)) {
-            // int -> datetime
-            return true;
-          }
-          if (isIntervalFamily(toTypeFamily)) {
-            // int -> interval
-            return true;
-          }
-          return false;
         case DECIMAL:
         case FLOAT:
         case REAL:
         case DOUBLE:
           if (isNumericFamily(toTypeFamily)) {
-            // decimal/float -> numeric
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.CHARACTER) {
-            // decimal/float -> char
+            // int/decimal/float -> numeric
             return true;
           }
           return false;
@@ -650,14 +629,6 @@ public class OperatorConversions
         case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
           if (isDateTimeFamily(toTypeFamily)) {
             // datetime -> datetime
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.INTEGER) {
-            // datetime -> int
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.CHARACTER) {
-            // datetime -> char
             return true;
           }
           return false;
@@ -676,14 +647,6 @@ public class OperatorConversions
         case INTERVAL_SECOND:
           if (isIntervalFamily(toTypeFamily)) {
             // interval -> interval
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.INTEGER) {
-            // interval -> int
-            return true;
-          }
-          if (toTypeFamily == SqlTypeFamily.CHARACTER) {
-            // interval -> char
             return true;
           }
           return false;

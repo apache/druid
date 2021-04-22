@@ -399,12 +399,10 @@ public class OperatorConversionsTest
       );
 
       Mockito.when(validator.newValidationError(ArgumentMatchers.any(), ArgumentMatchers.any()))
-             .thenAnswer(
-                 (Answer<CalciteContextException>) invocationOnMock -> new CalciteContextException(
-                     StringUtils.format("Exception in test for operator[%s]", function.getName()),
-                     invocationOnMock.getArgument(1, ExInst.class).ex()
-                 )
-             );
+             .thenAnswer((Answer<CalciteContextException>) invocationOnMock -> new CalciteContextException(
+                 StringUtils.format("Exception in test for operator[%s]", function.getName()),
+                 invocationOnMock.getArgument(1, ExInst.class).ex()
+             ));
       return callBinding;
     }
 
@@ -454,9 +452,6 @@ public class OperatorConversionsTest
 
       SqlTypeName.INT_TYPES.forEach(type -> {
         Set<SqlTypeFamily> f = new HashSet<>(numericFamilies);
-        f.add(SqlTypeFamily.CHARACTER);
-        f.addAll(dateTimeFamilies);
-        f.addAll(intervalFamilies);
         f.add(SqlTypeFamily.ANY);
         params.add(new Object[]{type, f});
         addedTypes.add(type);
@@ -464,7 +459,6 @@ public class OperatorConversionsTest
 
       Stream.concat(Stream.of(SqlTypeName.DECIMAL), SqlTypeName.APPROX_TYPES.stream()).forEach(type -> {
         Set<SqlTypeFamily> f = new HashSet<>(numericFamilies);
-        f.add(SqlTypeFamily.CHARACTER);
         f.add(SqlTypeFamily.ANY);
         params.add(new Object[]{type, f});
         addedTypes.add(type);
@@ -472,8 +466,6 @@ public class OperatorConversionsTest
 
       SqlTypeName.DATETIME_TYPES.forEach(type -> {
         Set<SqlTypeFamily> f = new HashSet<>(dateTimeFamilies);
-        f.add(SqlTypeFamily.INTEGER);
-        f.add(SqlTypeFamily.CHARACTER);
         f.add(SqlTypeFamily.ANY);
         params.add(new Object[]{type, f});
         addedTypes.add(type);
@@ -481,8 +473,6 @@ public class OperatorConversionsTest
 
       SqlTypeName.INTERVAL_TYPES.forEach(type -> {
         Set<SqlTypeFamily> f = new HashSet<>(intervalFamilies);
-        f.add(SqlTypeFamily.INTEGER);
-        f.add(SqlTypeFamily.CHARACTER);
         f.add(SqlTypeFamily.ANY);
         params.add(new Object[]{type, f});
         addedTypes.add(type);
