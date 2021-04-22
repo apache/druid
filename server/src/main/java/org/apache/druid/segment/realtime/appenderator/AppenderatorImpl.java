@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -569,6 +570,8 @@ public class AppenderatorImpl implements Appenderator
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
+    AtomicLong totalHydrantsCount = new AtomicLong();
+    AtomicLong totalHydrantsPersisted = new AtomicLong();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
       final Sink sink = entry.getValue();
@@ -576,21 +579,26 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("No sink for identifier: %s", identifier);
       }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
+      totalHydrantsCount.addAndGet(hydrants.size());
       currentHydrants.put(identifier.toString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
       final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
 
+      // gather hydrants that have not been persisted:
       for (FireHydrant hydrant : hydrants.subList(0, limit)) {
         if (!hydrant.hasSwapped()) {
           log.debug("Hydrant[%s] hasn't persisted yet, persisting. Segment[%s]", hydrant, identifier);
           indexesToPersist.add(Pair.of(hydrant, identifier));
+          totalHydrantsPersisted.addAndGet(1);
         }
       }
 
       if (sink.swappable()) {
+        // Now create a new hydrant and get the old one to persist it (i.e. if swap):
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
+        totalHydrantsPersisted.addAndGet(1);
       }
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
@@ -598,6 +606,7 @@ public class AppenderatorImpl implements Appenderator
     final Object commitMetadata = committer == null ? null : committer.getMetadata();
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
+    AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
     final ListenableFuture<Object> future = persistExecutor.submit(
         new Callable<Object>()
         {
@@ -651,6 +660,14 @@ public class AppenderatorImpl implements Appenderator
                                   .distinct()
                                   .collect(Collectors.joining(", "))
               );
+              log.info(
+                  "Persisted stats: processed rows: [%d], persisted rows[%d], sinks: [%d], total fireHydrants (across sinks): [%d], persisted fireHydrants (across sinks): [%d]",
+                  rowIngestionMeters.getProcessed(),
+                  totalPersistedRows.get(),
+                  sinks.size(),
+                  totalHydrantsCount.get(),
+                  totalHydrantsPersisted.get()
+              );
 
               // return null if committer is null
               return commitMetadata;
@@ -693,6 +710,7 @@ public class AppenderatorImpl implements Appenderator
   )
   {
     final Map<SegmentIdWithShardSpec, Sink> theSinks = new HashMap<>();
+    AtomicLong pushedHydrantsCount = new AtomicLong();
     for (final SegmentIdWithShardSpec identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
@@ -702,6 +720,8 @@ public class AppenderatorImpl implements Appenderator
       if (sink.finishWriting()) {
         totalRows.addAndGet(-sink.getNumRows());
       }
+      // count hydrants for stats:
+      pushedHydrantsCount.addAndGet(IterableUtils.size(sink));
     }
 
     return Futures.transform(
@@ -710,6 +730,10 @@ public class AppenderatorImpl implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
+
+          log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
+                   rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
+          );
 
           log.debug(
               "Building and pushing segments: %s",
@@ -733,6 +757,8 @@ public class AppenderatorImpl implements Appenderator
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
           }
+
+          log.info("Push complete...");
 
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
         },
