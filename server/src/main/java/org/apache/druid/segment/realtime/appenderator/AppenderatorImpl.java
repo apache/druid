@@ -572,6 +572,7 @@ public class AppenderatorImpl implements Appenderator
     long bytesPersisted = 0L;
     AtomicLong totalHydrantsCount = new AtomicLong();
     AtomicLong totalHydrantsPersisted = new AtomicLong();
+    final long totalSinks = sinks.size();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
       final Sink sink = entry.getValue();
@@ -664,7 +665,7 @@ public class AppenderatorImpl implements Appenderator
                   "Persisted stats: processed rows: [%d], persisted rows[%d], sinks: [%d], total fireHydrants (across sinks): [%d], persisted fireHydrants (across sinks): [%d]",
                   rowIngestionMeters.getProcessed(),
                   totalPersistedRows.get(),
-                  sinks.size(),
+                  totalSinks,
                   totalHydrantsCount.get(),
                   totalHydrantsPersisted.get()
               );
