@@ -41,18 +41,39 @@ To try the console in (say) coordinator mode you could run it as such:
 
 You should use a TypeScript friendly IDE (such as [WebStorm](https://www.jetbrains.com/webstorm/), or [VS Code](https://code.visualstudio.com/)) to develop the web console.
 
-The console relies on [tslint](https://palantir.github.io/tslint/), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce the code style.
+The console relies on [eslint](https://eslint.org) (and various plugins), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce code style. If you are going to do any non-trivial development you should set up your IDE to automatically lint and fix your code as you make changes.
 
-If you are going to do any non-trivial development you should set up file watchers in your IDE to automatically fix your code as you type.
+#### Configuring WebStorm
 
-If you do not set up auto file watchers then even a trivial change such as a typo fix might draw the ire of the code style enforcement (it might require some lines to be re-wrapped).
-If you find yourself in that position you should run on or more of:
+- **Preferences | Languages & Frameworks | JavaScript | Code Quality Tools | ESLint**
+  - Select "Automatic ESLint Configuration"
+  - Check "Run eslint --fix on save"
 
-- `npm run tslint-fix`
-- `npm run sasslint-fix`
-- `npm run prettify`
+- **Preferences | Languages & Frameworks | JavaScript | Prettier**
+  - Set "Run for files" to `{**/*,*}.{js,ts,jsx,tsx,css,scss}`
+  - Check "On code reformat"
+  - Check "On save"
 
-To get your code into an acceptable state.
+#### Configuring VS Code
+- Install `dbaeumer.vscode-eslint` extension
+- Install `esbenp.prettier-vscode` extension
+- Open User Settings (JSON) and set the following:
+  ```json
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true
+    }
+  ```
+
+#### Auto-fixing manually
+It is also possible to auto-fix and format code without making IDE changes by running the following scripts:
+
+- `npm run eslint-fix` &mdash; run code linter and fix issues
+- `npm run sasslint-fix` &mdash; run style linter and fix issues
+- `npm run prettify` &mdash; reformat code and styles
+
+Note that the `prettify` script should be run at the end because auto-fixed code may require formatting changes.
 
 ### Updating the list of license files
 
