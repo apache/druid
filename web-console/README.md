@@ -67,13 +67,15 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
   ```
 
 #### Auto-fixing manually
-It is also possible to auto-fix and format code without making IDE changes by running the following scripts:
+It is also possible to auto-fix and format code without making IDE changes by running the following script:
+
+- `npm run autofix` &mdash; run code linters and formatter
+  
+You could also run individual fixers individually:
 
 - `npm run eslint-fix` &mdash; run code linter and fix issues
 - `npm run sasslint-fix` &mdash; run style linter and fix issues
 - `npm run prettify` &mdash; reformat code and styles
-
-Note that the `prettify` script should be run at the end because auto-fixed code may require formatting changes.
 
 ### Updating the list of license files
 

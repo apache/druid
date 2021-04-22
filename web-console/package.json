@@ -49,6 +49,7 @@
     "codecov": "codecov --disable=gcov -p ..",
     "coverage": "jest --coverage src",
     "update-snapshots": "jest -u",
+    "autofix": "npm run eslint-fix && npm run sasslint-fix && npm run prettify",
     "eslint": "eslint '{src,e2e-tests}/**/*.ts?(x)'",
     "eslint-fix": "npm run eslint -- --fix",
     "eslint-changed-only": "git diff --diff-filter=ACMR --cached --name-only | grep -E \\.tsx\\?$ | xargs ./node_modules/.bin/eslint",
