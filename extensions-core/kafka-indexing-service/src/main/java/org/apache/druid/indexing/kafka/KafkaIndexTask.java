@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
@@ -99,6 +101,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
           ioConfig.getConsumerProperties()
       );
       props.putIfAbsent("isolation.level", "read_committed");
+      props.putIfAbsent("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
       props.putAll(consumerConfigs);
 
       return new KafkaConsumer<>(props);
