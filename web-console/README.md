@@ -71,7 +71,7 @@ It is also possible to auto-fix and format code without making IDE changes by ru
 
 - `npm run autofix` &mdash; run code linters and formatter
   
-You could also run individual fixers individually:
+You could also run fixers individually:
 
 - `npm run eslint-fix` &mdash; run code linter and fix issues
 - `npm run sasslint-fix` &mdash; run style linter and fix issues
