@@ -386,13 +386,29 @@ public class JobHelper
     }
   }
 
-  public static boolean runSingleJob(Jobby job)
+  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = job.run();
+
+    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+        Path workingPath = config.makeIntermediatePath();
+        log.info("Deleting path[%s]", workingPath);
+        try {
+          Configuration conf = injectSystemProperties(new Configuration(), config);
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
+        }
+        catch (IOException e) {
+          log.error(e, "Failed to cleanup path[%s]", workingPath);
+        }
+      }
+    }
+
     return succeeded;
   }
 
-  public static boolean runJobs(List<Jobby> jobs)
+  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;
     for (Jobby job : jobs) {
@@ -402,33 +418,25 @@ public class JobHelper
       }
     }
 
-    return succeeded;
-  }
-
-  public static void maybeDeleteIntermediatePath(
-      boolean jobSucceeded,
-      HadoopIngestionSpec indexerSchema)
-  {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
-    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
-    config.addJobProperties(configuration);
-    JobHelper.injectDruidProperties(configuration, config);
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (jobSucceeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          config.addJobProperties(configuration);
-          workingPath.getFileSystem(configuration).delete(workingPath, true);
+          Configuration conf = injectSystemProperties(new Configuration(), config);
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);
         }
       }
     }
+
+    return succeeded;
   }
 
-  public static DataSegmentAndIndexZipFilePath serializeOutIndex(
+  public static DataSegment serializeOutIndex(
       final DataSegment segmentTemplate,
       final Configuration configuration,
       final Progressable progressable,
@@ -474,16 +482,20 @@ public class JobHelper
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
-    return new DataSegmentAndIndexZipFilePath(
-        finalSegment,
-        tmpPath.toUri().getPath(),
-        finalIndexZipFilePath.toUri().getPath()
-    );
+    if (!renameIndexFiles(outputFS, tmpPath, finalIndexZipFilePath)) {
+      throw new IOE(
+          "Unable to rename [%s] to [%s]",
+          tmpPath.toUri().toString(),
+          finalIndexZipFilePath.toUri().toString()
+      );
+    }
+
+    return finalSegment;
   }
 
   public static void writeSegmentDescriptor(
       final FileSystem outputFS,
-      final DataSegmentAndIndexZipFilePath segmentAndPath,
+      final DataSegment segment,
       final Path descriptorPath,
       final Progressable progressable
   )
@@ -499,12 +511,9 @@ public class JobHelper
             try {
               progressable.progress();
               if (outputFS.exists(descriptorPath)) {
-                // If the descriptor path already exists, don't overwrite, and risk clobbering it.
-                // If it already exists, it means that the segment data is already written to the
-                // tmp path, and the existing descriptor written should give us the information we
-                // need to rename the segment index to final path and publish it in the top level task.
-                log.info("descriptor path [%s] already exists, not overwriting", descriptorPath);
-                return -1;
+                if (!outputFS.delete(descriptorPath, false)) {
+                  throw new IOE("Failed to delete descriptor at [%s]", descriptorPath);
+                }
               }
               try (final OutputStream descriptorOut = outputFS.create(
                   descriptorPath,
@@ -512,7 +521,7 @@ public class JobHelper
                   DEFAULT_FS_BUFFER_SIZE,
                   progressable
               )) {
-                HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segmentAndPath);
+                HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segment);
               }
             }
             catch (RuntimeException | IOException ex) {
@@ -623,39 +632,7 @@ public class JobHelper
   }
 
   /**
-   * Renames the index files for the segments. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
-   * which will not overwrite. Note: segments should be renamed in the index task, not in a hadoop job, as race
-   * conditions between job retries can cause the final segment index file path to get clobbered.
-   *
-   * @param indexerSchema  the hadoop ingestion spec
-   * @param segmentAndIndexZipFilePaths the list of segments with their currently stored tmp path and the final path
-   *                                    that they should be renamed to.
-   */
-  public static void renameIndexFilesForSegments(
-      HadoopIngestionSpec indexerSchema,
-      List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths
-  ) throws IOException
-  {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
-    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
-    config.addJobProperties(configuration);
-    JobHelper.injectDruidProperties(configuration, config);
-    for (DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath : segmentAndIndexZipFilePaths) {
-      Path tmpPath = new Path(segmentAndIndexZipFilePath.getTmpIndexZipFilePath());
-      Path finalIndexZipFilePath = new Path(segmentAndIndexZipFilePath.getFinalIndexZipFilePath());
-      final FileSystem outputFS = FileSystemHelper.get(finalIndexZipFilePath.toUri(), configuration);
-      if (!renameIndexFile(outputFS, tmpPath, finalIndexZipFilePath)) {
-        throw new IOE(
-            "Unable to rename [%s] to [%s]",
-            tmpPath.toUri().toString(),
-            finalIndexZipFilePath.toUri().toString()
-        );
-      }
-    }
-  }
-
-  /**
-   * Rename the file. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
+   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
    * which will not overwrite
    *
    * @param outputFS              The output fs
@@ -664,7 +641,7 @@ public class JobHelper
    *
    * @return False if a rename failed, true otherwise (rename success or no rename needed)
    */
-  private static boolean renameIndexFile(
+  private static boolean renameIndexFiles(
       final FileSystem outputFS,
       final Path indexZipFilePath,
       final Path finalIndexZipFilePath
