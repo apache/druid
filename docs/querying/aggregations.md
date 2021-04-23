@@ -134,8 +134,6 @@ Computes and returns arithmetic mean of a column values as 64 bit float value. T
 
 ### First / Last aggregator
 
-(Double/Float/Long) First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
-
 Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
 
 #### `doubleFirst` aggregator
