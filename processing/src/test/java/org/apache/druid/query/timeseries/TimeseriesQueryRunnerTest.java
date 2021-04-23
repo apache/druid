@@ -21,6 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
@@ -44,6 +45,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
@@ -2926,6 +2928,104 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableMap.of(
                     "myTimestamp", aprilSecond.getMillis(),
                     "timestampInPostAgg", aprilSecond.getMillis()
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithExpressionAggregator()
+  {
+    // expression agg cannot vectorize
+    cannotVectorize();
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_count",
+                                              ImmutableSet.of(),
+                                              null,
+                                              "0",
+                                              null,
+                                              "__acc + 1",
+                                              "__acc + diy_count",
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_sum",
+                                              ImmutableSet.of("index"),
+                                              null,
+                                              "0.0",
+                                              null,
+                                              "__acc + index",
+                                              null,
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_decomposed_sum",
+                                              ImmutableSet.of("index"),
+                                              null,
+                                              "0.0",
+                                              "<DOUBLE>[]",
+                                              "__acc + index",
+                                              "array_concat(__acc, diy_decomposed_sum)",
+                                              null,
+                                              "fold((x, acc) -> x + acc, o, 0.0)",
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "array_agg_distinct",
+                                              ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+                                              "acc",
+                                              "[]",
+                                              null,
+                                              "array_set_add(acc, market)",
+                                              "array_set_add_all(acc, array_agg_distinct)",
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          )
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .context(makeContext())
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "diy_count", 13L,
+                    "diy_sum", 6626.151569,
+                    "diy_decomposed_sum", 6626.151569,
+                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "diy_count", 13L,
+                    "diy_sum", 5833.209718,
+                    "diy_decomposed_sum", 5833.209718,
+                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
                 )
             )
         )
