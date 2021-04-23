@@ -125,6 +125,13 @@ public class Calcites
 
   }
 
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
+   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
+   *
+   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
+   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   */
   @Nullable
   public static ValueType getValueTypeForRelDataType(final RelDataType type)
   {
