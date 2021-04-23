@@ -206,7 +206,7 @@ public class TestKafkaExtractionCluster
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void checkServer() throws Exception
   {
-    try (Admin adminClient =  Admin.create((Map)getConsumerProperties())) {
+    try (Admin adminClient = Admin.create((Map) getConsumerProperties())) {
       if (adminClient.describeCluster().controller().get() == null) {
         throw new ISE("server is not active!");
       }
