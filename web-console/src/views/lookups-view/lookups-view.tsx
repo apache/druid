@@ -22,10 +22,10 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import {
-  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
@@ -54,7 +54,7 @@ const tableColumns: string[] = [
   ACTION_COLUMN_LABEL,
 ];
 
-const DEFAULT_LOOKUP_TIER: string = '__default';
+const DEFAULT_LOOKUP_TIER = '__default';
 
 function tierNameCompare(a: string, b: string) {
   return a.localeCompare(b);
@@ -90,10 +90,10 @@ export interface LookupsViewState {
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
-  private lookupsQueryManager: QueryManager<null, LookupEntriesAndTiers>;
+  private readonly lookupsQueryManager: QueryManager<null, LookupEntriesAndTiers>;
 
-  constructor(props: LookupsViewProps, context: any) {
-    super(props, context);
+  constructor(props: LookupsViewProps) {
+    super(props);
     this.state = {
       lookupEntriesAndTiersState: QueryState.INIT,
       isEdit: false,
@@ -114,7 +114,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
-        const lookupEntries: {}[] = [];
+        const lookupEntries: Record<string, string>[] = [];
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
@@ -163,7 +163,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private async openLookupEditDialog(tier: string, id: string) {
+  private openLookupEditDialog(tier: string, id: string) {
     const { lookupEntriesAndTiersState } = this.state;
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     if (!lookupEntriesAndTiers) return;
@@ -198,9 +198,12 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private handleChangeLookup = (field: keyof LookupEditInfo, value: string | LookupSpec) => {
+  private readonly handleChangeLookup = <K extends keyof LookupEditInfo>(
+    field: K,
+    value: LookupEditInfo[K],
+  ) => {
     this.setState(state => ({
-      lookupEdit: Object.assign({}, state.lookupEdit, { [field]: value }),
+      lookupEdit: { ...state.lookupEdit!, [field]: value },
     }));
   };
 

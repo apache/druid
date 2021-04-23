@@ -56,13 +56,13 @@ export function useQueryManager<Q, R>(
     return () => {
       queryManager.terminate();
     };
-  }, []);
+  }, [initQuery, queryManager]);
 
-  if (query) {
-    useEffect(() => {
+  useEffect(() => {
+    if (query) {
       queryManager.runQuery(query);
-    }, [query]);
-  }
+    }
+  }, [query, queryManager]);
 
   return [resultState, queryManager];
 }

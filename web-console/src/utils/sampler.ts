@@ -31,8 +31,8 @@ import {
   MetricSpec,
   PLACEHOLDER_TIMESTAMP_SPEC,
   REINDEX_TIMESTAMP_SPEC,
-  TimestampSpec,
   TIME_COLUMN,
+  TimestampSpec,
   Transform,
   TransformSpec,
   upgradeSpec,
@@ -419,7 +419,8 @@ export async function sampleForTimestamp(
   }
 
   const sampleTimeData = sampleTime.data;
-  return Object.assign({}, sampleColumns, {
+  return {
+    ...sampleColumns,
     data: sampleColumns.data.map((d, i) => {
       // Merge the column sample with the time column sample
       if (!d.parsed) return d;
@@ -427,7 +428,7 @@ export async function sampleForTimestamp(
       d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
       return d;
     }),
-  });
+  };
 }
 
 export async function sampleForTransform(

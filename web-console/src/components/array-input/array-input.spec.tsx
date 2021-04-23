@@ -26,8 +26,8 @@ describe('array input', () => {
     const arrayInput = (
       <ArrayInput
         values={['apple', 'banana', 'pear']}
-        className={'test'}
-        placeholder={'test'}
+        className="test"
+        placeholder="test"
         onChange={() => {}}
       />
     );

@@ -160,7 +160,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
               icon: IconNames.TH,
               label: (
                 <Popover
-                  boundary={'window'}
+                  boundary="window"
                   position={Position.RIGHT}
                   content={
                     <Deferred
@@ -216,7 +216,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               >
                                 <MenuItem
                                   icon={IconNames.LEFT_JOIN}
-                                  text={`Left join`}
+                                  text="Left join"
                                   onClick={() => {
                                     const { lookupColumn, originalTableColumn } = getJoinColumns(
                                       parsedQuery,
@@ -243,7 +243,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 />
                                 <MenuItem
                                   icon={IconNames.INNER_JOIN}
-                                  text={`Inner join`}
+                                  text="Inner join"
                                   onClick={() => {
                                     const { lookupColumn, originalTableColumn } = getJoinColumns(
                                       parsedQuery,
@@ -273,7 +273,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               parsedQuery.getJoins()[0].table.toString() === tableName && (
                                 <MenuItem
                                   icon={IconNames.EXCHANGE}
-                                  text={`Remove join`}
+                                  text="Remove join"
                                   onClick={() => onQueryChange(parsedQuery.removeAllJoins())}
                                 />
                               )}
@@ -282,7 +282,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               parsedQuery.getFirstTableName() === tableName && (
                                 <MenuItem
                                   icon={IconNames.FUNCTION}
-                                  text={`Aggregate COUNT(*)`}
+                                  text="Aggregate COUNT(*)"
                                   onClick={() =>
                                     onQueryChange(parsedQuery.addSelectExpression(COUNT_STAR), true)
                                   }
@@ -314,10 +314,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     icon: dataTypeToIcon(columnData.DATA_TYPE),
                     label: (
                       <Popover
-                        boundary={'window'}
+                        boundary="window"
                         position={Position.RIGHT}
                         autoFocus={false}
-                        targetClassName={'bp3-popover-open'}
+                        targetClassName="bp3-popover-open"
                         content={
                           <Deferred
                             content={() => {
@@ -462,7 +462,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+  private readonly handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const { columnTree } = this.state;
 
     const selectedTreeIndex = Number(e.target.value);
@@ -478,12 +478,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
-  private handleNodeCollapse = (nodeData: ITreeNode) => {
+  private readonly handleNodeCollapse = (nodeData: ITreeNode) => {
     nodeData.isExpanded = false;
     this.bounceState();
   };
 
-  private handleNodeExpand = (nodeData: ITreeNode) => {
+  private readonly handleNodeExpand = (nodeData: ITreeNode) => {
     nodeData.isExpanded = true;
     this.bounceState();
   };

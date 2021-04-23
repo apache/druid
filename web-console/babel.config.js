@@ -23,19 +23,19 @@ module.exports = function (api) {
     [
       '@babel/preset-env',
       {
-        "useBuiltIns": "entry",
-        "corejs": 3,
-        "forceAllTransforms": true,
-        "targets": {
-          "ie": "11"
-        }
-      }
-    ]
+        useBuiltIns: 'entry',
+        corejs: 3,
+        forceAllTransforms: true,
+        targets: {
+          ie: '11',
+        },
+      },
+    ],
   ];
   const plugins = [];
 
   return {
     presets,
-    plugins
+    plugins,
   };
-}
+};

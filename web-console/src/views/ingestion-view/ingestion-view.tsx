@@ -20,14 +20,13 @@ import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintj
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
-  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
   MoreButton,
   RefreshButton,
   TableColumnSelector,
@@ -44,6 +43,7 @@ import {
   addFilter,
   addFilterRaw,
   booleanCustomTableFilter,
+  Capabilities,
   deepGet,
   formatDuration,
   getDruidErrorMessage,
@@ -55,7 +55,6 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import { Capabilities } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
@@ -183,8 +182,8 @@ function stateToColor(status: string): string {
 }
 
 export class IngestionView extends React.PureComponent<IngestionViewProps, IngestionViewState> {
-  private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
+  private readonly supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
+  private readonly taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -319,7 +318,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     });
   };
 
-  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  private static onSecondaryPaneSizeChange(secondaryPaneSize: number) {
     localStorageSet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
@@ -335,14 +334,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.taskQueryManager.terminate();
   }
 
-  private closeSpecDialogs = () => {
+  private readonly closeSpecDialogs = () => {
     this.setState({
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
     });
   };
 
-  private submitSupervisor = async (spec: JSON) => {
+  private readonly submitSupervisor = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
@@ -360,7 +359,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.supervisorQueryManager.rerunLastQuery();
   };
 
-  private submitTask = async (spec: JSON) => {
+  private readonly submitTask = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/task', spec);
     } catch (e) {
@@ -1059,17 +1058,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <SplitterLayout
-          customClassName={'ingestion-view app-view'}
+          customClassName="ingestion-view app-view"
           vertical
           percentage
           secondaryInitialSize={
-            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE) as string) || 60
+            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE)!) || 60
           }
           primaryMinSize={30}
           secondaryMinSize={30}
-          onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+          onSecondaryPaneSizeChange={IngestionView.onSecondaryPaneSizeChange}
         >
-          <div className={'top-pane'}>
+          <div className="top-pane">
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
@@ -1088,7 +1087,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             </ViewControlBar>
             {this.renderSupervisorTable()}
           </div>
-          <div className={'bottom-pane'}>
+          <div className="bottom-pane">
             <ViewControlBar label="Tasks">
               <Label>Group by</Label>
               <ButtonGroup>
