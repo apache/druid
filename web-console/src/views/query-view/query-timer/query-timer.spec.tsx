@@ -17,24 +17,26 @@
  */
 
 import { render } from '@testing-library/react';
-import { QueryResult } from 'druid-query-toolkit';
 import React from 'react';
 
-import { QueryExtraInfo } from './query-extra-info';
+import { QueryTimer } from './query-timer';
 
-describe('QueryExtraInfo', () => {
+describe('QueryTimer', () => {
+  beforeEach(() => {
+    let nowCalls = 0;
+    jest.spyOn(Date, 'now').mockImplementation(() => {
+      return 1619201218452 + 2000 * nowCalls++;
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('matches snapshot', () => {
-    const queryExtraInfo = (
-      <QueryExtraInfo
-        queryResult={QueryResult.BLANK.attachQueryId(
-          'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
-        ).changeQueryDuration(8000)}
-        onDownload={() => {}}
-        onLoadMore={() => {}}
-      />
-    );
+    const queryTimer = <QueryTimer />;
 
-    const { container } = render(queryExtraInfo);
+    const { container } = render(queryTimer);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

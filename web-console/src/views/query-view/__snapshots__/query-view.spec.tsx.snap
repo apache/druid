@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`sql view matches snapshot 1`] = `
+exports[`QueryView matches snapshot 1`] = `
 <div
   className="query-view app-view"
 >
@@ -63,6 +63,7 @@ exports[`sql view matches snapshot 1`] = `
           liveQueryMode="auto"
           onLiveQueryModeChange={[Function]}
         />
+        <Memo(QueryTimer) />
       </div>
     </div>
     <div
@@ -77,7 +78,7 @@ exports[`sql view matches snapshot 1`] = `
 </div>
 `;
 
-exports[`sql view matches snapshot with query 1`] = `
+exports[`QueryView matches snapshot with query 1`] = `
 <div
   className="query-view app-view"
 >
@@ -140,6 +141,7 @@ exports[`sql view matches snapshot with query 1`] = `
           liveQueryMode="auto"
           onLiveQueryModeChange={[Function]}
         />
+        <Memo(QueryTimer) />
       </div>
     </div>
     <div
