@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -202,17 +203,18 @@ public class TestKafkaExtractionCluster
     return kafkaProducerProperties;
   }
 
-  private void checkServer()
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private void checkServer() throws Exception
   {
-    if (!kafkaServer.dataPlaneRequestProcessor().metadataSupport()
-                    .requireZkOrThrow(() -> new UnsupportedOperationException("Kafka must be runing using ZooKeeper"))
-                    .controller().isActive()) {
-      throw new ISE("server is not active!");
+    try (Admin adminClient =  Admin.create((Map)getConsumerProperties())) {
+      if (adminClient.describeCluster().controller().get() == null) {
+        throw new ISE("server is not active!");
+      }
     }
   }
 
   @Test(timeout = 60_000L)
-  public void testSimpleLookup() throws InterruptedException
+  public void testSimpleLookup() throws Exception
   {
     try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
       checkServer();
