@@ -251,7 +251,8 @@ public interface Appenderator extends QuerySegmentWalker
       return segmentIdentifier;
     }
 
-    int getNumRowsInSegment()
+    @VisibleForTesting
+    public int getNumRowsInSegment()
     {
       return numRowsInSegment;
     }
