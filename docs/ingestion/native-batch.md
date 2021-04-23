@@ -58,7 +58,7 @@ The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
 - [`gs`](#google-cloud-storage-input-source) reads data from Google Cloud Storage.
-- [`azure`](#azure-input-source) reads data from Azure Blob Storage.
+- [`azure`](#azure-input-source) reads data from Azure Blob Storage and Azure Data Lake.
 - [`hdfs`](#hdfs-input-source) reads data from HDFS storage.
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
