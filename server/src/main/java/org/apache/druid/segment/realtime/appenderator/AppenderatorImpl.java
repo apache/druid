@@ -597,7 +597,7 @@ public class AppenderatorImpl implements Appenderator
       }
 
       if (sink.swappable()) {
-        // Now create a new hydrant and get the old one to persist it (i.e. if swap):
+        // It is swappable. Get the old one to persist it and create a new one:
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
         totalHydrantsPersisted.addAndGet(1);
       }
@@ -917,7 +917,7 @@ public class AppenderatorImpl implements Appenderator
       );
 
       if (!isRealTime()) {
-        // Drop the queriable indexes  behind the hydrants... they are not needed anymore and their
+        // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
         // mapped file references
         // can generate OOMs during merge if enough of them are held back...
         for (FireHydrant fireHydrant : sink) {
@@ -1489,7 +1489,7 @@ public class AppenderatorImpl implements Appenderator
             numRows
         );
 
-        // Do not map unless it is being driven by a real time task:
+        // Map only when this appenderator is being driven by a real time task:
         Segment segmentToSwap = null;
         if (isRealTime()) {
           segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
@@ -1538,7 +1538,7 @@ public class AppenderatorImpl implements Appenderator
     int total;
     total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
     if (isRealTime()) {
-      // for real time ad references to byte memory mapped references..
+      // for real time add references to byte memory mapped references..
       total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
                (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
                ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
