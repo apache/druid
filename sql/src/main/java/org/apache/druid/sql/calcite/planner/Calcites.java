@@ -128,6 +128,19 @@ public class Calcites
   @Nullable
   public static ValueType getValueTypeForRelDataType(final RelDataType type)
   {
+    ValueType valueType = getValueTypeForRelDataTypeFull(type);
+    if (ValueType.isArray(valueType)) {
+      return ValueType.STRING;
+    }
+    return valueType;
+  }
+
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   */
+  @Nullable
+  public static ValueType getValueTypeForRelDataTypeFull(final RelDataType type)
+  {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
       return ValueType.FLOAT;
@@ -142,15 +155,12 @@ public class Calcites
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       SqlTypeName componentType = type.getComponentType().getSqlTypeName();
       if (isDoubleType(componentType)) {
-        // in the future return ValueType.DOUBLE_ARRAY;
-        return ValueType.STRING;
+        return ValueType.DOUBLE_ARRAY;
       }
       if (isLongType(componentType)) {
-        // in the future we will return ValueType.LONG_ARRAY;
-        return ValueType.STRING;
+        return ValueType.LONG_ARRAY;
       }
-      // in the future we will return ValueType.STRING_ARRAY;
-      return ValueType.STRING;
+      return ValueType.STRING_ARRAY;
     } else {
       return null;
     }

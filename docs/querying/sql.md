@@ -311,7 +311,7 @@ Aggregation functions can appear in the SELECT clause of any query. Any aggregat
 `AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
 possible for two aggregators in the same SQL query to have different filters.
 
-Only the COUNT aggregation can accept DISTINCT.
+Only the COUNT and ARRAY_AGG aggregations can accept DISTINCT.
 
 > The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
 > functions can produce inconsistent results across the same query. 
@@ -353,6 +353,10 @@ Only the COUNT aggregation can accept DISTINCT.
 |`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|
 |`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 |`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|
+|`ARRAY_AGG(expr)`|Collects all values of `expr` into an ARRAY, including null values, with the default limit on aggregation size of 1024 bytes. `ORDER BY` on the `ARRAY_AGG` expression is not currently supported.|
+|`ARRAY_AGG(DISTINCT expr)`|Collects all distinct values of `expr` into an ARRAY, including null values, with the default limit on aggregation size of 1024 bytes per aggregate. `ORDER BY` on the `ARRAY_AGG` expression is not currently supported.|
+|`ARRAY_AGG(expr, maxSizeBytes)`|Collects all values of `expr` into an ARRAY, including null values, with specified maximum byte size per aggregate. `ORDER BY` on the `ARRAY_AGG` expression is not currently supported.|
+|`ARRAY_AGG(DISTINCT expr, maxSizeBytes)`|Collects all distinct values of `expr` into an ARRAY, including null values, with specified maximum byte size per aggregate. `ORDER BY` on the `ARRAY_AGG` expression is not currently supported.|
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
 
