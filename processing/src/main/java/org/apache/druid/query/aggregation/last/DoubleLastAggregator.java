@@ -36,15 +36,15 @@ public class DoubleLastAggregator extends NumericLastAggregator
   }
 
   @Override
-  void setCurrentValue(ColumnValueSelector valueSelector)
+  void setLastValue(ColumnValueSelector valueSelector)
   {
     lastValue = valueSelector.getDouble();
   }
 
   @Override
-  void setCurrentValue(Number number)
+  void setLastValue(Number lastValue)
   {
-    lastValue = number.doubleValue();
+    this.lastValue = lastValue.doubleValue();
   }
 
   @Override

@@ -36,15 +36,15 @@ public class LongFirstAggregator extends NumericFirstAggregator
   }
 
   @Override
-  void setCurrentValue(ColumnValueSelector valueSelector)
+  void setFirstValue(ColumnValueSelector valueSelector)
   {
     firstValue = valueSelector.getLong();
   }
 
   @Override
-  void setCurrentValue(Number number)
+  void setFirstValue(Number firstValue)
   {
-    firstValue = number.longValue();
+    this.firstValue = firstValue.longValue();
   }
 
   @Override

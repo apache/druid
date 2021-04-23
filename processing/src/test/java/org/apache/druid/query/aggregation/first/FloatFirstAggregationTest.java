@@ -54,10 +54,13 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
   private float[] floats = {1.1f, 2.7f, 3.5f, 1.3f};
   private long[] times = {12, 10, 5344, 7899999};
   private SerializablePair[] pairs = {
+      new SerializablePair<>(1567899920L, null),
       new SerializablePair<>(1467225096L, 134.3f),
       new SerializablePair<>(23163L, 1232.212f),
       new SerializablePair<>(742L, 18f),
-      new SerializablePair<>(111111L, 233.5232f)
+      new SerializablePair<>(111111L, 233.5232f),
+      new SerializablePair<>(500L, null),
+      new SerializablePair<>(500L, 400.f)
   };
 
   @Before
@@ -74,6 +77,9 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector).atLeastOnce();
   }
 
+  /**
+   * test aggregator on value selector column
+   */
   @Test
   public void testDoubleFirstAggregator()
   {
@@ -96,6 +102,9 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(floats[1], agg.getFloat(), 0.0001);
   }
 
+  /**
+   * test aggregator on value selector column
+   */
   @Test
   public void testDoubleFirstBufferAggregator()
   {
@@ -142,6 +151,9 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
+  /**
+   * test aggregator on an object selector column
+   */
   @Test
   public void testDoubleFirstCombiningAggregator()
   {
@@ -151,20 +163,52 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
 
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
+    //
+    // aggregate first 5 events, pair[3] is supposed to be the first
+    //
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
+    agg.aggregate();
+    objectSelector.increment();
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
-    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
+
+    //
+    // aggregator once more, pair[5] will be the first
+    //
+    agg.aggregate();
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get();
+    expected = (Pair<Long, Float>) pairs[5];
+
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertNull(result.rhs);
+
+    //
+    // aggregate once more, pair[6] has the same timestamp as pair[5], but it won't be the first
+    //
+    agg.aggregate();
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get();
+    expected = (Pair<Long, Float>) pairs[5];
+
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertNull(result.rhs);
   }
 
+  /**
+   * test aggregator on an object column
+   */
   @Test
   public void testDoubleFirstCombiningBufferAggregator()
   {
@@ -172,26 +216,52 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
         ValueType.COMPLEX));
     EasyMock.replay(colSelectorFactory);
 
-    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
-        colSelectorFactory);
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[floatFirstAggregatorFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
+    //
+    // aggregate first 5 events, pair[3] is the first
+    //
+    aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
-    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
     Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
-  }
 
+    //
+    // aggregate once more, pair[5] is the first
+    //
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get(buffer, 0);
+    expected = (Pair<Long, Float>) pairs[5];
+
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertNull(result.rhs);
+
+    //
+    // aggregate once more, pair[6] has the same timestamp as pair[5], but it won't be the first
+    //
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get(buffer, 0);
+    expected = (Pair<Long, Float>) pairs[5];
+
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertNull(result.rhs);
+  }
 
   @Test
   public void testSerde() throws Exception
@@ -207,32 +277,41 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
     AggregateCombiner floatFirstAggregateCombiner = combiningAggFactory.makeAggregateCombiner();
 
     SerializablePair[] inputPairs = {
-        new SerializablePair<>(5L, 134.3f),
-        new SerializablePair<>(4L, 1232.212f),
-        new SerializablePair<>(3L, 18f),
-        new SerializablePair<>(6L, 233.5232f)
+        new SerializablePair<>(6L, null),
+        new SerializablePair<>(6L, 134.3f),
+        new SerializablePair<>(5L, 1232.212f),
+        new SerializablePair<>(4L, 18f),
+        new SerializablePair<>(7L, 233.5232f),
+        new SerializablePair<>(0L, null)
     };
     TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(inputPairs);
     floatFirstAggregateCombiner.reset(columnSelector);
     Assert.assertEquals(inputPairs[0], floatFirstAggregateCombiner.getObject());
 
-    // inputPairs[1] has lower time value, it should be the first
+    // inputPairs[1].first > inputPair[0].first, it should NOT be the first
     columnSelector.increment();
     floatFirstAggregateCombiner.fold(columnSelector);
-    Assert.assertEquals(inputPairs[1], floatFirstAggregateCombiner.getObject());
+    Assert.assertEquals(inputPairs[0], floatFirstAggregateCombiner.getObject());
 
-    // inputPairs[2] has lower time value, it should be the first
-    columnSelector.increment();
-    floatFirstAggregateCombiner.fold(columnSelector);
-    Assert.assertEquals(inputPairs[2], floatFirstAggregateCombiner.getObject());
-
-    // inputPairs[3] has the max time value, it should NOT be the first
+    // inputPairs[2].first < inputPair[0].first, it should be the first
     columnSelector.increment();
     floatFirstAggregateCombiner.fold(columnSelector);
     Assert.assertEquals(inputPairs[2], floatFirstAggregateCombiner.getObject());
 
-    floatFirstAggregateCombiner.reset(columnSelector);
+    // inputPairs[3].first is the lowest, it should be the first
+    columnSelector.increment();
+    floatFirstAggregateCombiner.fold(columnSelector);
     Assert.assertEquals(inputPairs[3], floatFirstAggregateCombiner.getObject());
+
+    // inputPairs[4] is not the lowest, it should NOT be the first
+    columnSelector.increment();
+    floatFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(inputPairs[3], floatFirstAggregateCombiner.getObject());
+
+    columnSelector.increment();
+    floatFirstAggregateCombiner.fold(columnSelector);
+
+    Assert.assertEquals(inputPairs[5], floatFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(

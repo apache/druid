@@ -49,7 +49,7 @@ public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>>
   {
     T newValue = (T) selector.getObject();
 
-    if (Longs.compare(lastValue.lhs, newValue.lhs) < 0) {
+    if (Longs.compare(lastValue.lhs, newValue.lhs) <= 0) {
       lastValue = newValue;
     }
   }

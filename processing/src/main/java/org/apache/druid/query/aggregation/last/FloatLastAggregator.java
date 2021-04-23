@@ -36,15 +36,15 @@ public class FloatLastAggregator extends NumericLastAggregator
   }
 
   @Override
-  void setCurrentValue(ColumnValueSelector valueSelector)
+  void setLastValue(ColumnValueSelector valueSelector)
   {
     lastValue = valueSelector.getFloat();
   }
 
   @Override
-  void setCurrentValue(Number number)
+  void setLastValue(Number lastValue)
   {
-    lastValue = number.floatValue();
+    this.lastValue = lastValue.floatValue();
   }
 
   @Override

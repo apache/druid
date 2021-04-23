@@ -29,23 +29,22 @@ public class LongLastAggregator extends NumericLastAggregator
 
   public LongLastAggregator(BaseLongColumnValueSelector timeSelector,
                             ColumnValueSelector valueSelector,
-                            boolean needsFoldCheck
-                            )
+                            boolean needsFoldCheck)
   {
     super(timeSelector, valueSelector, needsFoldCheck);
     lastValue = 0;
   }
 
   @Override
-  void setCurrentValue(ColumnValueSelector valueSelector)
+  void setLastValue(ColumnValueSelector valueSelector)
   {
     lastValue = valueSelector.getLong();
   }
 
   @Override
-  void setCurrentValue(Number number)
+  void setLastValue(Number lastValue)
   {
-    lastValue = number.longValue();
+    this.lastValue = lastValue.longValue();
   }
 
   @Override

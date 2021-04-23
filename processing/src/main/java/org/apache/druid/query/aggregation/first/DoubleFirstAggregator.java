@@ -36,15 +36,15 @@ public class DoubleFirstAggregator extends NumericFirstAggregator
   }
 
   @Override
-  void setCurrentValue(ColumnValueSelector valueSelector)
+  void setFirstValue(ColumnValueSelector valueSelector)
   {
     firstValue = valueSelector.getDouble();
   }
 
   @Override
-  void setCurrentValue(Number number)
+  void setFirstValue(Number firstValue)
   {
-    firstValue = number.doubleValue();
+    this.firstValue = firstValue.doubleValue();
   }
 
   @Override

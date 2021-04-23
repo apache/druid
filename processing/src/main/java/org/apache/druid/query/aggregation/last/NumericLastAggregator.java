@@ -32,10 +32,11 @@ import org.apache.druid.segment.ColumnValueSelector;
  */
 public abstract class NumericLastAggregator implements Aggregator
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
+  private static final boolean USE_DEFAULT = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
   private final boolean needsFoldCheck;
   private final ColumnValueSelector valueSelector;
+
   long lastTime;
   boolean rhsNull;
 
@@ -50,14 +51,14 @@ public abstract class NumericLastAggregator implements Aggregator
     this.needsFoldCheck = needsFoldCheck;
 
     lastTime = Long.MIN_VALUE;
-    rhsNull = !useDefault;
+    rhsNull = !USE_DEFAULT;
   }
 
   @Override
   public void aggregate()
   {
     if (needsFoldCheck) {
-      // Need to read this first (before time), just in case it's a SerializablePairLongString (we don't know; it's
+      // Need to read this first (before time), just in case it's a SerializablePair (we don't know; it's
       // detected at query time).
       final Object object = valueSelector.getObject();
 
@@ -73,7 +74,7 @@ public abstract class NumericLastAggregator implements Aggregator
             rhsNull = true;
           } else {
             rhsNull = false;
-            setCurrentValue(pair.rhs);
+            setLastValue(pair.rhs);
           }
         }
         return;
@@ -83,10 +84,11 @@ public abstract class NumericLastAggregator implements Aggregator
     long time = timeSelector.getLong();
     if (time >= lastTime) {
       lastTime = time;
-      if (useDefault || !valueSelector.isNull()) {
-        setCurrentValue(valueSelector);
+      if (USE_DEFAULT || !valueSelector.isNull()) {
+        setLastValue(valueSelector);
         rhsNull = false;
       } else {
+        setLastValue(0);
         rhsNull = true;
       }
     }
@@ -101,7 +103,7 @@ public abstract class NumericLastAggregator implements Aggregator
   /**
    * Store the current primitive typed 'first' value
    */
-  abstract void setCurrentValue(ColumnValueSelector valueSelector);
+  abstract void setLastValue(ColumnValueSelector valueSelector);
 
-  abstract void setCurrentValue(Number number);
+  abstract void setLastValue(Number lastValue);
 }

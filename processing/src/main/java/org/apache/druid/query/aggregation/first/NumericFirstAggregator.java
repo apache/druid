@@ -30,7 +30,7 @@ import org.apache.druid.segment.ColumnValueSelector;
  */
 public abstract class NumericFirstAggregator implements Aggregator
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
+  private static final boolean USE_DEFAULT = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
   private final ColumnValueSelector valueSelector;
   private final boolean needsFoldCheck;
@@ -49,15 +49,18 @@ public abstract class NumericFirstAggregator implements Aggregator
     this.needsFoldCheck = needsFoldCheck;
 
     firstTime = Long.MAX_VALUE;
-    rhsNull = !useDefault;
+    rhsNull = !USE_DEFAULT;
   }
 
   /**
    * Store the current primitive typed 'first' value
    */
-  abstract void setCurrentValue(ColumnValueSelector valueSelector);
+  abstract void setFirstValue(ColumnValueSelector valueSelector);
 
-  abstract void setCurrentValue(Number number);
+  /**
+   * Store a non-null first value
+   */
+  abstract void setFirstValue(Number firstValue);
 
   @Override
   public void aggregate()
@@ -80,7 +83,7 @@ public abstract class NumericFirstAggregator implements Aggregator
             rhsNull = true;
           } else {
             rhsNull = false;
-            setCurrentValue(pair.rhs);
+            setFirstValue(pair.rhs);
           }
         }
 
@@ -91,10 +94,11 @@ public abstract class NumericFirstAggregator implements Aggregator
     long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;
-      if (useDefault || !valueSelector.isNull()) {
-        setCurrentValue(valueSelector);
+      if (USE_DEFAULT || !valueSelector.isNull()) {
+        setFirstValue(valueSelector);
         rhsNull = false;
       } else {
+        setFirstValue(0);
         rhsNull = true;
       }
     }

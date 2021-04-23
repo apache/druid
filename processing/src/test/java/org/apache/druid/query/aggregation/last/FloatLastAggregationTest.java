@@ -54,10 +54,13 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   private float[] floats = {1.1897f, 0.001f, 86.23f, 166.228f};
   private long[] times = {8224, 6879, 2436, 7888};
   private SerializablePair[] pairs = {
+      new SerializablePair<>(111L, null),
       new SerializablePair<>(52782L, 134.3f),
       new SerializablePair<>(65492L, 1232.212f),
       new SerializablePair<>(69134L, 18.1233f),
-      new SerializablePair<>(11111L, 233.5232f)
+      new SerializablePair<>(11111L, 233.5232f),
+      new SerializablePair<>(99999L, 99999.f),
+      new SerializablePair<>(99999L, null)
   };
 
   @Before
@@ -93,6 +96,8 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(floats[0], result.rhs, 0.0001);
     Assert.assertEquals((long) floats[0], agg.getLong());
     Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
+
+
   }
 
   @Test
@@ -149,18 +154,43 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
 
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
-    aggregate(agg);
-    aggregate(agg);
-    aggregate(agg);
-    aggregate(agg);
+    agg.aggregate();
+    objectSelector.increment();
+    agg.aggregate();
+    objectSelector.increment();
+    agg.aggregate();
+    objectSelector.increment();
+    agg.aggregate();
+    objectSelector.increment();
+    agg.aggregate();
+    objectSelector.increment();
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
-    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
+    // pair[3] has the largest timestamp in first 5 events
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
+
+    // aggregate once more, the last will change to pair[5] event
+    agg.aggregate();
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get();
+    expected = (Pair<Long, Float>) pairs[5];
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
+    Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
+    Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
+
+    // aggregate once more, now the last event has the same timestamp as the last-1 event, it will be the last
+    agg.aggregate();
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get();
+    expected = (Pair<Long, Float>) pairs[6];
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(result.rhs, null);
   }
 
   @Test
@@ -176,20 +206,44 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     ByteBuffer buffer = ByteBuffer.wrap(new byte[floatLastAggregatorFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
-    aggregate(agg, buffer, 0);
-    aggregate(agg, buffer, 0);
-    aggregate(agg, buffer, 0);
-    aggregate(agg, buffer, 0);
+    // aggregate first 5 events, pair[3] is the last
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
-    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
     Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
-  }
 
+    // aggregate once more, pair[5] is the last
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get(buffer, 0);
+    expected = (Pair<Long, Float>) pairs[5];
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
+    Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
+    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
+
+    // aggregate once more, pair[6] has the same timestamp with pair[5], it will be the last
+    agg.aggregate(buffer, 0);
+    objectSelector.increment();
+    result = (Pair<Long, Float>) agg.get(buffer, 0);
+    expected = (Pair<Long, Float>) pairs[5];
+    Assert.assertEquals(expected.lhs, result.lhs);
+    Assert.assertEquals(result.rhs, null);
+  }
 
   @Test
   public void testSerde() throws Exception
@@ -232,6 +286,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     floatLastAggregateCombiner.reset(columnSelector);
     Assert.assertEquals(inputPairs[3], floatLastAggregateCombiner.getObject());
   }
+
 
   private void aggregate(
       Aggregator agg
