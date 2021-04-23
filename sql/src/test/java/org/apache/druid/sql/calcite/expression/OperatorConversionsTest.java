@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.CalciteContextException;
@@ -44,19 +43,13 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
 
 @RunWith(Enclosed.class)
 public class OperatorConversionsTest
@@ -205,11 +198,11 @@ public class OperatorConversionsTest
     }
 
     @Test
-    public void testImplicitlyCastableFromDatetimeFamilyToTimestamp()
+    public void testCastableFromDateTimestampToDatetimeFamily()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testCastableFromDatetimeFamilyToTimestamp")
-          .operandTypes(SqlTypeFamily.TIMESTAMP)
+          .operandTypes(SqlTypeFamily.DATETIME)
           .requiredOperands(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
@@ -219,15 +212,6 @@ public class OperatorConversionsTest
               mockCallBinding(
                   function,
                   ImmutableList.of(new OperandSpec(SqlTypeName.DATE, false))
-              ),
-              true
-          )
-      );
-      Assert.assertTrue(
-          typeChecker.checkOperandTypes(
-              mockCallBinding(
-                  function,
-                  ImmutableList.of(new OperandSpec(SqlTypeName.TIME, false))
               ),
               true
           )
@@ -415,139 +399,6 @@ public class OperatorConversionsTest
       {
         this.type = type;
         this.isLiteral = isLiteral;
-      }
-    }
-  }
-
-  @RunWith(Parameterized.class)
-  public static class ImplicitCastabilityTest
-  {
-    @Parameters(name = "Cast from {0}")
-    public static List<Object[]> parameters()
-    {
-      final List<Object[]> params = new ArrayList<>();
-      final Set<SqlTypeName> addedTypes = new HashSet<>();
-
-      final List<SqlTypeFamily> numericFamilies = ImmutableList.of(
-          SqlTypeFamily.NUMERIC,
-          SqlTypeFamily.APPROXIMATE_NUMERIC,
-          SqlTypeFamily.EXACT_NUMERIC,
-          SqlTypeFamily.DECIMAL,
-          SqlTypeFamily.INTEGER
-      );
-      final List<SqlTypeFamily> dateTimeFamilies = ImmutableList.of(
-          SqlTypeFamily.DATE,
-          SqlTypeFamily.TIME,
-          SqlTypeFamily.TIMESTAMP,
-          SqlTypeFamily.DATETIME
-      );
-      final List<SqlTypeFamily> intervalFamilies = ImmutableList.of(
-          SqlTypeFamily.INTERVAL_YEAR_MONTH,
-          SqlTypeFamily.INTERVAL_DAY_TIME,
-          SqlTypeFamily.DATETIME_INTERVAL
-      );
-
-      params.add(new Object[]{SqlTypeName.BOOLEAN, ImmutableSet.of(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY)});
-      addedTypes.add(SqlTypeName.BOOLEAN);
-
-      SqlTypeName.INT_TYPES.forEach(type -> {
-        Set<SqlTypeFamily> f = new HashSet<>(numericFamilies);
-        f.add(SqlTypeFamily.ANY);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      Stream.concat(Stream.of(SqlTypeName.DECIMAL), SqlTypeName.APPROX_TYPES.stream()).forEach(type -> {
-        Set<SqlTypeFamily> f = new HashSet<>(numericFamilies);
-        f.add(SqlTypeFamily.ANY);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      SqlTypeName.DATETIME_TYPES.forEach(type -> {
-        Set<SqlTypeFamily> f = new HashSet<>(dateTimeFamilies);
-        f.add(SqlTypeFamily.ANY);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      SqlTypeName.INTERVAL_TYPES.forEach(type -> {
-        Set<SqlTypeFamily> f = new HashSet<>(intervalFamilies);
-        f.add(SqlTypeFamily.ANY);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      Stream.of(SqlTypeName.NULL, SqlTypeName.ANY).forEach(type -> {
-        Set<SqlTypeFamily> f = EnumSet.allOf(SqlTypeFamily.class);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      SqlTypeName.STRING_TYPES.forEach(type -> {
-        Set<SqlTypeFamily> f = new HashSet<>();
-        f.add(type.getFamily());
-        f.add(SqlTypeFamily.STRING);
-        f.add(SqlTypeFamily.ANY);
-        params.add(new Object[]{type, f});
-        addedTypes.add(type);
-      });
-
-      // not castable to ANY because Calcite thinks the ANY type family doesn't include these.
-      Stream.of(
-          SqlTypeName.ARRAY,
-          SqlTypeName.MAP,
-          SqlTypeName.OTHER,
-          SqlTypeName.GEOMETRY
-      ).forEach(type -> {
-        if (!addedTypes.contains(type)) {
-          Set<SqlTypeFamily> f = new HashSet<>();
-          f.add(type.getFamily());
-          params.add(new Object[]{type, f});
-          addedTypes.add(type);
-        }
-      });
-
-      for (SqlTypeName type : SqlTypeName.values()) {
-        if (!addedTypes.contains(type)
-            // Skip dynamic_star because it returns ANY as its family
-            // but the ANY family doesn't return it in getTypeNames() (is it expelled from the family..?)
-            // which makes the unit test failed.
-            && type != SqlTypeName.DYNAMIC_STAR) {
-          Set<SqlTypeFamily> f = new HashSet<>();
-          f.add(type.getFamily());
-          f.add(SqlTypeFamily.ANY);
-          params.add(new Object[]{type, f});
-          addedTypes.add(type);
-        }
-      }
-      return params;
-    }
-
-    private final SqlTypeName fromType;
-    private final Set<SqlTypeFamily> castableToTypeFamily;
-
-    public ImplicitCastabilityTest(SqlTypeName fromType, Set<SqlTypeFamily> castableToTypeFamily)
-    {
-      this.fromType = fromType;
-      this.castableToTypeFamily = castableToTypeFamily;
-    }
-
-    @Test
-    public void testCastableImplicitly()
-    {
-      for (SqlTypeFamily family : SqlTypeFamily.values()) {
-        if (castableToTypeFamily.contains(family)) {
-          Assert.assertTrue(
-              StringUtils.format("Expected to be able to cast from[%s] to[%s], but cannot", fromType, family),
-              DefaultOperandTypeChecker.isCastableImplicitly(fromType, family)
-          );
-        } else {
-          Assert.assertFalse(
-              StringUtils.format("Expected to not be able to cast from[%s] to[%s], but can", fromType, family),
-              DefaultOperandTypeChecker.isCastableImplicitly(fromType, family)
-          );
-        }
       }
     }
   }

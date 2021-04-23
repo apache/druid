@@ -566,8 +566,8 @@ public class OperatorConversions
                 cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
             );
           }
-        } else if (isCastableImplicitly(operandType.getSqlTypeName(), expectedFamily)) {
-          // Operand came in with one of the castable types.
+        } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
+          // Operand came in with one of the expected types.
         } else {
           return throwOrReturn(
               throwOnFailure,
@@ -578,128 +578,6 @@ public class OperatorConversions
       }
 
       return true;
-    }
-
-    @VisibleForTesting
-    static boolean isCastableImplicitly(SqlTypeName fromType, SqlTypeFamily toTypeFamily)
-    {
-      // Allow casting to same family
-      // NOTE: this check allows CHAR/VARCHAR -> STRING family and BINARY/VARBINARY -> String family, where
-      // String family includes all CHAR, VARCHAR, BINARY, and VARBINARY.
-      // This is strange because we don't support implicit casting between CHAR/VARCHAR and BINARY/VARBINARY.
-      // Perhaps it's better to not allow this casting, but kept because of compatibility issue.
-      if (toTypeFamily.getTypeNames().contains(fromType)) {
-        return true;
-      }
-
-      // check castability between other type families
-      switch (fromType) {
-        case BOOLEAN:
-          // Druid expression allows casting boolean <-> numeric and boolean <-> string.
-          // However, the casting behavior seems quite confusing as shown below.
-          // - cast(true as int) => 1
-          // - cast(true as double) => 1.0
-          // - cast(true as char(4)) = '1   '
-          // - cast('true' as boolean) => false
-          // - cast('1' as boolean) => true
-          // - cast(1.0 as boolean) => true
-          // - cast(2 as boolean) => true
-          // - cast(-1 as boolean) => false
-          // This behavior might be useful in some use case, but is probably not always useful.
-          // So, we don't cast booleans to any of these types implicitly. Users still should be
-          // able to use cast explicitly if they want.
-          return false;
-        case TINYINT:
-        case SMALLINT:
-        case INTEGER:
-        case BIGINT:
-        case DECIMAL:
-        case FLOAT:
-        case REAL:
-        case DOUBLE:
-          if (isNumericFamily(toTypeFamily)) {
-            // int/decimal/float -> numeric
-            return true;
-          }
-          return false;
-        case DATE:
-        case TIME:
-        case TIME_WITH_LOCAL_TIME_ZONE:
-        case TIMESTAMP:
-        case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-          if (isDateTimeFamily(toTypeFamily)) {
-            // datetime -> datetime
-            return true;
-          }
-          return false;
-        case INTERVAL_YEAR:
-        case INTERVAL_YEAR_MONTH:
-        case INTERVAL_MONTH:
-        case INTERVAL_DAY:
-        case INTERVAL_DAY_HOUR:
-        case INTERVAL_DAY_MINUTE:
-        case INTERVAL_DAY_SECOND:
-        case INTERVAL_HOUR:
-        case INTERVAL_HOUR_MINUTE:
-        case INTERVAL_HOUR_SECOND:
-        case INTERVAL_MINUTE:
-        case INTERVAL_MINUTE_SECOND:
-        case INTERVAL_SECOND:
-          if (isIntervalFamily(toTypeFamily)) {
-            // interval -> interval
-            return true;
-          }
-          return false;
-        case CHAR:
-        case VARCHAR:
-        case BINARY:
-        case VARBINARY:
-          // these types can be casted implicitly only to the types of the same family
-          return false;
-        case NULL:
-        case ANY:
-          // can be cated to any type
-          return true;
-        case SYMBOL:
-        case MULTISET:
-        case ARRAY:
-        case MAP:
-        case DISTINCT:
-        case STRUCTURED:
-        case ROW:
-        case OTHER:
-        case CURSOR:
-        case COLUMN_LIST:
-        case DYNAMIC_STAR:
-        case GEOMETRY:
-        default:
-          // either uncastable or unsupported
-          return false;
-      }
-    }
-
-    private static boolean isNumericFamily(SqlTypeFamily typeFamily)
-    {
-      return typeFamily == SqlTypeFamily.NUMERIC
-             || typeFamily == SqlTypeFamily.APPROXIMATE_NUMERIC
-             || typeFamily == SqlTypeFamily.EXACT_NUMERIC
-             || typeFamily == SqlTypeFamily.DECIMAL
-             || typeFamily == SqlTypeFamily.INTEGER;
-    }
-
-    private static boolean isDateTimeFamily(SqlTypeFamily typeFamily)
-    {
-      return typeFamily == SqlTypeFamily.DATE
-             || typeFamily == SqlTypeFamily.TIME
-             || typeFamily == SqlTypeFamily.TIMESTAMP
-             || typeFamily == SqlTypeFamily.DATETIME;
-    }
-
-    private static boolean isIntervalFamily(SqlTypeFamily typeFamily)
-    {
-      return typeFamily == SqlTypeFamily.INTERVAL_YEAR_MONTH
-             || typeFamily == SqlTypeFamily.INTERVAL_DAY_TIME
-             || typeFamily == SqlTypeFamily.DATETIME_INTERVAL;
     }
 
     @Override
