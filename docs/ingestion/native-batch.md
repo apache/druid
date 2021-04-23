@@ -1005,7 +1005,7 @@ Google Cloud Storage object:
 > You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
-specified as a list of file URI strings or prefixes. The Azure input source is splittable and can be used by the [Parallel task](#parallel-task), where each worker task reads a single object.
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](#parallel-task) indexing and each worker task reads one chunk of the split data.
 
 Sample specs:
 
