@@ -556,9 +556,10 @@ public class OperatorConversions
 
         if (expectedFamily == SqlTypeFamily.ANY) {
           // ANY matches anything. This operand is all good; do nothing.
+        } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
+          // Operand came in with one of the expected types.
         } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
           // Null came in, check if operand is a nullable type.
-          // This check should be done before checking operand types.
           if (!nullableOperands.contains(i)) {
             return throwOrReturn(
                 throwOnFailure,
@@ -566,8 +567,6 @@ public class OperatorConversions
                 cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
             );
           }
-        } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
-          // Operand came in with one of the expected types.
         } else {
           return throwOrReturn(
               throwOnFailure,
