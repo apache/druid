@@ -109,7 +109,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
