@@ -51,8 +51,7 @@ install_zk
 ln -s /usr/local/$ZK_TAR /usr/local/zookeeper-3.5
 
 # Kafka
-# Match the version to the Kafka client used by KafkaSupervisor
-KAFKA_VERSION=2.7.0
+# KAFKA_VERSION is defined by docker build arguments
 wget -q -O /tmp/kafka_2.13-$KAFKA_VERSION.tgz "$APACHE_ARCHIVE_MIRROR_HOST/dist/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
 tar -xzf /tmp/kafka_2.13-$KAFKA_VERSION.tgz -C /usr/local
 ln -s /usr/local/kafka_2.13-$KAFKA_VERSION /usr/local/kafka
