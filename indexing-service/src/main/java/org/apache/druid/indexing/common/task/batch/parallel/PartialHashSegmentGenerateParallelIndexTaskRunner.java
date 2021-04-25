@@ -21,7 +21,9 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -32,15 +34,20 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
 {
   private static final String PHASE_NAME = "partial segment generation";
 
+  @Nullable
+  private final Map<Interval, Integer> intervalToNumShardsOverride;
+
   PartialHashSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      @Nullable Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
     super(toolbox, taskId, groupId, ingestionSchema, context);
+    this.intervalToNumShardsOverride = intervalToNumShardsOverride;
   }
 
   @Override
@@ -77,7 +84,8 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             supervisorTaskId,
             numAttempts,
             subTaskIngestionSpec,
-            context
+            context,
+            intervalToNumShardsOverride
         );
       }
     };

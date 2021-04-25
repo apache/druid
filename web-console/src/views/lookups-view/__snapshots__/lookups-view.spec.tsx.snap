@@ -20,7 +20,7 @@ exports[`lookups view matches snapshot 1`] = `
       columns={
         Array [
           "Lookup name",
-          "Tier",
+          "Lookup tier",
           "Type",
           "Version",
           "Actions",
@@ -95,7 +95,7 @@ exports[`lookups view matches snapshot 1`] = `
           "show": true,
         },
         Object {
-          "Header": "Tier",
+          "Header": "Lookup tier",
           "accessor": "tier",
           "filterable": true,
           "id": "tier",

@@ -17,13 +17,14 @@
  */
 
 import classNames from 'classnames';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { FlattenField } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { FlattenField } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
@@ -73,7 +74,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           ),
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => {
+          Cell: function ParseDataTableCell(row) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;
             }
@@ -86,7 +87,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
       })}
       SubComponent={rowInfo => {
         const { input, error } = rowInfo.original;
-        const inputStr = JSON.stringify(input, null, 2);
+        const inputStr = JSONBig.stringify(input, undefined, 2);
 
         if (!error && input && canFlatten) {
           return <pre className="parse-detail">{'Original row: ' + inputStr}</pre>;

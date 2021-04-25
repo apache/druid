@@ -41,6 +41,7 @@ import java.util.stream.StreamSupport;
 public class GranularityTest
 {
 
+  final Granularity NONE = Granularities.NONE;
   final Granularity SECOND = Granularities.SECOND;
   final Granularity MINUTE = Granularities.MINUTE;
   final Granularity HOUR = Granularities.HOUR;
@@ -50,6 +51,7 @@ public class GranularityTest
   final Granularity WEEK = Granularities.WEEK;
   final Granularity MONTH = Granularities.MONTH;
   final Granularity YEAR = Granularities.YEAR;
+  final Granularity ALL = Granularities.ALL;
 
   @Test
   public void testHiveFormat()
@@ -680,6 +682,7 @@ public class GranularityTest
   {
     DateTime dt = DateTimes.of("2011-02-03T04:05:06.100");
 
+    Assert.assertEquals(Intervals.ETERNITY, ALL.bucket(dt));
     Assert.assertEquals(Intervals.of("2011-01-01/2012-01-01"), YEAR.bucket(dt));
     Assert.assertEquals(Intervals.of("2011-02-01/2011-03-01"), MONTH.bucket(dt));
     Assert.assertEquals(Intervals.of("2011-01-31/2011-02-07"), WEEK.bucket(dt));
@@ -687,15 +690,17 @@ public class GranularityTest
     Assert.assertEquals(Intervals.of("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
     Assert.assertEquals(Intervals.of("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
     Assert.assertEquals(Intervals.of("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
+    Assert.assertEquals(Intervals.of("2011-02-03T04:05:06.100/2011-02-03T04:05:06.101"), NONE.bucket(dt));
 
     // Test with aligned DateTime
     Assert.assertEquals(Intervals.of("2011-01-01/2011-01-02"), DAY.bucket(DateTimes.of("2011-01-01")));
   }
 
   @Test
-  public void testTruncate()
+  public void testBucketStart()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
+    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
     Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
     Assert.assertEquals(DateTimes.of("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
     Assert.assertEquals(DateTimes.of("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
@@ -703,6 +708,52 @@ public class GranularityTest
     Assert.assertEquals(DateTimes.of("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
     Assert.assertEquals(DateTimes.of("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
     Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.898"), NONE.bucketStart(date));
+  }
+
+  @Test
+  public void testBucketStartOnMillis()
+  {
+    DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
+    Assert.assertEquals(DateTimes.MIN.getMillis(), ALL.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000").getMillis(), YEAR.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-01T00:00:00.000").getMillis(), MONTH.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-14T00:00:00.000").getMillis(), WEEK.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T00:00:00.000").getMillis(), DAY.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:00:00.000").getMillis(), HOUR.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:00.000").getMillis(), MINUTE.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.000").getMillis(), SECOND.bucketStart(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.898").getMillis(), NONE.bucketStart(date.getMillis()));
+  }
+
+  @Test
+  public void testIncrement()
+  {
+    DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
+    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
+    Assert.assertEquals(DateTimes.of("2012-03-15T22:42:23.898"), YEAR.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-04-15T22:42:23.898"), MONTH.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-22T22:42:23.898"), WEEK.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-16T22:42:23.898"), DAY.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-15T23:42:23.898"), HOUR.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:43:23.898"), MINUTE.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:24.898"), SECOND.increment(date));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.899"), NONE.increment(date));
+  }
+
+  @Test
+  public void testIncrementOnMillis()
+  {
+    DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
+    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
+    Assert.assertEquals(DateTimes.of("2012-03-15T22:42:23.898").getMillis(), YEAR.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-04-15T22:42:23.898").getMillis(), MONTH.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-22T22:42:23.898").getMillis(), WEEK.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-16T22:42:23.898").getMillis(), DAY.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T23:42:23.898").getMillis(), HOUR.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:43:23.898").getMillis(), MINUTE.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:24.898").getMillis(), SECOND.increment(date.getMillis()));
+    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.899").getMillis(), NONE.increment(date.getMillis()));
   }
 
   @Test
@@ -807,6 +858,26 @@ public class GranularityTest
                      .map(interval -> granSaoPauloDay.bucketStart(interval.getStart()))
                      .collect(Collectors.toList())
     );
+  }
+
+  @Test
+  public void testIsFinerComparator()
+  {
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, SECOND) < 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(SECOND, NONE) > 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, MINUTE) < 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(MINUTE, NONE) > 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, MONTH) < 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.YEAR, ALL) < 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.ALL, YEAR) > 0);
+    // Distinct references are needed to avoid intelli-j complain about compare being called on itself
+    // thus the variables
+    Granularity day = DAY;
+    Granularity none = NONE;
+    Granularity all = ALL;
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, day) == 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, none) == 0);
+    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(ALL, all) == 0);
   }
 
   private static class PathDate

@@ -40,6 +40,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
@@ -74,7 +75,6 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
@@ -94,6 +94,10 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
+import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierFactory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -105,9 +109,6 @@ import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
-import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
@@ -156,6 +157,7 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
+  private boolean isZkEnabled = true;
 
   /**
    * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
@@ -166,12 +168,18 @@ public class CliPeon extends GuiceRunnable
 
   private static final Logger log = new Logger(CliPeon.class);
 
-  @Inject
   private Properties properties;
 
   public CliPeon()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -235,7 +243,10 @@ public class CliPeon extends GuiceRunnable
               binder.bind(SegmentManager.class).in(LazySingleton.class);
               binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
               Jerseys.addResource(binder, HistoricalResource.class);
-              LifecycleModule.register(binder, ZkCoordinator.class);
+
+              if (isZkEnabled) {
+                LifecycleModule.register(binder, ZkCoordinator.class);
+              }
             }
           }
 

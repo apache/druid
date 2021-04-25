@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -36,7 +37,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
@@ -66,6 +66,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,6 +77,7 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -101,6 +103,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -167,7 +170,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier = createMock(KinesisRecordSupplier.class);
 
     tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
+        null,
         null,
         50000,
         null,
@@ -301,6 +306,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         1000,
         null,
         null,
+        null,
         false
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
@@ -339,6 +345,72 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // background fetch should not be enabled for supervisor supplier
     supplier.start();
     Assert.assertFalse(supplier.isBackgroundFetchRunning());
+  }
+
+  @Test
+  public void testKinesisIOConfig()
+  {
+    Exception e = null;
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              null,
+              false
+      );
+      AutoScalerConfig autoScalerConfig = kinesisSupervisorIOConfig.getAutoscalerConfig();
+      Assert.assertNull(autoScalerConfig);
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNull(e);
+
+    try {
+      KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+              STREAM,
+              INPUT_FORMAT,
+              "awsEndpoint",
+              null,
+              1,
+              1,
+              new Period("PT30M"),
+              new Period("P1D"),
+              new Period("PT30S"),
+              false,
+              new Period("PT30M"),
+              null,
+              null,
+              null,
+              100,
+              1000,
+              null,
+              null,
+              OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+              false
+      );
+    }
+    catch (Exception ex) {
+      e = ex;
+    }
+    Assert.assertNotNull(e);
+    Assert.assertTrue(e instanceof UnsupportedOperationException);
   }
 
   @Test
@@ -3689,7 +3761,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KinesisSupervisorTuningConfig modifiedTuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
+        null,
         null,
         50000,
         null,
@@ -4716,6 +4790,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -4741,7 +4816,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     };
 
     final KinesisSupervisorTuningConfig tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
+        null,
         null,
         50000,
         null,
@@ -4856,6 +4933,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         fetchDelayMillis,
         null,
         null,
+        null,
         false
     );
 
@@ -4941,6 +5019,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false
@@ -5030,6 +5109,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         recordsPerFetch,
         fetchDelayMillis,
+        null,
         null,
         null,
         false
@@ -5265,7 +5345,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<String, String> setupRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier()
     {
       return supervisorRecordSupplier;
     }

@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 @ManageLifecycle
 public class SegmentLoadDropHandler implements DataSegmentChangeHandler
@@ -85,6 +86,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
+  private final ServerTypeConfig serverTypeConfig;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
   private volatile boolean started = false;
@@ -139,8 +141,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-
     this.exec = exec;
+    this.serverTypeConfig = serverTypeConfig;
+
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
@@ -157,6 +160,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       try {
         if (!config.getLocations().isEmpty()) {
           loadLocalCache();
+        }
+
+        if (shouldAnnounce()) {
           serverAnnouncer.announce();
         }
       }
@@ -179,7 +185,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       log.info("Stopping...");
       try {
-        if (!config.getLocations().isEmpty()) {
+        if (shouldAnnounce()) {
           serverAnnouncer.unannounce();
         }
       }
@@ -258,11 +264,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    *
    * @throws SegmentLoadingException if it fails to load the given segment
    */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy) throws SegmentLoadingException
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
+      throws SegmentLoadingException
   {
     final boolean loaded;
     try {
-      loaded = segmentManager.loadSegment(segment, lazy);
+      loaded = segmentManager.loadSegment(segment,
+              lazy,
+          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+      );
     }
     catch (Exception e) {
       removeSegment(segment, callback, false);
@@ -288,7 +298,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     Status result = null;
     try {
@@ -329,7 +339,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -407,14 +419,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
   }
 
-  private void removeSegment(
+  @VisibleForTesting
+  void removeSegment(
       final DataSegment segment,
-      final DataSegmentChangeCallback callback,
+      @Nullable final DataSegmentChangeCallback callback,
       final boolean scheduleDrop
   )
   {
@@ -468,7 +481,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -507,7 +522,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
   {
     synchronized (requestStatusesLock) {
-      if (requestStatuses.getIfPresent(changeRequest) == null) {
+      AtomicReference<Status> status = requestStatuses.getIfPresent(changeRequest);
+
+      // If last load/drop request status is failed, here can try that again
+      if (status == null || status.get().getState() == Status.STATE.FAILED) {
         changeRequest.go(
             new DataSegmentChangeHandler()
             {
@@ -564,6 +582,21 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     for (CustomSettableFuture future : waitingFuturesCopy) {
       future.resolve();
     }
+  }
+
+  /**
+   * Returns whether or not we should announce ourselves as a data server using {@link DataSegmentServerAnnouncer}.
+   *
+   * Returns true if _either_:
+   *
+   * (1) Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
+   * to detect that we exist.
+   * (2) We have non-empty storage locations in {@link #config}. This is necessary for Coordinators to be able to
+   * assign segments to us.
+   */
+  private boolean shouldAnnounce()
+  {
+    return serverTypeConfig.getServerType().isSegmentServer() || !config.getLocations().isEmpty();
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable

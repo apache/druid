@@ -19,7 +19,7 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { StatusDialog } from './status-dialog';
+import { anywhereMatcher, StatusDialog } from './status-dialog';
 
 describe('status dialog', () => {
   it('matches snapshot', () => {
@@ -35,10 +35,10 @@ describe('status dialog', () => {
       'io.imply.druid.UtilityBeltModule',
     ];
 
-    expect(StatusDialog.anywhereMatcher({ id: '0', value: 'common' }, data)).toEqual(true);
-    expect(StatusDialog.anywhereMatcher({ id: '1', value: 'common' }, data)).toEqual(true);
-    expect(StatusDialog.anywhereMatcher({ id: '0', value: 'org' }, data)).toEqual(true);
-    expect(StatusDialog.anywhereMatcher({ id: '1', value: 'org' }, data)).toEqual(true);
-    expect(StatusDialog.anywhereMatcher({ id: '2', value: 'common' }, data)).toEqual(false);
+    expect(anywhereMatcher({ id: '0', value: 'common' }, data)).toEqual(true);
+    expect(anywhereMatcher({ id: '1', value: 'common' }, data)).toEqual(true);
+    expect(anywhereMatcher({ id: '0', value: 'org' }, data)).toEqual(true);
+    expect(anywhereMatcher({ id: '1', value: 'org' }, data)).toEqual(true);
+    expect(anywhereMatcher({ id: '2', value: 'common' }, data)).toEqual(false);
   });
 });

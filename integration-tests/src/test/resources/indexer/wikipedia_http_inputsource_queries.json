@@ -1,0 +1,98 @@
+[
+    {
+        "description": "timeseries, 1 agg, all",
+        "query":{
+            "queryType" : "timeBoundary",
+            "dataSource": "%%DATASOURCE%%"
+        },
+        "expectedResults":[
+            {
+                "timestamp" : "2016-06-27T00:00:11.000Z",
+                "result" : {
+                    "minTime" : "2016-06-27T00:00:11.000Z",
+                    "maxTime" : "2016-06-27T21:31:02.000Z"
+                }
+            }
+        ]
+    },
+    {
+        "description": "timeseries, datasketch aggs, all",
+        "query":{
+            "queryType" : "timeseries",
+            "dataSource": "%%DATASOURCE%%",
+            "granularity":"day",
+            "intervals":[
+                "2016-06-27/P1D"
+            ],
+            "filter":null,
+            "aggregations":[
+                {
+                    "type": "HLLSketchMerge",
+                    "name": "approxCountHLL",
+                    "fieldName": "HLLSketchBuild",
+                    "lgK": 12,
+                    "tgtHllType": "HLL_4",
+                    "round": true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"thetaSketch",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesSketch",
+                    "fieldName":"quantilesDoublesSketch",
+                    "k":128
+                }
+            ]
+        },
+        "expectedResults":[
+            {
+                "timestamp" : "2016-06-27T00:00:00.000Z",
+                "result" : {
+                    "quantilesSketch":48866,
+                    "approxCountTheta":7862.0,
+                    "approxCountHLL":7961
+                }
+            }
+        ]
+    },
+    {
+        "description": "timeseries, stringFirst/stringLast aggs, all",
+        "query":{
+            "queryType" : "timeseries",
+            "dataSource": "%%DATASOURCE%%",
+            "granularity":"day",
+            "intervals":[
+                "2016-06-27/P1D"
+            ],
+            "filter":null,
+            "aggregations":[
+                {
+                    "type": "stringFirst",
+                    "name": "first_user",
+                    "fieldName": "user"
+                },
+                {
+                    "type":"stringLast",
+                    "name":"last_user",
+                    "fieldName":"user"
+                }
+            ]
+        },
+        "expectedResults":[
+            {
+                "timestamp" : "2016-06-27T00:00:00.000Z",
+                "result" : {
+                    "first_user":"Lsjbot",
+                    "last_user":"EmausBot"
+                }
+            }
+        ]
+    }
+]

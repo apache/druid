@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
@@ -66,7 +67,7 @@ public class GroupByRowProcessor
      * @param dimensionsToInclude list of dimensions to include, or null to include all dimensions. Used by processing
      *                            of subtotals. If specified, the results will not necessarily be fully grouped.
      */
-    Sequence<ResultRow> results(@Nullable List<String> dimensionsToInclude);
+    Sequence<ResultRow> results(@Nullable List<DimensionSpec> dimensionsToInclude);
   }
 
   private GroupByRowProcessor()
@@ -140,7 +141,7 @@ public class GroupByRowProcessor
     return new ResultSupplier()
     {
       @Override
-      public Sequence<ResultRow> results(@Nullable List<String> dimensionsToInclude)
+      public Sequence<ResultRow> results(@Nullable List<DimensionSpec> dimensionsToInclude)
       {
         return getRowsFromGrouper(query, grouper, dimensionsToInclude);
       }
@@ -156,7 +157,7 @@ public class GroupByRowProcessor
   private static Sequence<ResultRow> getRowsFromGrouper(
       final GroupByQuery query,
       final Grouper<RowBasedKey> grouper,
-      @Nullable List<String> dimensionsToInclude
+      @Nullable List<DimensionSpec> dimensionsToInclude
   )
   {
     return new BaseSequence<>(

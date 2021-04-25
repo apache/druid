@@ -36,6 +36,7 @@ exports.SQL_KEYWORDS = [
   'ASC',
   'DESC',
   'LIMIT',
+  'OFFSET',
   'UNION ALL',
   'JOIN',
   'LEFT',
@@ -44,6 +45,7 @@ exports.SQL_KEYWORDS = [
   'RIGHT',
   'OUTER',
   'FULL',
+  'CROSS',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
@@ -57,6 +59,8 @@ exports.SQL_EXPRESSION_PARTS = [
   'AND',
   'NOT',
   'IN',
+  'ANY',
+  'SOME',
   'IS',
   'TO',
   'BETWEEN',

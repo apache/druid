@@ -21,11 +21,14 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IndexSpec;
@@ -35,6 +38,8 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
+import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -53,6 +58,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.mock;
 
 @RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
@@ -132,7 +140,14 @@ public class ParallelIndexSupervisorTaskTest
           false,
           "subTaskId",
           createInterval(id),
-          new BuildingHashBasedNumberedShardSpec(id, id, id + 1, null, new ObjectMapper())
+          new BuildingHashBasedNumberedShardSpec(
+              id,
+              id,
+              id + 1,
+              null,
+              HashPartitionFunction.MURMUR3_32_ABS,
+              new ObjectMapper()
+          )
       );
     }
 
@@ -175,13 +190,16 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null),
-          appendToExisting
+          appendToExisting,
+          null
       );
       final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
           null,
           null,
+          null,
           10,
           1000L,
+          null,
           null,
           null,
           null,
@@ -208,6 +226,8 @@ public class ParallelIndexSupervisorTaskTest
           null,
           false,
           null,
+          null,
+          null,
           null
       );
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
@@ -233,4 +253,64 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
   }
+
+  public static class StaticUtilsTest
+  {
+    @Test
+    public void testIsParallelModeFalse_nullTuningConfig()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, null));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_rangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(0).andReturn(1).andReturn(2);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_notRangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(PartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(1).andReturn(2).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_inputSourceNotSplittable()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(false).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+  }
+
 }

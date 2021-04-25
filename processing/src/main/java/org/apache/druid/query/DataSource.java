@@ -59,14 +59,10 @@ public interface DataSource
 
   /**
    * Returns true if queries on this dataSource are cacheable at both the result level and per-segment level.
-   * Currently, dataSources that modify the behavior of per-segment processing are not cacheable (like 'join').
-   * Nor are dataSources that do not actually reference segments (like 'inline'), since cache keys are always based
-   * on segment identifiers.
-   *
-   * Note: Ideally, queries on 'join' datasources _would_ be cacheable, but we cannot currently do this due to lacking
-   * the code necessary to compute cache keys properly.
+   * Currently, dataSources that do not actually reference segments (like 'inline'), are not cacheable since cache keys
+   * are always based on segment identifiers.
    */
-  boolean isCacheable();
+  boolean isCacheable(boolean isBroker);
 
   /**
    * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or

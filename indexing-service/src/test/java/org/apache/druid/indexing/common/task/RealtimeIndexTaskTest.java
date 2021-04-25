@@ -97,6 +97,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -104,8 +106,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -113,6 +113,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -139,7 +140,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
-public class RealtimeIndexTaskTest
+public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
   private static final ServiceEmitter EMITTER = new ServiceEmitter(
@@ -829,7 +830,9 @@ public class RealtimeIndexTaskTest
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
+        null,
         null,
         new Period("P1Y"),
         new Period("PT10M"),
@@ -885,7 +888,18 @@ public class RealtimeIndexTaskTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(
+        directory.getPath(),
+        null,
+        null,
+        50000,
+        null,
+        true,
+        null,
+        null,
+        null,
+        false
+    );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));

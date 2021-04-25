@@ -25,12 +25,25 @@ import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ServerModule;
+import org.apache.druid.jackson.JacksonModule;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class InputSourceModuleTest
@@ -58,5 +71,32 @@ public class InputSourceModuleTest
                                   .collect(Collectors.toList());
     Assert.assertNotNull(subtypes);
     Assert.assertEquals(SQL_NAMED_TYPE, Iterables.getOnlyElement(subtypes));
+  }
+
+  @Test
+  public void testHttpInputSourceDefaultConfig()
+  {
+    Properties props = new Properties();
+    Injector injector = makeInjectorWithProperties(props);
+    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
+    Assert.assertEquals(new HttpInputSourceConfig(null), instance);
+    Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, instance.getAllowedProtocols());
+  }
+
+  private Injector makeInjectorWithProperties(final Properties props)
+  {
+    return Guice.createInjector(
+        ImmutableList.of(
+            new DruidGuiceExtensions(),
+            new LifecycleModule(),
+            new ServerModule(),
+            binder -> {
+              binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+              binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+              binder.bind(Properties.class).toInstance(props);
+            },
+            new JacksonModule(),
+            new InputSourceModule()
+        ));
   }
 }

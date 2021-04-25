@@ -19,13 +19,19 @@
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
-import { AppToaster } from '../singletons/toaster';
+import { AppToaster } from '../singletons';
+
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -50,7 +56,7 @@ export function addFilterRaw(filters: Filter[], id: string, value: string): Filt
 }
 
 export function makeTextFilter(placeholder = ''): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function TextFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <InputGroup
@@ -67,7 +73,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
 }
 
 export function makeBooleanFilter(): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function BooleanFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <HTMLSelect
@@ -92,7 +98,8 @@ interface NeedleAndMode {
   mode: 'exact' | 'includes';
 }
 
-function getNeedleAndMode(input: string): NeedleAndMode {
+export function getNeedleAndMode(filter: Filter): NeedleAndMode {
+  const input = filter.value.toLowerCase();
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
@@ -108,7 +115,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
   const haystack = String(value).toLowerCase();
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
@@ -116,14 +123,15 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   return haystack.includes(needle);
 }
 
-export function sqlQueryCustomTableFilter(filter: Filter): string {
-  const columnName = JSON.stringify(filter.id);
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
+export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return `${columnName} = '${needle}'`;
+    return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
   } else {
-    return `LOWER(${columnName}) LIKE LOWER('%${needle}%')`;
+    return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
+      SqlLiteral.create(`%${needle}%`),
+    );
   }
 }
 
@@ -134,10 +142,14 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
+export function oneOf<T>(thing: T, ...options: T[]): boolean {
+  return options.includes(thing);
+}
+
 // ----------------------------
 
 export function countBy<T>(
-  array: T[],
+  array: readonly T[],
   fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -148,20 +160,21 @@ export function countBy<T>(
   return counts;
 }
 
-function identity(x: any): any {
+function identity<T>(x: T): T {
   return x;
 }
 
-export function lookupBy<T, Q>(
-  array: T[],
+export function lookupBy<T, Q = T>(
+  array: readonly T[],
   keyFn: (x: T, index: number) => string = String,
-  valueFn: (x: T, index: number) => Q = identity,
+  valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
+  if (!valueFn) valueFn = identity as any;
   const lookup: Record<string, Q> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
     const a = array[i];
-    lookup[keyFn(a, i)] = valueFn(a, i);
+    lookup[keyFn(a, i)] = valueFn!(a, i);
   }
   return lookup;
 }
@@ -213,7 +226,7 @@ export function parseList(list: string): string[] {
 
 // ----------------------------
 
-export function formatNumber(n: number): string {
+export function formatInteger(n: number): string {
   return numeral(n).format('0,0');
 }
 
@@ -223,6 +236,20 @@ export function formatBytes(n: number): string {
 
 export function formatBytesCompact(n: number): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatMegabytes(n: number): string {
+  return numeral(n / 1048576).format('0,0.0');
+}
+
+export function formatPercent(n: number): string {
+  return (n * 100).toFixed(2) + '%';
+}
+
+export function formatMillions(n: number): string {
+  const s = (n / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(n));
+  return s + ' M';
 }
 
 function pad2(str: string | number): string {
@@ -238,7 +265,7 @@ export function formatDuration(ms: number): string {
 
 export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
-  return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
+  return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
@@ -260,7 +287,7 @@ export function validJson(json: string): boolean {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
@@ -277,10 +304,10 @@ export function alphanumericCompare(a: string, b: string): number {
 }
 
 export function sortWithPrefixSuffix(
-  things: string[],
-  prefix: string[],
-  suffix: string[],
-  cmp: null | ((a: string, b: string) => number),
+  things: readonly string[],
+  prefix: readonly string[],
+  suffix: readonly string[],
+  cmp?: (a: string, b: string) => number,
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
@@ -291,7 +318,7 @@ export function sortWithPrefixSuffix(
 // ----------------------------
 
 export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType: string = '';
+  let blobType;
   switch (type) {
     case 'json':
       blobType = 'application/json';
@@ -321,4 +348,37 @@ export function delay(ms: number) {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function swapElements<T>(items: readonly T[], indexA: number, indexB: number): T[] {
+  const newItems = items.concat();
+  const t = newItems[indexA];
+  newItems[indexA] = newItems[indexB];
+  newItems[indexB] = t;
+  return newItems;
+}
+
+export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
+  const indexDiff = fromIndex - toIndex;
+  if (indexDiff > 0) {
+    // move left
+    return [
+      ...items.slice(0, toIndex),
+      items[fromIndex],
+      ...items.slice(toIndex, fromIndex),
+      ...items.slice(fromIndex + 1, items.length),
+    ];
+  } else if (indexDiff < 0) {
+    // move right
+    const targetIndex = toIndex + 1;
+    return [
+      ...items.slice(0, fromIndex),
+      ...items.slice(fromIndex + 1, targetIndex),
+      items[fromIndex],
+      ...items.slice(targetIndex, items.length),
+    ];
+  } else {
+    // do nothing
+    return items.slice();
+  }
 }

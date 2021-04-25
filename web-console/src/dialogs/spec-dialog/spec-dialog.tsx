@@ -17,6 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
 
@@ -33,7 +34,9 @@ export interface SpecDialogProps {
 
 export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps) {
   const { onClose, onSubmit, title, initSpec } = props;
-  const [spec, setSpec] = useState(() => (initSpec ? JSON.stringify(initSpec, null, 2) : ''));
+  const [spec, setSpec] = useState(() =>
+    initSpec ? JSONBig.stringify(initSpec, undefined, 2) : '',
+  );
 
   function postSpec(): void {
     if (!validJson(spec)) return;

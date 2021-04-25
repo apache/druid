@@ -19,11 +19,13 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
-public interface ColumnInspector
+public interface ColumnInspector extends Expr.InputBindingInspector
 {
   /**
    * Returns capabilities of a particular column.
@@ -34,4 +36,15 @@ public interface ColumnInspector
    */
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
+
+  @Nullable
+  @Override
+  default ExprType getType(String name)
+  {
+    ColumnCapabilities capabilities = getColumnCapabilities(name);
+    if (capabilities != null) {
+      return ExprType.fromValueType(capabilities.getType());
+    }
+    return null;
+  }
 }

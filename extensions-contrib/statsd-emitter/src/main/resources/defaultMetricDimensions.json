@@ -16,6 +16,7 @@
   "query/success/count" : { "dimensions" : [], "type" : "count" },
   "query/failed/count" : { "dimensions" : [], "type" : "count" },
   "query/interrupted/count" : { "dimensions" : [], "type" : "count" },
+  "query/timeout/count" : { "dimensions" : [], "type" : "count" },
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "count" },
@@ -58,9 +59,15 @@
 
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+
+  "taskSlot/total/count" : { "dimensions" : [], "type" : "gauge" },
+  "taskSlot/idle/count" : { "dimensions" : [], "type" : "gauge" },
+  "taskSlot/busy/count" : { "dimensions" : [], "type" : "gauge" },
+  "taskSlot/lazy/count" : { "dimensions" : [], "type" : "gauge" },
+  "taskSlot/blacklisted/count" : { "dimensions" : [], "type" : "gauge" },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
@@ -103,7 +110,7 @@
   "jvm/gc/count" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
   "jvm/gc/cpu" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
 
-  "ingest/events/buffered" : { "dimensions" : ["serviceName, bufferCapacity"], "type" : "gauge"},
+  "ingest/events/buffered" : { "dimensions" : ["serviceName", "bufferCapacity"], "type" : "gauge"},
 
   "sys/swap/free" : { "dimensions" : [], "type" : "gauge"},
   "sys/swap/max" : { "dimensions" : [], "type" : "gauge"},

@@ -333,6 +333,9 @@ public class DruidRelsTest
     final T mockRel = EasyMock.mock(clazz);
     EasyMock.expect(mockRel.getPartialDruidQuery()).andReturn(mockPartialQuery).anyTimes();
     EasyMock.expect(mockRel.getTable()).andReturn(mockRelOptTable).anyTimes();
+    if (clazz == DruidQueryRel.class) {
+      EasyMock.expect(((DruidQueryRel) mockRel).getDruidTable()).andReturn(druidTable).anyTimes();
+    }
     additionalExpectationsFunction.accept(mockRel);
 
     EasyMock.replay(mockRel, mockPartialQuery, mockRelOptTable);

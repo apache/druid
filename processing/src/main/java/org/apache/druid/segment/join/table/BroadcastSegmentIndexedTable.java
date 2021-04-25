@@ -20,14 +20,13 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
@@ -52,7 +52,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -60,6 +59,7 @@ import java.util.stream.Collectors;
 public class BroadcastSegmentIndexedTable implements IndexedTable
 {
   private static final Logger LOG = new Logger(BroadcastSegmentIndexedTable.class);
+  private static final byte CACHE_PREFIX = 0x01;
 
   private final QueryableIndexSegment segment;
   private final QueryableIndexStorageAdapter adapter;
@@ -67,9 +67,13 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   private final Set<String> keyColumns;
   private final RowSignature rowSignature;
   private final String version;
-  private final List<Map<Object, IntList>> keyColumnsIndex;
+  private final List<Index> keyColumnsIndexes;
 
-  public BroadcastSegmentIndexedTable(final QueryableIndexSegment theSegment, final Set<String> keyColumns, final String version)
+  public BroadcastSegmentIndexedTable(
+      final QueryableIndexSegment theSegment,
+      final Set<String> keyColumns,
+      final String version
+  )
   {
     this.keyColumns = keyColumns;
     this.version = version;
@@ -92,19 +96,22 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     }
     this.rowSignature = sigBuilder.build();
 
-    // initialize keycolumn index maps
-    this.keyColumnsIndex = new ArrayList<>(rowSignature.size());
+    // initialize keycolumn index builders
+    final ArrayList<RowBasedIndexBuilder> indexBuilders = new ArrayList<>(rowSignature.size());
     final List<String> keyColumnNames = new ArrayList<>(keyColumns.size());
     for (int i = 0; i < rowSignature.size(); i++) {
-      final Map<Object, IntList> m;
+      final RowBasedIndexBuilder m;
       final String columnName = rowSignature.getColumnName(i);
       if (keyColumns.contains(columnName)) {
-        m = new HashMap<>();
+        final ValueType keyType =
+            rowSignature.getColumnType(i).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
+
+        m = new RowBasedIndexBuilder(keyType);
         keyColumnNames.add(columnName);
       } else {
         m = null;
       }
-      keyColumnsIndex.add(m);
+      indexBuilders.add(m);
     }
 
     // sort of like the dump segment tool, but build key column indexes when reading the segment
@@ -143,12 +150,8 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
             for (int keyColumnSelectorIndex = 0; keyColumnSelectorIndex < selectors.size(); keyColumnSelectorIndex++) {
               final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
               final int columnPosition = rowSignature.indexOf(keyColumnName);
-              final Map<Object, IntList> keyColumnValueIndex = keyColumnsIndex.get(columnPosition);
-              final Object key = selectors.get(keyColumnSelectorIndex).getObject();
-              if (key != null) {
-                final IntList array = keyColumnValueIndex.computeIfAbsent(key, k -> new IntArrayList());
-                array.add(rowNumber);
-              }
+              final RowBasedIndexBuilder keyColumnIndexBuilder = indexBuilders.get(columnPosition);
+              keyColumnIndexBuilder.add(selectors.get(keyColumnSelectorIndex).getObject());
             }
 
             if (rowNumber % 100_000 == 0) {
@@ -166,6 +169,11 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     );
 
     Integer totalRows = sequence.accumulate(0, (accumulated, in) -> accumulated += in);
+
+    this.keyColumnsIndexes = indexBuilders.stream()
+                                          .map(builder -> builder != null ? builder.build() : null)
+                                          .collect(Collectors.toList());
+
     LOG.info("Created BroadcastSegmentIndexedTable with %s rows.", totalRows);
   }
 
@@ -196,7 +204,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   @Override
   public Index columnIndex(int column)
   {
-    return RowBasedIndexedTable.getKeyColumnIndex(column, keyColumnsIndex, rowSignature);
+    return RowBasedIndexedTable.getKeyColumnIndex(column, keyColumnsIndexes);
   }
 
   @Override
@@ -239,6 +247,26 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         offset,
         new HashMap<>()
     );
+  }
+
+  @Override
+  public byte[] computeCacheKey()
+  {
+    SegmentId segmentId = segment.getId();
+    CacheKeyBuilder keyBuilder = new CacheKeyBuilder(CACHE_PREFIX);
+    return keyBuilder
+        .appendLong(segmentId.getInterval().getStartMillis())
+        .appendLong(segmentId.getInterval().getEndMillis())
+        .appendString(segmentId.getVersion())
+        .appendString(segmentId.getDataSource())
+        .appendInt(segmentId.getPartitionNum())
+        .build();
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return true;
   }
 
   @Override

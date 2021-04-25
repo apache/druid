@@ -34,10 +34,11 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   private final String typeName;
   @Nullable
   private final ComplexMetricSerde serde;
+  @Nullable
   private final Serializer serializer;
   private static final Logger log = new Logger(ComplexColumnPartSerde.class);
 
-  private ComplexColumnPartSerde(String typeName, Serializer serializer)
+  private ComplexColumnPartSerde(String typeName, @Nullable Serializer serializer)
   {
     this.typeName = typeName;
     this.serde = ComplexMetrics.getSerdeForType(typeName);
@@ -84,7 +85,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         // longer term this needs to be captured by making the serde provide this information, and then this should
         // no longer be set to true but rather the actual values
         builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
-        serde.deserializeColumn(buffer, builder);
+        serde.deserializeColumn(buffer, builder, columnConfig);
       }
     };
   }

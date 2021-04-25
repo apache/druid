@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -36,6 +37,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,7 +77,7 @@ public class PollingLookup extends LookupExtractor
     refOfCacheKeeper.set(new CacheRefKeeper(this.cacheFactory.makeOf(dataFetcher.fetchAll())));
     if (pollPeriodMs > 0) {
       scheduledExecutorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadScheduledExecutor(
-          Execs.makeThreadFactory("PollingLookup-" + id, Thread.MIN_PRIORITY)
+          Execs.makeThreadFactory("PollingLookup-" + StringUtils.encodeForFormat(id), Thread.MIN_PRIORITY)
       ));
       pollFuture = scheduledExecutorService.scheduleWithFixedDelay(
           pollAndSwap(),
@@ -173,9 +175,21 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
+  public boolean canGetKeySet()
+  {
+    return false;
+  }
+
+  @Override
   public Iterable<Map.Entry<String, String>> iterable()
   {
     throw new UnsupportedOperationException("Cannot iterate");
+  }
+
+  @Override
+  public Set<String> keySet()
+  {
+    throw new UnsupportedOperationException("Cannot get key set");
   }
 
   @Override

@@ -105,7 +105,7 @@ public class SingleDimensionShardSpecTest
             ImmutableList.of("billy"),
             Maps.transformValues(pair.rhs, input -> input)
         );
-        Assert.assertEquals(StringUtils.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow.getTimestampFromEpoch(), inputRow));
+        Assert.assertEquals(StringUtils.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow));
       }
     }
   }
@@ -145,7 +145,7 @@ public class SingleDimensionShardSpecTest
   {
     final SingleDimensionShardSpec shardSpec = makeSpec("start", "end");
     Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
     Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
     Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }

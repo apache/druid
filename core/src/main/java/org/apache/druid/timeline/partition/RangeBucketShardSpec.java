@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -90,8 +91,7 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
     return new BuildingSingleDimensionShardSpec(bucketId, dimension, start, end, partitionId);
   }
 
-  @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
+  public boolean isInChunk(InputRow inputRow)
   {
     return SingleDimensionShardSpec.isInChunk(dimension, start, end, inputRow);
   }
@@ -99,7 +99,14 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   @Override
   public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
-    return SingleDimensionShardSpec.createLookup(shardSpecs);
+    return (long timestamp, InputRow row) -> {
+      for (ShardSpec spec : shardSpecs) {
+        if (((RangeBucketShardSpec) spec).isInChunk(row)) {
+          return spec;
+        }
+      }
+      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
+    };
   }
 
   @Override

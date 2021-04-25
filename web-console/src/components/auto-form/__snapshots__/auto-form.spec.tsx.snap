@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`auto-form snapshot matches snapshot 1`] = `
+exports[`AutoForm matches snapshot 1`] = `
 <div
   className="auto-form"
 >
@@ -8,23 +8,13 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     key="testOne"
     label="Test one"
   >
-    <Blueprint3.NumericInput
-      allowNumericCharactersOnly={true}
-      buttonPosition="right"
-      clampValueOnBlur={false}
+    <Memo(NumericInputWithDefault)
       disabled={false}
       fill={true}
-      large={false}
-      majorStepSize={10}
       min={0}
-      minorStepSize={0.1}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
-      selectAllOnFocus={false}
-      selectAllOnIncrement={false}
-      stepSize={1}
-      value=""
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
@@ -35,6 +25,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       allowNumericCharactersOnly={true}
       buttonPosition="right"
       clampValueOnBlur={false}
+      defaultValue=""
       disabled={false}
       fill={true}
       large={false}
@@ -46,14 +37,13 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       selectAllOnFocus={false}
       selectAllOnIncrement={false}
       stepSize={1000}
-      value=""
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
     key="testThree"
     label="Test three"
   >
-    <SuggestibleInput
+    <Memo(SuggestibleInput)
       disabled={false}
       onBlur={[Function]}
       onValueChange={[Function]}
@@ -132,5 +122,16 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       placeholder=""
     />
   </Memo(FormGroupWithInfo)>
+  <Blueprint3.FormGroup
+    key="more-or-less"
+  >
+    <Blueprint3.Button
+      fill={true}
+      minimal={true}
+      onClick={[Function]}
+      rightIcon="chevron-down"
+      text="Show more"
+    />
+  </Blueprint3.FormGroup>
 </div>
 `;

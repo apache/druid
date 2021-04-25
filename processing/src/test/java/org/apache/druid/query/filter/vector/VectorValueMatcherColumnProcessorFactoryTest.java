@@ -21,6 +21,8 @@ package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -49,7 +51,10 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
   public void testFloat()
   {
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeFloatProcessor(vectorValueSelector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeFloatProcessor(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+            vectorValueSelector
+        );
 
     Assert.assertTrue(matcherFactory instanceof FloatVectorValueMatcher);
 
@@ -74,7 +79,10 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
   public void testDouble()
   {
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeDoubleProcessor(vectorValueSelector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeDoubleProcessor(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE),
+            vectorValueSelector
+        );
 
     Assert.assertTrue(matcherFactory instanceof DoubleVectorValueMatcher);
 
@@ -100,7 +108,10 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
   public void testLong()
   {
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(vectorValueSelector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG),
+            vectorValueSelector
+        );
 
     Assert.assertTrue(matcherFactory instanceof LongVectorValueMatcher);
 
@@ -137,7 +148,15 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.replay(selector, lookup);
 
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(selector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(
+            new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                        .setHasMultipleValues(false)
+                                        .setHasBitmapIndexes(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryEncoded(true),
+            selector
+        );
 
     Assert.assertTrue(matcherFactory instanceof SingleValueStringVectorValueMatcher);
 
@@ -167,7 +186,15 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.replay(selector);
 
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(selector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(
+            new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                        .setHasMultipleValues(false)
+                                        .setHasBitmapIndexes(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryEncoded(true),
+            selector
+        );
 
     Assert.assertTrue(matcherFactory instanceof SingleValueStringVectorValueMatcher);
 
@@ -199,7 +226,15 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.replay(selector);
 
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(selector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(
+            new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                        .setHasMultipleValues(false)
+                                        .setHasBitmapIndexes(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryEncoded(true),
+            selector
+        );
 
     Assert.assertTrue(matcherFactory instanceof SingleValueStringVectorValueMatcher);
 
@@ -234,7 +269,15 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.replay(selector, lookup);
 
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(selector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(
+            new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                        .setHasMultipleValues(false)
+                                        .setHasBitmapIndexes(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryEncoded(true),
+            selector
+        );
 
     Assert.assertTrue(matcherFactory instanceof SingleValueStringVectorValueMatcher);
 
@@ -259,7 +302,15 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.expect(lookup.lookupId(null)).andReturn(0).anyTimes();
     EasyMock.replay(selector, lookup);
     VectorValueMatcherFactory matcherFactory =
-        VectorValueMatcherColumnProcessorFactory.instance().makeMultiValueDimensionProcessor(selector);
+        VectorValueMatcherColumnProcessorFactory.instance().makeMultiValueDimensionProcessor(
+            new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                        .setHasMultipleValues(false)
+                                        .setHasBitmapIndexes(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryEncoded(true),
+            selector
+        );
 
     Assert.assertTrue(matcherFactory instanceof MultiValueStringVectorValueMatcher);
 

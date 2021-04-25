@@ -46,7 +46,7 @@ public class HumanReadableBytes
   public int getBytesInInt()
   {
     if (bytes > Integer.MAX_VALUE) {
-      throw new ISE("Number overflow");
+      throw new ISE("Number [%d] exceeds range of Integer.MAX_VALUE", bytes);
     }
 
     return (int) bytes;

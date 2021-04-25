@@ -56,12 +56,12 @@ exports[`Segment Timeline matches snapshot 1`] = `
               checked=""
               name="Blueprint3.RadioGroup-0"
               type="radio"
-              value="countData"
+              value="sizeData"
             />
             <span
               class="bp3-control-indicator"
             />
-            Segment count
+            Total size
           </label>
           <label
             class="bp3-control bp3-radio"
@@ -69,12 +69,12 @@ exports[`Segment Timeline matches snapshot 1`] = `
             <input
               name="Blueprint3.RadioGroup-0"
               type="radio"
-              value="sizeData"
+              value="countData"
             />
             <span
               class="bp3-control-indicator"
             />
-            Total size
+            Segment count
           </label>
         </div>
       </div>
@@ -148,27 +148,27 @@ exports[`Segment Timeline matches snapshot 1`] = `
             <option
               value="1"
             >
-               1 months
+              1 months
             </option>
             <option
               value="3"
             >
-               3 months
+              3 months
             </option>
             <option
               value="6"
             >
-               6 months
+              6 months
             </option>
             <option
               value="9"
             >
-               9 months
+              9 months
             </option>
             <option
               value="12"
             >
-               1 year
+              1 year
             </option>
           </select>
           <span

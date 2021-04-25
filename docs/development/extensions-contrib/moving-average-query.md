@@ -34,7 +34,7 @@ Moving Average encapsulates the [groupBy query](../../querying/groupbyquery.md) 
 
 It runs the query in two main phases:
 
-1. Runs an inner [groupBy](../../querying/groupbyquery.html) or [timeseries](../../querying/timeseriesquery.html) query to compute Aggregators (i.e. daily count of events).
+1. Runs an inner [groupBy](../../querying/groupbyquery.md) or [timeseries](../../querying/timeseriesquery.md) query to compute Aggregators (i.e. daily count of events).
 2. Passes over aggregated results in Broker, in order to compute Averagers (i.e. moving 7 day average of the daily count).
 
 #### Main enhancements provided by this extension:
@@ -70,7 +70,7 @@ There are currently no configuration properties specific to Moving Average.
 |dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.md) (Notice that property is optional)|no|
 |limitSpec|See [LimitSpec](../../querying/limitspec.md)|no|
 |having|See [Having](../../querying/having.md)|no|
-|granularity|A period granularity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
+|granularity|A period granularity; See [Period Granularities](../../querying/granularities.md#period-granularities)|yes|
 |filter|See [Filters](../../querying/filters.md)|no|
 |aggregations|Aggregations forms the input to Averagers; See [Aggregations](../../querying/aggregations.md)|yes|
 |postAggregations|Supports only aggregations as input; See [Post Aggregations](../../querying/post-aggregations.md)|no|

@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
@@ -31,8 +31,10 @@ import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
-import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
+import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -80,6 +82,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         context
     );
 
+    Preconditions.checkArgument(
+        !ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty(),
+        "Missing intervals in granularitySpec"
+    );
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.inputRowIteratorBuilder = inputRowIteratorBuilder;
@@ -157,6 +163,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final SegmentAllocatorForBatch segmentAllocator = createSegmentAllocator(toolbox, taskClient);
     final SequenceNameFunction sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
 
+    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+        buildSegmentsMeters,
+        tuningConfig.isLogParseExceptions(),
+        tuningConfig.getMaxParseExceptions(),
+        tuningConfig.getMaxSavedParseExceptions()
+    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -164,28 +176,26 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox,
         dataSchema,
         tuningConfig,
-        new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
+        new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
+        buildSegmentsMeters,
+        parseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
-          buildSegmentsMeters,
-          null,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions(),
-          pushTimeout,
-          inputRowIteratorBuilder
-      );
-      final SegmentsAndCommitMetadata pushed = inputSourceProcessor.process(
+      final SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
           inputSource,
           inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
           tmpDir,
-          sequenceNameFunction
+          sequenceNameFunction,
+          inputRowIteratorBuilder,
+          buildSegmentsMeters,
+          parseExceptionHandler,
+          pushTimeout
       );
 
       return pushed.getSegments();

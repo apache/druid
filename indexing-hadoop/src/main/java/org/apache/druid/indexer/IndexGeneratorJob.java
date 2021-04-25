@@ -50,7 +50,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -302,12 +301,12 @@ public class IndexGeneratorJob implements Jobby
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
-    IncrementalIndex newIndex = new IncrementalIndex.Builder()
+    // Build the incremental-index according to the spec that was chosen by the user
+    IncrementalIndex newIndex = tuningConfig.getAppendableIndexSpec().builder()
         .setIndexSchema(indexSchema)
-        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows()) // only used by OffHeapIncrementalIndex
-        .setMaxRowCount(tuningConfig.getRowFlushBoundary())
-        .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
-        .buildOnheap();
+        .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
+        .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
+        .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);
@@ -610,7 +609,7 @@ public class IndexGeneratorJob implements Jobby
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .mergeQueryableIndex(indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null);
+          .mergeQueryableIndex(indexes, rollup, aggs, null, file, config.getIndexSpec(), progressIndicator, null, -1);
     }
 
     @Override
@@ -646,10 +645,7 @@ public class IndexGeneratorJob implements Jobby
           null
       );
       try {
-        File baseFlushFile = File.createTempFile("base", "flush");
-        baseFlushFile.delete();
-        baseFlushFile.mkdirs();
-
+        File baseFlushFile = FileUtils.createTempDir("base-flush");
         Set<File> toMerge = new TreeSet<>();
         int indexCount = 0;
         int lineCount = 0;

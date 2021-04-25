@@ -28,6 +28,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -97,6 +98,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -105,8 +110,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
@@ -128,14 +135,18 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
   )
   {
     super(
         targetPartitionSize,
         maxRowsPerSegment,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         maxTotalRows,
         null,
         numShards,
@@ -151,7 +162,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        maxColumnsToMerge,
+        awaitSegmentAvailabilityTimeoutMillis
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {
@@ -248,8 +261,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return new ParallelIndexTuningConfig(
         null,
         null,
+        getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isSkipBytesInMemoryOverheadCheck(),
         null,
         null,
         getSplitHintSpec(),
@@ -271,7 +286,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         getTotalNumMergeTasks(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxColumnsToMerge(),
+        getAwaitSegmentAvailabilityTimeoutMillis()
     );
   }
 

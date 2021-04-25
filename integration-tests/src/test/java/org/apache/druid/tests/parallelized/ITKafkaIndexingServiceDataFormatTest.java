@@ -22,7 +22,9 @@ package org.apache.druid.tests.parallelized;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest;
 import org.apache.druid.tests.indexer.AbstractStreamIndexingTest;
@@ -78,6 +80,9 @@ public class ITKafkaIndexingServiceDataFormatTest extends AbstractKafkaIndexingS
   @Inject
   private @Json ObjectMapper jsonMapper;
 
+  @Inject
+  private IntegrationTestingConfig config;
+
   @BeforeClass
   public void beforeClass() throws Exception
   {
@@ -88,7 +93,15 @@ public class ITKafkaIndexingServiceDataFormatTest extends AbstractKafkaIndexingS
   public void testIndexData(boolean transactionEnabled, String serializerPath, String parserType, String specPath)
       throws Exception
   {
-    doTestIndexDataStableState(transactionEnabled, serializerPath, parserType, specPath);
+    Map<String, String> testConfig = KafkaUtil.getAdditionalKafkaTestConfigFromProperties(config);
+    boolean txnEnable = Boolean.parseBoolean(
+        testConfig.getOrDefault(KafkaUtil.TEST_CONFIG_TRANSACTION_ENABLED, "false")
+    );
+    if (txnEnable != transactionEnabled) {
+      // do nothing
+      return;
+    }
+    doTestIndexDataStableState(txnEnable, serializerPath, parserType, specPath);
   }
 
   @Override

@@ -73,10 +73,10 @@ public class ExprListenerImpl extends ExprBaseListener
     int opCode = ((TerminalNode) ctx.getChild(0)).getSymbol().getType();
     switch (opCode) {
       case ExprParser.MINUS:
-        nodes.put(ctx, new UnaryMinusExpr((Expr) nodes.get(ctx.getChild(1))));
+        nodes.put(ctx, new UnaryMinusExpr(ctx.getChild(0).getText(), (Expr) nodes.get(ctx.getChild(1))));
         break;
       case ExprParser.NOT:
-        nodes.put(ctx, new UnaryNotExpr((Expr) nodes.get(ctx.getChild(1))));
+        nodes.put(ctx, new UnaryNotExpr(ctx.getChild(0).getText(), (Expr) nodes.get(ctx.getChild(1))));
         break;
       default:
         throw new RE("Unrecognized unary operator %s", ctx.getChild(0).getText());
@@ -482,7 +482,7 @@ public class ExprListenerImpl extends ExprBaseListener
    * {@link IdentifierExpr#identifier} be the same as {@link IdentifierExpr#binding} because they have
    * synthetic bindings set at evaluation time. This is done to aid in analysis needed for the automatic expression
    * translation which maps scalar expressions to multi-value inputs. See
-   * {@link Parser#applyUnappliedBindings(Expr, Expr.BindingDetails, List)}} for additional details.
+   * {@link Parser#applyUnappliedBindings(Expr, Expr.BindingAnalysis, List)}} for additional details.
    */
   private IdentifierExpr createIdentifierExpr(String binding)
   {

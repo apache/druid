@@ -47,7 +47,7 @@ All the configuration parameters for the StatsD emitter are under `druid.emitter
 |`druid.emitter.statsd.dogstatsd`|Flag to enable [DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) support. Causes dimensions to be included as tags, not as a part of the metric name. `convertRange` fields will be ignored.|no|false|
 |`druid.emitter.statsd.dogstatsdConstantTags`|If `druid.emitter.statsd.dogstatsd` is true, the tags in the JSON list of strings will be sent with every event.|no|[]|
 |`druid.emitter.statsd.dogstatsdServiceAsTag`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdServiceAsTag` are true, druid service (e.g. `druid/broker`, `druid/coordinator`, etc) is reported as a tag (e.g. `druid_service:druid/broker`) instead of being included in metric name (e.g. `druid.broker.query.time`) and `druid` is used as metric prefix (e.g. `druid.query.time`).|no|false|
-|`druid.emitter.statsd.dogstatsdEvents`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdEvents` are true, [Alert events](../../operations/alerts.html) are reported to DogStatsD.|no|false|
+|`druid.emitter.statsd.dogstatsdEvents`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdEvents` are true, [Alert events](../../operations/alerts.md) are reported to DogStatsD.|no|false|
 
 ### Druid to StatsD Event Converter
 

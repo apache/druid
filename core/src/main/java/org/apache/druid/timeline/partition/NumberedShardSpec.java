@@ -107,12 +107,6 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "NumberedShardSpec{" +

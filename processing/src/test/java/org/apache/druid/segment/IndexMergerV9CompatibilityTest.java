@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -133,7 +134,7 @@ public class IndexMergerV9CompatibilityTest
   @Before
   public void setUp() throws IOException
   {
-    toPersist = new IncrementalIndex.Builder()
+    toPersist = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(JodaUtils.MIN_INSTANT)
@@ -141,7 +142,7 @@ public class IndexMergerV9CompatibilityTest
                 .build()
         )
     .setMaxRowCount(1000000)
-    .buildOnheap();
+    .build();
 
     toPersist.getMetadata().put("key", "value");
     for (InputRow event : events) {

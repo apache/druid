@@ -117,7 +117,7 @@ public abstract class IndexTaskClient implements AutoCloseable
             numThreads,
             StringUtils.format(
                 "IndexTaskClient-%s-%%d",
-                callerId
+                StringUtils.encodeForFormat(callerId)
             )
         )
     );

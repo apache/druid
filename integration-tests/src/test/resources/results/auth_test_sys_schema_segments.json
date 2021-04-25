@@ -13,8 +13,9 @@
     "is_available": 1,
     "is_realtime": 0,
     "is_overshadowed": 0,
-    "shardSpec": "NoneShardSpec",
-    "dimensions": "[anonymous, area_code, city, continent_code, country_name, dma_code, geo, language, namespace, network, newpage, page, postal_code, region_lookup, robot, unpatrolled, user]",
-    "metrics": "[added, count, deleted, delta, delta_hist, unique_users, variation]"
+    "shard_spec": "{\"type\":\"none\"}",
+    "dimensions": "[\"anonymous\",\"area_code\",\"city\",\"continent_code\",\"country_name\",\"dma_code\",\"geo\",\"language\",\"namespace\",\"network\",\"newpage\",\"page\",\"postal_code\",\"region_lookup\",\"robot\",\"unpatrolled\",\"user\"]",
+    "metrics": "[\"added\",\"count\",\"deleted\",\"delta\",\"delta_hist\",\"unique_users\",\"variation\"]",
+    "last_compaction_state": null
   }
 ]

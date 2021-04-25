@@ -48,13 +48,16 @@ public class QueryCountStatsMonitor extends AbstractMonitor
     final long successfulQueryCount = statsProvider.getSuccessfulQueryCount();
     final long failedQueryCount = statsProvider.getFailedQueryCount();
     final long interruptedQueryCount = statsProvider.getInterruptedQueryCount();
+    final long timedOutQueryCount = statsProvider.getTimedOutQueryCount();
+
     Map<String, Long> diff = keyedDiff.to(
         "queryCountStats",
         ImmutableMap.of(
-            "query/count", successfulQueryCount + failedQueryCount + interruptedQueryCount,
+            "query/count", successfulQueryCount + failedQueryCount + interruptedQueryCount + timedOutQueryCount,
             "query/success/count", successfulQueryCount,
             "query/failed/count", failedQueryCount,
-            "query/interrupted/count", interruptedQueryCount
+            "query/interrupted/count", interruptedQueryCount,
+            "query/timeout/count", timedOutQueryCount
         )
     );
     if (diff != null) {

@@ -27,8 +27,10 @@ import com.google.common.collect.Iterables;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.AvroHadoopInputRowParserTest;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FileEntity;
@@ -128,16 +130,64 @@ public class AvroOCFReaderTest
     }
   }
 
+  @Test
+  public void testSample() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, mapper)
+    );
+    final InputEntityReader reader = createReader(mapper, null);
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
+      Assert.assertTrue(iterator.hasNext());
+      final InputRowListPlusRawValues row = iterator.next();
+      Assert.assertFalse(iterator.hasNext());
+      final Map<String, Object> rawColumns = row.getRawValues();
+      Assert.assertNotNull(rawColumns);
+      Assert.assertEquals(19, rawColumns.size());
+      final List<InputRow> inputRows = row.getInputRows();
+      Assert.assertNotNull(inputRows);
+      final InputRow inputRow = Iterables.getOnlyElement(inputRows);
+      assertInputRow(inputRow);
+    }
+  }
+
+  @Test
+  public void testSampleSerdeRaw() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, mapper)
+    );
+    final InputEntityReader reader = createReader(mapper, null);
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
+      Assert.assertTrue(iterator.hasNext());
+      final InputRowListPlusRawValues row = iterator.next();
+      Assert.assertFalse(iterator.hasNext());
+      final List<InputRow> inputRows = row.getInputRows();
+      Assert.assertNotNull(inputRows);
+      final InputRow inputRow = Iterables.getOnlyElement(inputRows);
+      assertInputRow(inputRow);
+      // Ensure the raw values can be serialised into JSON
+      mapper.writeValueAsString(row.getRawValues());
+    }
+  }
+
   private void assertRow(InputEntityReader reader) throws IOException
   {
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
-      Assert.assertEquals(DateTimes.of("2015-10-25T19:30:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventType")));
-      Assert.assertEquals(679865987569912369L, row.getMetric("someLong"));
+      assertInputRow(row);
       Assert.assertFalse(iterator.hasNext());
     }
+  }
+
+  private void assertInputRow(InputRow row)
+  {
+    Assert.assertEquals(DateTimes.of("2015-10-25T19:30:00.000Z"), row.getTimestamp());
+    Assert.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventType")));
+    Assert.assertEquals(679865987569912369L, row.getMetric("someLong"));
   }
 
   private InputEntityReader createReader(
@@ -150,10 +200,9 @@ public class AvroOCFReaderTest
     final TimestampSpec timestampSpec = new TimestampSpec("timestamp", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
         "eventType")));
-    final List<String> metricNames = ImmutableList.of("someLong");
 
     final AvroOCFInputFormat inputFormat = new AvroOCFInputFormat(mapper, null, readerSchema, null);
-    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, metricNames);
+    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(someAvroFile);
     return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }

@@ -186,9 +186,10 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     // Ingest all data.
     runTestTask(inputInterval, Granularities.DAY, false, Collections.emptyList());
 
-    final Interval interval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
     final Collection<DataSegment> allSegments = new HashSet<>(
-        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE)
+        inputInterval == null
+        ? getStorageCoordinator().retrieveAllUsedSegments("dataSource", Segments.ONLY_VISIBLE)
+        : getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", inputInterval, Segments.ONLY_VISIBLE)
     );
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
@@ -204,10 +205,18 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     // Verify that the segment has been replaced.
     final Collection<DataSegment> newSegments =
-        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+        inputInterval == null
+        ? getStorageCoordinator().retrieveAllUsedSegments("dataSource", Segments.ONLY_VISIBLE)
+        : getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", inputInterval, Segments.ONLY_VISIBLE);
+    Assert.assertFalse(newSegments.isEmpty());
     allSegments.addAll(newSegments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+
+    final Interval timelineInterval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
+    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(
+        timelineInterval,
+        Partitions.ONLY_COMPLETE
+    );
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
@@ -343,7 +352,11 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
+            null,
             1,
+            null,
+            null,
             null,
             null,
             null,
@@ -456,7 +469,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null,
               new SettableSplittableLocalInputSource(inputDir, "test_*", splittableInputSource),
               DEFAULT_INPUT_FORMAT,
-              appendToExisting
+              appendToExisting,
+              null
           ),
           tuningConfig
       );

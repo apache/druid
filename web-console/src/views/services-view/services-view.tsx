@@ -18,11 +18,9 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -35,19 +33,23 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { Api } from '../../singletons';
 import {
   addFilter,
+  Capabilities,
+  CapabilitiesMode,
+  deepGet,
   formatBytes,
   formatBytesCompact,
   LocalStorageKeys,
   lookupBy,
+  oneOf,
   queryDruidSql,
   QueryManager,
+  QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './services-view.scss';
 
@@ -65,7 +67,7 @@ const allColumns: string[] = [
 ];
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: allColumns,
+  'full': allColumns,
   'no-sql': allColumns,
   'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
 };
@@ -91,16 +93,13 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   capabilities: Capabilities;
 }
 
 export interface ServicesViewState {
-  servicesLoading: boolean;
-  services?: any[];
-  servicesError?: string;
+  servicesState: QueryState<ServiceResultRow[]>;
   serviceFilter: Filter[];
   groupServicesBy?: 'service_type' | 'tier';
 
@@ -114,6 +113,7 @@ interface ServiceQueryResultRow {
   service: string;
   service_type: string;
   tier: string;
+  is_leader: number;
   curr_size: number;
   host: string;
   max_size: number;
@@ -141,6 +141,7 @@ interface MiddleManagerQueryResultRow {
     ip: string;
     scheme: string;
     version: string;
+    category: string;
   };
 }
 
@@ -150,7 +151,7 @@ interface ServiceResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8
@@ -163,7 +164,7 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   //   peon => 1
 
   static SERVICE_SQL = `SELECT
-  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size", "is_leader",
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -181,7 +182,7 @@ FROM sys.servers
 ORDER BY "rank" DESC, "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
-    const allServiceResp = await axios.get('/druid/coordinator/v1/servers?simple');
+    const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
     const allServices = allServiceResp.data;
     return allServices.map((s: any) => {
       return {
@@ -200,7 +201,7 @@ ORDER BY "rank" DESC, "service" DESC`;
   constructor(props: ServicesViewProps, context: any) {
     super(props, context);
     this.state = {
-      servicesLoading: true,
+      servicesState: QueryState.INIT,
       serviceFilter: [],
 
       hiddenColumns: new LocalStorageBackedArray<string>(
@@ -220,7 +221,9 @@ ORDER BY "rank" DESC, "service" DESC`;
         }
 
         if (capabilities.hasCoordinatorAccess()) {
-          const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueueResponse = await Api.instance.get(
+            '/druid/coordinator/v1/loadqueue?simple',
+          );
           const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
@@ -234,7 +237,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         if (capabilities.hasOverlordAccess()) {
           let middleManagers: MiddleManagerQueryResultRow[];
           try {
-            const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
+            const middleManagerResponse = await Api.instance.get('/druid/indexer/v1/workers');
             middleManagers = middleManagerResponse.data;
           } catch (e) {
             if (
@@ -250,7 +253,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             }
           }
 
-          const middleManagersLookup = lookupBy(middleManagers, m => m.worker.host);
+          const middleManagersLookup: Record<string, MiddleManagerQueryResultRow> = lookupBy(
+            middleManagers,
+            m => m.worker.host,
+          );
 
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
@@ -263,11 +269,9 @@ ORDER BY "rank" DESC, "service" DESC`;
 
         return services;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: servicesState => {
         this.setState({
-          services: result,
-          servicesLoading: loading,
-          servicesError: error,
+          servicesState,
         });
       },
     });
@@ -284,14 +288,7 @@ ORDER BY "rank" DESC, "service" DESC`;
 
   renderServicesTable() {
     const { capabilities } = this.props;
-    const {
-      services,
-      servicesLoading,
-      servicesError,
-      serviceFilter,
-      groupServicesBy,
-      hiddenColumns,
-    } = this.state;
+    const { servicesState, serviceFilter, groupServicesBy, hiddenColumns } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -304,12 +301,13 @@ ORDER BY "rank" DESC, "service" DESC`;
       );
     };
 
+    const services = servicesState.data;
     return (
       <ReactTable
         data={services || []}
-        loading={servicesLoading}
+        loading={servicesState.loading}
         noDataText={
-          !servicesLoading && services && !services.length ? 'No historicals' : servicesError || ''
+          servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
         }
         filterable
         filtered={serviceFilter}
@@ -321,17 +319,17 @@ ORDER BY "rank" DESC, "service" DESC`;
         columns={[
           {
             Header: 'Service',
+            show: hiddenColumns.exists('Service'),
             accessor: 'service',
             width: 300,
             Aggregated: () => '',
-            show: hiddenColumns.exists('Service'),
           },
           {
             Header: 'Type',
+            show: hiddenColumns.exists('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -344,16 +342,15 @@ ORDER BY "rank" DESC, "service" DESC`;
                 </a>
               );
             },
-            show: hiddenColumns.exists('Type'),
           },
           {
             Header: 'Tier',
+            show: hiddenColumns.exists('Tier'),
             id: 'tier',
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
             },
-            Cell: row => {
-              const value = row.value;
+            Cell: ({ value }) => {
               return (
                 <a
                   onClick={() => {
@@ -364,16 +361,16 @@ ORDER BY "rank" DESC, "service" DESC`;
                 </a>
               );
             },
-            show: hiddenColumns.exists('Tier'),
           },
           {
             Header: 'Host',
+            show: hiddenColumns.exists('Host'),
             accessor: 'host',
             Aggregated: () => '',
-            show: hiddenColumns.exists('Host'),
           },
           {
             Header: 'Port',
+            show: hiddenColumns.exists('Port'),
             id: 'port',
             accessor: row => {
               const ports: string[] = [];
@@ -386,10 +383,10 @@ ORDER BY "rank" DESC, "service" DESC`;
               return ports.join(', ') || 'No port';
             },
             Aggregated: () => '',
-            show: hiddenColumns.exists('Port'),
           },
           {
             Header: 'Curr size',
+            show: hiddenColumns.exists('Curr size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
@@ -405,10 +402,10 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: hiddenColumns.exists('Curr size'),
           },
           {
             Header: 'Max size',
+            show: hiddenColumns.exists('Max size'),
             id: 'max_size',
             width: 100,
             filterable: false,
@@ -424,30 +421,31 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: hiddenColumns.exists('Max size'),
           },
           {
             Header: 'Usage',
+            show: hiddenColumns.exists('Usage'),
             id: 'usage',
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
-                return row.worker ? row.currCapacityUsed / row.worker.capacity : null;
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
+                return row.worker ? (row.currCapacityUsed || 0) / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
               }
             },
             Aggregated: row => {
               switch (row.row._pivotVal) {
-                case 'historical':
+                case 'historical': {
                   const originalHistoricals = row.subRows.map(r => r._original);
                   const totalCurr = sum(originalHistoricals, s => s.curr_size);
                   const totalMax = sum(originalHistoricals, s => s.max_size);
                   return fillIndicator(totalCurr / totalMax);
+                }
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
@@ -458,6 +456,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
+                }
 
                 default:
                   return '';
@@ -471,7 +470,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return fillIndicator(row.value);
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
@@ -479,20 +478,21 @@ ORDER BY "rank" DESC, "service" DESC`;
                   } else {
                     return '- / -';
                   }
+                }
 
                 default:
                   return '';
               }
             },
-            show: hiddenColumns.exists('Usage'),
           },
           {
             Header: 'Detail',
+            show: hiddenColumns.exists('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
+              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];
@@ -503,6 +503,8 @@ ORDER BY "rank" DESC, "service" DESC`;
                   details.push(`Blacklisted until: ${row.blacklistedUntil}`);
                 }
                 return details.join(' ');
+              } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
+                return (row.is_leader || 0) === 1 ? 'leader' : '';
               } else {
                 return (row.segmentsToLoad || 0) + (row.segmentsToDrop || 0);
               }
@@ -511,7 +513,7 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
-                case 'historical':
+                case 'historical': {
                   const {
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -524,9 +526,14 @@ ORDER BY "rank" DESC, "service" DESC`;
                     segmentsToDrop,
                     segmentsToDropSize,
                   );
+                }
 
                 case 'indexer':
                 case 'middle_manager':
+                  return row.value;
+
+                case 'coordinator':
+                case 'overlord':
                   return row.value;
 
                 default:
@@ -547,21 +554,22 @@ ORDER BY "rank" DESC, "service" DESC`;
                 segmentsToDropSize,
               );
             },
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
+            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: row => {
-              if (!row.value) return null;
-              const disabled = row.value.version === '';
-              const workerActions = this.getWorkerActions(row.value.host, disabled);
+            Cell: ({ value, aggregated }) => {
+              if (aggregated) return '';
+              if (!value) return null;
+              const disabled = value.version === '';
+              const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            Aggregated: () => '',
           },
         ]}
       />
@@ -595,8 +603,8 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerDisableWorkerHost)}/disable`,
             {},
           );
           return resp.data;
@@ -624,8 +632,8 @@ ORDER BY "rank" DESC, "service" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/worker/${Api.encodePath(middleManagerEnableWorkerHost)}/enable`,
             {},
           );
           return resp.data;

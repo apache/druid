@@ -89,7 +89,7 @@ it is a natural choice for storing timeseries data. Its flexible data model allo
 non-timeseries data, even in the same datasource.
 
 To achieve best-case compression and query performance in Druid for timeseries data, it is important to partition and
-sort by metric name, like timeseries databases often do. See [Partitioning and sorting](index.html#partitioning) for more details.
+sort by metric name, like timeseries databases often do. See [Partitioning and sorting](index.md#partitioning) for more details.
 
 Tips for modeling timeseries data in Druid:
 
@@ -98,12 +98,12 @@ for ingestion and aggregation.
 - Create a dimension that indicates the name of the series that a data point belongs to. This dimension is often called
 "metric" or "name". Do not get the dimension named "metric" confused with the concept of Druid metrics. Place this
 first in the list of dimensions in your "dimensionsSpec" for best performance (this helps because it improves locality;
-see [partitioning and sorting](index.html#partitioning) below for details).
+see [partitioning and sorting](index.md#partitioning) below for details).
 - Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
 database systems.
 - Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
 to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want to
-be able to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.html#approx).
+be able to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approx).
 - Consider enabling [rollup](#rollup), which will allow Druid to potentially combine multiple points into one
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
@@ -167,7 +167,7 @@ so they can be sorted and the quantile can be computed, Druid instead only needs
 can reduce data transfer needs to mere kilobytes.
 
 For details about the sketches available in Druid, see the
-[approximate aggregators](../querying/aggregations.html#approx) page.
+[approximate aggregators](../querying/aggregations.md#approx) page.
 
 If you prefer videos, take a look at [Not exactly!](https://www.youtube.com/watch?v=Hpd3f_MLdXo), a conference talk
 about sketches in Druid.
@@ -187,7 +187,7 @@ For details about how to configure numeric dimensions, see the [`dimensionsSpec`
 ### Secondary timestamps
 
 Druid schemas must always include a primary timestamp. The primary timestamp is used for
-[partitioning and sorting](index.html#partitioning) your data, so it should be the timestamp that you will most often filter on.
+[partitioning and sorting](index.md#partitioning) your data, so it should be the timestamp that you will most often filter on.
 Druid is able to rapidly identify and retrieve data corresponding to time ranges of the primary timestamp column.
 
 If your data has more than one timestamp, you can ingest the others as secondary timestamps. The best way to do this
@@ -195,7 +195,7 @@ is to ingest them as [long-typed dimensions](index.md#dimensionsspec) in millise
 If necessary, you can get them into this format using a [`transformSpec`](index.md#transformspec) and
 [expressions](../misc/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
 
-At query time, you can query secondary timestamps with [SQL time functions](../querying/sql.html#time-functions)
+At query time, you can query secondary timestamps with [SQL time functions](../querying/sql.md#time-functions)
 like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Druid queries, you can use
 [expressions](../misc/math-expr.md).
 

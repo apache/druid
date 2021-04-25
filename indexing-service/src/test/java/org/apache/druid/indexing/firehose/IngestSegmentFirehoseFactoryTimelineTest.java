@@ -48,10 +48,11 @@ import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -250,10 +251,10 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(new LongSumAggregatorFactory(METRICS[0], METRICS[0]))
         .build();
-    final IncrementalIndex index = new IncrementalIndex.Builder()
+    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(rows.length)
-        .buildOnheap();
+        .build();
 
     for (InputRow row : rows) {
       try {

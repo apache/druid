@@ -116,6 +116,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
     binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
     binder.bind(BadRequestExceptionMapper.class).in(Singleton.class);
+    binder.bind(ServiceUnavailableExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -238,6 +239,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       if (node.isBindOnHost()) {
         connector.setHost(node.getHost());
@@ -323,6 +325,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(
           server,
           new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),

@@ -35,9 +35,12 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
+import org.apache.druid.query.filter.SearchQueryDimFilter;
+import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
@@ -901,15 +904,17 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectException(
-        IAE.class,
-        "The first argument to the function[round] should be integer or double type but got the type: STRING"
-    );
+    if (!NullHandling.sqlCompatible()) {
+      expectException(
+          IAE.class,
+          "The first argument to the function[round] should be integer or double type but got the type: STRING"
+      );
+    }
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("round(\"s\")"),
-        "IAE Exception"
+        NullHandling.sqlCompatible() ? null : "IAE Exception"
     );
   }
 
@@ -1072,6 +1077,231 @@ public class ExpressionsTest extends ExpressionTestBase
     );
   }
 
+  @Test
+  public void testContains()
+  {
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("there")
+        ),
+        DruidExpression.fromExpression("contains_string(\"spacey\",'there')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("contains_string(\"spacey\",'There')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("icontains_string(\"spacey\",'There')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("what")
+        ),
+        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'what')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("there")
+        ),
+        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'there')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("icontains_string(concat('what is',\"spacey\"),'There')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        SqlStdOperatorTable.AND,
+        ImmutableList.of(
+            testHelper.makeCall(
+                ContainsOperatorConversion.caseSensitive().calciteOperator(),
+                testHelper.makeInputRef("spacey"),
+                testHelper.makeLiteral("there")
+            ),
+            testHelper.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                testHelper.makeLiteral("yes"),
+                testHelper.makeLiteral("yes")
+            )
+        ),
+        DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+        1L
+    );
+
+    testHelper.testExpression(
+        SqlStdOperatorTable.AND,
+        ImmutableList.of(
+            testHelper.makeCall(
+                ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+                testHelper.makeInputRef("spacey"),
+                testHelper.makeLiteral("There")
+            ),
+            testHelper.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                testHelper.makeLiteral("yes"),
+                testHelper.makeLiteral("yes")
+            )
+        ),
+        DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+        1L
+    );
+  }
+
+  @Test
+  public void testContainsAsFilter()
+  {
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("there")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("there", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("There", true), null),
+        false
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("There", false), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("what")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("what", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("there")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("there", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("What")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("What", false), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("", true), null),
+        true
+    );
+  }
 
   @Test
   public void testTimeFloor()
@@ -1247,7 +1477,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),1,'UTC')"
+            "timestamp_shift(\"t\",'P13M',1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
@@ -1293,7 +1523,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1,'UTC')"
+            "timestamp_shift(\"t\",'P13M',-1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
@@ -1751,6 +1981,102 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidUnaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"a\")"),
+        -11L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"x\")"),
+        -3L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidUnaryDoubleFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"a\")"),
+        4.9E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"x\")"),
+        1.0E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidBinaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a"),
+            testHelper.makeInputRef("b")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"a\",\"b\")"),
+        8L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeInputRef("y")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"x\",\"y\")"),
+        2L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"s\",\"s\")"),
         null
     );
   }

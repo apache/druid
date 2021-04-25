@@ -27,9 +27,15 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -94,9 +100,32 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   }
 
   @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory metricVectorFactory)
+  {
+    VectorObjectSelector selector = metricVectorFactory.makeObjectSelector(fieldName);
+    return new ApproximateHistogramFoldingVectorAggregator(selector, resolution, lowerLimit, upperLimit);
+  }
+
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return (capabilities != null) && (capabilities.getType() == ValueType.COMPLEX);
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit, finalizeAsBase64Binary);
+    return new ApproximateHistogramFoldingAggregatorFactory(
+        name,
+        name,
+        resolution,
+        numBuckets,
+        lowerLimit,
+        upperLimit,
+        finalizeAsBase64Binary
+    );
   }
 
   @Override

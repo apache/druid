@@ -127,7 +127,7 @@ public class DoubleMeanAggregationTest
         .setAggregatorSpecs(
             new DoubleMeanAggregatorFactory("meanOnDouble", SimpleTestIndex.DOUBLE_COL)
         )
-        .setContext(Collections.singletonMap(GroupByQueryConfig.CTX_KEY_VECTORIZE, doVectorize))
+        .setContext(Collections.singletonMap(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // do json serialization and deserialization of query to ensure there are no serde issues

@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.filter.BloomKFilter;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 
@@ -108,7 +109,7 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
             break;
         }
 
-        return ExprEval.of(matches, ExprType.LONG);
+        return ExprEval.ofLongBoolean(matches);
       }
 
       private boolean nullMatch()
@@ -122,6 +123,13 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new BloomExpr(newArg));
+      }
+
+      @Nullable
+      @Override
+      public ExprType getOutputType(InputBindingInspector inspector)
+      {
+        return ExprType.LONG;
       }
     }
 

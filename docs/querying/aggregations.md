@@ -379,7 +379,7 @@ As a general guideline for experimentation, the [Moments Sketch paper](https://a
 
 #### Fixed Buckets Histogram
 
-Druid also provides a [simple histogram implementation](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) that uses a fixed range and fixed number of buckets with support for quantile estimation, backed by an array of bucket count values.
+Druid also provides a [simple histogram implementation](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) that uses a fixed range and fixed number of buckets with support for quantile estimation, backed by an array of bucket count values.
 
 The fixed buckets histogram can perform well when the distribution of the input data allows a small number of buckets to be used.
 
@@ -395,7 +395,7 @@ The [Approximate Histogram](../development/extensions-core/approximate-histogram
 
 The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
 
-A [study published by the DataSketches team](https://datasketches.apache.org/docs/Quantiles/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
+A [study published by the DataSketches team](https://datasketches.apache.org/docs/QuantilesStudies/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
 
 - The algorithm's quantile calculations can fail to provide results for a large range of rank values (all ranks less than 0.89 in the example used in the study), returning all zeroes instead.
 - The algorithm can completely fail to record spikes in the tail ends of the distribution
@@ -422,7 +422,30 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
     "type" : "selector",
     "dimension" : <dimension>,
     "value" : <dimension value>
-  }
+  },
   "aggregator" : <aggregation>
 }
+```
+
+### Grouping Aggregator
+
+A grouping aggregator can only be used as part of GroupBy queries which have a subtotal spec. It returns a number for
+each output row that lets you infer whether a particular dimension is included in the sub-grouping used for that row. You can pass
+a *non-empty* list of dimensions to this aggregator which *must* be a subset of dimensions that you are grouping on. 
+E.g if the aggregator has `["dim1", "dim2"]` as input dimensions and `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, 
+following can be the possible output of the aggregator
+
+| subtotal used in query | Output | (bits representation) |
+|------------------------|--------|-----------------------|
+| `["dim1", "dim2"]`       | 0      | (00)                  |
+| `["dim1"]`               | 1      | (01)                  |
+| `["dim2"]`               | 2      | (10)                  |
+| `[]`                     | 3      | (11)                  |  
+
+As illustrated in above example, output number can be thought of as an unsigned n bit number where n is the number of dimensions passed to the aggregator. 
+The bit at position X is set in this number to 0 if a dimension at position X in input to aggregators is included in the sub-grouping. Otherwise, this bit 
+is set to 1.
+
+```json
+{ "type" : "grouping", "name" : <output_name>, "groupings" : [<dimension>] }
 ```

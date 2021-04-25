@@ -16,9 +16,15 @@
 # limitations under the License.
 
 DOCKER_HOST_IP="$(host "$(hostname)" | perl -nle '/has address (.*)/ && print $1')"
+
 if [ -z "$DOCKER_HOST_IP" ]; then
     # Mac specific way to get host ip
     DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1' | tail -n1)"
+fi
+
+if [ -z "$DOCKER_HOST_IP" ]; then
+  # Another Mac specific way, when the machine isn't able to resolve its own name
+  DOCKER_HOST_IP="$(ifconfig | fgrep 'inet ' | fgrep -v 127.0.0.1 | awk '{print $2}')"
 fi
 
 if [ -z "$DOCKER_HOST_IP" ]; then

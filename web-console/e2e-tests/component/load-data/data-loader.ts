@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
+
+import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 import { ConfigureSchemaConfig } from './config/configure-schema';
+import { ConfigureTimestampConfig } from './config/configure-timestamp';
 import { PartitionConfig } from './config/partition';
 import { PublishConfig } from './config/publish';
 import { DataConnector } from './data-connector/data-connector';
@@ -31,7 +34,7 @@ export class DataLoader {
 
   constructor(props: DataLoaderProps) {
     Object.assign(this, props);
-    this.baseUrl = props.unifiedConsoleUrl! + '#load-data';
+    this.baseUrl = props.unifiedConsoleUrl + '#load-data';
   }
 
   /**
@@ -41,8 +44,10 @@ export class DataLoader {
     await this.page.goto(this.baseUrl);
     await this.start();
     await this.connect(this.connector, this.connectValidator);
-    await this.parseData();
-    await this.parseTime();
+    if (this.connector.needParse) {
+      await this.parseData();
+      await this.parseTime(this.configureTimestampConfig);
+    }
     await this.transform();
     await this.filter();
     await this.configureSchema(this.configureSchemaConfig);
@@ -53,108 +58,111 @@ export class DataLoader {
   }
 
   private async start() {
-    await this.page.click(`"${this.connector.name}"`);
-    await this.clickButton('Connect data');
+    const cardSelector = `//*[contains(@class,"bp3-card")][p[contains(text(),"${this.connector.name}")]]`;
+    await this.page.click(cardSelector);
+    await clickButton(this.page, 'Connect data');
   }
 
   private async connect(connector: DataConnector, validator: (preview: string) => void) {
     await connector.connect();
     await this.validateConnect(validator);
-    await this.clickButton('Next: Parse data');
+    const next = this.connector.needParse ? 'Parse data' : 'Transform';
+    await clickButton(this.page, `Next: ${next}`);
   }
 
   private async validateConnect(validator: (preview: string) => void) {
     const previewSelector = '.raw-lines';
-    await this.page.waitFor(previewSelector);
+    await this.page.waitForSelector(previewSelector);
     const preview = await this.page.$eval(previewSelector, el => (el as HTMLTextAreaElement).value);
-    validator(preview!);
+    validator(preview);
   }
 
   private async parseData() {
-    await this.page.waitFor('.parse-data-table');
-    await this.clickButton('Next: Parse time');
+    await this.page.waitForSelector('.parse-data-table');
+    await clickButton(this.page, 'Next: Parse time');
   }
 
-  private async parseTime() {
-    await this.page.waitFor('.parse-time-table');
-    await this.clickButton('Next: Transform');
+  private async parseTime(configureTimestampConfig?: ConfigureTimestampConfig) {
+    await this.page.waitForSelector('.parse-time-table');
+    if (configureTimestampConfig) {
+      await this.applyConfigureTimestampConfig(configureTimestampConfig);
+    }
+    await clickButton(this.page, 'Next: Transform');
   }
 
   private async transform() {
-    await this.page.waitFor('.transform-table');
-    await this.clickButton('Next: Filter');
+    await this.page.waitForSelector('.transform-table');
+    await clickButton(this.page, 'Next: Filter');
   }
 
   private async filter() {
-    await this.page.waitFor('.filter-table');
-    await this.clickButton('Next: Configure schema');
+    await this.page.waitForSelector('.filter-table');
+    await clickButton(this.page, 'Next: Configure schema');
   }
 
   private async configureSchema(configureSchemaConfig: ConfigureSchemaConfig) {
-    await this.page.waitFor('.schema-table');
+    await this.page.waitForSelector('.schema-table');
     await this.applyConfigureSchemaConfig(configureSchemaConfig);
-    await this.clickButton('Next: Partition');
+    await clickButton(this.page, 'Next: Partition');
+  }
+
+  private async applyConfigureTimestampConfig(configureTimestampConfig: ConfigureTimestampConfig) {
+    await clickButton(this.page, 'Expression');
+    await setLabeledInput(this.page, 'Expression', configureTimestampConfig.timestampExpression);
+    await clickButton(this.page, 'Apply');
   }
 
   private async applyConfigureSchemaConfig(configureSchemaConfig: ConfigureSchemaConfig) {
-    const rollup = await this.page.$('//*[text()="Rollup"]/input');
-    const rollupChecked = await rollup!.evaluate(el => (el as HTMLInputElement).checked);
+    const rollupSelector = '//*[text()="Rollup"]';
+    const rollupInput = await this.page.$(`${rollupSelector}/input`);
+    const rollupChecked = await rollupInput!.evaluate(el => (el as HTMLInputElement).checked);
     if (rollupChecked !== configureSchemaConfig.rollup) {
-      await rollup!.click();
+      await this.page.click(rollupSelector);
       const confirmationDialogSelector = '//*[contains(@class,"bp3-alert-body")]';
-      await this.page.waitFor(confirmationDialogSelector);
-      await this.clickButton('Yes');
+      await this.page.waitForSelector(confirmationDialogSelector);
+      await clickButton(this.page, 'Yes');
       const statusMessageSelector = '.recipe-toaster';
-      await this.page.waitFor(statusMessageSelector);
+      await this.page.waitForSelector(statusMessageSelector);
       await this.page.click(`${statusMessageSelector} button`);
     }
   }
 
   private async partition(partitionConfig: PartitionConfig) {
-    await this.page.waitFor('div.load-data-view.partition');
+    await this.page.waitForSelector('div.load-data-view.partition');
     await this.applyPartitionConfig(partitionConfig);
-    await this.clickButton('Next: Tune');
+    await clickButton(this.page, 'Next: Tune');
   }
 
   private async applyPartitionConfig(partitionConfig: PartitionConfig) {
-    const segmentGranularity = await this.page.$(
-      '//*[text()="Segment granularity"]/following-sibling::div//input',
-    );
-    await this.setInput(segmentGranularity!, partitionConfig.segmentGranularity);
+    await setLabeledInput(this.page, 'Segment granularity', partitionConfig.segmentGranularity);
+    if (partitionConfig.timeIntervals) {
+      await setLabeledTextarea(this.page, 'Time intervals', partitionConfig.timeIntervals);
+    }
+    if (partitionConfig.partitionsSpec != null) {
+      await partitionConfig.partitionsSpec.apply(this.page);
+    }
   }
 
   private async tune() {
-    await this.page.waitFor('div.load-data-view.tuning');
-    await this.clickButton('Next: Publish');
+    await this.page.waitForSelector('div.load-data-view.tuning');
+    await clickButton(this.page, 'Next: Publish');
   }
 
   private async publish(publishConfig: PublishConfig) {
-    await this.page.waitFor('div.load-data-view.publish');
+    await this.page.waitForSelector('div.load-data-view.publish');
     await this.applyPublishConfig(publishConfig);
-    await this.clickButton('Edit spec');
+    await clickButton(this.page, 'Edit spec');
   }
 
   private async applyPublishConfig(publishConfig: PublishConfig) {
     if (publishConfig.datasourceName != null) {
-      const datasourceName = await this.page.$(
-        '//*[text()="Datasource name"]/following-sibling::div//input',
-      );
-      await this.setInput(datasourceName!, publishConfig.datasourceName);
+      await setLabeledInput(this.page, 'Datasource name', publishConfig.datasourceName);
     }
   }
 
   private async editSpec() {
-    await this.page.waitFor('div.load-data-view.spec');
-    await this.clickButton('Submit');
-  }
-
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
-  }
-
-  private async setInput(input: playwright.ElementHandle<Element>, value: string) {
-    await input.fill('');
-    await input.type(value);
+    await this.page.waitForSelector('div.load-data-view.spec');
+    await clickButton(this.page, 'Submit');
   }
 }
 
@@ -163,6 +171,7 @@ interface DataLoaderProps {
   readonly unifiedConsoleUrl: string;
   readonly connector: DataConnector;
   readonly connectValidator: (preview: string) => void;
+  readonly configureTimestampConfig?: ConfigureTimestampConfig;
   readonly configureSchemaConfig: ConfigureSchemaConfig;
   readonly partitionConfig: PartitionConfig;
   readonly publishConfig: PublishConfig;

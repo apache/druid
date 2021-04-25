@@ -43,7 +43,9 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
   @Nullable
   private final ValueType finalizedType;
+  @Nullable
   private final Comparator<Object> comparator;
+  @Nullable
   private final Function<Object, Object> finalizer;
 
   @JsonCreator
@@ -59,8 +61,8 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       final String name,
       final String fieldName,
       @Nullable final ValueType finalizedType,
-      final Comparator<Object> comparator,
-      final Function<Object, Object> finalizer
+      @Nullable final Comparator<Object> comparator,
+      @Nullable final Function<Object, Object> finalizer
   )
   {
     this.name = name;

@@ -21,6 +21,8 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.druid.client.indexing.SamplerResponse;
+import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -31,10 +33,9 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -45,12 +46,13 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -103,80 +105,102 @@ public class InputSourceSampler
     final File tempDir = FileUtils.createTempDir();
     closer.register(() -> FileUtils.deleteDirectory(tempDir));
 
-    final InputSourceReader reader = buildReader(
-        nonNullSamplerConfig,
-        nonNullDataSchema,
-        inputSource,
-        inputFormat,
-        tempDir
-    );
-    try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
-         final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
-         final Closer closer1 = closer) {
-      SamplerResponseRow[] responseRows = new SamplerResponseRow[nonNullSamplerConfig.getNumRows()];
-      int counter = 0, numRowsIndexed = 0;
+    try {
+      final InputSourceReader reader = buildReader(
+          nonNullSamplerConfig,
+          nonNullDataSchema,
+          inputSource,
+          inputFormat,
+          tempDir
+      );
+      try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
+           final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
+           final Closer closer1 = closer) {
+        List<SamplerResponseRow> responseRows = new ArrayList<>(nonNullSamplerConfig.getNumRows());
+        int numRowsIndexed = 0;
 
-      while (counter < responseRows.length && iterator.hasNext()) {
-        Map<String, Object> rawColumns = null;
-        try {
+        while (responseRows.size() < nonNullSamplerConfig.getNumRows() && iterator.hasNext()) {
           final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
 
-          if (inputRowListPlusRawValues.getRawValues() != null) {
-            rawColumns = inputRowListPlusRawValues.getRawValues();
-          }
+          final List<Map<String, Object>> rawColumnsList = inputRowListPlusRawValues.getRawValuesList();
 
-          if (inputRowListPlusRawValues.getParseException() != null) {
-            throw inputRowListPlusRawValues.getParseException();
-          }
-
-          if (inputRowListPlusRawValues.getInputRows() == null) {
+          final ParseException parseException = inputRowListPlusRawValues.getParseException();
+          if (parseException != null) {
+            if (rawColumnsList != null) {
+              // add all rows to response
+              responseRows.addAll(rawColumnsList.stream()
+                                                .map(rawColumns -> new SamplerResponseRow(
+                                                    rawColumns,
+                                                    null,
+                                                    true,
+                                                    parseException.getMessage()
+                                                ))
+                                                .collect(Collectors.toList()));
+            } else {
+              // no data parsed, add one response row
+              responseRows.add(new SamplerResponseRow(null, null, true, parseException.getMessage()));
+            }
             continue;
           }
 
-          for (InputRow row : inputRowListPlusRawValues.getInputRows()) {
-            if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-              throw new ParseException("Timestamp cannot be represented as a long: [%s]", row);
-            }
-            IncrementalIndexAddResult result = index.add(new SamplerInputRow(row, counter), true);
-            if (result.getParseException() != null) {
-              throw result.getParseException();
+          List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
+          if (inputRows == null) {
+            continue;
+          }
+
+          for (int i = 0; i < inputRows.size(); i++) {
+            // InputRowListPlusRawValues guarantees the size of rawColumnsList and inputRows are the same
+            Map<String, Object> rawColumns = rawColumnsList == null ? null : rawColumnsList.get(i);
+            InputRow row = inputRows.get(i);
+
+            //keep the index of the row to be added to responseRows for further use
+            final int rowIndex = responseRows.size();
+            IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex), true);
+            if (addResult.hasParseException()) {
+              responseRows.add(new SamplerResponseRow(
+                  rawColumns,
+                  null,
+                  true,
+                  addResult.getParseException().getMessage()
+              ));
             } else {
               // store the raw value; will be merged with the data from the IncrementalIndex later
-              responseRows[counter] = new SamplerResponseRow(rawColumns, null, null, null);
-              counter++;
+              responseRows.add(new SamplerResponseRow(rawColumns, null, null, null));
               numRowsIndexed++;
             }
           }
         }
-        catch (ParseException e) {
-          responseRows[counter] = new SamplerResponseRow(rawColumns, null, true, e.getMessage());
-          counter++;
+
+        final List<String> columnNames = index.getColumnNames();
+        columnNames.remove(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
+
+        for (Row row : index) {
+          Map<String, Object> parsed = new LinkedHashMap<>();
+
+          parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
+          columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
+
+          Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
+          if (sortKey != null) {
+            responseRows.set(sortKey.intValue(), responseRows.get(sortKey.intValue()).withParsed(parsed));
+          }
         }
-      }
 
-      final List<String> columnNames = index.getColumnNames();
-      columnNames.remove(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
-
-      for (Row row : index) {
-        Map<String, Object> parsed = new HashMap<>();
-
-        columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
-        parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
-
-        Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
-        if (sortKey != null) {
-          responseRows[sortKey.intValue()] = responseRows[sortKey.intValue()].withParsed(parsed);
+        // make sure size of responseRows meets the input
+        if (responseRows.size() > nonNullSamplerConfig.getNumRows()) {
+          responseRows = responseRows.subList(0, nonNullSamplerConfig.getNumRows());
         }
-      }
 
-      return new SamplerResponse(
-          counter,
-          numRowsIndexed,
-          Arrays.stream(responseRows)
-                .filter(Objects::nonNull)
-                .filter(x -> x.getParsed() != null || x.isUnparseable() != null)
-                .collect(Collectors.toList())
-      );
+        int numRowsRead = responseRows.size();
+        return new SamplerResponse(
+            numRowsRead,
+            numRowsIndexed,
+            responseRows.stream()
+                        .filter(Objects::nonNull)
+                        .filter(x -> x.getParsed() != null || x.isUnparseable() != null)
+                        .collect(Collectors.toList())
+        );
+      }
     }
     catch (Exception e) {
       throw new SamplerException(e, "Failed to sample data: %s", e.getMessage());
@@ -191,14 +215,7 @@ public class InputSourceSampler
       File tempDir
   )
   {
-    final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                            .map(AggregatorFactory::getName)
-                                            .collect(Collectors.toList());
-    final InputRowSchema inputRowSchema = new InputRowSchema(
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        metricsNames
-    );
+    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
 
     InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
 
@@ -219,8 +236,8 @@ public class InputSourceSampler
         .withRollup(dataSchema.getGranularitySpec().isRollup())
         .build();
 
-    return new IncrementalIndex.Builder().setIndexSchema(schema)
+    return new OnheapIncrementalIndex.Builder().setIndexSchema(schema)
                                          .setMaxRowCount(samplerConfig.getNumRows())
-                                         .buildOnheap();
+                                         .build();
   }
 }

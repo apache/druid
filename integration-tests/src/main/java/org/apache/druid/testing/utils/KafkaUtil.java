@@ -21,12 +21,16 @@ package org.apache.druid.testing.utils;
 
 import org.apache.druid.testing.IntegrationTestingConfig;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 public class KafkaUtil
 {
   private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
+  private static final String TEST_CONFIG_PROPERTY_PREFIX = "kafka.test.config.";
+
+  public static final String TEST_CONFIG_TRANSACTION_ENABLED = "transactionEnabled";
 
   public static void addPropertiesFromTestConfig(IntegrationTestingConfig config, Properties properties)
   {
@@ -35,5 +39,16 @@ public class KafkaUtil
         properties.setProperty(entry.getKey().substring(TEST_PROPERTY_PREFIX.length()), entry.getValue());
       }
     }
+  }
+
+  public static Map<String, String> getAdditionalKafkaTestConfigFromProperties(IntegrationTestingConfig config)
+  {
+    Map<String, String> theMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
+      if (entry.getKey().startsWith(TEST_CONFIG_PROPERTY_PREFIX)) {
+        theMap.put(entry.getKey().substring(TEST_CONFIG_PROPERTY_PREFIX.length()), entry.getValue());
+      }
+    }
+    return theMap;
   }
 }

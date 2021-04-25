@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -167,6 +168,63 @@ public class ConcurrentGrouperTest
 
     Assert.assertEquals(expected, actual);
 
+    grouper.close();
+  }
+
+  @Test
+  public void testGrouperTimeout() throws Exception
+  {
+    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
+        bufferSupplier,
+        TEST_RESOURCE_HOLDER,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
+        NULL_FACTORY,
+        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        1024,
+        0.7f,
+        1,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+        new DefaultObjectMapper(),
+        8,
+        null,
+        false,
+        MoreExecutors.listeningDecorator(SERVICE),
+        0,
+        true,
+        1,
+        4,
+        8
+    );
+    grouper.init();
+
+    final int numRows = 1000;
+
+    Future<?>[] futures = new Future[8];
+
+    for (int i = 0; i < 8; i++) {
+      futures[i] = SERVICE.submit(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          for (long i = 0; i < numRows; i++) {
+            grouper.aggregate(i);
+          }
+        }
+      });
+    }
+
+    for (Future eachFuture : futures) {
+      eachFuture.get();
+    }
+    try {
+      grouper.iterator(true);
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+    }
     grouper.close();
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -36,7 +37,6 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.utils.CircularBuffer;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Kafka indexing task runner supporting incremental segments publishing
  */
-public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long>
+public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
@@ -66,7 +66,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       KafkaIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
-      CircularBuffer<Throwable> savedParseExceptions,
       LockGranularity lockGranularityToUse
   )
   {
@@ -74,7 +73,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         task,
         parser,
         authorizerMapper,
-        savedParseExceptions,
         lockGranularityToUse
     );
     this.task = task;
@@ -88,15 +86,15 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<Integer, Long>> getRecords(
-      RecordSupplier<Integer, Long> recordSupplier,
+  protected List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> getRecords(
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox toolbox
   ) throws Exception
   {
     // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
     // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
     // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
-    List<OrderedPartitionableRecord<Integer, Long>> records = new ArrayList<>();
+    List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> records = new ArrayList<>();
     try {
       records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     }
@@ -124,7 +122,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
-      RecordSupplier<Integer, Long> recordSupplier,
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
@@ -195,7 +193,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<Integer, Long> recordSupplier,
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       Set<StreamPartition<Integer>> assignment
   )
   {

@@ -161,7 +161,15 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues();
+      VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
+      ColumnCapabilities virtualCapabilities = null;
+      if (virtualColumn != null) {
+        virtualCapabilities = virtualColumn.capabilities(
+            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
+            dimension
+        );
+      }
+      return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);

@@ -21,8 +21,9 @@ import React, { useState } from 'react';
 import { ShowJson } from '../../components';
 import { ShowHistory } from '../../components/show-history/show-history';
 import { SupervisorStatisticsTable } from '../../components/supervisor-statistics-table/supervisor-statistics-table';
+import { Api } from '../../singletons';
+import { deepGet } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface SupervisorTableActionDialogProps {
@@ -64,6 +65,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     },
   ];
 
+  const supervisorEndpointBase = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`;
   return (
     <TableActionDialog
       sideButtonMetadata={supervisorTableSideButtonMetadata}
@@ -73,26 +75,26 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     >
       {activeTab === 'status' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`}
+          endpoint={`${supervisorEndpointBase}/status`}
           transform={x => deepGet(x, 'payload')}
           downloadFilename={`supervisor-status-${supervisorId}.json`}
         />
       )}
       {activeTab === 'stats' && (
         <SupervisorStatisticsTable
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
+          supervisorId={supervisorId}
           downloadFilename={`supervisor-stats-${supervisorId}.json`}
         />
       )}
       {activeTab === 'payload' && (
         <ShowJson
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
+          endpoint={supervisorEndpointBase}
           downloadFilename={`supervisor-payload-${supervisorId}.json`}
         />
       )}
       {activeTab === 'history' && (
         <ShowHistory
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`}
+          endpoint={`${supervisorEndpointBase}/history`}
           downloadFilename={`supervisor-history-${supervisorId}.json`}
         />
       )}

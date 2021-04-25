@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.CachingClusteredClient;
@@ -103,6 +104,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -339,7 +341,8 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())
     );
   }
 

@@ -22,12 +22,13 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+
 /**
  */
 public abstract class AbstractMonitor implements Monitor
 {
   private volatile boolean started = false;
-
+  
   @Override
   public void start()
   {

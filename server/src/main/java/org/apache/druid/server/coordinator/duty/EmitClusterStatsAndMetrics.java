@@ -97,6 +97,35 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
   }
 
+  private void emitDutyStat(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final String duty,
+      final long value
+  )
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY, duty)
+            .build(metricName, value)
+    );
+  }
+
+  private void emitDutyStats(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final CoordinatorStats stats,
+      final String statName
+  )
+  {
+    stats.forEachDutyStat(
+        statName,
+        (final String duty, final long count) -> {
+          emitDutyStat(emitter, metricName, duty, count);
+        }
+    );
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
@@ -301,13 +330,115 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         )
     );
 
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "compactTask/maxSlot/count",
+            stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
+        )
+    );
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "compactTask/availableSlot/count",
+            stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
+        )
+    );
+
     stats.forEachDataSourceStat(
-        "segmentsWaitCompact",
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/waitCompact/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_AWAITING,
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/waitCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_AWAITING,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/waitCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/skipCompact/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/skipCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/skipCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/compacted/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/compacted/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/compacted/count", count)
           );
         }
     );
@@ -332,6 +463,9 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           );
         }
     );
+
+    // Emit coordinator runtime stats
+    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
 
     return params;
   }

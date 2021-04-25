@@ -55,6 +55,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -74,7 +75,6 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -231,7 +231,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false),
+                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -242,7 +242,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false)
+                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions())
                   );
                 }
               }
@@ -319,13 +319,11 @@ public class GroupByQueryEngineV2
   /**
    * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
    * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonExistent' is sort of a hack to let
-   * the vectorized engine, which only operates on actual segments, to still work in this case for non-existent columns.
+   * broker merge, for example with an 'inline' datasource subquery.
    */
   public static boolean isAllSingleValueDims(
-      final Function<String, ColumnCapabilities> capabilitiesFunction,
-      final List<DimensionSpec> dimensions,
-      final boolean missingMeansNonExistent
+      final ColumnInspector inspector,
+      final List<DimensionSpec> dimensions
   )
   {
     return dimensions
@@ -338,10 +336,9 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse()) ||
-                     (missingMeansNonExistent && columnCapabilities == null);
+              // Now check column capabilities, which must be present and explicitly not multi-valued
+              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+              return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
             });
   }
 

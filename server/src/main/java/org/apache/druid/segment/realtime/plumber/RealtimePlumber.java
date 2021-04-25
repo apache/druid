@@ -57,11 +57,11 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -116,7 +116,6 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
   private final QuerySegmentWalker texasRanger;
-
   private final Cache cache;
 
   private volatile long nextFlush = 0;
@@ -261,9 +260,9 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
+          config.getMaxBytesInMemoryOrDefault(),
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -439,7 +438,8 @@ public class RealtimePlumber implements Plumber
                     schema.getAggregators(),
                     mergedTarget,
                     config.getIndexSpec(),
-                    config.getSegmentWriteOutMediumFactory()
+                    config.getSegmentWriteOutMediumFactory(),
+                    -1
                 );
               }
               catch (Throwable t) {
@@ -457,7 +457,7 @@ public class RealtimePlumber implements Plumber
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())),
                   false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getId());
@@ -725,9 +725,9 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
+          config.getMaxBytesInMemoryOrDefault(),
           config.getDedupColumn(),
           hydrants
       );

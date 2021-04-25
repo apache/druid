@@ -87,7 +87,7 @@ classloader.
 
 1. HDFS deep storage uses jars from `extensions/druid-hdfs-storage/` to read and write Druid data on HDFS.
 2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
-`druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html#extensions)).
+`druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.md#extensions)).
 
 `hadoop-client:2.8.5` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
 many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead

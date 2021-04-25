@@ -142,12 +142,15 @@ public class Calcites
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       SqlTypeName componentType = type.getComponentType().getSqlTypeName();
       if (isDoubleType(componentType)) {
-        return ValueType.DOUBLE_ARRAY;
+        // in the future return ValueType.DOUBLE_ARRAY;
+        return ValueType.STRING;
       }
       if (isLongType(componentType)) {
-        return ValueType.LONG_ARRAY;
+        // in the future we will return ValueType.LONG_ARRAY;
+        return ValueType.STRING;
       }
-      return ValueType.STRING_ARRAY;
+      // in the future we will return ValueType.STRING_ARRAY;
+      return ValueType.STRING;
     } else {
       return null;
     }

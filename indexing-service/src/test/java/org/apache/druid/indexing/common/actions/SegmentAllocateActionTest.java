@@ -882,14 +882,18 @@ public class SegmentAllocateActionTest
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(
+                           new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), null, objectMapper)
+                       )
                        .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(
+                           new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), null, objectMapper)
+                       )
                        .size(0)
                        .build()
         )
@@ -903,7 +907,7 @@ public class SegmentAllocateActionTest
         "seq",
         null,
         true,
-        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 1, 2),
+        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 1, 2, null),
         lockGranularity
     );
     final SegmentIdWithShardSpec segmentIdentifier = action.perform(task, taskActionTestKit.getTaskActionToolbox());

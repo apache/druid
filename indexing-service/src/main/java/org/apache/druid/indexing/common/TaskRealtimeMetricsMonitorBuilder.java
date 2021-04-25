@@ -21,10 +21,10 @@ package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 

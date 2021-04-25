@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -62,12 +61,6 @@ public class DataSegmentTest
       public <T> PartitionChunk<T> createChunk(T obj)
       {
         return null;
-      }
-
-      @Override
-      public boolean isInChunk(long timestamp, InputRow inputRow)
-      {
-        return false;
       }
 
       @Override
@@ -127,6 +120,7 @@ public class DataSegmentTest
         new NumberedShardSpec(3, 0),
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            ImmutableMap.of(),
             ImmutableMap.of()
         ),
         TEST_VERSION,
@@ -238,7 +232,8 @@ public class DataSegmentTest
   {
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
-        Collections.singletonMap("test", "map")
+        Collections.singletonMap("test", "map"),
+        Collections.singletonMap("test2", "map2")
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")

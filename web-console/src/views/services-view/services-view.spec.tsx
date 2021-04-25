@@ -19,19 +19,14 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { ServicesView } from './services-view';
 
 describe('services view', () => {
   it('action services view', () => {
     const servicesView = shallow(
-      <ServicesView
-        middleManager={'test'}
-        goToQuery={() => {}}
-        goToTask={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
+      <ServicesView goToQuery={() => {}} goToTask={() => {}} capabilities={Capabilities.FULL} />,
     );
     expect(servicesView).toMatchSnapshot();
   });

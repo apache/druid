@@ -35,6 +35,7 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.IngestionState;
+import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.TaskMetricsGetter;
 import org.apache.druid.indexer.TaskMetricsUtils;
@@ -49,12 +50,12 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -78,10 +79,10 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
@@ -188,12 +189,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Optional<SortedSet<Interval>> intervals = spec.getDataSchema().getGranularitySpec().bucketIntervals();
-    if (intervals.isPresent()) {
+    Iterable<Interval> intervals = spec.getDataSchema().getGranularitySpec().sortedBucketIntervals();
+    if (intervals.iterator().hasNext()) {
       Interval interval = JodaUtils.umbrellaInterval(
-          JodaUtils.condenseIntervals(
-              intervals.get()
-          )
+          JodaUtils.condenseIntervals(intervals)
       );
       return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
     } else {
@@ -311,7 +310,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
     String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
-    boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
+    boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
     HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
@@ -376,7 +375,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
-              indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
+              indexerSchema.getDataSchema().getGranularitySpec().sortedBucketIntervals()
           )
       );
       final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);
@@ -441,8 +440,21 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       );
 
       if (buildSegmentsStatus.getDataSegments() != null) {
-        ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
+
+        // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
+        // for awaitSegmentAvailabilityTimeoutMillis
+        if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
+          ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+          ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(buildSegmentsStatus.getDataSegments());
+          segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+              toolbox,
+              segmentsToWaitFor,
+              spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
+          );
+        }
+
+        ingestionState = IngestionState.COMPLETED;
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       } else {
@@ -535,7 +547,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 ingestionState,
                 null,
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                segmentAvailabilityConfirmationCompleted
             )
         )
     );
@@ -620,7 +633,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
 
-  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
+  /**
+   * Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}.
+   */
   @SuppressWarnings("unused")
   public static class HadoopDetermineConfigInnerProcessingRunner
   {
@@ -762,14 +777,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       if (jobId != null) {
+        // This call to JobHelper#authenticate will be transparent if already authenticated or using inseucre Hadoop.
+        JobHelper.authenticate();
         int res = ToolRunner.run(new JobClient(), new String[]{
             "-kill",
             jobId
         });
 
-        return new String[] {jobId, (res == 0 ? "Success" : "Fail")};
+        return new String[]{jobId, (res == 0 ? "Success" : "Fail")};
       }
-      return new String[] {jobId, "Fail"};
+      return new String[]{jobId, "Fail"};
     }
   }
 

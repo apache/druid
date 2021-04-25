@@ -265,7 +265,7 @@ public class HashVectorGrouper implements VectorGrouper
   @Override
   public void close()
   {
-    // Nothing to do.
+    aggregators.close();
   }
 
 

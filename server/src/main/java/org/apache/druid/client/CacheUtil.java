@@ -192,6 +192,6 @@ public class CacheUtil
     return cacheStrategy != null
            && cacheStrategy.isCacheable(query, serverType.willMergeRunners())
            && cacheConfig.isQueryCacheable(query)
-           && query.getDataSource().isCacheable();
+           && query.getDataSource().isCacheable(serverType == ServerType.BROKER);
   }
 }

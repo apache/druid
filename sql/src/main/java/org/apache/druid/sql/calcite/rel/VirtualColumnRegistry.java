@@ -136,9 +136,11 @@ public class VirtualColumnRegistry
     final RowSignature.Builder builder =
         RowSignature.builder().addAll(baseRowSignature);
 
+    RowSignature baseSignature = builder.build();
+
     for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
       final String columnName = virtualColumn.getOutputName();
-      builder.add(columnName, virtualColumn.capabilities(columnName).getType());
+      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).getType());
     }
 
     return builder.build();

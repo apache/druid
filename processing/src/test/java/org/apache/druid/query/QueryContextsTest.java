@@ -107,4 +107,42 @@ public class QueryContextsTest
 
     QueryContexts.withMaxScatterGatherBytes(query, 100);
   }
+
+  @Test
+  public void testDisableSegmentPruning()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, false)
+    );
+    Assert.assertFalse(QueryContexts.isSecondaryPartitionPruningEnabled(query));
+  }
+
+  @Test
+  public void testDefaultSegmentPruning()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of()
+    );
+    Assert.assertTrue(QueryContexts.isSecondaryPartitionPruningEnabled(query));
+  }
+
+  @Test
+  public void testGetEnableJoinLeftScanDirect()
+  {
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
+    Assert.assertTrue(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        true
+    )));
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        false
+    )));
+  }
 }

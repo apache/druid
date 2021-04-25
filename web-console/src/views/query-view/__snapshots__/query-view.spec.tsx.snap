@@ -32,10 +32,10 @@ exports[`sql view matches snapshot 1`] = `
         runeMode={false}
       />
       <div
-        className="control-bar"
+        className="query-control-bar"
       >
         <HotkeysTarget(RunButton)
-          loading={false}
+          loading={true}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
@@ -46,19 +46,6 @@ exports[`sql view matches snapshot 1`] = `
           runeMode={false}
         />
         <Blueprint3.Tooltip
-          content="Automatically run queries when modified via helper action menus."
-          hoverCloseDelay={0}
-          hoverOpenDelay={800}
-          transitionDuration={100}
-        >
-          <Blueprint3.Switch
-            checked={true}
-            className="auto-run"
-            label="Auto run"
-            onChange={[Function]}
-          />
-        </Blueprint3.Tooltip>
-        <Blueprint3.Tooltip
           content="Automatically wrap the query with a limit to protect against queries with very large result sets."
           hoverCloseDelay={0}
           hoverOpenDelay={800}
@@ -66,18 +53,26 @@ exports[`sql view matches snapshot 1`] = `
         >
           <Blueprint3.Switch
             checked={true}
-            className="smart-query-limit"
-            label="Smart query limit"
+            className="auto-limit"
+            label="Auto limit"
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>
+        <Memo(LiveQueryModeSelector)
+          autoLiveQueryModeShouldRun={true}
+          liveQueryMode="auto"
+          onLiveQueryModeChange={[Function]}
+        />
       </div>
     </div>
-    <Memo(QueryOutput)
-      loading={false}
-      onQueryChange={[Function]}
-      runeMode={false}
-    />
+    <div
+      className="output-pane"
+    >
+      <Memo(Loader)
+        cancelText="Cancel query"
+        onCancel={[Function]}
+      />
+    </div>
   </t>
 </div>
 `;
@@ -114,10 +109,10 @@ exports[`sql view matches snapshot with query 1`] = `
         runeMode={false}
       />
       <div
-        className="control-bar"
+        className="query-control-bar"
       >
         <HotkeysTarget(RunButton)
-          loading={false}
+          loading={true}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
@@ -128,19 +123,6 @@ exports[`sql view matches snapshot with query 1`] = `
           runeMode={false}
         />
         <Blueprint3.Tooltip
-          content="Automatically run queries when modified via helper action menus."
-          hoverCloseDelay={0}
-          hoverOpenDelay={800}
-          transitionDuration={100}
-        >
-          <Blueprint3.Switch
-            checked={true}
-            className="auto-run"
-            label="Auto run"
-            onChange={[Function]}
-          />
-        </Blueprint3.Tooltip>
-        <Blueprint3.Tooltip
           content="Automatically wrap the query with a limit to protect against queries with very large result sets."
           hoverCloseDelay={0}
           hoverOpenDelay={800}
@@ -148,18 +130,26 @@ exports[`sql view matches snapshot with query 1`] = `
         >
           <Blueprint3.Switch
             checked={true}
-            className="smart-query-limit"
-            label="Smart query limit"
+            className="auto-limit"
+            label="Auto limit"
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>
+        <Memo(LiveQueryModeSelector)
+          autoLiveQueryModeShouldRun={true}
+          liveQueryMode="auto"
+          onLiveQueryModeChange={[Function]}
+        />
       </div>
     </div>
-    <Memo(QueryOutput)
-      loading={false}
-      onQueryChange={[Function]}
-      runeMode={false}
-    />
+    <div
+      className="output-pane"
+    >
+      <Memo(Loader)
+        cancelText="Cancel query"
+        onCancel={[Function]}
+      />
+    </div>
   </t>
 </div>
 `;

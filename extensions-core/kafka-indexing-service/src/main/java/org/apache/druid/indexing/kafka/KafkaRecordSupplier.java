@@ -22,12 +22,14 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -50,7 +52,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
+public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaRecordEntity>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
   private boolean closed;
@@ -118,15 +120,16 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<Integer, Long>> poll(long timeout)
+  public List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> poll(long timeout)
   {
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = new ArrayList<>();
+    List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> polledRecords = new ArrayList<>();
     for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
+
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
           record.partition(),
           record.offset(),
-          record.value() == null ? null : ImmutableList.of(record.value())
+          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
     }
     return polledRecords;
@@ -192,16 +195,30 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     // Extract passwords before SSL connection to Kafka
     for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
       String propertyKey = entry.getKey();
-      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-        PasswordProvider configPasswordProvider = configMapper.convertValue(
-            entry.getValue(),
-            PasswordProvider.class
-        );
-        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
-      } else {
-        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+
+      if (!KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(propertyKey)) {
+        if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+          PasswordProvider configPasswordProvider = configMapper.convertValue(
+              entry.getValue(),
+              PasswordProvider.class
+          );
+          properties.setProperty(propertyKey, configPasswordProvider.getPassword());
+        } else {
+          properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+        }
+      }
+    }
+
+    // Additional DynamicConfigProvider based extensible support for all consumer properties
+    Object dynamicConfigProviderJson = consumerProperties.get(KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
+    if (dynamicConfigProviderJson != null) {
+      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
+      Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
+
+      for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
+        properties.setProperty(e.getKey(), e.getValue());
       }
     }
   }
@@ -237,6 +254,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    props.putIfAbsent("isolation.level", "read_committed");
     props.putAll(consumerConfigs);
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();

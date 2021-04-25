@@ -53,7 +53,8 @@ public class TableDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertTrue(fooDataSource.isCacheable());
+    Assert.assertTrue(fooDataSource.isCacheable(true));
+    Assert.assertTrue(fooDataSource.isCacheable(false));
   }
 
   @Test

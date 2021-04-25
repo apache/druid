@@ -48,6 +48,8 @@ exports[`segments-view matches snapshot 1`] = `
             "Start",
             "End",
             "Version",
+            "Time span",
+            "Partitioning",
             "Partition",
             "Size",
             "Num rows",
@@ -60,6 +62,7 @@ exports[`segments-view matches snapshot 1`] = `
           ]
         }
         onChange={[Function]}
+        onClose={[Function]}
         tableColumnsHidden={Array []}
       />
     </Memo(ViewControlBar)>
@@ -123,7 +126,9 @@ exports[`segments-view matches snapshot 1`] = `
           Object {
             "Header": "Segment ID",
             "accessor": "segment_id",
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 300,
           },
           Object {
@@ -137,7 +142,9 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Interval",
             "accessor": "interval",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": false,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -145,7 +152,9 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Start",
             "accessor": "start",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -153,21 +162,44 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "End",
             "accessor": "end",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           Object {
             "Header": "Version",
             "accessor": "version",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Time span",
+            "accessor": "time_span",
+            "filterable": true,
+            "show": true,
+            "sortable": true,
+            "width": 100,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Partitioning",
+            "accessor": "partitioning",
+            "filterable": true,
+            "show": true,
+            "sortable": true,
+            "width": 100,
           },
           Object {
             "Header": "Partition",
             "accessor": "partition_num",
             "filterable": false,
             "show": true,
+            "sortable": true,
             "width": 60,
           },
           Object {
@@ -177,6 +209,7 @@ exports[`segments-view matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+            "sortable": true,
           },
           Object {
             "Cell": [Function],
@@ -293,7 +326,7 @@ exports[`segments-view matches snapshot 1`] = `
       getTrProps={[Function]}
       groupedByPivotKey="_groupedByPivot"
       indexKey="_index"
-      loading={true}
+      loading={false}
       loadingText="Loading..."
       manual={true}
       multiSort={true}

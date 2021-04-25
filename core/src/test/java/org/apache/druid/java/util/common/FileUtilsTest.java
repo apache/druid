@@ -103,12 +103,14 @@ public class FileUtilsTest
   @Test
   public void testCreateTempDirNonexistentBase()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("java.io.tmpdir (/nonexistent) does not exist");
-
     final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
+    final String nonExistentDir = oldJavaTmpDir + "/nonexistent";
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(StringUtils.format("java.io.tmpdir (%s) does not exist", nonExistentDir));
+
     try {
-      System.setProperty("java.io.tmpdir", "/nonexistent");
+      System.setProperty("java.io.tmpdir", nonExistentDir);
       FileUtils.createTempDir();
     }
     finally {

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
@@ -28,7 +29,9 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -55,14 +58,15 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -86,7 +90,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ExecutorService queryExecutorService;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -110,7 +114,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
-    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -167,25 +171,27 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
     );
 
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
+
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
         descriptor -> {
-          final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
+          final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
               descriptor.getInterval(),
-              descriptor.getVersion()
+              descriptor.getVersion(),
+              descriptor.getPartitionNumber()
           );
-          if (holder == null) {
-            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-          }
 
-          final PartitionChunk<Sink> chunk = holder.getChunk(descriptor.getPartitionNumber());
           if (chunk == null) {
             return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
           }
@@ -224,9 +230,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
                       if (hydrantDefinitelySwapped && cache.isLocal()) {
+                        StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
+                        long segmentMinTime = storageAdapter.getMinTime().getMillis();
+                        long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
                         runner = new CachingQueryRunner<>(
                             makeHydrantCacheIdentifier(hydrant),
+                            cacheKeyPrefix,
                             descriptor,
+                            actualDataInterval,
                             objectMapper,
                             cache,
                             toolChest,
@@ -287,6 +299,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         true
     );
+  }
+
+  @VisibleForTesting
+  String getDataSource()
+  {
+    return dataSource;
   }
 
   /**

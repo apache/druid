@@ -29,6 +29,7 @@ import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,6 @@ public class HadoopTuningConfig implements TuningConfig
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -56,7 +56,8 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
-        DEFAULT_ROW_FLUSH_BOUNDARY,
+        DEFAULT_APPENDABLE_INDEX,
+        DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
         false,
         true,
@@ -73,6 +74,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -83,7 +85,8 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
-  private final int rowFlushBoundary;
+  private final AppendableIndexSpec appendableIndexSpec;
+  private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
@@ -99,6 +102,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
+  private final long awaitSegmentAvailabilityTimeoutMillis;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -108,6 +112,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("shardSpecs") @Nullable Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
+      final @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
@@ -127,7 +132,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("allowedHadoopPrefix") @Nullable List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
   )
   {
     this.workingPath = workingPath;
@@ -137,11 +143,12 @@ public class HadoopTuningConfig implements TuningConfig
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
-    this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
-                                                      ? DEFAULT_ROW_FLUSH_BOUNDARY
+    this.maxRowsInMemory = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
+                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
@@ -172,6 +179,12 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+
+    if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+      this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+    } else {
+      this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+    }
   }
 
   @Nullable
@@ -187,6 +200,7 @@ public class HadoopTuningConfig implements TuningConfig
     return version;
   }
 
+  @Override
   @JsonProperty
   public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
@@ -199,25 +213,36 @@ public class HadoopTuningConfig implements TuningConfig
     return shardSpecs;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
   }
 
-  @JsonProperty("maxRowsInMemory")
-  public int getRowFlushBoundary()
+  @JsonProperty
+  @Override
+  public AppendableIndexSpec getAppendableIndexSpec()
   {
-    return rowFlushBoundary;
+    return appendableIndexSpec;
+  }
+
+  @Override
+  @JsonProperty
+  public int getMaxRowsInMemory()
+  {
+    return maxRowsInMemory;
   }
 
   @JsonProperty
+  @Override
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
@@ -318,6 +343,12 @@ public class HadoopTuningConfig implements TuningConfig
     return useYarnRMJobStatusFallback;
   }
 
+  @JsonProperty
+  public long getAwaitSegmentAvailabilityTimeoutMillis()
+  {
+    return awaitSegmentAvailabilityTimeoutMillis;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -327,7 +358,8 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        appendableIndexSpec,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
@@ -344,7 +376,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -357,7 +390,8 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        appendableIndexSpec,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
@@ -374,7 +408,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -387,7 +422,8 @@ public class HadoopTuningConfig implements TuningConfig
         specs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        appendableIndexSpec,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
@@ -404,7 +440,8 @@ public class HadoopTuningConfig implements TuningConfig
         allowedHadoopPrefix,
         logParseExceptions,
         maxParseExceptions,
-        useYarnRMJobStatusFallback
+        useYarnRMJobStatusFallback,
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 }

@@ -1,0 +1,70 @@
+{
+    "type": "index",
+    "spec": {
+        "dataSchema": {
+            "dataSource": "%%DATASOURCE%%",
+            "metricsSpec": [
+                {
+                    "type": "count",
+                    "name": "count"
+                },
+                {
+                    "type": "doubleSum",
+                    "name": "added",
+                    "fieldName": "added"
+                },
+                {
+                    "type": "doubleSum",
+                    "name": "deleted",
+                    "fieldName": "deleted"
+                },
+                {
+                    "type": "doubleSum",
+                    "name": "delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "stringFirst",
+                    "name": "first_user",
+                    "fieldName": "user"
+                },
+                {
+                    "type": "stringLast",
+                    "name": "last_user",
+                    "fieldName": "user"
+                }
+            ],
+            "granularitySpec": {
+                "segmentGranularity": "DAY",
+                "queryGranularity": "DAY",
+                "intervals" : [ "2013-08-31/2013-09-02" ]
+            },
+            "parser": {
+                "parseSpec": {
+                    "format" : "json",
+                    "timestampSpec": {
+                        "column": "timestamp"
+                    },
+                    "dimensionsSpec": {
+                        "dimensions": [
+                            "continent"
+                        ]
+                    }
+                }
+            }
+        },
+        "ioConfig": {
+            "type": "index",
+            "firehose": {
+                "type": "local",
+                "baseDir": "/resources/data/batch_index/json",
+                "filter": "wikipedia_index_data*"
+            }
+        },
+        "tuningConfig": {
+            "type": "index",
+            "maxRowsPerSegment": 5,
+            "maxRowsInMemory": 2
+        }
+    }
+}

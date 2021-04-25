@@ -50,6 +50,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.column.RowSignature;
@@ -611,5 +612,44 @@ public class OperatorConversions
     } else {
       return false;
     }
+  }
+
+  public static DirectOperatorConversion druidUnaryLongFn(String sqlOperator, String druidFunctionName)
+  {
+    return new DirectOperatorConversion(
+        operatorBuilder(sqlOperator)
+            .requiredOperands(1)
+            .operandTypes(SqlTypeFamily.NUMERIC)
+            .returnTypeNullable(SqlTypeName.BIGINT)
+            .functionCategory(SqlFunctionCategory.NUMERIC)
+            .build(),
+        druidFunctionName
+    );
+  }
+
+  public static DirectOperatorConversion druidBinaryLongFn(String sqlOperator, String druidFunctionName)
+  {
+    return new DirectOperatorConversion(
+        operatorBuilder(sqlOperator)
+            .requiredOperands(2)
+            .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+            .returnTypeNullable(SqlTypeName.BIGINT)
+            .functionCategory(SqlFunctionCategory.NUMERIC)
+            .build(),
+        druidFunctionName
+    );
+  }
+
+  public static DirectOperatorConversion druidUnaryDoubleFn(String sqlOperator, String druidFunctionName)
+  {
+    return new DirectOperatorConversion(
+        operatorBuilder(StringUtils.toUpperCase(sqlOperator))
+            .requiredOperands(1)
+            .operandTypes(SqlTypeFamily.NUMERIC)
+            .returnTypeNullable(SqlTypeName.DOUBLE)
+            .functionCategory(SqlFunctionCategory.NUMERIC)
+            .build(),
+        druidFunctionName
+    );
   }
 }

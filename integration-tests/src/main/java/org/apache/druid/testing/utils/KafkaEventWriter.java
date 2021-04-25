@@ -42,7 +42,6 @@ public class KafkaEventWriter implements StreamEventWriter
   public KafkaEventWriter(IntegrationTestingConfig config, boolean txnEnabled)
   {
     Properties properties = new Properties();
-    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     properties.setProperty("bootstrap.servers", config.getKafkaHost());
     properties.setProperty("acks", "all");
     properties.setProperty("retries", "3");
@@ -53,6 +52,7 @@ public class KafkaEventWriter implements StreamEventWriter
       properties.setProperty("enable.idempotence", "true");
       properties.setProperty("transactional.id", IdUtils.getRandomId());
     }
+    KafkaUtil.addPropertiesFromTestConfig(config, properties);
     this.producer = new KafkaProducer<>(
         properties,
         new StringSerializer(),

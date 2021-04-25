@@ -39,7 +39,6 @@ describe('filter table', () => {
         columnFilter=""
         dimensionFilters={[]}
         selectedFilterName={undefined}
-        onShowGlobalFilter={() => {}}
         onFilterSelect={() => {}}
       />
     );

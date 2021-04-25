@@ -48,6 +48,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -243,77 +244,6 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_coerceListToArray()
-  {
-    List<Long> longList = ImmutableList.of(1L, 2L, 3L);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(longList));
-
-    List<Integer> intList = ImmutableList.of(1, 2, 3);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(intList));
-
-    List<Float> floatList = ImmutableList.of(1.0f, 2.0f, 3.0f);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExpressionSelectors.coerceListToArray(floatList));
-
-    List<Double> doubleList = ImmutableList.of(1.0, 2.0, 3.0);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExpressionSelectors.coerceListToArray(doubleList));
-
-    List<String> stringList = ImmutableList.of("a", "b", "c");
-    Assert.assertArrayEquals(new String[]{"a", "b", "c"}, (String[]) ExpressionSelectors.coerceListToArray(stringList));
-
-    List<String> withNulls = new ArrayList<>();
-    withNulls.add("a");
-    withNulls.add(null);
-    withNulls.add("c");
-    Assert.assertArrayEquals(new String[]{"a", null, "c"}, (String[]) ExpressionSelectors.coerceListToArray(withNulls));
-
-    List<Long> withNumberNulls = new ArrayList<>();
-    withNumberNulls.add(1L);
-    withNumberNulls.add(null);
-    withNumberNulls.add(3L);
-
-    Assert.assertArrayEquals(new Long[]{1L, null, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(withNumberNulls));
-
-    List<Object> withStringMix = ImmutableList.of(1L, "b", 3L);
-    Assert.assertArrayEquals(
-        new String[]{"1", "b", "3"},
-        (String[]) ExpressionSelectors.coerceListToArray(withStringMix)
-    );
-
-    List<Number> withIntsAndLongs = ImmutableList.of(1, 2L, 3);
-    Assert.assertArrayEquals(
-        new Long[]{1L, 2L, 3L},
-        (Long[]) ExpressionSelectors.coerceListToArray(withIntsAndLongs)
-    );
-
-    List<Number> withFloatsAndLongs = ImmutableList.of(1, 2L, 3.0f);
-    Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExpressionSelectors.coerceListToArray(withFloatsAndLongs)
-    );
-
-    List<Number> withDoublesAndLongs = ImmutableList.of(1, 2L, 3.0);
-    Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExpressionSelectors.coerceListToArray(withDoublesAndLongs)
-    );
-
-    List<Number> withFloatsAndDoubles = ImmutableList.of(1L, 2.0f, 3.0);
-    Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExpressionSelectors.coerceListToArray(withFloatsAndDoubles)
-    );
-
-    List<String> withAllNulls = new ArrayList<>();
-    withAllNulls.add(null);
-    withAllNulls.add(null);
-    withAllNulls.add(null);
-    Assert.assertArrayEquals(
-        new String[]{null, null, null},
-        (String[]) ExpressionSelectors.coerceListToArray(withAllNulls)
-    );
-  }
-
-  @Test
   public void test_coerceEvalToSelectorObject()
   {
     Assert.assertEquals(
@@ -360,7 +290,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         true
     );
 
-    IncrementalIndex index = new IncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).buildOnheap();
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
     index.add(
         new MapBasedInputRow(
             DateTimes.nowUtc().getMillis(),

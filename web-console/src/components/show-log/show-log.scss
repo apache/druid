@@ -21,15 +21,23 @@
   height: 100%;
 
   .top-actions {
+    position: relative;
     text-align: right;
     padding-bottom: 10px;
 
     & > * {
       display: inline-block;
     }
+
+    .tail-log {
+      position: absolute;
+      top: 6px;
+      left: 0;
+    }
   }
 
   .main-area {
+    position: relative;
     height: calc(100% - 40px);
 
     textarea {
@@ -40,10 +48,5 @@
       font-size: 11px;
       line-height: 13px;
     }
-  }
-
-  .bp3-checkbox {
-    float: left;
-    margin-top: 5px;
   }
 }

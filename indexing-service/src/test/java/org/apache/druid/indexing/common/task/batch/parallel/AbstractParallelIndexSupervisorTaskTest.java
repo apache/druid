@@ -56,7 +56,6 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
@@ -65,8 +64,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -76,6 +75,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -157,7 +157,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
+          null,
+          null,
           2,
+          null,
+          null,
           null,
           null,
           null,
@@ -199,7 +203,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             false,
             null,
             null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
+            false
         ),
         null
     );
@@ -227,6 +232,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
+        null,
         new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
@@ -238,6 +245,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
+        null,
         null,
         null,
         null,
@@ -482,6 +491,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       final String taskType = task.isPresent() ? task.get().getType() : null;
       final TaskStatus taskStatus = taskRunner.getStatus(taskId);
+
       if (taskStatus != null) {
         return new TaskStatusResponse(
             taskId,
@@ -512,6 +522,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
+    final TaskConfig taskConfig = new TaskConfig(null, null, null, null, null, false, null, null, null, false);
+
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
@@ -528,21 +540,24 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(CoordinatorClient.class, coordinatorClient)
             .addValue(SegmentLoaderFactory.class, new SegmentLoaderFactory(indexIO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
+            .addValue(TaskConfig.class, taskConfig)
     );
     objectMapper.registerSubtypes(
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
+        new NamedType(CompactionTask.CompactionTuningConfig.class, CompactionTask.CompactionTuningConfig.TYPE),
         new NamedType(SinglePhaseSubTask.class, SinglePhaseSubTask.TYPE),
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),
         new NamedType(PartialRangeSegmentGenerateTask.class, PartialRangeSegmentGenerateTask.TYPE),
         new NamedType(PartialGenericSegmentMergeTask.class, PartialGenericSegmentMergeTask.TYPE),
-        new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE)
+        new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE),
+        new NamedType(PartialDimensionCardinalityTask.class, PartialDimensionCardinalityTask.TYPE)
     );
   }
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
     return new TaskToolbox(
-        null,
+        new TaskConfig(null, null, null, null, null, false, null, null, null, false),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
         null,

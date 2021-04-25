@@ -25,6 +25,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -96,26 +97,27 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       // Submit initial ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false, new Pair<>(false, false));
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(0));
-      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE);
       // Submit append ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true, new Pair<>(false, false));
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(1));
-      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE);
       // Submit compaction task
       compactData(indexDatasource, COMPACTION_TASK);
       // Verification post compaction
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(2));
       verifySegmentsCompacted(indexDatasource, expectedSegmentCountList.get(2));
-      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE);
     }
   }
 
   private void submitIngestionTaskAndVerify(
       String indexDatasource,
       PartitionsSpec partitionsSpec,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws Exception
   {
     InputFormatDetails inputFormatDetails = InputFormatDetails.JSON;
@@ -148,6 +150,11 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
             "%%APPEND_TO_EXISTING%%",
             jsonMapper.writeValueAsString(appendToExisting)
         );
+        spec = StringUtils.replace(
+            spec,
+            "%%DROP_EXISTING%%",
+            jsonMapper.writeValueAsString(false)
+        );
         if (partitionsSpec instanceof DynamicPartitionsSpec) {
           spec = StringUtils.replace(
               spec,
@@ -175,7 +182,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         null,
         false,
         false,
-        true
+        true,
+        segmentAvailabilityConfirmationPair
     );
   }
 }

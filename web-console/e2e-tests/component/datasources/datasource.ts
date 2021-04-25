@@ -28,7 +28,7 @@ export class Datasource {
 interface DatasourceProps {
   readonly name: string;
   readonly availability: string;
-  readonly numRows: number;
+  readonly totalRows: number;
 }
 
 export interface Datasource extends DatasourceProps {}

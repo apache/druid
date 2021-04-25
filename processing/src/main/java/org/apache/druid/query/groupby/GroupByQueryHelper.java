@@ -39,10 +39,12 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.joda.time.DateTime;
+import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -64,10 +66,10 @@ public class GroupByQueryHelper
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Granularity gran = query.getGranularity();
-    final DateTime timeStart = query.getIntervals().get(0).getStart();
+    final long timeStart = query.getIntervals().get(0).getStartMillis();
     final boolean combine = subquery == null;
 
-    DateTime granTimeStart = timeStart;
+    long granTimeStart = timeStart;
     if (!(Granularities.ALL.equals(gran))) {
       granTimeStart = gran.bucketStart(timeStart);
     }
@@ -114,26 +116,26 @@ public class GroupByQueryHelper
         .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
         .withMetrics(aggs.toArray(new AggregatorFactory[0]))
         .withQueryGranularity(gran)
-        .withMinTimestamp(granTimeStart.getMillis())
+        .withMinTimestamp(granTimeStart)
         .build();
 
+
+    final AppendableIndexBuilder indexBuilder;
+
     if (query.getContextValue("useOffheap", false)) {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOffheap(bufferPool);
+      indexBuilder = new OffheapIncrementalIndex.Builder()
+          .setBufferPool(bufferPool);
     } else {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOnheap();
+      indexBuilder = new OnheapIncrementalIndex.Builder();
     }
+
+    index = indexBuilder
+        .setIndexSchema(indexSchema)
+        .setDeserializeComplexMetrics(false)
+        .setConcurrentEventAdd(true)
+        .setSortFacts(sortResults)
+        .setMaxRowCount(querySpecificConfig.getMaxResults())
+        .build();
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {

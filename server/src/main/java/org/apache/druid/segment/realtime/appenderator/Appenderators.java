@@ -28,12 +28,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.concurrent.ExecutorService;
@@ -56,7 +58,9 @@ public class Appenderators
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return new AppenderatorImpl(
@@ -83,7 +87,9 @@ public class Appenderators
         ),
         indexIO,
         indexMerger,
-        cache
+        cache,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
   }
 
@@ -95,7 +101,9 @@ public class Appenderators
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return new AppenderatorImpl(
@@ -105,36 +113,13 @@ public class Appenderators
         metrics,
         dataSegmentPusher,
         objectMapper,
-        new DataSegmentAnnouncer()
-        {
-          @Override
-          public void announceSegment(DataSegment segment)
-          {
-            // Do nothing
-          }
-
-          @Override
-          public void unannounceSegment(DataSegment segment)
-          {
-            // Do nothing
-          }
-
-          @Override
-          public void announceSegments(Iterable<DataSegment> segments)
-          {
-            // Do nothing
-          }
-
-          @Override
-          public void unannounceSegments(Iterable<DataSegment> segments)
-          {
-            // Do nothing
-          }
-        },
+        new NoopDataSegmentAnnouncer(),
         null,
         indexIO,
         indexMerger,
-        null
+        null,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
   }
 }

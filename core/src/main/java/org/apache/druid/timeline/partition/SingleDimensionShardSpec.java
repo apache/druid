@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
@@ -115,7 +116,7 @@ public class SingleDimensionShardSpec implements ShardSpec
   {
     return (long timestamp, InputRow row) -> {
       for (ShardSpec spec : shardSpecs) {
-        if (spec.isInChunk(timestamp, row)) {
+        if (((SingleDimensionShardSpec) spec).isInChunk(row)) {
           return spec;
         }
       }
@@ -164,8 +165,8 @@ public class SingleDimensionShardSpec implements ShardSpec
     }
   }
 
-  @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
+  @VisibleForTesting
+  boolean isInChunk(InputRow inputRow)
   {
     return isInChunk(dimension, start, end, inputRow);
   }

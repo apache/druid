@@ -29,9 +29,10 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -87,7 +88,7 @@ public class SelectorFilter implements Filter
   @Override
   public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
   {
-    return DimensionHandlerUtils.makeVectorProcessor(
+    return ColumnProcessors.makeVectorProcessor(
         dimension,
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
@@ -119,7 +120,7 @@ public class SelectorFilter implements Filter
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
   }

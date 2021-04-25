@@ -33,11 +33,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  */
@@ -52,6 +55,7 @@ public class StorageNodeModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
+    bindLocationSelectorStrategy(binder);
 
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
@@ -116,5 +120,24 @@ public class StorageNodeModule implements Module
   public Boolean isSegmentCacheConfigured(SegmentLoaderConfig segmentLoaderConfig)
   {
     return !segmentLoaderConfig.getLocations().isEmpty();
+  }
+
+  /**
+   * provide a list of StorageLocation
+   * so that it can be injected into objects such as implementations of {@link StorageLocationSelectorStrategy}
+   */
+  @Provides
+  @LazySingleton
+  public List<StorageLocation> provideStorageLocation(SegmentLoaderConfig config)
+  {
+    return config.toStorageLocations();
+  }
+
+  /**
+   * a helper method for both storage module and independent unit test cases
+   */
+  public static void bindLocationSelectorStrategy(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelector", StorageLocationSelectorStrategy.class);
   }
 }

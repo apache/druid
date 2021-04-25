@@ -28,7 +28,7 @@ import java.util.List;
 public abstract class CompoundMonitor implements Monitor
 {
   private final List<Monitor> monitors;
-
+  
   public CompoundMonitor(List<Monitor> monitors)
   {
     this.monitors = monitors;

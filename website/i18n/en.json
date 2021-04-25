@@ -23,6 +23,9 @@
       "comparisons/druid-vs-sql-on-hadoop": {
         "title": "Apache Druid vs SQL-on-Hadoop"
       },
+      "configuration/human-readable-byte": {
+        "title": "Human-readable Byte Configuration Reference"
+      },
       "configuration/index": {
         "title": "Configuration reference"
       },
@@ -176,6 +179,9 @@
       "development/extensions-core/datasketches-tuple": {
         "title": "DataSketches Tuple Sketch module"
       },
+      "development/extensions-core/druid-aws-rds": {
+        "title": "Druid AWS RDS Module"
+      },
       "development/extensions-core/druid-basic-security": {
         "title": "Basic Security"
       },
@@ -210,6 +216,9 @@
       "development/extensions-core/kinesis-ingestion": {
         "title": "Amazon Kinesis ingestion",
         "sidebar_label": "Amazon Kinesis"
+      },
+      "development/extensions-core/druid-kubernetes": {
+        "title": "Kubernetes"
       },
       "development/extensions-core/lookups-cached-global": {
         "title": "Globally Cached Lookups"
@@ -261,6 +270,9 @@
       "development/versioning": {
         "title": "Versioning"
       },
+      "ingestion/compaction": {
+        "title": "Compaction"
+      },
       "ingestion/data-formats": {
         "title": "Data formats"
       },
@@ -306,6 +318,9 @@
       "operations/api-reference": {
         "title": "API reference"
       },
+      "operations/auth-ldap": {
+        "title": "LDAP auth"
+      },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
       },
@@ -317,6 +332,9 @@
       },
       "operations/dump-segment": {
         "title": "dump-segment tool"
+      },
+      "operations/dynamic-config-provider": {
+        "title": "Dynamic Config Providers"
       },
       "operations/export-metadata": {
         "title": "Export Metadata Tool"
@@ -362,6 +380,12 @@
       },
       "operations/rule-configuration": {
         "title": "Retaining or automatically dropping data"
+      },
+      "operations/security-overview": {
+        "title": "Security overview"
+      },
+      "operations/security-user-auth": {
+        "title": "User authentication and authorization"
       },
       "operations/segment-optimization": {
         "title": "Segment Size Optimization"

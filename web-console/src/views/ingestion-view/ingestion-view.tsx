@@ -18,11 +18,9 @@
 
 import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -40,23 +38,25 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
-import { AppToaster } from '../../singletons/toaster';
+import { Api, AppToaster } from '../../singletons';
 import {
   addFilter,
   addFilterRaw,
   booleanCustomTableFilter,
+  Capabilities,
+  deepGet,
   formatDuration,
   getDruidErrorMessage,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
+  oneOf,
   queryDruidSql,
   QueryManager,
+  QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { deepGet } from '../../utils/object-change';
 
 import './ingestion-view.scss';
 
@@ -107,15 +107,12 @@ export interface IngestionViewProps {
   openDialog: string | undefined;
   goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
-  goToMiddleManager: (middleManager: string) => void;
   goToLoadData: (supervisorId?: string, taskId?: string) => void;
   capabilities: Capabilities;
 }
 
 export interface IngestionViewState {
-  supervisorsLoading: boolean;
-  supervisors?: SupervisorQueryResultRow[];
-  supervisorsError?: string;
+  supervisorsState: QueryState<SupervisorQueryResultRow[]>;
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
@@ -126,9 +123,7 @@ export interface IngestionViewState {
   showSuspendAllSupervisors: boolean;
   showTerminateAllSupervisors: boolean;
 
-  tasksLoading: boolean;
-  tasks?: TaskQueryResultRow[];
-  tasksError?: string;
+  tasksState: QueryState<TaskQueryResultRow[]>;
 
   taskFilter: Filter[];
   supervisorFilter: Filter[];
@@ -187,8 +182,8 @@ function stateToColor(status: string): string {
 }
 
 export class IngestionView extends React.PureComponent<IngestionViewProps, IngestionViewState> {
-  private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
+  private readonly supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
+  private readonly taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -197,8 +192,10 @@ export class IngestionView extends React.PureComponent<IngestionViewProps, Inges
     FAILED: 1,
   };
 
-  static SUPERVISOR_SQL = `SELECT "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
-FROM sys.supervisors`;
+  static SUPERVISOR_SQL = `SELECT
+  "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
+FROM sys.supervisors
+ORDER BY "supervisor_id"`;
 
   static TASK_SQL = `SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
@@ -223,14 +220,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
 
     this.state = {
-      supervisorsLoading: true,
-      supervisors: [],
+      supervisorsState: QueryState.INIT,
 
       showResumeAllSupervisors: false,
       showSuspendAllSupervisors: false,
       showTerminateAllSupervisors: false,
 
-      tasksLoading: true,
+      tasksState: QueryState.INIT,
       taskFilter: taskFilter,
       supervisorFilter: supervisorFilter,
 
@@ -255,7 +251,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.SUPERVISOR_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const supervisors = (await axios.get('/druid/indexer/v1/supervisor?full')).data;
+          const supervisors = (await Api.instance.get('/druid/indexer/v1/supervisor?full')).data;
           if (!Array.isArray(supervisors)) throw new Error(`Unexpected results`);
           return supervisors.map((sup: any) => {
             return {
@@ -274,11 +270,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: supervisorsState => {
         this.setState({
-          supervisors: result,
-          supervisorsLoading: loading,
-          supervisorsError: error,
+          supervisorsState,
         });
       },
     });
@@ -290,17 +284,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: IngestionView.TASK_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await axios.get(`/druid/indexer/v1/tasks`);
+          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
           return IngestionView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: tasksState => {
         this.setState({
-          tasks: result,
-          tasksLoading: loading,
-          tasksError: error,
+          tasksState,
         });
       },
     });
@@ -326,7 +318,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     });
   };
 
-  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  private static onSecondaryPaneSizeChange(secondaryPaneSize: number) {
     localStorageSet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
@@ -342,16 +334,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.taskQueryManager.terminate();
   }
 
-  private closeSpecDialogs = () => {
+  private readonly closeSpecDialogs = () => {
     this.setState({
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
     });
   };
 
-  private submitSupervisor = async (spec: JSON) => {
+  private readonly submitSupervisor = async (spec: JSON) => {
     try {
-      await axios.post('/druid/indexer/v1/supervisor', spec);
+      await Api.instance.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
@@ -367,9 +359,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.supervisorQueryManager.rerunLastQuery();
   };
 
-  private submitTask = async (spec: JSON) => {
+  private readonly submitTask = async (spec: JSON) => {
     try {
-      await axios.post('/druid/indexer/v1/task', spec);
+      await Api.instance.post('/druid/indexer/v1/task', spec);
     } catch (e) {
       AppToaster.show({
         message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
@@ -393,7 +385,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     const { goToDatasource, goToLoadData } = this.props;
 
     const actions: BasicAction[] = [];
-    if (type === 'kafka' || type === 'kinesis') {
+    if (oneOf(type, 'kafka', 'kinesis')) {
       actions.push(
         {
           icon: IconNames.MULTI_SELECT,
@@ -439,8 +431,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/supervisor/${Api.encodePath(resumeSupervisorId)}/resume`,
             {},
           );
           return resp.data;
@@ -468,8 +460,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/supervisor/${Api.encodePath(suspendSupervisorId)}/suspend`,
             {},
           );
           return resp.data;
@@ -497,8 +489,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/supervisor/${Api.encodePath(resetSupervisorId)}/reset`,
             {},
           );
           return resp.data;
@@ -535,8 +527,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(
-            `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/supervisor/${Api.encodePath(terminateSupervisorId)}/terminate`,
             {},
           );
           return resp.data;
@@ -559,23 +551,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderSupervisorTable() {
-    const {
-      supervisors,
-      supervisorsLoading,
-      supervisorsError,
-      hiddenSupervisorColumns,
-      taskFilter,
-      supervisorFilter,
-    } = this.state;
+    const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
+
     return (
       <>
         <ReactTable
-          data={supervisors || []}
-          loading={supervisorsLoading}
+          data={supervisorsState.data || []}
+          loading={supervisorsState.loading}
           noDataText={
-            !supervisorsLoading && supervisors && !supervisors.length
-              ? 'No supervisors'
-              : supervisorsError || ''
+            supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
@@ -675,14 +659,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         onAction: () => goToDatasource(datasource),
       });
     }
-    if (type === 'index' || type === 'index_parallel') {
+    if (oneOf(type, 'index', 'index_parallel')) {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
         onAction: () => goToLoadData(undefined, id),
       });
     }
-    if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
+    if (oneOf(status, 'RUNNING', 'WAITING', 'PENDING')) {
       actions.push({
         icon: IconNames.CROSS,
         title: 'Kill',
@@ -700,7 +684,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
+          const resp = await Api.instance.post(
+            `/druid/indexer/v1/task/${Api.encodePath(killTaskId)}/shutdown`,
+            {},
+          );
           return resp.data;
         }}
         confirmButtonText="Kill task"
@@ -720,11 +707,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderTaskTable() {
-    const { goToMiddleManager } = this.props;
     const {
-      tasks,
-      tasksLoading,
-      tasksError,
+      tasksState,
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
@@ -733,9 +717,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <ReactTable
-          data={tasks || []}
-          loading={tasksLoading}
-          noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : tasksError || ''}
+          data={tasksState.data || []}
+          loading={tasksState.loading}
+          noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
@@ -830,21 +814,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               }),
               Cell: row => {
                 if (row.aggregated) return '';
-                const { status, location } = row.original;
-                const locationHostname = location ? location.split(':')[0] : null;
+                const { status } = row.original;
                 const errorMsg = row.original.error_msg;
                 return (
                   <span>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {location && (
-                      <a
-                        onClick={() => goToMiddleManager(locationHostname)}
-                        title={`Go to: ${locationHostname}`}
-                      >
-                        &nbsp;&#x279A;
-                      </a>
-                    )}
                     {errorMsg && (
                       <a
                         onClick={() => this.setState({ alertErrorMsg: errorMsg })}
@@ -973,7 +948,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
           return resp.data;
         }}
         confirmButtonText="Resume all supervisors"
@@ -999,7 +974,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
           return resp.data;
         }}
         confirmButtonText="Suspend all supervisors"
@@ -1025,7 +1000,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <AsyncActionDialog
         action={async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
+          const resp = await Api.instance.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
           return resp.data;
         }}
         confirmButtonText="Terminate all supervisors"
@@ -1083,17 +1058,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <SplitterLayout
-          customClassName={'ingestion-view app-view'}
+          customClassName="ingestion-view app-view"
           vertical
           percentage
           secondaryInitialSize={
-            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE) as string) || 60
+            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE)!) || 60
           }
           primaryMinSize={30}
           secondaryMinSize={30}
-          onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+          onSecondaryPaneSizeChange={IngestionView.onSecondaryPaneSizeChange}
         >
-          <div className={'top-pane'}>
+          <div className="top-pane">
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
@@ -1112,7 +1087,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             </ViewControlBar>
             {this.renderSupervisorTable()}
           </div>
-          <div className={'bottom-pane'}>
+          <div className="bottom-pane">
             <ViewControlBar label="Tasks">
               <Label>Group by</Label>
               <ButtonGroup>

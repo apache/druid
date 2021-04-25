@@ -104,16 +104,26 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
+
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
 
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
     Assert.assertTrue(workerRunningTask(task.getId()));
+
     mockWorkerCompleteSuccessfulTask(task);
     Assert.assertTrue(workerCompletedTask(result));
-
     Assert.assertEquals(task.getId(), result.get().getId());
     Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
+
+    cf.delete().guaranteed().forPath(JOINER.join(STATUS_PATH, task.getId()));
+
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
   }
 
   @Test
@@ -421,6 +431,9 @@ public class RemoteTaskRunnerTest
   public void testWorkerRemoved() throws Exception
   {
     doSetup();
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
+
     Future<TaskStatus> future = remoteTaskRunner.run(task);
 
     Assert.assertTrue(taskAnnounced(task.getId()));
@@ -449,6 +462,9 @@ public class RemoteTaskRunnerTest
         )
     );
     Assert.assertNull(cf.checkExists().forPath(STATUS_PATH));
+
+    Assert.assertEquals(0, remoteTaskRunner.getTotalTaskSlotCount());
+    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
   }
 
   @Test
@@ -621,6 +637,9 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertEquals(1, lazyworkers.size());
     Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
+    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getLazyTaskSlotCount());
   }
 
   @Test
@@ -931,10 +950,12 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task1);
     Assert.assertTrue(taskFuture1.get().isFailure());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
 
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
     Assert.assertTrue(taskAnnounced(task2.getId()));
     mockWorkerRunningTask(task2);
+    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
 
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
     Assert.assertTrue(taskAnnounced(task3.getId()));
@@ -942,10 +963,12 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task3);
     Assert.assertTrue(taskFuture3.get().isFailure());
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(3, remoteTaskRunner.getBlacklistedTaskSlotCount());
 
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
   }
 
   @Test

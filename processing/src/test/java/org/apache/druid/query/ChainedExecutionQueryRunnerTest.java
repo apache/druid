@@ -269,14 +269,14 @@ public class ChainedExecutionQueryRunnerTest
     ListenableFuture future = capturedFuture.getValue();
 
     // wait for query to time out
-    QueryInterruptedException cause = null;
+    QueryTimeoutException cause = null;
     try {
       resultFuture.get();
     }
     catch (ExecutionException e) {
-      Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
-      Assert.assertEquals("Query timeout", ((QueryInterruptedException) e.getCause()).getErrorCode());
-      cause = (QueryInterruptedException) e.getCause();
+      Assert.assertTrue(e.getCause() instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e.getCause()).getErrorCode());
+      cause = (QueryTimeoutException) e.getCause();
     }
     queriesInterrupted.await();
     Assert.assertNotNull(cause);

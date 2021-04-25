@@ -23,6 +23,7 @@
 $easeOutQuad = cubic-bezier(0.250, 0.460, 0.450, 0.940)
 $easeOutBack = cubic-bezier(0.175,  0.885, 0.320, 1.275)
 $expandSize = 7px
+$border-color = alpha(black, 0.15)
 
 input-select-style()
   border: 1px solid rgba(0,0,0,0.1)
@@ -37,7 +38,6 @@ input-select-style()
   position:relative
   display: flex
   flex-direction: column
-  border: 1px solid alpha(black, .1)
   *
     box-sizing: border-box
   .rt-table
@@ -60,20 +60,20 @@ input-select-style()
 
     &.-headerGroups
       background: alpha(black, .03)
-      border-bottom: 1px solid alpha(black, .05)
+      border-bottom: 1px solid $border-color
 
     &.-filters
-      border-bottom: 1px solid alpha(black, 0.05)
+      border-bottom: 1px solid $border-color
 
       //input
       //select
       //  input-select-style();
 
       .rt-th
-        border-right: 1px solid alpha(black, 0.02)
+        border-right: 1px solid $border-color
 
     &.-header
-      box-shadow: 0 2px 15px 0px alpha(black, .15)
+      box-shadow: 0 1px 0 0 $border-color
 
     .rt-tr
       text-align: left
@@ -83,13 +83,13 @@ input-select-style()
       padding: 5px 5px
       line-height: normal
       position: relative
-      border-right: 1px solid alpha(black, .05)
+      border-right: 1px solid $border-color
       transition box-shadow .3s $easeOutBack
       box-shadow:inset 0 0 0 0 transparent
       &.-sort-asc
-        box-shadow:inset 0 3px 0 0 alpha(white, .6)
+        box-shadow:inset 0 3px 0 0 #8489A1
       &.-sort-desc
-        box-shadow:inset 0 -3px 0 0 alpha(white, .6)
+        box-shadow:inset 0 -3px 0 0 #8489A1
       &.-cursor-pointer
         cursor: pointer
       &:last-child
@@ -105,7 +105,7 @@ input-select-style()
       text-overflow: ellipsis
 
     .rt-header-pivot
-      border-right-color: #f7f7f7
+      border-right-color: $border-color
 
     .rt-header-pivot:after, .rt-header-pivot:before
       left: 100%
@@ -136,11 +136,11 @@ input-select-style()
     overflow: auto
     // z-index:0
     .rt-tr-group
-      border-bottom: solid 1px alpha(black, .05)
+      border-bottom: 1px solid $border-color
       &:last-child
         border-bottom: 0
     .rt-td
-      border-right:1px solid alpha(black, .02)
+      border-right:1px solid $border-color
       &:last-child
         border-right:0
     .rt-expandable
@@ -207,16 +207,16 @@ input-select-style()
     flex: 1 0 auto
     display: flex
     flex-direction: column
-    box-shadow: 0 0px 15px 0px alpha(black, .15)
+    box-shadow: 0 0px 15px 0px alpha(black, 0)
 
     .rt-td
-      border-right:1px solid alpha(black, .05)
+      border-right:1px solid $border-color
       &:last-child
         border-right:0
 
   &.-striped
     .rt-tr.-odd
-      background: alpha(white, .03)
+      background: alpha(white, .025)
   &.-highlight
     .rt-tbody
       .rt-tr:not(.-padRow):hover
@@ -229,8 +229,7 @@ input-select-style()
     align-items: stretch
     flex-wrap: wrap
     padding: 3px
-    box-shadow: 0 0px 15px 0px alpha(black, .1)
-    border-top: 2px solid alpha(black, .1)
+    border-top: 1px solid $border-color
 
     input
     select

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Intent } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
 import React from 'react';
 
@@ -25,9 +26,10 @@ describe('interval calendar component', () => {
   it('matches snapshot', () => {
     const intervalInput = (
       <IntervalInput
-        interval={'2010-01-01/2020-01-01'}
-        placeholder={'2010-01-01/2020-01-01'}
+        interval="2010-01-01/2020-01-01"
+        placeholder="2010-01-01/2020-01-01"
         onValueChange={() => {}}
+        intent={Intent.PRIMARY}
       />
     );
     const { container } = render(intervalInput);

@@ -22,7 +22,6 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import org.apache.druid.java.util.common.StringUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
@@ -165,8 +164,8 @@ public class Request
 
   public Request setBasicAuthentication(String username, String password)
   {
-    final String base64Value = base64Encode(StringUtils.format("%s:%s", username, password));
-    setHeader(HttpHeaders.Names.AUTHORIZATION, StringUtils.format("Basic %s", base64Value));
+    final String base64Value = base64Encode(username + ":" + password);
+    setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + base64Value);
     return this;
   }
 

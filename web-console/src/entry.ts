@@ -16,23 +16,21 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import 'brace'; // Import Ace editor and all the sub components used in the app
-import 'brace/ext/language_tools';
-import 'brace/theme/solarized_dark';
 import 'core-js/stable';
+import 'regenerator-runtime/runtime';
+import './bootstrap/ace';
+
 import React from 'react';
 import ReactDOM from 'react-dom';
-import 'regenerator-runtime/runtime';
 
-import './ace-modes/dsql';
-import './ace-modes/hjson';
-import './bootstrap/react-table-defaults';
+import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
-import { UrlBaser } from './singletons/url-baser';
+import { Api, UrlBaser } from './singletons';
 
 import './entry.scss';
+
+bootstrapReactTable();
 
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
@@ -69,16 +67,21 @@ if (typeof consoleConfig.title === 'string') {
   window.document.title = consoleConfig.title;
 }
 
+const apiConfig = Api.getDefaultConfig();
+
 if (consoleConfig.baseURL) {
-  axios.defaults.baseURL = consoleConfig.baseURL;
+  apiConfig.baseURL = consoleConfig.baseURL;
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  apiConfig.headers[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
-  Object.assign(axios.defaults.headers, consoleConfig.customHeaders);
+  Object.assign(apiConfig.headers, consoleConfig.customHeaders);
 }
+
+Api.initialize(apiConfig);
+
 if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);
 }
@@ -88,7 +91,7 @@ ReactDOM.render(
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
-  }) as any,
+  }),
   container,
 );
 

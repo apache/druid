@@ -35,12 +35,14 @@ public class CoordinatorStats
 {
   private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
   private final Map<String, Object2LongOpenHashMap<String>> perDataSourceStats;
+  private final Map<String, Object2LongOpenHashMap<String>> perDutyStats;
   private final Object2LongOpenHashMap<String> globalStats;
 
   public CoordinatorStats()
   {
     perTierStats = new HashMap<>();
     perDataSourceStats = new HashMap<>();
+    perDutyStats = new HashMap<>();
     globalStats = new Object2LongOpenHashMap<>();
   }
 
@@ -52,6 +54,11 @@ public class CoordinatorStats
   public boolean hasPerDataSourceStats()
   {
     return !perDataSourceStats.isEmpty();
+  }
+
+  public boolean hasPerDutyStats()
+  {
+    return !perDutyStats.isEmpty();
   }
 
   public Set<String> getTiers(final String statName)
@@ -66,6 +73,15 @@ public class CoordinatorStats
   public Set<String> getDataSources(String statName)
   {
     final Object2LongOpenHashMap<String> stat = perDataSourceStats.get(statName);
+    if (stat == null) {
+      return Collections.emptySet();
+    }
+    return Collections.unmodifiableSet(stat.keySet());
+  }
+
+  public Set<String> getDuties(String statName)
+  {
+    final Object2LongOpenHashMap<String> stat = perDutyStats.get(statName);
     if (stat == null) {
       return Collections.emptySet();
     }
@@ -109,6 +125,21 @@ public class CoordinatorStats
     }
   }
 
+  public long getDutyStat(String statName, String duty)
+  {
+    return perDutyStats.get(statName).getLong(duty);
+  }
+
+  public void forEachDutyStat(String statName, ObjLongConsumer<String> consumer)
+  {
+    final Object2LongOpenHashMap<String> stat = perDutyStats.get(statName);
+    if (stat != null) {
+      for (Entry<String> entry : stat.object2LongEntrySet()) {
+        consumer.accept(entry.getKey(), entry.getLongValue());
+      }
+    }
+  }
+
   public long getGlobalStat(final String statName)
   {
     return globalStats.getLong(statName);
@@ -130,6 +161,12 @@ public class CoordinatorStats
   {
     perDataSourceStats.computeIfAbsent(statName, k -> new Object2LongOpenHashMap<>())
                       .addTo(dataSource, value);
+  }
+
+  public void addToDutyStat(String statName, String duty, long value)
+  {
+    perDutyStats.computeIfAbsent(statName, k -> new Object2LongOpenHashMap<>())
+                .addTo(duty, value);
   }
 
   public void addToGlobalStat(final String statName, final long value)
@@ -164,6 +201,20 @@ public class CoordinatorStats
             myStat.addTo(entry.getKey(), entry.getLongValue());
           }
         }
+    );
+
+    stats.perDutyStats.forEach(
+        (statName, urStat) -> {
+          final Object2LongOpenHashMap<String> myStat = perDutyStats.computeIfAbsent(
+              statName,
+              k -> new Object2LongOpenHashMap<>()
+          );
+
+          for (Entry<String> entry : urStat.object2LongEntrySet()) {
+            myStat.addTo(entry.getKey(), entry.getLongValue());
+          }
+        }
+
     );
 
     for (final Object2LongMap.Entry<String> entry : stats.globalStats.object2LongEntrySet()) {

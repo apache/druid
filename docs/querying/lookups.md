@@ -56,7 +56,7 @@ Other lookup types are available as extensions, including:
 Query Syntax
 ------------
 
-In [Druid SQL](sql.html), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
+In [Druid SQL](sql.md), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
 
 ```sql
 SELECT
@@ -78,7 +78,7 @@ FROM
 GROUP BY 1
 ```
 
-In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.html).
+In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.md).
 
 Query Execution
 ---------------
@@ -347,7 +347,7 @@ These end points can be used to get the propagation status of configured lookups
 
 ### List lookup state of all processes
 
-`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers or configured lookup tiers are listed.
+`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers advertised by other Druid nodes, or by default, returning all configured lookup tiers. The default response will also include the lookups which are loaded, being loaded, or being dropped on each node, for each tier, including the complete lookup spec. Add the optional query parameter `detailed=false` to only include the 'version' of the lookup instead of the complete spec.
 
 ### List lookup state of processes in a tier
 

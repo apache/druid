@@ -89,6 +89,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     queryId(query);
     subQueryId(query);
     sqlQueryId(query);
+    context(query);
   }
 
   @Override

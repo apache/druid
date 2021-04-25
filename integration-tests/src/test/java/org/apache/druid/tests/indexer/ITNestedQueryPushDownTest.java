@@ -89,7 +89,7 @@ public class ITNestedQueryPushDownTest extends AbstractIndexerTest
           fullDatasourceName
       );
 
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");

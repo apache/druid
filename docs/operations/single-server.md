@@ -40,7 +40,7 @@ The other configurations are intended for general use single-machine deployments
 
 The startup scripts for these example configurations run a single ZK instance along with the Druid services. You can choose to deploy ZK separately as well.
 
-The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.html#coordinator-operation).
+The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.md#coordinator-operation).
 
 While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
 

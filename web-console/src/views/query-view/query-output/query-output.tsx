@@ -26,13 +26,16 @@ import {
   SqlRef,
   trimString,
 } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
+import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, prettyPrintSql } from '../../../utils';
+import { copyAndAlert, deepSet, filterMap, prettyPrintSql } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
+
+import { ColumnRenameInput } from './column-rename-input/column-rename-input';
 
 import './query-output.scss';
 
@@ -40,18 +43,58 @@ function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
 }
 
+function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSONBig.stringify(value);
+
+    default:
+      return String(value);
+  }
+}
+
+interface Pagination {
+  page: number;
+  pageSize: number;
+}
+
+function getNumericColumnBraces(
+  queryResult: QueryResult | undefined,
+  pagination: Pagination,
+): Record<number, string[]> {
+  const numericColumnBraces: Record<number, string[]> = {};
+  if (queryResult) {
+    const index = pagination.page * pagination.pageSize;
+    const rows = queryResult.rows.slice(index, index + pagination.pageSize);
+    if (rows.length) {
+      const numColumns = queryResult.header.length;
+      for (let c = 0; c < numColumns; c++) {
+        const brace = filterMap(rows, row =>
+          typeof row[c] === 'number' ? String(row[c]) : undefined,
+        );
+        if (rows.length === brace.length) {
+          numericColumnBraces[c] = brace;
+        }
+      }
+    }
+  }
+  return numericColumnBraces;
+}
+
 export interface QueryOutputProps {
-  loading: boolean;
   queryResult?: QueryResult;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
-  error?: string;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, loading, error } = props;
+  const { queryResult, onQueryChange, runeMode } = props;
   const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
-  const [showValue, setShowValue] = useState();
+  const [pagination, setPagination] = useState<Pagination>({ page: 0, pageSize: 20 });
+  const [showValue, setShowValue] = useState<string>();
+  const [renamingColumn, setRenamingColumn] = useState<number>(-1);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
@@ -63,7 +106,6 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   }
 
   function getHeaderMenu(header: string, headerIndex: number) {
-    const { onQueryChange, runeMode } = props;
     const ref = SqlRef.column(header);
     const prettyRef = prettyPrintSql(ref);
 
@@ -133,6 +175,16 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             },
           });
         }
+      }
+
+      if (!parsedQuery.hasStarInSelect()) {
+        basicActions.push({
+          icon: IconNames.EDIT,
+          title: `Rename column`,
+          onAction: () => {
+            setRenamingColumn(headerIndex);
+          },
+        });
       }
 
       basicActions.push({
@@ -211,72 +263,77 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     );
   }
 
-  function getCellMenu(header: string, headerIndex: number, value: any) {
+  function getCellMenu(header: string, headerIndex: number, value: unknown) {
     const { runeMode } = props;
 
-    const showFullValueMenuItem =
-      typeof value === 'string' ? (
-        <MenuItem
-          icon={IconNames.EYE_OPEN}
-          text={`Show full value`}
-          onClick={() => {
-            setShowValue(value);
-          }}
-        />
-      ) : (
-        undefined
-      );
+    const val = SqlLiteral.maybe(value);
+    const showFullValueMenuItem = (
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text="Show full value"
+        onClick={() => {
+          setShowValue(stringifyValue(value));
+        }}
+      />
+    );
 
-    const val = SqlLiteral.create(value);
     if (parsedQuery) {
+      let ex: SqlExpression | undefined;
+      let having = false;
       const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
       if (selectValue) {
         const outputName = selectValue.getOutputName();
-        const having = parsedQuery.isAggregateSelectIndex(headerIndex);
-        let ex: SqlExpression;
+        having = parsedQuery.isAggregateSelectIndex(headerIndex);
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
           ex = selectValue.expression as SqlExpression;
         }
-
-        return (
-          <Menu>
-            {isComparable(value) && (
-              <>
-                {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
-                {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
-              </>
-            )}
-            {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
-            {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
-            {showFullValueMenuItem}
-          </Menu>
-        );
+      } else if (parsedQuery.hasStarInSelect()) {
+        ex = SqlRef.column(header);
       }
-    }
 
-    const ref = SqlRef.column(header);
-    const trimmedValue = trimString(String(value), 50);
-    return (
-      <Menu>
-        <MenuItem
-          icon={IconNames.CLIPBOARD}
-          text={`Copy: ${trimmedValue}`}
-          onClick={() => copyAndAlert(value, `${trimmedValue} copied to clipboard`)}
-        />
-        {!runeMode && (
-          <>
-            {clipboardMenuItem(ref.equal(val))}
-            {clipboardMenuItem(ref.unequal(val))}
-          </>
-        )}
-        {showFullValueMenuItem}
-      </Menu>
-    );
+      return (
+        <Menu>
+          {ex && val && (
+            <>
+              {isComparable(value) && (
+                <>
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                </>
+              )}
+              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    } else {
+      const ref = SqlRef.column(header);
+      const stringValue = stringifyValue(value);
+      const trimmedValue = trimString(stringValue, 50);
+      return (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${trimmedValue}`}
+            onClick={() => copyAndAlert(stringValue, `${trimmedValue} copied to clipboard`)}
+          />
+          {!runeMode && val && (
+            <>
+              {clipboardMenuItem(ref.equal(val))}
+              {clipboardMenuItem(ref.unequal(val))}
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    }
   }
 
-  function getHeaderClassName(header: string) {
+  function getHeaderClassName(header: string, i: number) {
     if (!parsedQuery) return;
 
     const className = [];
@@ -289,41 +346,76 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       className.push('aggregate-header');
     }
 
+    if (i === renamingColumn) {
+      className.push('renaming');
+    }
+
     return className.join(' ');
   }
 
+  function renameColumnTo(renameTo: string | undefined) {
+    setRenamingColumn(-1);
+    if (renameTo && parsedQuery) {
+      if (parsedQuery.hasStarInSelect()) return;
+      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      if (!selectExpression) return;
+      onQueryChange(
+        parsedQuery.changeSelectExpressions(
+          parsedQuery.selectExpressions.change(
+            renamingColumn,
+            selectExpression.changeAliasName(renameTo),
+          ),
+        ),
+        true,
+      );
+    }
+  }
+
+  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
   return (
     <div className="query-output">
       <ReactTable
         data={queryResult ? (queryResult.rows as any[][]) : []}
-        loading={loading}
-        noDataText={
-          !loading && queryResult && !queryResult.rows.length
-            ? 'Query returned no data'
-            : error || ''
-        }
+        noDataText={queryResult && !queryResult.rows.length ? 'Query returned no data' : ''}
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        onPageChange={page => setPagination(deepSet(pagination, 'page', page))}
+        onPageSizeChange={(pageSize, page) => setPagination({ page, pageSize })}
         sortable={false}
         columns={(queryResult ? queryResult.header : []).map((column, i) => {
           const h = column.name;
           return {
-            Header: () => {
-              return (
-                <Popover className={'clickable-cell'} content={getHeaderMenu(h, i)}>
-                  <div>
-                    {h}
-                    {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} iconSize={14} />}
-                  </div>
-                </Popover>
-              );
-            },
-            headerClassName: getHeaderClassName(h),
+            Header:
+              i === renamingColumn && parsedQuery
+                ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
+                : () => {
+                    return (
+                      <Popover className="clickable-cell" content={getHeaderMenu(h, i)}>
+                        <div>
+                          {h}
+                          {hasFilterOnHeader(h, i) && (
+                            <Icon icon={IconNames.FILTER} iconSize={14} />
+                          )}
+                        </div>
+                      </Popover>
+                    );
+                  },
+            headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
-            Cell: row => {
+            Cell: function QueryOutputTableCell(row) {
               const value = row.value;
               return (
                 <div>
                   <Popover content={getCellMenu(h, i, value)}>
-                    <TableCell value={value} unlimited />
+                    {numericColumnBraces[i] ? (
+                      <BracedText
+                        text={String(value)}
+                        braces={numericColumnBraces[i]}
+                        padFractionalPart
+                      />
+                    ) : (
+                      <TableCell value={value} unlimited />
+                    )}
                   </Popover>
                 </div>
               );

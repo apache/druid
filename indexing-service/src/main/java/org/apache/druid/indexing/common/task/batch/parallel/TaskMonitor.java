@@ -54,7 +54,7 @@ public class TaskMonitor<T extends Task>
 {
   private static final Logger log = new Logger(TaskMonitor.class);
 
-  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded(("task-monitor-%d"));
+  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded("task-monitor-%d");
 
   /**
    * A map of subTaskSpecId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is

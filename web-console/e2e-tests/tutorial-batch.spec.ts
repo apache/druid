@@ -16,31 +16,34 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
-import { v4 as uuid } from 'uuid';
+import { SqlRef } from 'druid-query-toolkit';
+import * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import { PartitionConfig } from './component/load-data/config/partition';
-import { SegmentGranularity } from './component/load-data/config/partition';
+import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
+import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
 import { PublishConfig } from './component/load-data/config/publish';
 import { LocalFileDataConnector } from './component/load-data/data-connector/local-file';
 import { DataLoader } from './component/load-data/data-loader';
 import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';
-import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowserNormal as createBrowser } from './util/playwright';
-import { createPage } from './util/playwright';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, UNIFIED_CONSOLE_URL } from './util/druid';
+import { createBrowser, createPage } from './util/playwright';
 import { retryIfJestAssertionError } from './util/retry';
+import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
+
+const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Россия 한국 中国!?~';
 
 describe('Tutorial: Loading a file', () => {
   let browser: playwright.Browser;
   let page: playwright.Page;
 
   beforeAll(async () => {
+    await waitTillWebConsoleReady();
     browser = await createBrowser();
   });
 
@@ -53,27 +56,29 @@ describe('Tutorial: Loading a file', () => {
   });
 
   it('Loads data from local disk', async () => {
-    const datasourceName = uuid();
-    const dataConnector = new LocalFileDataConnector(
-      page,
-      'quickstart/tutorial/',
-      'wikiticker-2015-09-12-sampled.json.gz',
-    );
-    const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
-    const partitionConfig = new PartitionConfig({ segmentGranularity: SegmentGranularity.DAY });
-    const publishConfig = new PublishConfig({ datasourceName: datasourceName });
-
+    const testName = 'load-data-from-local-disk-';
+    const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
     const dataLoader = new DataLoader({
       page: page,
       unifiedConsoleUrl: UNIFIED_CONSOLE_URL,
-      connector: dataConnector,
+      connector: new LocalFileDataConnector(page, {
+        baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
+        fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
+      }),
       connectValidator: validateConnectLocalData,
-      configureSchemaConfig: configureSchemaConfig,
-      partitionConfig: partitionConfig,
-      publishConfig: publishConfig,
+      configureTimestampConfig: new ConfigureTimestampConfig({
+        timestampExpression: 'timestamp_parse("time") + 1',
+      }),
+      configureSchemaConfig: new ConfigureSchemaConfig({ rollup: false }),
+      partitionConfig: new PartitionConfig({
+        segmentGranularity: SegmentGranularity.DAY,
+        timeIntervals: null,
+        partitionsSpec: null,
+      }),
+      publishConfig: new PublishConfig({ datasourceName: datasourceName }),
     });
 
-    await saveScreenshotIfError('load-data-from-local-disk-', page, async () => {
+    await saveScreenshotIfError(testName, page, async () => {
       await dataLoader.load();
       await validateTaskStatus(page, datasourceName);
       await validateDatasourceStatus(page, datasourceName);
@@ -156,18 +161,18 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
     const datasource = datasources.find(t => t.name === datasourceName);
     expect(datasource).toBeDefined();
     expect(datasource!.availability).toMatch('Fully available (1 segment)');
-    expect(datasource!.numRows).toBe(39244);
+    expect(datasource!.totalRows).toBe(39244);
   });
 }
 
 async function validateQuery(page: playwright.Page, datasourceName: string) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = `SELECT * FROM "${datasourceName}" ORDER BY __time`;
+  const query = `SELECT * FROM ${SqlRef.table(datasourceName)} ORDER BY __time`;
   const results = await queryOverview.runQuery(query);
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]).toStrictEqual([
-    /* __time */ '2015-09-12T00:46:58.771Z',
+    /* __time */ '2015-09-12T00:46:58.772Z',
     /* added */ '36',
     /* channel */ '#en.wikipedia',
     /* cityName */ 'null',
@@ -186,6 +191,7 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
     /* page */ 'Talk:Oswald Tilghman',
     /* regionIsoCode */ 'null',
     /* regionName */ 'null',
+    /* time */ '2015-09-12T00:46:58.771Z',
     /* user */ 'GELongstreet',
   ]);
 }

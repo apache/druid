@@ -2,7 +2,7 @@
 
 exports[`interval calendar component matches snapshot 1`] = `
 <div
-  class="bp3-input-group"
+  class="bp3-input-group bp3-intent-primary"
 >
   <input
     class="bp3-input"

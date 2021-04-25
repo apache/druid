@@ -144,7 +144,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
         ]
       }
     },
-    "tuningconfig": {
+    "tuningConfig": {
       "type": "index_parallel"
     }
   }

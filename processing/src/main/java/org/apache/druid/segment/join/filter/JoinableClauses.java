@@ -23,10 +23,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -138,6 +138,6 @@ public class JoinableClauses
       prefixes.add(clause.getPrefix());
     }
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    JoinPrefixUtils.checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 }

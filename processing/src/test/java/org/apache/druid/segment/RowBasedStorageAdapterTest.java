@@ -86,7 +86,7 @@ public class RowBasedStorageAdapterTest
           }
       );
 
-  // Processors used by the "allProcessors" tasks.
+  // VectorProcessors used by the "allProcessors" tasks.
   private static final LinkedHashMap<String, Function<Cursor, Supplier<Object>>> PROCESSORS = new LinkedHashMap<>();
 
   @BeforeClass

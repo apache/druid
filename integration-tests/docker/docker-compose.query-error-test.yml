@@ -1,0 +1,101 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.2"
+services:
+  druid-zookeeper-kafka:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-zookeeper-kafka
+
+  druid-metadata-storage:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-metadata-storage
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+
+  druid-overlord:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-overlord
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-coordinator:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-coordinator
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-overlord
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-broker:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-broker
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-historical-for-query-error-test
+
+  druid-router:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-router
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-coordinator
+      - druid-broker
+
+  druid-historical-for-query-error-test:
+    image: druid/cluster
+    container_name: druid-historical-for-query-error-test
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.14
+    ports:
+      - 8084:8083
+      - 8284:8283
+      - 5010:5007
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/historical-for-query-error-test
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+
+networks:
+  druid-it-net:
+    name: druid-it-net
+    ipam:
+      config:
+        - subnet: 172.172.172.0/24

@@ -74,7 +74,7 @@ exports[`rule editor matches snapshot no tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="bp3-card bp3-elevation-0"
+        class="bp3-card bp3-elevation-2"
       >
         <div
           class="bp3-form-group"
@@ -288,7 +288,7 @@ exports[`rule editor matches snapshot with broadcast rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="bp3-card bp3-elevation-0"
+        class="bp3-card bp3-elevation-2"
       >
         <div
           class="bp3-form-group"
@@ -380,7 +380,6 @@ exports[`rule editor matches snapshot with broadcast rule 1`] = `
                 <input
                   class="bp3-input"
                   placeholder="2010-01-01/2020-01-01"
-                  style="padding-right: 10px;"
                   type="text"
                   value=""
                 />
@@ -468,7 +467,7 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="bp3-card bp3-elevation-0"
+        class="bp3-card bp3-elevation-2"
       >
         <div
           class="bp3-form-group"
@@ -560,7 +559,6 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
                 <input
                   class="bp3-input"
                   placeholder="2010-01-01/2020-01-01"
-                  style="padding-right: 10px;"
                   type="text"
                   value=""
                 />
@@ -599,7 +597,6 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
                     class="bp3-input"
                     max="256"
                     min="1"
-                    style="padding-right: 10px;"
                     type="text"
                     value="1"
                   />
@@ -632,7 +629,9 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
                     </span>
                   </button>
                   <button
-                    class="bp3-button"
+                    class="bp3-button bp3-disabled"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -758,7 +757,6 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
                     class="bp3-input"
                     max="256"
                     min="1"
-                    style="padding-right: 10px;"
                     type="text"
                     value="2"
                   />
@@ -1011,7 +1009,7 @@ exports[`rule editor matches snapshot with existing tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="bp3-card bp3-elevation-0"
+        class="bp3-card bp3-elevation-2"
       >
         <div
           class="bp3-form-group"
@@ -1103,7 +1101,6 @@ exports[`rule editor matches snapshot with existing tier in rule 1`] = `
                 <input
                   class="bp3-input"
                   placeholder="2010-01-01/2020-01-01"
-                  style="padding-right: 10px;"
                   type="text"
                   value=""
                 />
@@ -1142,7 +1139,6 @@ exports[`rule editor matches snapshot with existing tier in rule 1`] = `
                     class="bp3-input"
                     max="256"
                     min="1"
-                    style="padding-right: 10px;"
                     type="text"
                     value="2"
                   />
@@ -1397,7 +1393,7 @@ exports[`rule editor matches snapshot with non existing tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="bp3-card bp3-elevation-0"
+        class="bp3-card bp3-elevation-2"
       >
         <div
           class="bp3-form-group"
@@ -1489,7 +1485,6 @@ exports[`rule editor matches snapshot with non existing tier in rule 1`] = `
                 <input
                   class="bp3-input"
                   placeholder="2010-01-01/2020-01-01"
-                  style="padding-right: 10px;"
                   type="text"
                   value=""
                 />
@@ -1528,7 +1523,6 @@ exports[`rule editor matches snapshot with non existing tier in rule 1`] = `
                     class="bp3-input"
                     max="256"
                     min="1"
-                    style="padding-right: 10px;"
                     type="text"
                     value="2"
                   />

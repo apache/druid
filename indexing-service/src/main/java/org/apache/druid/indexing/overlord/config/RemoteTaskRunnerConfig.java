@@ -44,7 +44,10 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   private Period taskCleanupTimeout = new Period("PT15M");
 
   @JsonProperty
-  @HumanReadableBytesRange(min = 10 * 1024, max = Integer.MAX_VALUE)
+  @HumanReadableBytesRange(min = 10 * 1024,
+      max = Integer.MAX_VALUE,
+      message = "maxZnodeBytes must be in the range of [10KiB, 2GiB)"
+  )
   private HumanReadableBytes maxZnodeBytes = HumanReadableBytes.valueOf(CuratorUtils.DEFAULT_MAX_ZNODE_BYTES);
 
   @JsonProperty
@@ -170,7 +173,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     int result = taskAssignmentTimeout.hashCode();
     result = 31 * result + taskCleanupTimeout.hashCode();
     result = 31 * result + getMinWorkerVersion().hashCode();
-    result = 31 * result + maxZnodeBytes.getBytesInInt();
+    result = 31 * result + maxZnodeBytes.hashCode();
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
     result = 31 * result + maxRetriesBeforeBlacklist;

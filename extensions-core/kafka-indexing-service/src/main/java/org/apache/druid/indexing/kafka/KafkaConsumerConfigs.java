@@ -38,7 +38,6 @@ public class KafkaConsumerConfigs
     props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
     props.put("auto.offset.reset", "none");
     props.put("enable.auto.commit", "false");
-    props.put("isolation.level", "read_committed");
     return props;
   }
 

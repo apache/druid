@@ -38,6 +38,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -168,7 +169,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         null,
+        null,
         new Duration(COORDINATOR_PERIOD),
+        null,
+        null,
         null,
         10,
         new Duration("PT0s")
@@ -223,7 +227,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         baseView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         null,
@@ -246,10 +250,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 
@@ -521,7 +527,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         baseView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         null,
@@ -544,10 +550,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 

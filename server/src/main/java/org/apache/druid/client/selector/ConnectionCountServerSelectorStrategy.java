@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -34,6 +35,7 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
   private static final Comparator<QueryableDruidServer> COMPARATOR =
       Comparator.comparingInt(s -> ((DirectDruidClient) s.getQueryRunner()).getNumOpenConnections());
 
+  @Nullable
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {

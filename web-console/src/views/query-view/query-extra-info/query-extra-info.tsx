@@ -31,7 +31,7 @@ import copy from 'copy-to-clipboard';
 import { QueryResult } from 'druid-query-toolkit';
 import React from 'react';
 
-import { AppToaster } from '../../../singletons/toaster';
+import { AppToaster } from '../../../singletons';
 import { pluralIfNeeded } from '../../../utils';
 
 import './query-extra-info.scss';

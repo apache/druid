@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.security;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
  * take care of sending the response.
@@ -30,8 +33,15 @@ public class ForbiddenException extends RuntimeException
     super("Unauthorized.");
   }
 
-  public ForbiddenException(String msg)
+  @JsonCreator
+  public ForbiddenException(@JsonProperty("errorMessage") String msg)
   {
     super(msg);
+  }
+
+  @JsonProperty
+  public String getErrorMessage()
+  {
+    return super.getMessage();
   }
 }

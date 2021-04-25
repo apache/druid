@@ -47,13 +47,45 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public enum ServerType
 {
-  HISTORICAL,
-  BRIDGE,
+  HISTORICAL {
+    @Override
+    public boolean isSegmentReplicationTarget()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean isSegmentServer()
+    {
+      return true;
+    }
+  },
+
+  BRIDGE {
+    @Override
+    public boolean isSegmentReplicationTarget()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean isSegmentServer()
+    {
+      return true;
+    }
+  },
+
   INDEXER_EXECUTOR {
     @Override
     public boolean isSegmentReplicationTarget()
     {
       return false;
+    }
+
+    @Override
+    public boolean isSegmentServer()
+    {
+      return true;
     }
   },
 
@@ -63,11 +95,23 @@ public enum ServerType
     {
       return false;
     }
+
+    @Override
+    public boolean isSegmentServer()
+    {
+      return true;
+    }
   },
 
   BROKER {
     @Override
     public boolean isSegmentReplicationTarget()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean isSegmentServer()
     {
       return false;
     }
@@ -80,10 +124,7 @@ public enum ServerType
    *
    * @see org.apache.druid.server.coordinator.rules.LoadRule
    */
-  public boolean isSegmentReplicationTarget()
-  {
-    return true;
-  }
+  public abstract boolean isSegmentReplicationTarget();
 
   /**
    * Indicates this type of node is able to be a target of segment broadcast.
@@ -94,6 +135,13 @@ public enum ServerType
   {
     return true;
   }
+
+  /**
+   * Indicates this type of node is serving segments that are meant to be the target of fan-out by a Broker.
+   *
+   * Nodes that return "true" here are often referred to as "data servers" or "data server processes".
+   */
+  public abstract boolean isSegmentServer();
 
   @JsonCreator
   public static ServerType fromString(String type)

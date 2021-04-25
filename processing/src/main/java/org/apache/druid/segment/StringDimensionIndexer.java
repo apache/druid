@@ -321,14 +321,18 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
     // more buffer to be safe
     long estimatedSize = key.length * Integer.BYTES;
-    long totalChars = 0;
     for (int element : key) {
       String val = dimLookup.getValue(element);
       if (val != null) {
-        totalChars += val.length();
+        // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
+        // String has the following memory usuage...
+        // 28 bytes of data for String metadata (class pointer, flags, locks, hash, count, offset, reference to char array)
+        // 16 bytes of data for the char array metadata (class pointer, flags, locks, size)
+        // 2 bytes for every letter of the string
+        int sizeOfString = 28 + 16 + (2 * val.length());
+        estimatedSize += sizeOfString;
       }
     }
-    estimatedSize += totalChars * Character.BYTES;
     return estimatedSize;
   }
 

@@ -16,26 +16,37 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
+import * as JSONBig from 'json-bigint-native';
 
-import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  getDummyTimestampSpec,
+  getDimensionNamesFromTransforms,
   getSpecType,
+  getTimestampSchema,
   IngestionSpec,
   IngestionType,
   InputFormat,
   IoConfig,
-  isColumnTimestampSpec,
   isDruidSource,
   MetricSpec,
+  PLACEHOLDER_TIMESTAMP_SPEC,
+  REINDEX_TIMESTAMP_SPEC,
+  TIME_COLUMN,
   TimestampSpec,
   Transform,
   TransformSpec,
   upgradeSpec,
-} from './ingestion-spec';
+} from '../druid-models';
+import { Api } from '../singletons';
+
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
+import {
+  alphanumericCompare,
+  EMPTY_ARRAY,
+  filterMap,
+  oneOf,
+  sortWithPrefixSuffix,
+} from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -121,7 +132,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
     type: 'inline',
-    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+    data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
@@ -132,33 +143,41 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   return sampleSpec;
 }
 
-export function headerFromSampleResponse(
-  sampleResponse: SampleResponse,
-  ignoreColumn?: string,
-  columnOrder?: string[],
-): string[] {
+export interface HeaderFromSampleResponseOptions {
+  sampleResponse: SampleResponse;
+  ignoreTimeColumn?: boolean;
+  columnOrder?: string[];
+  suffixColumnOrder?: string[];
+}
+
+export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
+  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
+
   let columns = sortWithPrefixSuffix(
     dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
-    columnOrder || ['__time'],
-    [],
+    columnOrder || [TIME_COLUMN],
+    suffixColumnOrder || [],
     alphanumericCompare,
   );
 
-  if (ignoreColumn) {
-    columns = columns.filter(c => c !== ignoreColumn);
+  if (ignoreTimeColumn) {
+    columns = columns.filter(c => c !== TIME_COLUMN);
   }
 
   return columns;
 }
 
+export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSampleResponseOptions {
+  parsedOnly?: boolean;
+}
+
 export function headerAndRowsFromSampleResponse(
-  sampleResponse: SampleResponse,
-  ignoreColumn?: string,
-  columnOrder?: string[],
-  parsedOnly = false,
+  options: HeaderAndRowsFromSampleResponseOptions,
 ): HeaderAndRows {
+  const { sampleResponse, parsedOnly } = options;
+
   return {
-    header: headerFromSampleResponse(sampleResponse, ignoreColumn, columnOrder),
+    header: headerFromSampleResponse(options),
     rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
   };
 }
@@ -166,7 +185,7 @@ export function headerAndRowsFromSampleResponse(
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
-    statusResp = await axios.get(`/proxy/overlord/status`);
+    statusResp = await Api.instance.get(`/proxy/overlord/status`);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -182,7 +201,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -231,7 +250,8 @@ function cleanupQueryGranularity(queryGranularity: any): any {
   if (typeof queryGranularityType !== 'string') return queryGranularity;
   queryGranularityType = queryGranularityType.toUpperCase();
 
-  const knownGranularity = [
+  const knownGranularity = oneOf(
+    queryGranularityType,
     'NONE',
     'SECOND',
     'MINUTE',
@@ -240,7 +260,7 @@ function cleanupQueryGranularity(queryGranularity: any): any {
     'WEEK',
     'MONTH',
     'YEAR',
-  ].includes(queryGranularityType);
+  );
 
   return knownGranularity ? queryGranularityType : queryGranularity;
 }
@@ -261,6 +281,7 @@ export async function sampleForConnect(
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
       pattern: '(.*)',
+      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
   }
@@ -272,7 +293,7 @@ export async function sampleForConnect(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getDummyTimestampSpec(),
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     } as any,
@@ -320,13 +341,15 @@ export async function sampleForParser(
     sampleStrategy,
   );
 
+  const reingestMode = isDruidSource(spec);
+
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getDummyTimestampSpec(),
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     },
@@ -342,7 +365,7 @@ export async function sampleForTimestamp(
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
-  const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
+  const timestampSchema = getTimestampSchema(spec);
 
   // First do a query with a static timestamp spec
   const sampleSpecColumns: SampleSpec = {
@@ -352,7 +375,7 @@ export async function sampleForTimestamp(
       dataSchema: {
         dataSource: 'sample',
         dimensionsSpec: {},
-        timestampSpec: columnTimestampSpec ? getDummyTimestampSpec() : timestampSpec,
+        timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -364,7 +387,10 @@ export async function sampleForTimestamp(
   );
 
   // If we are not parsing a column then there is nothing left to do
-  if (!columnTimestampSpec) return sampleColumns;
+  if (timestampSchema === 'none') return sampleColumns;
+
+  const transforms: Transform[] =
+    deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
   // If we are trying to parts a column then get a bit fancy:
   // Query the same sample again (same cache key)
@@ -376,6 +402,9 @@ export async function sampleForTimestamp(
         dataSource: 'sample',
         dimensionsSpec: {},
         timestampSpec,
+        transformSpec: {
+          transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -390,7 +419,8 @@ export async function sampleForTimestamp(
   }
 
   const sampleTimeData = sampleTime.data;
-  return Object.assign({}, sampleColumns, {
+  return {
+    ...sampleColumns,
     data: sampleColumns.data.map((d, i) => {
       // Merge the column sample with the time column sample
       if (!d.parsed) return d;
@@ -398,7 +428,7 @@ export async function sampleForTimestamp(
       d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
       return d;
     }),
-  });
+  };
 }
 
 export async function sampleForTransform(
@@ -432,11 +462,11 @@ export async function sampleForTransform(
     );
 
     specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse(
-        sampleResponseHack,
-        '__time',
-        ['__time'].concat(inputFormatColumns),
-      ).concat(transforms.map(t => t.name)),
+      headerFromSampleResponse({
+        sampleResponse: sampleResponseHack,
+        ignoreTimeColumn: true,
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 
@@ -491,11 +521,11 @@ export async function sampleForFilter(
     );
 
     specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse(
-        sampleResponseHack,
-        '__time',
-        ['__time'].concat(inputFormatColumns),
-      ).concat(transforms.map(t => t.name)),
+      headerFromSampleResponse({
+        sampleResponse: sampleResponseHack,
+        ignoreTimeColumn: true,
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 

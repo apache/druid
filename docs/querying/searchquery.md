@@ -57,7 +57,7 @@ There are several main parts to a search query:
 |--------|-----------|---------|
 |queryType|This String should always be "search"; this is the first thing Apache Druid looks at to figure out how to interpret the query.|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
-|granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.md).|yes|
+|granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.md).|no (default to `all`)|
 |filter|See [Filters](../querying/filters.md).|no|
 |limit| Defines the maximum number per Historical process (parsed as int) of search results to return. |no (default to 1000)|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|

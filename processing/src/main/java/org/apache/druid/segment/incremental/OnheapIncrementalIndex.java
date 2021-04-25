@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -40,6 +41,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,14 +71,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
       long maxBytesInMemory
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
@@ -150,7 +151,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
-    List<String> parseExceptionMessages;
+    final List<String> parseExceptionMessages = new ArrayList<>();
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
@@ -159,11 +160,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
     } else {
       aggs = new Aggregator[metrics.length];
       factorizeAggs(metrics, aggs, rowContainer, row);
-      parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
 
       final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
@@ -185,8 +186,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         sizeInBytes.addAndGet(estimatedRowSize);
       } else {
         // We lost a race
+        parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
-        parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+        doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
@@ -235,14 +237,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
-  private List<String> doAggregate(
+  private void doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
       ThreadLocal<InputRow> rowContainer,
-      InputRow row
+      InputRow row,
+      List<String> parseExceptionsHolder
   )
   {
-    List<String> parseExceptionMessages = new ArrayList<>();
     rowContainer.set(row);
 
     for (int i = 0; i < aggs.length; i++) {
@@ -254,13 +256,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-          parseExceptionMessages.add(e.getMessage());
+          parseExceptionsHolder.add(e.getMessage());
         }
       }
     }
 
     rowContainer.set(null);
-    return parseExceptionMessages;
   }
 
   private void closeAggregators()
@@ -435,4 +436,51 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
+  public static class Builder extends AppendableIndexBuilder
+  {
+    @Override
+    protected OnheapIncrementalIndex buildInner()
+    {
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          maxBytesInMemory
+      );
+    }
+  }
+
+  public static class Spec implements AppendableIndexSpec
+  {
+    public static final String TYPE = "onheap";
+
+    @Override
+    public AppendableIndexBuilder builder()
+    {
+      return new Builder();
+    }
+
+    @Override
+    public long getDefaultMaxBytesInMemory()
+    {
+      // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
+      // tracks active index and not the index being flushed to disk, to account for that
+      // we halved default to 1/6(max jvm memory)
+      return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
+    }
+
+    @Override
+    public boolean equals(Object that)
+    {
+      return that.getClass().equals(this.getClass());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(this.getClass());
+    }
+  }
 }

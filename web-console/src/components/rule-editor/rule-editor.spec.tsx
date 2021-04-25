@@ -29,8 +29,8 @@ describe('rule editor', () => {
         tiers={['test', 'test', 'test']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -48,8 +48,8 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -67,8 +67,8 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -89,8 +89,8 @@ describe('rule editor', () => {
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);
@@ -107,8 +107,8 @@ describe('rule editor', () => {
         tiers={[]}
         onChange={() => {}}
         onDelete={() => {}}
-        moveUp={null}
-        moveDown={null}
+        moveUp={undefined}
+        moveDown={undefined}
       />
     );
     const { container } = render(ruleEditor);

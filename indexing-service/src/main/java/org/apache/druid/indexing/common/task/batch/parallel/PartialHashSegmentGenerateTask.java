@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
+import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -40,13 +42,12 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialHashSegmentGenerateParallelIndexTaskRunner}. This task partitions input data by
  * hashing the segment granularity and partition dimensions in {@link HashedPartitionsSpec}. Partitioned segments are
- * stored in local storage using {@link org.apache.druid.indexing.worker.ShuffleDataSegmentPusher}.
+ * stored in local storage using {@link ShuffleDataSegmentPusher}.
  */
 public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<GeneratedPartitionsMetadataReport>
 {
@@ -56,6 +57,8 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  @Nullable
+  private final Map<Interval, Integer> intervalToNumShardsOverride;
 
   @JsonCreator
   public PartialHashSegmentGenerateTask(
@@ -66,7 +69,8 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context
+      @JsonProperty("context") final Map<String, Object> context,
+      @JsonProperty("intervalToNumShardsOverride") @Nullable final Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
     super(
@@ -82,6 +86,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
+    this.intervalToNumShardsOverride = intervalToNumShardsOverride;
   }
 
   @JsonProperty
@@ -102,6 +107,13 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     return supervisorTaskId;
   }
 
+  @Nullable
+  @JsonProperty
+  public Map<Interval, Integer> getIntervalToNumShardsOverride()
+  {
+    return intervalToNumShardsOverride;
+  }
+
   @Override
   public String getType()
   {
@@ -112,7 +124,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     return tryTimeChunkLock(
-        taskActionClient,
+        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
         getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
@@ -130,7 +142,11 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         getId(),
         granularitySpec,
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
-        createHashPartitionAnalysisFromPartitionsSpec(granularitySpec, partitionsSpec)
+        createHashPartitionAnalysisFromPartitionsSpec(
+            granularitySpec,
+            partitionsSpec,
+            intervalToNumShardsOverride
+        )
     );
   }
 
@@ -165,15 +181,25 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
    */
   public static HashPartitionAnalysis createHashPartitionAnalysisFromPartitionsSpec(
       GranularitySpec granularitySpec,
-      @Nonnull HashedPartitionsSpec partitionsSpec
+      @Nonnull HashedPartitionsSpec partitionsSpec,
+      @Nullable Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
-    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
-    final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
-                                      ? 1
-                                      : partitionsSpec.getNumShards();
     final HashPartitionAnalysis partitionAnalysis = new HashPartitionAnalysis(partitionsSpec);
-    intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
+
+    if (intervalToNumShardsOverride != null) {
+      // Some intervals populated from granularitySpec can be missing in intervalToNumShardsOverride
+      // because intervalToNumShardsOverride contains only the intervals which exist in input data.
+      // We only care about the intervals in intervalToNumShardsOverride here.
+      intervalToNumShardsOverride.forEach(partitionAnalysis::updateBucket);
+    } else {
+      final Iterable<Interval> intervals = granularitySpec.sortedBucketIntervals();
+      final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
+                                        ? 1
+                                        : partitionsSpec.getNumShards();
+
+      intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
+    }
     return partitionAnalysis;
   }
 }

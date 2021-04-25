@@ -29,6 +29,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
+ * An iterator that walks through the file tree for a given {@link Path} and returns {@link FileStatus} for every
+ * file encountered within the hierarchy.
  */
 public class FSSpideringIterator implements Iterator<FileStatus>
 {
@@ -60,8 +62,9 @@ public class FSSpideringIterator implements Iterator<FileStatus>
 
   private final FileSystem fs;
   private final FileStatus[] statii;
+  private FileStatus nextStatus = null;
 
-  FSSpideringIterator statuses = null;
+  private FSSpideringIterator statuses = null;
   int index = 0;
 
   public FSSpideringIterator(
@@ -76,29 +79,43 @@ public class FSSpideringIterator implements Iterator<FileStatus>
   @Override
   public boolean hasNext()
   {
-    if (statuses != null && !statuses.hasNext()) {
-      statuses = null;
-      index++;
-    }
-    return index < statii.length;
+    fetchNextIfNeeded();
+    return nextStatus != null;
   }
 
   @Override
   public FileStatus next()
   {
-    while (hasNext()) {
-      if (statii[index].isDir()) {
+    fetchNextIfNeeded();
+    if (nextStatus == null) {
+      throw new NoSuchElementException();
+    }
+    FileStatus result = nextStatus;
+    nextStatus = null;
+    return result;
+  }
+
+  private void fetchNextIfNeeded()
+  {
+
+    while (nextStatus == null && index < statii.length) {
+      if (statii[index].isDirectory()) {
         if (statuses == null) {
           statuses = spiderPathPropagateExceptions(fs, statii[index].getPath());
         } else if (statuses.hasNext()) {
-          return statuses.next();
+          nextStatus = statuses.next();
+        } else {
+          if (index == statii.length - 1) {
+            return;
+          }
+          statuses = null;
+          index++;
         }
       } else {
         ++index;
-        return statii[index - 1];
+        nextStatus = statii[index - 1];
       }
     }
-    throw new NoSuchElementException();
   }
 
   @Override

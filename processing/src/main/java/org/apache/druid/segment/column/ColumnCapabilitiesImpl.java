@@ -71,6 +71,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
+      capabilities.complexTypeName = other.getComplexTypeName();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
@@ -129,6 +130,14 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
     }
 
+    if (merged.type == ValueType.COMPLEX && merged.complexTypeName == null) {
+      merged.complexTypeName = other.getComplexTypeName();
+    }
+
+    if (merged.type == ValueType.COMPLEX && merged.complexTypeName != null && !merged.complexTypeName.equals(other.getComplexTypeName())) {
+      throw new ISE("Cannot merge columns of typeName[%s] and [%s]", merged.complexTypeName, other.getComplexTypeName());
+    }
+
     merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
     merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
     merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
@@ -169,6 +178,21 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
+   * Simple, single valued, non dictionary encoded string without bitmap index or anything fancy
+   */
+  public static ColumnCapabilitiesImpl createSimpleSingleValueStringColumnCapabilities()
+  {
+    return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                       .setHasMultipleValues(false)
+                                       .setHasBitmapIndexes(false)
+                                       .setDictionaryEncoded(false)
+                                       .setDictionaryValuesSorted(false)
+                                       .setDictionaryValuesUnique(false)
+                                       .setHasSpatialIndexes(false)
+                                       .setHasNulls(true);
+  }
+
+  /**
    * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
    * and {@link #hasNulls} is not set
    */
@@ -186,6 +210,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Nullable
   private ValueType type = null;
+
+  @Nullable
+  private String complexTypeName = null;
 
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
@@ -209,9 +236,22 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return type;
   }
 
+  @Override
+  @JsonProperty
+  public String getComplexTypeName()
+  {
+    return complexTypeName;
+  }
+
   public ColumnCapabilitiesImpl setType(ValueType type)
   {
     this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl setComplexTypeName(String typeName)
+  {
+    this.complexTypeName = typeName;
     return this;
   }
 

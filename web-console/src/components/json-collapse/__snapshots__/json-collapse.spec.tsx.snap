@@ -1,29 +1,31 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`json collapse matches snapshot 1`] = `
+exports[`JsonCollapse matches snapshot 1`] = `
 <div
-  class="json-collapse"
+  className="json-collapse"
 >
-  <button
-    class="bp3-button bp3-minimal"
-    type="button"
+  <div
+    className="collapse-buttons"
   >
-    <span
-      class="bp3-button-text"
-    >
-      test
-    </span>
-  </button>
-  <div>
-    <div
-      class="bp3-collapse"
-    >
-      <div
-        aria-hidden="false"
-        class="bp3-collapse-body"
-        style="transform: translateY(-0px);"
-      />
-    </div>
+    <Blueprint3.Button
+      active={false}
+      minimal={true}
+      onClick={[Function]}
+      text="test"
+    />
   </div>
+  <Blueprint3.Collapse
+    component="div"
+    isOpen={false}
+    keepChildrenMounted={false}
+    transitionDuration={200}
+  >
+    <Blueprint3.TextArea
+      readOnly={true}
+      value="{
+  \\"name\\": \\"test\\"
+}"
+    />
+  </Blueprint3.Collapse>
 </div>
 `;

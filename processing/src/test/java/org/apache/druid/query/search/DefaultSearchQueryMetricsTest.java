@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.search;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CachingEmitter;
@@ -57,6 +58,7 @@ public class DefaultSearchQueryMetricsTest
             ImmutableSet.of("t3"),
             null
         ))
+        .context(ImmutableMap.of("testKey", "testValue"))
         .build();
 
     SearchQueryMetrics queryMetrics = DefaultSearchQueryMetricsFactory.instance().makeMetrics(query);
@@ -65,7 +67,7 @@ public class DefaultSearchQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(12, actualEvent.size());
+    Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -79,6 +81,7 @@ public class DefaultSearchQueryMetricsTest
     Assert.assertEquals("false", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
+    Assert.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));

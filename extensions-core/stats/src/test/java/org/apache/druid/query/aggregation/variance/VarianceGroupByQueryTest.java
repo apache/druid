@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -63,14 +64,12 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
   private final String testName;
+  private final GroupByQuery.Builder queryBuilder;
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    // Use GroupByQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
-    // can't vectorize yet.
     return GroupByQueryRunnerTest.constructorFeeder().stream()
-                                 .filter(constructor -> !((boolean) constructor[4]) /* !vectorize */)
                                  .map(
                                      constructor ->
                                          new Object[]{
@@ -94,13 +93,14 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.queryBuilder = GroupByQuery.builder()
+                                    .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
   }
 
   @Test
   public void testGroupByVarianceOnly()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -141,8 +141,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testGroupBy()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -191,8 +190,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         new String[]{"alias", "rows", "index", "index_var", "index_stddev"}
     );
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -244,8 +242,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   public void testGroupByZtestPostAgg()
   {
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -286,8 +283,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   public void testGroupByTestPvalueZscorePostAgg()
   {
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -308,7 +304,14 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .build();
 
     VarianceTestHelper.RowBuilder builder =
-        new VarianceTestHelper.RowBuilder(new String[]{"alias", "rows", "idx", "index_stddev", "index_var", "pvalueZscore"});
+        new VarianceTestHelper.RowBuilder(new String[]{
+            "alias",
+            "rows",
+            "idx",
+            "index_stddev",
+            "index_var",
+            "pvalueZscore"
+        });
 
     List<ResultRow> expectedResults = builder
         .add("2011-04-01", "automotive", 1L, 135.0, 0.0, 0.0, 1.0)

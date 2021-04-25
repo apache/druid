@@ -113,56 +113,77 @@ public class ExprTest
   {
     EqualsVerifier.forClass(ApplyFunctionExpr.class)
                   .usingGetClass()
-                  .withIgnoredFields("function", "bindingDetails", "lambdaBindingDetails", "argsBindingDetails")
+                  .withIgnoredFields("function", "bindingAnalysis", "lambdaBindingAnalysis", "argsBindingAnalyses")
                   .verify();
   }
 
   @Test
   public void testEqualsContractForUnaryNotExpr()
   {
-    EqualsVerifier.forClass(UnaryNotExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(UnaryNotExpr.class).withIgnoredFields("op").usingGetClass().verify();
   }
 
   @Test
   public void testEqualsContractForUnaryMinusExpr()
   {
-    EqualsVerifier.forClass(UnaryMinusExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(UnaryMinusExpr.class).withIgnoredFields("op").usingGetClass().verify();
   }
 
   @Test
   public void testEqualsContractForStringExpr()
   {
-    EqualsVerifier.forClass(StringExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(StringExpr.class)
+                  .withIgnoredFields("outputType")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForDoubleExpr()
   {
-    EqualsVerifier.forClass(DoubleExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DoubleExpr.class)
+                  .withIgnoredFields("outputType")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForLongExpr()
   {
-    EqualsVerifier.forClass(LongExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(LongExpr.class)
+                  .withIgnoredFields("outputType")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForStringArrayExpr()
   {
-    EqualsVerifier.forClass(StringArrayExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(StringArrayExpr.class)
+                  .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new String[]{"foo"}, new String[0])
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForLongArrayExpr()
   {
-    EqualsVerifier.forClass(LongArrayExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(LongArrayExpr.class)
+                  .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new Long[]{1L}, new Long[0])
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForDoubleArrayExpr()
   {
-    EqualsVerifier.forClass(DoubleArrayExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DoubleArrayExpr.class)
+                  .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new Double[]{1.0}, new Double[0])
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
@@ -179,12 +200,16 @@ public class ExprTest
   @Test
   public void testEqualsContractForNullLongExpr()
   {
-    EqualsVerifier.forClass(NullLongExpr.class).verify();
+    EqualsVerifier.forClass(NullLongExpr.class)
+                  .withIgnoredFields("outputType", "value")
+                  .verify();
   }
 
   @Test
   public void testEqualsContractForNullDoubleExpr()
   {
-    EqualsVerifier.forClass(NullDoubleExpr.class).verify();
+    EqualsVerifier.forClass(NullDoubleExpr.class)
+                  .withIgnoredFields("outputType", "value")
+                  .verify();
   }
 }

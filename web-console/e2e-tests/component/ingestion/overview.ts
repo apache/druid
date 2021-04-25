@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 import { extractTable } from '../../util/table';
 
@@ -50,7 +50,7 @@ export class IngestionOverview {
 
   async getTasks(): Promise<IngestionTask[]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const data = await extractTable(this.page, 'div.bottom-pane div.rt-tr-group', 'div.rt-td');
 

@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
@@ -33,6 +33,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -56,15 +57,6 @@ public class S3Utils
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final Logger log = new Logger(S3Utils.class);
 
-
-  static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
-  {
-    final boolean isIOException = ex.getCause() instanceof IOException;
-    final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    final boolean badStatusCode = ex.getStatusCode() == 400 || ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
-    return !badStatusCode && (isIOException || isTimeout);
-  }
-
   public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
   {
     @Override
@@ -74,8 +66,8 @@ public class S3Utils
         return false;
       } else if (e instanceof IOException) {
         return true;
-      } else if (e instanceof AmazonServiceException) {
-        return isServiceExceptionRecoverable((AmazonServiceException) e);
+      } else if (e instanceof AmazonClientException) {
+        return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
         return apply(e.getCause());
       }

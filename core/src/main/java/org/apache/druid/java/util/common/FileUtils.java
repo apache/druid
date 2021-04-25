@@ -25,7 +25,6 @@ import com.google.common.io.ByteSource;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -53,19 +52,10 @@ import java.util.UUID;
 
 public class FileUtils
 {
-  private static final Logger log = new Logger(FileUtils.class);
-
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
-  public static final Predicate<Throwable> IS_EXCEPTION = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable input)
-    {
-      return input instanceof Exception;
-    }
-  };
+  public static final Predicate<Throwable> IS_EXCEPTION = input -> input instanceof Exception;
 
   /**
    * Copy input byte source to outFile. If outFile exists, it is attempted to be deleted.

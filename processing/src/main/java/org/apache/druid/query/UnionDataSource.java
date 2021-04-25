@@ -83,7 +83,7 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public boolean isCacheable()
+  public boolean isCacheable(boolean isBroker)
   {
     // Disables result-level caching for 'union' datasources, which doesn't work currently.
     // See https://github.com/apache/druid/issues/8713 for reference.

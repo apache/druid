@@ -42,6 +42,9 @@ public class DruidMetrics
   public static final String SERVER = "server";
   public static final String TIER = "tier";
 
+  public static final String DUTY = "duty";
+  public static final String DUTY_GROUP = "dutyGroup";
+
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
     int retVal = 0;
@@ -66,7 +69,6 @@ public class DruidMetrics
     } else {
       queryMetrics = queryMetricsFactory.makeMetrics(query);
     }
-    queryMetrics.context(query);
     queryMetrics.remoteAddress(remoteAddr);
     return queryMetrics;
   }

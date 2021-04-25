@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 # setup client keystore
 ./docker/tls/generate-client-certs-and-keystores.sh
 rm -rf docker/client_tls

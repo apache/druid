@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -132,6 +133,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   catch (QueryInterruptedException e) {
                                     throw new RuntimeException(e);
                                   }
+                                  catch (QueryTimeoutException e) {
+                                    throw e;
+                                  }
                                   catch (Exception e) {
                                     log.noStackTrace().error(e, "Exception with one of the sequences!");
                                     Throwables.propagateIfPossible(e);
@@ -167,7 +171,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
               GuavaUtils.cancelAll(true, future, futures);
-              throw new QueryInterruptedException(e);
+              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
             }
             catch (ExecutionException e) {
               GuavaUtils.cancelAll(true, future, futures);

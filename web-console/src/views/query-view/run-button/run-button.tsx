@@ -24,10 +24,10 @@ import {
   HotkeysTarget,
   Intent,
   Menu,
+  MenuDivider,
   MenuItem,
   Popover,
   Position,
-  Tooltip,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
@@ -75,7 +75,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
     );
   }
 
-  private handleRun = () => {
+  private readonly handleRun = () => {
     const { onRun } = this.props;
     if (!onRun) return;
     onRun();
@@ -106,14 +106,24 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           target="_blank"
         />
         <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />
+        {!runeMode && onExplain && (
+          <MenuItem icon={IconNames.CLEAN} text="Explain SQL query" onClick={onExplain} />
+        )}
+        {runeMode && (
+          <MenuItem icon={IconNames.ALIGN_LEFT} text="Prettify JSON" onClick={onPrettier} />
+        )}
+        <MenuItem
+          icon={IconNames.PROPERTIES}
+          text="Edit context"
+          onClick={onEditContext}
+          label={numContextKeys ? pluralIfNeeded(numContextKeys, 'key') : undefined}
+        />
+        <MenuDivider />
         {!runeMode && (
           <>
-            {onExplain && (
-              <MenuItem icon={IconNames.CLEAN} text="Explain SQL query" onClick={onExplain} />
-            )}
             <MenuCheckbox
               checked={useApproximateCountDistinct}
-              label="Use approximate COUNT(DISTINCT)"
+              text="Use approximate COUNT(DISTINCT)"
               onChange={() => {
                 onQueryContextChange(
                   setUseApproximateCountDistinct(queryContext, !useApproximateCountDistinct),
@@ -122,7 +132,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
             />
             <MenuCheckbox
               checked={useApproximateTopN}
-              label="Use approximate TopN"
+              text="Use approximate TopN"
               onChange={() => {
                 onQueryContextChange(setUseApproximateTopN(queryContext, !useApproximateTopN));
               }}
@@ -131,22 +141,11 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         )}
         <MenuCheckbox
           checked={useCache}
-          label="Use cache"
+          text="Use cache"
           onChange={() => {
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
-        {!runeMode && (
-          <MenuItem
-            icon={IconNames.PROPERTIES}
-            text="Edit context"
-            onClick={onEditContext}
-            labelElement={numContextKeys ? pluralIfNeeded(numContextKeys, 'key') : undefined}
-          />
-        )}
-        {runeMode && (
-          <MenuItem icon={IconNames.ALIGN_LEFT} text="Prettify JSON" onClick={onPrettier} />
-        )}
       </Menu>
     );
   }
@@ -157,16 +156,14 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
     return (
       <ButtonGroup className="run-button">
         {onRun ? (
-          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-            <Button
-              className={runeMode ? 'rune-button' : undefined}
-              disabled={loading}
-              icon={IconNames.CARET_RIGHT}
-              onClick={this.handleRun}
-              text="Run"
-              intent={Intent.PRIMARY}
-            />
-          </Tooltip>
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            disabled={loading}
+            icon={IconNames.CARET_RIGHT}
+            onClick={this.handleRun}
+            text="Run"
+            intent={Intent.PRIMARY}
+          />
         ) : (
           <Button
             className={runeMode ? 'rune-button' : undefined}

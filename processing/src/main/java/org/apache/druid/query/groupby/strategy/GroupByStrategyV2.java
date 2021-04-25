@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -40,8 +42,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.InsufficientResourcesException;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -84,8 +86,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
-  // see countRequiredMergeBufferNum() for explanation
-  private static final int MAX_MERGE_BUFFER_NUM = 2;
+  // see countRequiredMergeBufferNumWithoutSubtotal() for explanation
+  private static final int MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL = 2;
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
@@ -115,8 +117,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public GroupByQueryResource prepareResource(GroupByQuery query)
   {
-    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1) +
-                                       numMergeBuffersNeededForSubtotalsSpec(query);
+    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query);
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
@@ -133,14 +134,25 @@ public class GroupByStrategyV2 implements GroupByStrategy
         mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
       }
       if (mergeBufferHolders.isEmpty()) {
-        throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
+        throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
+            StringUtils.format(
+                "Cannot acquire %s merge buffers. Try again after current running queries are finished.",
+                requiredMergeBufferNum
+            )
+        );
       } else {
         return new GroupByQueryResource(mergeBufferHolders);
       }
     }
   }
 
-  private static int countRequiredMergeBufferNum(Query query, int foundNum)
+  @VisibleForTesting
+  public static int countRequiredMergeBufferNum(GroupByQuery query)
+  {
+    return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
+  }
+
+  private static int countRequiredMergeBufferNumWithoutSubtotal(Query query, int foundNum)
   {
     // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
     // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
@@ -150,10 +162,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
 
     final DataSource dataSource = query.getDataSource();
-    if (foundNum == MAX_MERGE_BUFFER_NUM + 1 || !(dataSource instanceof QueryDataSource)) {
+    if (foundNum == MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL + 1 || !(dataSource instanceof QueryDataSource)) {
       return foundNum - 1;
     } else {
-      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
+      return countRequiredMergeBufferNumWithoutSubtotal(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
     }
   }
 
@@ -405,27 +417,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // Iterate through each subtotalSpec, build results for it and add to subtotalsResults
       for (List<String> subtotalSpec : subtotals) {
         final ImmutableSet<String> dimsInSubtotalSpec = ImmutableSet.copyOf(subtotalSpec);
+        // Dimension spec including dimension name and output name
+        final List<DimensionSpec> subTotalDimensionSpec = new ArrayList<>(dimsInSubtotalSpec.size());
         final List<DimensionSpec> dimensions = query.getDimensions();
-        final List<DimensionSpec> newDimensions = new ArrayList<>();
 
-        for (int i = 0; i < dimensions.size(); i++) {
-          DimensionSpec dimensionSpec = dimensions.get(i);
+        for (DimensionSpec dimensionSpec : dimensions) {
           if (dimsInSubtotalSpec.contains(dimensionSpec.getOutputName())) {
-            newDimensions.add(
-                new DefaultDimensionSpec(
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputName(),
-                    dimensionSpec.getOutputType()
-                )
-            );
-          } else {
-            // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
-            // Use a field name that does not appear in the main query result, to assure the result will be null.
-            String dimName = "_" + i;
-            while (query.getResultRowSignature().indexOf(dimName) >= 0) {
-              dimName = "_" + dimName;
-            }
-            newDimensions.add(DefaultDimensionSpec.of(dimName));
+            subTotalDimensionSpec.add(dimensionSpec);
           }
         }
 
@@ -439,15 +437,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
 
         GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec)
-            .withDimensionSpecs(newDimensions);
+            .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -459,7 +456,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
               baseSubtotalQuery,
               subtotalQuery,
-              resultSupplierOneFinal.results(subtotalSpec),
+              resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               resource,
               spillMapper,
@@ -468,7 +465,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
           );
         }
       }
@@ -486,7 +483,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
-      List<String> dimsToInclude,
+      List<DimensionSpec> dimsToInclude,
       GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )
@@ -531,11 +528,20 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return aggsAndPostAggs;
   }
 
-  private int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
+  private static int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
   {
     List<List<String>> subtotalSpecs = query.getSubtotalsSpec();
+    final DataSource dataSource = query.getDataSource();
+    int numMergeBuffersNeededForSubQuerySubtotal = 0;
+    if (dataSource instanceof QueryDataSource) {
+      Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+      if (subQuery instanceof GroupByQuery) {
+        numMergeBuffersNeededForSubQuerySubtotal = numMergeBuffersNeededForSubtotalsSpec((GroupByQuery) subQuery);
+      }
+
+    }
     if (subtotalSpecs == null || subtotalSpecs.size() == 0) {
-      return 0;
+      return numMergeBuffersNeededForSubQuerySubtotal;
     }
 
     List<String> queryDimOutputNames = query.getDimensions().stream().map(DimensionSpec::getOutputName).collect(
@@ -546,7 +552,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       }
     }
 
-    return 1;
+    return Math.max(1, numMergeBuffersNeededForSubQuerySubtotal);
   }
 
   @Override

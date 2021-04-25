@@ -159,13 +159,13 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
-    protected String getSerialType()
+    public String getSerialType()
     {
       return null;
     }
 
     @Override
-    protected int getStreamingFetchSize()
+    public int getStreamingFetchSize()
     {
       return 0;
     }

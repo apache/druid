@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -27,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -49,12 +49,12 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -72,6 +72,10 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -83,13 +87,18 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -124,6 +133,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  private static final String DATASOURCE = "test";
   private static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
@@ -219,6 +229,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
@@ -230,17 +241,25 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(2, segments.size());
 
-    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
 
-    Assert.assertEquals("test", segments.get(1).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -297,6 +316,7 @@ public class IndexTaskTest extends IngestionTestBase
           transformSpec,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -307,6 +327,7 @@ public class IndexTaskTest extends IngestionTestBase
           transformSpec,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -374,7 +395,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
     Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
 
-    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
@@ -405,6 +426,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
             false
         ),
         null
@@ -440,6 +462,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(50, true),
+            false,
             false
         ),
         null
@@ -471,6 +494,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 1, null), true),
+            false,
             false
         ),
         null
@@ -480,10 +504,57 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(1, segments.size());
 
-    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
+  }
+
+  @Test
+  public void testNumShardsAndHashPartitionFunctionProvided() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            null,
+            null,
+            createTuningConfigWithPartitionsSpec(
+                new HashedPartitionsSpec(null, 1, null, HashPartitionFunction.MURMUR3_32_ABS), true
+            ),
+            false,
+            false
+        ),
+        null
+    );
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assert.assertEquals(
+        HashPartitionFunction.MURMUR3_32_ABS,
+        ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
+    );
   }
 
   @Test
@@ -507,6 +578,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")), true),
+            false,
             false
         ),
         null
@@ -517,9 +589,11 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(2, segments.size());
 
     for (DataSegment segment : segments) {
-      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(DATASOURCE, segment.getDataSource());
       Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
       Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+      final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+      Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
       final File segmentFile = segmentLoader.getSegmentFiles(segment);
 
@@ -540,17 +614,15 @@ public class IndexTaskTest extends IngestionTestBase
           .map(cursor -> {
             final DimensionSelector selector = cursor.getColumnSelectorFactory()
                                                      .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-            try {
-              final int hash = HashBasedNumberedShardSpec.hash(
-                  jsonMapper,
-                  Collections.singletonList(selector.getObject())
-              );
-              cursor.advance();
-              return hash;
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
+            final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+                HashBasedNumberedShardSpec.serializeGroupKey(
+                    jsonMapper,
+                    Collections.singletonList(selector.getObject())
+                ),
+                hashBasedNumberedShardSpec.getNumBuckets()
+            );
+            cursor.advance();
+            return hash;
           })
           .toList();
 
@@ -579,7 +651,8 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             createTuningConfigWithMaxRowsPerSegment(2, false),
-            true
+            true,
+            false
         ),
         null
     );
@@ -591,12 +664,12 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
     Assert.assertEquals(2, segments.size());
 
-    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals("test", segments.get(1).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
@@ -627,6 +700,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
             false
         ),
         null
@@ -636,17 +710,17 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(3, segments.size());
 
-    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014-01-01T00/PT1H"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals("test", segments.get(1).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014-01-01T01/PT1H"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals("test", segments.get(2).getDataSource());
+    Assert.assertEquals(DATASOURCE, segments.get(2).getDataSource());
     Assert.assertEquals(Intervals.of("2014-01-01T02/PT1H"), segments.get(2).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(2).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
@@ -675,6 +749,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -687,6 +762,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -731,6 +807,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -743,6 +820,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -794,6 +872,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfig(2, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -808,7 +887,7 @@ public class IndexTaskTest extends IngestionTestBase
       final Interval expectedInterval = Intervals.of(StringUtils.format("2014-01-01T0%d/PT1H", (i / 2)));
       final int expectedPartitionNum = i % 2;
 
-      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(DATASOURCE, segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
       Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
       Assert.assertEquals(expectedPartitionNum, segment.getShardSpec().getPartitionNum());
@@ -837,6 +916,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfig(3, 2, null, 2L, null, true, true),
+            false,
             false
         ),
         null
@@ -850,7 +930,7 @@ public class IndexTaskTest extends IngestionTestBase
       final DataSegment segment = segments.get(i);
       final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
 
-      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(DATASOURCE, segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
       Assert.assertTrue(segment.getShardSpec().getClass().equals(HashBasedNumberedShardSpec.class));
       Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
@@ -879,6 +959,7 @@ public class IndexTaskTest extends IngestionTestBase
             ),
             null,
             createTuningConfig(3, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -892,11 +973,190 @@ public class IndexTaskTest extends IngestionTestBase
     for (int i = 0; i < 5; i++) {
       final DataSegment segment = segments.get(i);
 
-      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(DATASOURCE, segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
       Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
       Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
     }
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityNoSegments() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    EasyMock.replay(mockToolbox);
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    EasyMock.verify(mockToolbox);
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityInvalidWaitTimeout() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    segmentsToWaitFor.add(EasyMock.createMock(DataSegment.class));
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    EasyMock.replay(mockToolbox);
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1));
+    EasyMock.verify(mockToolbox);
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityMultipleSegmentsTimeout() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    SegmentHandoffNotifierFactory mockFactory = EasyMock.createMock(SegmentHandoffNotifierFactory.class);
+    SegmentHandoffNotifier mockNotifier = EasyMock.createMock(SegmentHandoffNotifier.class);
+
+    DataSegment mockDataSegment1 = EasyMock.createMock(DataSegment.class);
+    DataSegment mockDataSegment2 = EasyMock.createMock(DataSegment.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    segmentsToWaitFor.add(mockDataSegment1);
+    segmentsToWaitFor.add(mockDataSegment2);
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    EasyMock.expect(mockDataSegment1.getInterval()).andReturn(Intervals.of("1970-01-01/2100-01-01")).once();
+    EasyMock.expect(mockDataSegment1.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment1.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+    EasyMock.expect(mockDataSegment2.getInterval()).andReturn(Intervals.of("1970-01-01/2100-01-01")).once();
+    EasyMock.expect(mockDataSegment2.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment2.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+
+    EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
+    EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
+    mockNotifier.start();
+    EasyMock.expectLastCall().once();
+    mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().andReturn(true).times(2);
+    mockNotifier.close();
+    EasyMock.expectLastCall().once();
+
+
+    EasyMock.replay(mockToolbox);
+    EasyMock.replay(mockDataSegment1, mockDataSegment2);
+    EasyMock.replay(mockFactory, mockNotifier);
+
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    EasyMock.verify(mockToolbox);
+    EasyMock.verify(mockDataSegment1, mockDataSegment2);
+    EasyMock.verify(mockFactory, mockNotifier);
+  }
+
+  @Test
+  public void testWaitForSegmentAvailabilityMultipleSegmentsSuccess() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+
+    DataSegment mockDataSegment1 = EasyMock.createMock(DataSegment.class);
+    DataSegment mockDataSegment2 = EasyMock.createMock(DataSegment.class);
+    List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    segmentsToWaitFor.add(mockDataSegment1);
+    segmentsToWaitFor.add(mockDataSegment2);
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    EasyMock.expect(mockDataSegment1.getInterval()).andReturn(Intervals.of("1970-01-01/1971-01-01")).once();
+    EasyMock.expect(mockDataSegment1.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment1.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+    EasyMock.expect(mockDataSegment1.getId()).andReturn(SegmentId.dummy("MockDataSource")).once();
+    EasyMock.expect(mockDataSegment2.getInterval()).andReturn(Intervals.of("1971-01-01/1972-01-01")).once();
+    EasyMock.expect(mockDataSegment2.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment2.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+    EasyMock.expect(mockDataSegment2.getId()).andReturn(SegmentId.dummy("MockDataSource")).once();
+
+    EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory())
+            .andReturn(new NoopSegmentHandoffNotifierFactory())
+            .once();
+    EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
+
+    EasyMock.replay(mockToolbox);
+    EasyMock.replay(mockDataSegment1, mockDataSegment2);
+
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
+    EasyMock.verify(mockToolbox);
+    EasyMock.verify(mockDataSegment1, mockDataSegment2);
   }
 
   private static void populateRollupTestData(File tmpFile) throws IOException
@@ -945,6 +1205,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -955,6 +1216,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1001,6 +1263,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1011,6 +1274,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1030,7 +1294,7 @@ public class IndexTaskTest extends IngestionTestBase
         RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
-        Collections.singletonList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
+        Collections.singletonList("Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1}")
     );
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -1068,6 +1332,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1079,7 +1345,9 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         7,
-        7
+        7,
+        null,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1101,6 +1369,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1111,6 +1380,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1151,19 +1421,19 @@ public class IndexTaskTest extends IngestionTestBase
         RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val],]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float,]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,]",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val]]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long]",
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         )
     );
 
@@ -1196,6 +1466,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
+        null,
         new DynamicPartitionsSpec(2, null),
         INDEX_SPEC,
         null,
@@ -1207,7 +1479,9 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1230,6 +1504,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1240,6 +1515,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1281,9 +1557,9 @@ public class IndexTaskTest extends IngestionTestBase
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         )
     );
 
@@ -1316,6 +1592,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        null,
+        null,
         new HashedPartitionsSpec(2, null, null),
         INDEX_SPEC,
         null,
@@ -1327,7 +1605,9 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         true,
         2,
-        5
+        5,
+        null,
+        null
     );
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
@@ -1350,6 +1630,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1360,6 +1641,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1399,9 +1681,9 @@ public class IndexTaskTest extends IngestionTestBase
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-            "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         new ArrayList<>()
@@ -1449,6 +1731,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1459,6 +1742,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1521,6 +1805,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     } else {
@@ -1531,6 +1816,7 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           null,
           tuningConfig,
+          false,
           false
       );
     }
@@ -1554,7 +1840,7 @@ public class IndexTaskTest extends IngestionTestBase
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
         Collections.singletonList(
-            "Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
+            "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
@@ -1582,6 +1868,7 @@ public class IndexTaskTest extends IngestionTestBase
               ),
               null,
               createTuningConfig(3, 2, null, 2L, null, false, true),
+              false,
               false
           ),
           null
@@ -1594,7 +1881,7 @@ public class IndexTaskTest extends IngestionTestBase
       final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
       for (int j = 0; j < 5; j++) {
         final DataSegment segment = segments.get(j);
-        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(DATASOURCE, segment.getDataSource());
         Assert.assertEquals(expectedInterval, segment.getInterval());
         if (i == 0) {
           Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
@@ -1646,6 +1933,7 @@ public class IndexTaskTest extends IngestionTestBase
               ),
               null,
               createTuningConfig(3, 2, null, 2L, null, false, true),
+              false,
               false
           ),
           null
@@ -1660,7 +1948,7 @@ public class IndexTaskTest extends IngestionTestBase
                                         : Intervals.of("2014-01-01/2014-02-01");
       for (int j = 0; j < 5; j++) {
         final DataSegment segment = segments.get(j);
-        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(DATASOURCE, segment.getDataSource());
         Assert.assertEquals(expectedInterval, segment.getInterval());
         Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
         Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
@@ -1681,6 +1969,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             createTuningConfigWithPartitionsSpec(new SingleDimensionPartitionsSpec(null, 1, null, false), true),
+            false,
             false
         ),
         null
@@ -1692,12 +1981,369 @@ public class IndexTaskTest extends IngestionTestBase
     task.isReady(createActionClient(task));
   }
 
+  @Test
+  public void testOldSegmentNotDropWhenDropFlagFalse() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.YEAR,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with YEAR segment granularity
+    List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
+      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+    }
+
+    indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with overwrite and MINUTE segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(3, segments.size());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
+    int yearSegmentFound = 0;
+    int minuteSegmentFound = 0;
+    for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
+      // Used segments after overwrite will contain 1 old segment with YEAR segmentGranularity (from first ingestion)
+      // and 3 new segments with MINUTE segmentGranularity (from second ingestion)
+      if (usedSegmentsBeforeOverwrite.contains(segment)) {
+        Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+        yearSegmentFound++;
+      } else {
+        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+        minuteSegmentFound++;
+      }
+    }
+    Assert.assertEquals(1, yearSegmentFound);
+    Assert.assertEquals(3, minuteSegmentFound);
+  }
+
+  @Test
+  public void testOldSegmentNotDropWhenDropFlagTrueSinceIngestionIntervalDoesNotContainsOldSegment() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.YEAR,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with YEAR segment granularity
+    List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
+      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+    }
+
+    indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            true
+        ),
+        null
+    );
+
+    // Ingest data with overwrite and MINUTE segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(3, segments.size());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
+    int yearSegmentFound = 0;
+    int minuteSegmentFound = 0;
+    for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
+      // Used segments after overwrite will contain 1 old segment with YEAR segmentGranularity (from first ingestion)
+      // and 3 new segments with MINUTE segmentGranularity (from second ingestion)
+      if (usedSegmentsBeforeOverwrite.contains(segment)) {
+        Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+        yearSegmentFound++;
+      } else {
+        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+        minuteSegmentFound++;
+      }
+    }
+    Assert.assertEquals(1, yearSegmentFound);
+    Assert.assertEquals(3, minuteSegmentFound);
+  }
+
+  @Test
+  public void testOldSegmentDropWhenDropFlagTrueAndIngestionIntervalContainsOldSegment() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.YEAR,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with YEAR segment granularity
+    List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
+      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+    }
+
+    indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2015-01-01"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            true
+        ),
+        null
+    );
+
+    // Ingest data with overwrite and MINUTE segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(3, segments.size());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(3, usedSegmentsBeforeAfterOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
+      // Used segments after overwrite and drop will contain only the
+      // 3 new segments with MINUTE segmentGranularity (from second ingestion)
+      if (usedSegmentsBeforeOverwrite.contains(segment)) {
+        Assert.fail();
+      } else {
+        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+      }
+    }
+  }
+
+  @Test
+  public void testOldSegmentNotDropWhenDropFlagTrueAndIngestionIntervalEmpty() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.YEAR,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with YEAR segment granularity
+    List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
+      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+    }
+
+    indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            true
+        ),
+        null
+    );
+
+    // Ingest data with overwrite and MINUTE segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(3, segments.size());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
+    int yearSegmentFound = 0;
+    int minuteSegmentFound = 0;
+    for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
+      // Used segments after overwrite will contain 1 old segment with YEAR segmentGranularity (from first ingestion)
+      // and 3 new segments with MINUTE segmentGranularity (from second ingestion)
+      if (usedSegmentsBeforeOverwrite.contains(segment)) {
+        Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+        yearSegmentFound++;
+      } else {
+        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+        minuteSegmentFound++;
+      }
+    }
+    Assert.assertEquals(1, yearSegmentFound);
+    Assert.assertEquals(3, minuteSegmentFound);
+  }
+
+  @Test
+  public void testErrorWhenDropFlagTrueAndOverwriteFalse() throws Exception
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Cannot both drop existing segments and append to existing segments. Either dropExisting or appendToExisting should be set to false"
+    );
+    new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            temporaryFolder.newFolder(),
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            true,
+            true
+        ),
+        null
+    );
+  }
+
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
   {
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
     Assert.assertThat(
         status.getErrorMsg(),
-        CoreMatchers.containsString("Max parse exceptions exceeded")
+        CoreMatchers.containsString("Max parse exceptions")
     );
   }
 
@@ -1754,8 +2400,10 @@ public class IndexTaskTest extends IngestionTestBase
     return new IndexTuningConfig(
         null,
         maxRowsPerSegment,
+        null,
         maxRowsInMemory,
         maxBytesInMemory,
+        null,
         maxTotalRows,
         null,
         null,
@@ -1771,7 +2419,9 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        1
+        1,
+        null,
+        null
     );
   }
 
@@ -1794,7 +2444,8 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable GranularitySpec granularitySpec,
       @Nullable TransformSpec transformSpec,
       IndexTuningConfig tuningConfig,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Boolean dropExisting
   )
   {
     if (useInputFormatApi) {
@@ -1807,7 +2458,8 @@ public class IndexTaskTest extends IngestionTestBase
           transformSpec,
           granularitySpec,
           tuningConfig,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     } else {
       return createIngestionSpec(
@@ -1817,7 +2469,8 @@ public class IndexTaskTest extends IngestionTestBase
           transformSpec,
           granularitySpec,
           tuningConfig,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     }
   }
@@ -1829,7 +2482,8 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable TransformSpec transformSpec,
       @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Boolean dropExisting
   )
   {
     return createIngestionSpec(
@@ -1842,7 +2496,8 @@ public class IndexTaskTest extends IngestionTestBase
         transformSpec,
         granularitySpec,
         tuningConfig,
-        appendToExisting
+        appendToExisting,
+        dropExisting
     );
   }
 
@@ -1855,7 +2510,8 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable TransformSpec transformSpec,
       @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Boolean dropExisting
   )
   {
     return createIngestionSpec(
@@ -1868,7 +2524,8 @@ public class IndexTaskTest extends IngestionTestBase
         transformSpec,
         granularitySpec,
         tuningConfig,
-        appendToExisting
+        appendToExisting,
+        dropExisting
     );
   }
 
@@ -1882,14 +2539,15 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable TransformSpec transformSpec,
       @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
-      boolean appendToExisting
+      boolean appendToExisting,
+      Boolean dropExisting
   )
   {
     if (inputFormat != null) {
       Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
       return new IndexIngestionSpec(
           new DataSchema(
-              "test",
+              DATASOURCE,
               Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
               Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"),
               new AggregatorFactory[]{
@@ -1906,14 +2564,15 @@ public class IndexTaskTest extends IngestionTestBase
               null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
-              appendToExisting
+              appendToExisting,
+              dropExisting
           ),
           tuningConfig
       );
     } else {
       return new IndexIngestionSpec(
           new DataSchema(
-              "test",
+              DATASOURCE,
               objectMapper.convertValue(
                   new StringInputRowParser(
                       parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC,
@@ -1938,10 +2597,19 @@ public class IndexTaskTest extends IngestionTestBase
                   "druid*",
                   null
               ),
-              appendToExisting
+              appendToExisting,
+              dropExisting
           ),
           tuningConfig
       );
     }
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IndexTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }

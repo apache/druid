@@ -19,12 +19,13 @@
 import React, { useState } from 'react';
 
 import { ShowJson } from '../../components';
+import { Api } from '../../singletons';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface SegmentTableActionDialogProps {
-  segmentId?: string;
-  datasourceId?: string;
+  segmentId: string;
+  datasourceId: string;
   actions: BasicAction[];
   onClose: () => void;
 }
@@ -53,7 +54,9 @@ export const SegmentTableActionDialog = React.memo(function SegmentTableActionDi
     >
       {activeTab === 'metadata' && (
         <ShowJson
-          endpoint={`/druid/coordinator/v1/metadata/datasources/${datasourceId}/segments/${segmentId}`}
+          endpoint={`/druid/coordinator/v1/metadata/datasources/${Api.encodePath(
+            datasourceId,
+          )}/segments/${Api.encodePath(segmentId)}`}
           downloadFilename={`Segment-metadata-${segmentId}.json`}
         />
       )}

@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -34,12 +35,19 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
   private static final String INDEX_TASK = "/indexer/wikipedia_local_input_source_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
 
-  public void doIndexTest(InputFormatDetails inputFormatDetails) throws Exception
+  public void doIndexTest(
+      InputFormatDetails inputFormatDetails,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
-    doIndexTest(inputFormatDetails, ImmutableMap.of());
+    doIndexTest(inputFormatDetails, ImmutableMap.of(), segmentAvailabilityConfirmationPair);
   }
 
-  public void doIndexTest(InputFormatDetails inputFormatDetails, @Nonnull Map<String, Object> extraInputFormatMap) throws Exception
+  public void doIndexTest(
+      InputFormatDetails inputFormatDetails,
+      @Nonnull Map<String, Object> extraInputFormatMap,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     Map inputFormatMap = new ImmutableMap.Builder<String, Object>().putAll(extraInputFormatMap)
@@ -77,6 +85,11 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
           );
           spec = StringUtils.replace(
               spec,
+              "%%DROP_EXISTING%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
               "%%FORCE_GUARANTEED_ROLLUP%%",
               jsonMapper.writeValueAsString(false)
           );
@@ -94,7 +107,8 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

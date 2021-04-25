@@ -88,7 +88,9 @@ public class CommonCacheNotifier
       String callerName
   )
   {
-    this.exec = Execs.singleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
+    this.exec = Execs.singleThreaded(
+        StringUtils.format("%s-notifierThread-", StringUtils.encodeForFormat(callerName)) + "%d"
+    );
     this.callerName = callerName;
     this.updateQueue = new LinkedBlockingQueue<>();
     this.itemConfigMap = itemConfigMap;

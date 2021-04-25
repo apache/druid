@@ -32,9 +32,11 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
@@ -55,6 +57,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -125,6 +128,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public void tearDownIngestionTestBase()
   {
     temporaryFolder.delete();
+  }
+
+  public TestLocalTaskActionClientFactory createActionClientFactory()
+  {
+    return new TestLocalTaskActionClientFactory();
   }
 
   public TestLocalTaskActionClient createActionClient(Task task)
@@ -208,6 +216,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public IndexMergerV9 getIndexMerger()
   {
     return testUtils.getTestIndexMergerV9();
+  }
+
+  public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
+  {
+    @Override
+    public TaskActionClient create(Task task)
+    {
+      return new TestLocalTaskActionClient(task);
+    }
   }
 
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
@@ -295,7 +312,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            null,
+            new TaskConfig(null, null, null, null, null, false, null, null, null, false),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
@@ -380,6 +397,36 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     @Override
     public Optional<ScalingStats> getScalingStats()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getTotalTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getIdleTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getUsedTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getLazyTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }

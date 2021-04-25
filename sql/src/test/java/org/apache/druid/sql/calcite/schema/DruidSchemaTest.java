@@ -61,7 +61,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
-import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -137,6 +136,7 @@ public class DruidSchemaTest extends CalciteTestBase
 
   private SpecificSegmentsQuerySegmentWalker walker = null;
   private DruidSchema schema = null;
+  private DruidSchema schema2 = null;
   private SegmentManager segmentManager;
   private Set<String> segmentDataSourceNames;
   private Set<String> joinableDataSourceNames;
@@ -256,7 +256,6 @@ public class DruidSchemaTest extends CalciteTestBase
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
         PLANNER_CONFIG_DEFAULT,
-        new NoopViewManager(),
         new NoopEscalator()
     )
     {
@@ -266,6 +265,37 @@ public class DruidSchemaTest extends CalciteTestBase
         DruidTable table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
+      }
+    };
+
+    schema2 = new DruidSchema(
+            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+            serverView,
+            segmentManager,
+            new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
+            PLANNER_CONFIG_DEFAULT,
+            new NoopEscalator()
+    )
+    {
+
+      boolean throwException = true;
+      @Override
+      protected DruidTable buildDruidTable(String dataSource)
+      {
+        DruidTable table = super.buildDruidTable(dataSource);
+        buildTableLatch.countDown();
+        return table;
+      }
+
+      @Override
+      Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+      {
+        if (throwException) {
+          throwException = false;
+          throw new RuntimeException("Query[xxxx] url[http://xxxx:8083/druid/v2/] timed out.");
+        } else {
+          return super.refreshSegments(segments);
+        }
       }
     };
 
@@ -288,6 +318,19 @@ public class DruidSchemaTest extends CalciteTestBase
     final Map<String, Table> tableMap = schema.getTableMap();
     Assert.assertEquals(ImmutableSet.of("foo", "foo2"), tableMap.keySet());
   }
+
+  @Test
+  public void testSchemaInit() throws InterruptedException
+  {
+    schema2.start();
+    schema2.awaitInitialization();
+    Map<String, Table> tableMap = schema2.getTableMap();
+    Assert.assertEquals(2, tableMap.size());
+    Assert.assertTrue(tableMap.containsKey("foo"));
+    Assert.assertTrue(tableMap.containsKey("foo2"));
+    schema2.stop();
+  }
+
 
   @Test
   public void testGetTableMapFoo()

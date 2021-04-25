@@ -103,6 +103,7 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
               i,
               numBuckets,
               partitionsSpec.getPartitionDimensions(),
+              partitionsSpec.getPartitionFunction(),
               toolbox.getJsonMapper()
           ))
           .collect(Collectors.toList());

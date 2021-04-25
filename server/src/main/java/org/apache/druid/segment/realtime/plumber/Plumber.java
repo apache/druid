@@ -29,9 +29,9 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 
 public interface Plumber
 {
-  IncrementalIndexAddResult THROWAWAY = new IncrementalIndexAddResult(-1, -1, null, "row too late");
-  IncrementalIndexAddResult NOT_WRITABLE = new IncrementalIndexAddResult(-1, -1, null, "not writable");
-  IncrementalIndexAddResult DUPLICATE = new IncrementalIndexAddResult(-2, -1, null, "duplicate row");
+  IncrementalIndexAddResult THROWAWAY = new IncrementalIndexAddResult(-1, -1, "row too late");
+  IncrementalIndexAddResult NOT_WRITABLE = new IncrementalIndexAddResult(-1, -1, "not writable");
+  IncrementalIndexAddResult DUPLICATE = new IncrementalIndexAddResult(-2, -1, "duplicate row");
 
   /**
    * Perform any initial setup. Should be called before using any other methods, and should be paired

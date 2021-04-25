@@ -65,7 +65,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -110,19 +109,21 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -157,7 +158,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-public class AppenderatorDriverRealtimeIndexTaskTest
+public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(AppenderatorDriverRealtimeIndexTaskTest.class);
   private static final ServiceEmitter EMITTER = new ServiceEmitter(
@@ -683,15 +684,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     // Wait for the task to finish.
     TaskStatus status = statusFuture.get();
-    Assert.assertTrue(status.getErrorMsg()
-                            .contains("java.lang.RuntimeException: Max parse exceptions exceeded, terminating task..."));
+    Assert.assertTrue(status.getErrorMsg().contains("org.apache.druid.java.util.common.RE: Max parse exceptions[0] exceeded"));
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Collections.singletonList(
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]"
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]"
         )
     );
 
@@ -898,10 +898,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]",
-            "Unparseable timestamp found! Event: null"
+            "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1]]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]",
+            "Timestamp[null] is unparseable! Event: null"
         )
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -979,10 +979,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]",
-            "Unparseable timestamp found! Event: null"
+            "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1]]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1]]",
+            "Timestamp[null] is unparseable! Event: null"
         )
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -1394,7 +1394,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
+        null,
         1000,
+        null,
         null,
         maxRowsPerSegment,
         maxTotalRows,
@@ -1484,11 +1486,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       @Override
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
+          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1503,7 +1506,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     };
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(
+        directory.getPath(),
+        null,
+        null,
+        50000,
+        null,
+        true,
+        null,
+        null,
+        null,
+        false
+    );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,

@@ -60,6 +60,7 @@ public class DruidCalciteSchemaModule implements Module
     SqlBindings.addSchema(binder, NamedDruidSchema.class);
     SqlBindings.addSchema(binder, NamedSystemSchema.class);
     SqlBindings.addSchema(binder, NamedLookupSchema.class);
+    SqlBindings.addSchema(binder, NamedViewSchema.class);
   }
 
   @Provides

@@ -70,6 +70,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
 
+  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
   public SQLMetadataStorageActionHandler(
       final SQLMetadataConnector connector,
       final ObjectMapper jsonMapper,

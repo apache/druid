@@ -18,8 +18,7 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -30,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.22.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -78,48 +77,51 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.6.0</apache.kafka.version>
+        <apache.kafka.version>2.8.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>1.3.0-incubating</datasketches.version>
-        <datasketches.memory.version>1.2.0-incubating</datasketches.memory.version>
+        <datasketches.version>2.0.0</datasketches.version>
+        <datasketches.memory.version>1.3.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.30.v20200611</jetty.version>
+        <jetty.version>9.4.39.v20210325</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
+        <jackson.databind.version>2.10.5.1</jackson.databind.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <mysql.version>5.1.48</mysql.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
-        <netty4.version>4.1.48.Final</netty4.version>
-        <node.version>v10.14.2</node.version>
-        <npm.version>6.5.0</npm.version>
+        <netty4.version>4.1.63.Final</netty4.version>
+        <node.version>v10.24.0</node.version>
+        <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
-        <mockito.version>3.2.4</mockito.version>
-        <powermock.version>2.0.2</powermock.version>
-        <aws.sdk.version>1.11.199</aws.sdk.version>
+        <mockito.version>3.8.0</mockito.version>
+        <powermock.version>2.0.9</powermock.version>
+        <aws.sdk.version>1.11.884</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
+        <jacoco.version>0.8.6</jacoco.version>
         <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
              If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
              see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.25.0</com.google.apis.client.version>
-        <com.google.apis.compute.version>v1-rev214-1.25.0</com.google.apis.compute.version>
+        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
+        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -145,6 +147,7 @@
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
+        <module>extensions-core/kubernetes-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -166,6 +169,7 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/ec2-extensions</module>
         <module>extensions-core/s3-extensions</module>
+        <module>extensions-core/druid-aws-rds-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
@@ -194,6 +198,7 @@
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
         <module>extensions-contrib/aliyun-oss-extensions</module>
+        <module>extensions-contrib/prometheus-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -258,6 +263,11 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sts</artifactId>
                 <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
@@ -381,7 +391,7 @@
             <dependency>
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-storage-api</artifactId>
-                <version>2.6.0</version>
+                <version>2.7.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -451,7 +461,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
+                <version>${jackson.databind.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -949,6 +959,11 @@
                 <version>4.5.1</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.2</version>
+            </dependency>
+            <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
@@ -1033,7 +1048,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>4.0.2</version>
+                <version>4.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1098,7 +1113,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.13.2</version>
+                <version>3.19.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1216,7 +1231,14 @@
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.14.3</version>
+                <version>7.3.0</version>
+                <!-- testng ships guice 4.2, which requires a newer version of guava -->
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.inject</groupId>
+                        <artifactId>guice</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -1245,7 +1267,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.1.11</version>
+                <version>3.5.5</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1253,6 +1275,11 @@
                 <artifactId>system-rules</artifactId>
                 <version>1.19.0</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.timeandspace</groupId>
+                <artifactId>cron-scheduler</artifactId>
+                <version>0.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -1262,7 +1289,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.5</version>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
@@ -1284,7 +1311,9 @@
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
-                    </excludes>
+
+                        <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
+                  </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1335,13 +1364,13 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12</version>
+                <version>4.2.0</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>3.1.12</version>
+                        <version>4.2.2</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -1351,7 +1380,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.8</version>
+                <version>3.14.0</version>
                 <configuration>
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
@@ -1374,7 +1403,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>2.6</version>
+                <version>3.1</version>
                 <configuration>
                     <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
@@ -1453,7 +1482,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>1.4.1</version>
+                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1462,6 +1491,9 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <requireMavenVersion>
+                                    <version>3.0.0</version>
+                                </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>1.8.0</version>
                                 </requireJavaVersion>
@@ -1512,6 +1544,7 @@
                     <generateGitPropertiesFile>true</generateGitPropertiesFile>
                     <generateGitPropertiesFilename>${project.build.directory}/git.version</generateGitPropertiesFilename>
                     <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <useNativeGit>true</useNativeGit>
                     <excludeProperties>
                         <excludeProperty>git.build.user.email</excludeProperty>
                         <excludeProperty>git.build.host</excludeProperty>
@@ -1554,9 +1587,9 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.3.2</version>
+                <version>6.0.3</version>
+                <inherited>false</inherited>
                 <configuration>
-                    <cveValidForHours>24</cveValidForHours>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
@@ -1567,6 +1600,9 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <goals>
+                            <goal>aggregate</goal>
+                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
                     </execution>
                 </executions>
@@ -1703,10 +1739,10 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.6</version>
+                    <version>1.11.3</version>
                     <configuration>
-                        <nodeVersion>v10.13.0</nodeVersion>
-                        <npmVersion>6.4.1</npmVersion>
+                        <nodeVersion>${node.version}</nodeVersion>
+                        <npmVersion>${npm.version}</npmVersion>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1862,7 +1898,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>MIT</licenseFamilyCategory>
                                     <licenseFamilyName>MIT JQuery</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2005, 2014 jQuery Foundation, Inc. and other contributors</pattern>
                                         <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
@@ -1872,7 +1908,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Underscore</licenseFamilyCategory>
                                     <licenseFamilyName>Underscore</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Underscore is freely distributable under the MIT license</pattern>
                                     </patterns>
@@ -1880,7 +1916,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
                                     <licenseFamilyName>Allan Jardine</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
                                     </patterns>
@@ -1888,7 +1924,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
                                     <licenseFamilyName>Allan Jardine</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
                                         <pattern>Copyright 2008-2011 Allan Jardine</pattern>
@@ -1924,6 +1960,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
@@ -1933,11 +1970,11 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
-                                <exclude>coordinator-console/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
+                                <exclude>.editorconfig</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

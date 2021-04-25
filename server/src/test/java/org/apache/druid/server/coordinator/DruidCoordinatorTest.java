@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -37,6 +38,7 @@ import org.apache.druid.client.SingleServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -139,7 +141,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         null,
+        null,
         new Duration(COORDINATOR_PERIOD),
+        null,
+        null,
         null,
         10,
         new Duration("PT0s")
@@ -187,7 +192,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -210,10 +215,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        new HashSet<>(),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 
@@ -409,6 +416,24 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
     Assert.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
+
+    Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
+        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+    Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
+    Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
+
+    Object2LongMap<String> underRepliicationCountsPerDataSourceUsingClusterView =
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tier);
+    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView);
+    Assert.assertEquals(1, underRepliicationCountsPerDataSourceUsingClusterView.size());
+    //noinspection deprecation
+    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView.get(dataSource));
+    // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
+    // The load rules asks for 2 replicas, but only 1 historical server in cluster. Since computing using cluster view
+    // the segments are replicated as many times as they can be given state of cluster, therefore should not be
+    // under-replicated.
+    Assert.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
+
     coordinator.stop();
     leaderUnannouncerLatch.await();
 
@@ -495,6 +520,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
+
+    Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
+        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -657,12 +688,90 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName1).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
+    Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
+        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+    Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
+    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
+
     coordinator.stop();
     leaderUnannouncerLatch.await();
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(segmentsMetadataManager);
     EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test
+  public void testBalancerThreadNumber()
+  {
+    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
+
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+
+    ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
+    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+
+    DruidCoordinator c = new DruidCoordinator(
+        null,
+        null,
+        configManager,
+        null,
+        null,
+        null,
+        () -> null,
+        null,
+        scheduledExecutorFactory,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        ZkEnablementConfig.ENABLED
+    );
+
+    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0, "TEST");
+    // before initialization
+    Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
+    Assert.assertNull(c.getBalancerExec());
+
+    // first initialization
+    duty.initBalancerExecutor();
+    System.out.println("c.getCachedBalancerThreadNumber(): " + c.getCachedBalancerThreadNumber());
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService firstExec = c.getBalancerExec();
+    Assert.assertNotNull(firstExec);
+
+    // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
+    duty.initBalancerExecutor();
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService secondExec = c.getBalancerExec();
+    Assert.assertNotNull(secondExec);
+    Assert.assertTrue(firstExec == secondExec);
+
+    // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
+    duty.initBalancerExecutor();
+    Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService thirdExec = c.getBalancerExec();
+    Assert.assertNotNull(thirdExec);
+    Assert.assertFalse(secondExec == thirdExec);
+    Assert.assertFalse(firstExec == thirdExec);
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,

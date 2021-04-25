@@ -38,6 +38,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -254,7 +255,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
     this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "usedSegmentChecker");
     this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
-    this.executor = MoreExecutors.listeningDecorator(Execs.singleThreaded("[" + appenderator.getId() + "]-publish"));
+    this.executor = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded("[" + StringUtils.encodeForFormat(appenderator.getId()) + "]-publish")
+    );
   }
 
   @VisibleForTesting
@@ -413,8 +416,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             identifier,
             result.getNumRowsInSegment(),
             appenderator.getTotalRowCount(),
-            result.isPersistRequired(),
-            result.getParseException()
+            result.isPersistRequired()
         );
       }
       catch (SegmentNotWritableException e) {
@@ -556,6 +558,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToBeDropped,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
@@ -591,6 +594,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
+                segmentsToBeDropped,
                 ourSegments,
                 outputSegmentsAnnotateFunction,
                 callerMetadata

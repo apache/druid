@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -96,22 +97,34 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     return intermediateRowIterator().map(row -> {
-      final Map<String, Object> rawColumns;
+
+      final List<Map<String, Object>> rawColumnsList;
       try {
-        rawColumns = toMap(row);
+        rawColumnsList = toMap(row);
       }
       catch (Exception e) {
-        return InputRowListPlusRawValues.of(null, new ParseException(e, "Unable to parse row [%s] into JSON", row));
+        return InputRowListPlusRawValues.of(null,
+                                            new ParseException(e, "Unable to parse row [%s] into JSON", row));
       }
+
+      if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
+        return InputRowListPlusRawValues.of(null,
+                                            new ParseException("No map object parsed for row [%s]", row));
+      }
+
+      List<InputRow> rows;
       try {
-        return InputRowListPlusRawValues.of(parseInputRows(row), rawColumns);
+        rows = parseInputRows(row);
       }
       catch (ParseException e) {
-        return InputRowListPlusRawValues.of(rawColumns, e);
+        return InputRowListPlusRawValues.ofList(rawColumnsList, e);
       }
       catch (IOException e) {
-        return InputRowListPlusRawValues.of(rawColumns, new ParseException(e, "Unable to parse row [%s] into inputRow", row));
+        ParseException exception = new ParseException(e, "Unable to parse row [%s] into inputRow", row);
+        return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
       }
+
+      return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
     });
   }
 
@@ -132,8 +145,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   /**
    * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by InputSourceSampler.
    * Implementations can use any method to convert the given row into a Map.
+   *
+   * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows} or the returned objects will be discarded
    */
-  protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;
+  protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
   {

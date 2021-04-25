@@ -48,9 +48,11 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -157,8 +159,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
-    final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
-    final String cancelUrl = StringUtils.format("%s://%s/druid/v2/%s", scheme, host, query.getId());
+    final String url = scheme + "://" + host + "/druid/v2/";
+    final String cancelUrl = url + query.getId();
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
@@ -211,7 +213,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
-            throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
+            throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
           }
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
@@ -428,7 +430,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           if (timeLeft <= 0) {
             String msg = StringUtils.format("Query[%s] url[%s] timed out.", query.getId(), url);
             setupResponseReadFailure(msg, null);
-            throw new RE(msg);
+            throw new QueryTimeoutException(msg);
           } else {
             return timeLeft;
           }
@@ -443,7 +445,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url
             );
             setupResponseReadFailure(msg, null);
-            throw new RE(msg);
+            throw new ResourceLimitExceededException(msg);
           }
         }
       };
@@ -451,7 +453,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       long timeLeft = timeoutAt - System.currentTimeMillis();
 
       if (timeLeft <= 0) {
-        throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
       }
 
       future = httpClient.go(

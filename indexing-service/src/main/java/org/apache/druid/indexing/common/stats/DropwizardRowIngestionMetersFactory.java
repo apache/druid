@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.common.stats;
 
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+
 public class DropwizardRowIngestionMetersFactory implements RowIngestionMetersFactory
 {
   @Override

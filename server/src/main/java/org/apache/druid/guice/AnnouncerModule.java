@@ -20,9 +20,11 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
@@ -32,10 +34,20 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncerProvider;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 
+import java.util.Properties;
+
 /**
  */
 public class AnnouncerModule implements Module
 {
+  private boolean isZkEnabled = true;
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -43,7 +55,12 @@ public class AnnouncerModule implements Module
     JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
     binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
     binder.bind(BatchDataSegmentAnnouncer.class).in(LazySingleton.class);
-    binder.bind(DataSegmentServerAnnouncer.class).to(CuratorDataSegmentServerAnnouncer.class).in(LazySingleton.class);
+
+    if (isZkEnabled) {
+      binder.bind(DataSegmentServerAnnouncer.class).to(CuratorDataSegmentServerAnnouncer.class).in(LazySingleton.class);
+    } else {
+      binder.bind(DataSegmentServerAnnouncer.class).to(DataSegmentServerAnnouncer.Noop.class).in(LazySingleton.class);
+    }
   }
 
   @Provides

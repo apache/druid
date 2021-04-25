@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
@@ -55,6 +56,7 @@ import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -68,6 +70,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -86,46 +89,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(Parameterized.class)
 public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingTest
 {
-  interface IndexCreator
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexStorageAdapterTest(String indexType) throws JsonProcessingException
   {
-    IncrementalIndex createIndex();
+    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1_000)
+        .build()
+    ));
   }
 
-  private final IndexCreator indexCreator;
-
-  public IncrementalIndexStorageAdapterTest(
-      IndexCreator IndexCreator
-  )
-  {
-    this.indexCreator = IndexCreator;
-  }
-
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-                        .setMaxRowCount(1000)
-                        .buildOnheap();
-                  }
-                }
-            }
-        }
-    );
+    return IncrementalIndexCreator.getAppendableIndexTypes();
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -189,7 +176,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testObjectColumnSelectorOnVaryingColumnSchema() throws Exception
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T00:00:00"),
@@ -271,7 +258,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   public void testResetSanity() throws IOException
   {
 
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     DateTime t = DateTimes.nowUtc();
     Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
 
@@ -331,7 +318,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testSingleValueTopN() throws IOException
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     DateTime t = DateTimes.nowUtc();
     index.add(
         new MapBasedInputRow(
@@ -373,7 +360,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testFilterByNull() throws Exception
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -434,7 +421,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testCursoringAndIndexUpdationInterleaving() throws Exception
   {
-    final IncrementalIndex index = indexCreator.createIndex();
+    final IncrementalIndex<?> index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
 
     for (int i = 0; i < 2; i++) {
@@ -498,7 +485,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   {
     // Tests the dictionary ID race condition bug described at https://github.com/apache/druid/pull/6340
 
-    final IncrementalIndex index = indexCreator.createIndex();
+    final IncrementalIndex<?> index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
 
     for (int i = 0; i < 5; i++) {
@@ -549,7 +536,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testCursoringAndSnapshot() throws Exception
   {
-    final IncrementalIndex index = indexCreator.createIndex();
+    final IncrementalIndex<?> index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
 
     for (int i = 0; i < 2; i++) {

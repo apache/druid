@@ -28,11 +28,12 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
-import org.hamcrest.CoreMatchers;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,9 +46,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
 
-public class StreamingMergeSortedGrouperTest
+public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -161,8 +161,7 @@ public class StreamingMergeSortedGrouperTest
   @Test
   public void testTimeout()
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+    expectedException.expect(QueryTimeoutException.class);
 
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 100);

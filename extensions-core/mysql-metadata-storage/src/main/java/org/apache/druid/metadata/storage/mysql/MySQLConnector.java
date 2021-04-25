@@ -148,19 +148,19 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected String getPayloadType()
+  public String getPayloadType()
   {
     return PAYLOAD_TYPE;
   }
 
   @Override
-  protected String getSerialType()
+  public String getSerialType()
   {
     return SERIAL_TYPE;
   }
 
   @Override
-  protected String getCollation()
+  public String getCollation()
   {
     return COLLATION;
   }
@@ -172,7 +172,7 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected int getStreamingFetchSize()
+  public int getStreamingFetchSize()
   {
     // this is MySQL's way of indicating you want results streamed back
     // see http://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html

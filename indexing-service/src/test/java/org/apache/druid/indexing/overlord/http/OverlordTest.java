@@ -453,6 +453,36 @@ public class OverlordTest
     }
 
     @Override
+    public long getTotalTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getIdleTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getUsedTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getLazyTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getBlacklistedTaskSlotCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void start()
     {
       //Do nothing

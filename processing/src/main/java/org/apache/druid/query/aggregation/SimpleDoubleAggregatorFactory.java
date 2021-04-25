@@ -23,16 +23,18 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -69,7 +71,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
     this.fieldName = fieldName;
     this.expression = expression;
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
+    this.fieldExpression = Parser.lazyParse(expression, macroTable);
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
@@ -117,6 +119,12 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
         fieldExpression.get(),
         nullValue()
     );
+  }
+
+  @Override
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return AggregatorUtil.makeVectorValueSelector(columnSelectorFactory, fieldName, expression, fieldExpression);
   }
 
   private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)
@@ -233,6 +241,12 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   public String getExpression()
   {
     return expression;
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
   }
 
   protected abstract double nullValue();

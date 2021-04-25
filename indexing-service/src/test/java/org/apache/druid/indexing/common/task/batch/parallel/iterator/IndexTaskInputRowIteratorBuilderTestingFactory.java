@@ -143,9 +143,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
       List<Handler> handlerInvocationHistory = new ArrayList<>();
       IndexTaskInputRowIteratorBuilder iteratorBuilder = iteratorBuilderSupplier.get()
           .delegate(inputRowIterator)
-          .granularitySpec(granularitySpec)
-          .nullRowRunnable(() -> handlerInvocationHistory.add(Handler.NULL_ROW))
-          .absentBucketIntervalConsumer(row -> handlerInvocationHistory.add(Handler.ABSENT_BUCKET_INTERVAL));
+          .granularitySpec(granularitySpec);
 
       if (iteratorBuilder instanceof DefaultIndexTaskInputRowIteratorBuilder) {
         appendedHandlers.stream()

@@ -47,12 +47,12 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -76,7 +76,7 @@ import java.util.function.Function;
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
@@ -89,7 +89,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     this.timelines = timelines;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }
@@ -142,9 +142,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         new AtomicLong(),
         analysis.getBaseQuery().orElse(query)
     );
@@ -260,11 +260,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       final List<WindowedSegment> retVal = new ArrayList<>();
 
       for (SegmentDescriptor spec : specs) {
-        final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+        final PartitionChunk<ReferenceCountingSegment> entry = timeline.findChunk(
             spec.getInterval(),
-            spec.getVersion()
+            spec.getVersion(),
+            spec.getPartitionNumber()
         );
-        retVal.add(new WindowedSegment(entry.getChunk(spec.getPartitionNumber()).getObject(), spec.getInterval()));
+        retVal.add(new WindowedSegment(entry.getObject(), spec.getInterval()));
       }
 
       return retVal;

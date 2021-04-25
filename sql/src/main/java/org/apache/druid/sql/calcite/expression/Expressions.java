@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -54,7 +53,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -168,13 +166,17 @@ public class Expressions
   }
 
   /**
-   * Translate a Calcite {@code RexNode} to a Druid expressions.
+   * Translate a Calcite {@link RexNode} to a Druid expression for projections or the aggregators that don't
+   * require numeric inputs.
+   *
+   * Consider using {@link org.apache.druid.sql.calcite.aggregation.Aggregations#toDruidExpressionForNumericAggregator}
+   * for the aggregators that require numeric inputs.
    *
    * @param plannerContext SQL planner context
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
    *
-   * @return rexNode referring to fields in rowOrder, or null if not possible
+   * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
    */
   @Nullable
   public static DruidExpression toDruidExpression(
@@ -664,21 +666,6 @@ public class Expressions
     return druidExpression != null
            ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
            : null;
-  }
-
-  public static ExprType exprTypeForValueType(final ValueType valueType)
-  {
-    switch (valueType) {
-      case LONG:
-        return ExprType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ExprType.DOUBLE;
-      case STRING:
-        return ExprType.STRING;
-      default:
-        throw new ISE("No ExprType for valueType[%s]", valueType);
-    }
   }
 
   /**

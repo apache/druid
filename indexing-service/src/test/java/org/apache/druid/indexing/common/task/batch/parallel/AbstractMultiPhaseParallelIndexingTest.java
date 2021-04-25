@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -50,6 +51,7 @@ import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -71,6 +73,7 @@ import java.util.Set;
 abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
   protected static final String DATASOURCE = "dataSource";
+  protected static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       new ScanQueryQueryToolChest(
@@ -176,7 +179,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   )
   {
     GranularitySpec granularitySpec = new UniformGranularitySpec(
-        Granularities.DAY,
+        SEGMENT_GRANULARITY,
         Granularities.MINUTE,
         interval == null ? null : Collections.singletonList(interval)
     );
@@ -195,7 +198,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           null,
           new LocalInputSource(inputDir, filter),
           inputFormat,
-          appendToExisting
+          appendToExisting,
+          null
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
@@ -280,7 +284,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
         .manufacturate(tempSegmentDir);
     try {
-      return loader.getSegment(dataSegment, false);
+      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

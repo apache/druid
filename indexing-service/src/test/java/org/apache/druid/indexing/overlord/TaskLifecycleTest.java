@@ -113,6 +113,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -128,8 +130,6 @@ import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -599,7 +599,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false);
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -742,11 +742,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -757,6 +759,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -822,11 +826,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -837,6 +843,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -1247,10 +1255,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1258,7 +1267,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -1354,11 +1366,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1369,6 +1383,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -1468,7 +1484,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
+        null,
         null,
         new Period("P1Y"),
         null, //default window period of 10 minutes

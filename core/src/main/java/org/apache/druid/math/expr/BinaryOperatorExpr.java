@@ -47,14 +47,6 @@ abstract class BinaryOpExprBase implements Expr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    left.visit(visitor);
-    right.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public Expr visit(Shuttle shuttle)
   {
     Expr newLeft = left.visit(shuttle);
@@ -81,10 +73,17 @@ abstract class BinaryOpExprBase implements Expr
   protected abstract BinaryOpExprBase copy(Expr left, Expr right);
 
   @Override
-  public BindingDetails analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     // currently all binary operators operate on scalar inputs
     return left.analyzeInputs().with(right).withScalarArguments(ImmutableSet.of(left, right));
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingInspector inspector)
+  {
+    return ExprTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
   }
 
   @Override
@@ -132,18 +131,18 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-    if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
-      return evalString(leftVal.asString(), rightVal.asString());
-    } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
-      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
-    } else {
-      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
+    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
+    switch (type) {
+      case STRING:
+        return evalString(leftVal.asString(), rightVal.asString());
+      case LONG:
+        return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
+      case DOUBLE:
+      default:
+        if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
+          return ExprEval.of(null);
+        }
+        return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
     }
   }
 

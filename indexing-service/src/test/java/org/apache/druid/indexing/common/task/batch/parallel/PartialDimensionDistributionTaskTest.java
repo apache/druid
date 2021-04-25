@@ -34,11 +34,13 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -110,19 +112,6 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void requiresGranularitySpecInputIntervals()
-    {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("Missing intervals in granularitySpec");
-
-      DataSchema dataSchema = ParallelIndexTestingFactory.createDataSchema(Collections.emptyList());
-
-      new PartialDimensionDistributionTaskBuilder()
-          .dataSchema(dataSchema)
-          .build();
-    }
-
-    @Test
     public void serializesDeserializes()
     {
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
@@ -149,7 +138,7 @@ public class PartialDimensionDistributionTaskTest
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Rule
-    public LoggerCaptureRule logger = new LoggerCaptureRule(PartialDimensionDistributionTask.class);
+    public LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
 
     private Capture<SubTaskReport> reportCapture;
     private TaskToolbox taskToolbox;
@@ -180,6 +169,7 @@ public class PartialDimensionDistributionTaskTest
           }
       );
       EasyMock.expect(taskToolbox.getIndexingServiceClient()).andReturn(new NoopIndexingServiceClient());
+      EasyMock.expect(taskToolbox.getRowIngestionMetersFactory()).andReturn(new DropwizardRowIngestionMetersFactory());
       EasyMock.replay(taskToolbox);
     }
 
@@ -253,7 +243,7 @@ public class PartialDimensionDistributionTaskTest
           .build();
 
       exception.expect(RuntimeException.class);
-      exception.expectMessage("Max parse exceptions exceeded");
+      exception.expectMessage("Max parse exceptions[0] exceeded");
 
       task.runTask(taskToolbox);
     }

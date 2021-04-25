@@ -63,7 +63,7 @@ druid.metadata.storage.connector.dbcp.maxConnLifetimeMillis=1200000
 druid.metadata.storage.connector.dbcp.defaultQueryTimeout=30000
 ```
 
-See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration.html) for full list.
+See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration) for full list.
 
 ## Metadata storage tables
 

@@ -81,7 +81,7 @@ use the cluster resource of the existing cluster for batch ingestion.
 
 This table compares the three available options:
 
-| **Method** | [Native batch (parallel)](native-batch.html#parallel-task) | [Hadoop-based](hadoop.html) | [Native batch (simple)](native-batch.html#simple-task) |
+| **Method** | [Native batch (parallel)](native-batch.md#parallel-task) | [Hadoop-based](hadoop.md) | [Native batch (simple)](native-batch.md#simple-task) |
 |---|-----|--------------|------------|
 | **Task type** | `index_parallel` | `index_hadoop` | `index`  |
 | **Parallel?** | Yes, if `inputFormat` is splittable and `maxNumConcurrentSubTasks` > 1 in `tuningConfig`. See [data format documentation](./data-formats.md) for details. | Yes, always. | No. Each task is single-threaded. |
@@ -90,7 +90,7 @@ This table compares the three available options:
 | **Input locations** | Any [`inputSource`](./native-batch.md#input-sources). | Any Hadoop FileSystem or Druid datasource. | Any [`inputSource`](./native-batch.md#input-sources). |
 | **File formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. | Any [`inputFormat`](./data-formats.md#input-format). |
 | **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). |
-| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. |
+| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec-1) for details. |
 
 <a name="data-model"></a>
 
@@ -106,7 +106,7 @@ offers a unique data modeling system that bears similarity to both relational an
 Druid schemas must always include a primary timestamp. The primary timestamp is used for
 [partitioning and sorting](#partitioning) your data. Druid queries are able to rapidly identify and retrieve data
 corresponding to time ranges of the primary timestamp column. Druid is also able to use the primary timestamp column
-for time-based [data management operations](data-management.html) such as dropping time chunks, overwriting time chunks,
+for time-based [data management operations](data-management.md) such as dropping time chunks, overwriting time chunks,
 and time-based retention rules.
 
 The primary timestamp is parsed based on the [`timestampSpec`](#timestampspec). In addition, the
@@ -186,7 +186,7 @@ Tips for maximizing rollup:
 
 - Generally, the fewer dimensions you have, and the lower the cardinality of your dimensions, the better rollup ratios
 you will achieve.
-- Use [sketches](schema-design.html#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
+- Use [sketches](schema-design.md#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
 - Adjusting `queryGranularity` at ingestion time (for example, using `PT5M` instead of `PT1M`) increases the
 likelihood of two rows in Druid having matching timestamps, and can improve your rollup ratios.
 - It can be beneficial to load the same data into more than one Druid datasource. Some users choose to create a "full"
@@ -196,7 +196,7 @@ that datasource leads to much faster query times. This can often be done with ju
 footprint, since abbreviated datasources tend to be substantially smaller.
 - If you are using a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect
 rollup, you can potentially improve your rollup ratio by switching to a guaranteed perfect rollup option, or by
-[reindexing](data-management.md#compaction-and-reindexing) your data in the background after initial ingestion.
+[reindexing](data-management.md#reingesting-data) or [compacting](compaction.md) your data in the background after initial ingestion.
 
 ### Perfect rollup vs Best-effort rollup
 
@@ -218,8 +218,8 @@ The following table shows how each method handles rollup:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
-|[Hadoop](hadoop.html)|Always perfect.|
+|[Native batch](native-batch.md)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
+|[Hadoop](hadoop.md)|Always perfect.|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|
 
@@ -258,7 +258,7 @@ storage size decreases - and it also tends to improve query performance as well.
 
 Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of
 flexibility. As of current Druid versions, If you are doing initial ingestion through a less-flexible method (like
-Kafka) then you can use [reindexing techniques](data-management.html#compaction-and-reindexing) to repartition your data after it
+Kafka) then you can use [reindexing](data-management.md#reingesting-data) or [compaction](compaction.md) to repartition your data after it
 is initially ingested. This is a powerful technique: you can use it to ensure that any data older than a certain
 threshold is optimally partitioned, even as you continuously add new data from a stream.
 
@@ -266,10 +266,10 @@ The following table shows how each ingestion method handles partitioning:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|Configured using [`partitionsSpec`](native-batch.html#partitionsspec) inside the `tuningConfig`.|
-|[Hadoop](hadoop.html)|Configured using [`partitionsSpec`](hadoop.html#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
+|[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
+|[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
+|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
+|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
 
 > Note that, of course, one way to partition data is to load it into separate datasources. This is a perfectly viable
 > approach and works very well when the number of datasources does not lead to excessive per-datasource overheads. If
@@ -283,7 +283,7 @@ The following table shows how each ingestion method handles partitioning:
 
 ## Ingestion specs
 
-No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.html) or
+No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.md) or
 ongoing "supervisors" (which run and supervise a set of tasks over time). In any case, part of the task or supervisor
 definition is an _ingestion spec_.
 
@@ -359,7 +359,7 @@ You can also load data visually, without the need to write an ingestion spec, us
 available in Druid's [web console](../operations/druid-console.md). Druid's visual data loader supports
 [Kafka](../development/extensions-core/kafka-ingestion.md),
 [Kinesis](../development/extensions-core/kinesis-ingestion.md), and
-[native batch](native-batch.html) mode.
+[native batch](native-batch.md) mode.
 
 ## `dataSchema`
 
@@ -406,7 +406,7 @@ An example `dataSchema` is:
 ### `dataSource`
 
 The `dataSource` is located in `dataSchema` → `dataSource` and is simply the name of the
-[datasource](../design/architecture.html#datasources-and-segments) that data will be written to. An example
+[datasource](../design/architecture.md#datasources-and-segments) that data will be written to. An example
 `dataSource` is:
 
 ```
@@ -489,12 +489,13 @@ Normal interpretation occurs when either `dimensions` or `spatialDimensions` is 
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 
-1. First, start from the set of all input fields from the [`inputFormat`](./data-formats.md) (or the [`flattenSpec`](./data-formats.md#flattenspec), if one is being used).
-2. Any field listed in `dimensionExclusions` is excluded.
-3. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
-4. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
-5. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
-6. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
+1. First, start from the set of all root-level fields from the input record, as determined by the [`inputFormat`](./data-formats.md). "Root-level" includes all fields at the top level of a data structure, but does not included fields nested within maps or lists. To extract these, you must use a [`flattenSpec`](./data-formats.md#flattenspec). All fields of non-nested data formats, such as CSV and delimited text, are considered root-level.
+2. If a [`flattenSpec`](./data-formats.md#flattenspec) is being used, the set of root-level fields includes any fields generated by the flattenSpec. The useFieldDiscovery parameter determines whether the original root-level fields will be retained or discarded.
+3. Any field listed in `dimensionExclusions` is excluded.
+4. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
+5. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
+6. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
+7. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
 
 > Note: Fields generated by a [`transformSpec`](#transformspec) are not currently considered candidates for
 > schemaless dimension interpretation.
@@ -526,7 +527,7 @@ An example `metricsSpec` is:
 The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
 the following operations:
 
-1. Partitioning a datasource into [time chunks](../design/architecture.html#datasources-and-segments) (via `segmentGranularity`).
+1. Partitioning a datasource into [time chunks](../design/architecture.md#datasources-and-segments) (via `segmentGranularity`).
 2. Truncating the timestamp, if desired (via `queryGranularity`).
 3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
 4. Specifying whether ingestion-time [rollup](#rollup) should be used or not (via `rollup`).
@@ -551,7 +552,7 @@ A `granularitySpec` can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type | Either `uniform` or `arbitrary`. In most cases you want to use `uniform`.| `uniform` |
-| segmentGranularity | [Time chunking](../design/architecture.html#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
+| segmentGranularity | [Time chunking](../design/architecture.md#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
 | queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br><br>Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
 | rollup | Whether to use ingestion-time [rollup](#rollup) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
 | intervals | A list of intervals describing what time chunks of segments should be created. If `type` is set to `uniform`, this list will be broken up and rounded-off based on the `segmentGranularity`. If `type` is set to `arbitrary`, this list will be used as-is.<br><br>If `null` or not provided, batch ingestion tasks will generally determine which time chunks to output based on what timestamps are found in the input data.<br><br>If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks will throw away any records with timestamps outside of the specified intervals.<br><br>Ignored for any form of streaming ingestion. | `null` |
@@ -720,7 +721,8 @@ is:
 |-----|-----------|-------|
 |type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
 |maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
-|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).<br /><br />Setting maxBytesInMemory to -1 disables this check, meaning Druid will rely entirely on maxRowsInMemory to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set maxBytesInMemory to -1 and rely on maxRowsInMemory instead.|One-sixth of max JVM heap size|
+|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decreases, and task will fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.<br /><br />Setting maxBytesInMemory to -1 disables this check, meaning Druid will rely entirely on maxRowsInMemory to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set maxBytesInMemory to -1 and rely on maxRowsInMemory instead.|One-sixth of max JVM heap size|
+|skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Tune how data is indexed. See below for more information.|See table below|
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-ingestion.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 

@@ -586,18 +586,19 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       };
     }
 
-    private void addSegment(final DataSegment segment)
+    private void addSegment(DataSegment segment)
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
         if (druidServer.getSegment(segment.getId()) == null) {
-          druidServer.addDataSegment(segment);
+          DataSegment theSegment = DataSegmentInterner.intern(segment);
+          druidServer.addDataSegment(theSegment);
           runSegmentCallbacks(
               new Function<SegmentCallback, CallbackAction>()
               {
                 @Override
                 public CallbackAction apply(SegmentCallback input)
                 {
-                  return input.segmentAdded(druidServer.getMetadata(), segment);
+                  return input.segmentAdded(druidServer.getMetadata(), theSegment);
                 }
               }
           );

@@ -63,6 +63,11 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
   }
 
+  public ParallelIndexIngestionSpec withDataSchema(DataSchema dataSchema)
+  {
+    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
+  }
+
   @Override
   @JsonProperty("dataSchema")
   public DataSchema getDataSchema()

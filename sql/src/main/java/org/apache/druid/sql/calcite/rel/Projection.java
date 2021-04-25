@@ -316,8 +316,8 @@ public class Projection
     }
 
     // Check if a cast is necessary.
-    final ExprType toExprType = Expressions.exprTypeForValueType(columnValueType);
-    final ExprType fromExprType = Expressions.exprTypeForValueType(
+    final ExprType toExprType = ExprType.fromValueTypeStrict(columnValueType);
+    final ExprType fromExprType = ExprType.fromValueTypeStrict(
         Calcites.getValueTypeForRelDataType(rexNode.getType())
     );
 

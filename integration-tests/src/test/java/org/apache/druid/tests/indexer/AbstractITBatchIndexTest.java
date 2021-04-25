@@ -23,6 +23,10 @@ import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -30,6 +34,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentG
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -102,10 +107,20 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath,
       boolean waitForNewVersion,
       boolean runTestQueries,
-      boolean waitForSegmentsToLoad
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
   {
-    doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
+    doIndexTest(
+        dataSource,
+        indexTaskFilePath,
+        Function.identity(),
+        queryFilePath,
+        waitForNewVersion,
+        runTestQueries,
+        waitForSegmentsToLoad,
+        segmentAvailabilityConfirmationPair
+    );
   }
 
   protected void doIndexTest(
@@ -115,7 +130,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath,
       boolean waitForNewVersion,
       boolean runTestQueries,
-      boolean waitForSegmentsToLoad
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -127,13 +143,19 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         )
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
+    submitTaskAndWait(
+        taskSpec,
+        fullDatasourceName,
+        waitForNewVersion,
+        waitForSegmentsToLoad,
+        segmentAvailabilityConfirmationPair
+    );
     if (runTestQueries) {
-      doTestQuery(dataSource, queryFilePath, 2);
+      doTestQuery(dataSource, queryFilePath);
     }
   }
 
-  protected void doTestQuery(String dataSource, String queryFilePath, int timesToRun)
+  protected void doTestQuery(String dataSource, String queryFilePath)
   {
     try {
       String queryResponseTemplate;
@@ -150,7 +172,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           "%%DATASOURCE%%",
           dataSource + config.getExtraDatasourceNameSuffix()
       );
-      queryHelper.testQueriesFromString(queryResponseTemplate, timesToRun);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
 
     }
     catch (Exception e) {
@@ -163,10 +185,18 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,
-      String queryFilePath
+      String queryFilePath,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
   {
-    doReindexTest(baseDataSource, reindexDataSource, Function.identity(), reindexTaskFilePath, queryFilePath);
+    doReindexTest(
+        baseDataSource,
+        reindexDataSource,
+        Function.identity(),
+        reindexTaskFilePath,
+        queryFilePath,
+        segmentAvailabilityConfirmationPair
+    );
   }
 
   void doReindexTest(
@@ -174,7 +204,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String reindexDataSource,
       Function<String, String> taskSpecTransform,
       String reindexTaskFilePath,
-      String queryFilePath
+      String queryFilePath,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
   {
     final String fullBaseDatasourceName = baseDataSource + config.getExtraDatasourceNameSuffix();
@@ -194,7 +225,13 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     taskSpec = taskSpecTransform.apply(taskSpec);
 
-    submitTaskAndWait(taskSpec, fullReindexDatasourceName, false, true);
+    submitTaskAndWait(
+        taskSpec,
+        fullReindexDatasourceName,
+        false,
+        true,
+        segmentAvailabilityConfirmationPair
+    );
     try {
       String queryResponseTemplate;
       try {
@@ -211,7 +248,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName
       );
 
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
       // verify excluded dimension is not reIndexed
       final List<String> dimensions = clientInfoResourceTestClient.getDimensions(
           fullReindexDatasourceName,
@@ -231,16 +268,33 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath
   ) throws IOException
   {
+    doIndexTestSqlTest(
+        dataSource,
+        indexTaskFilePath,
+        queryFilePath,
+        Function.identity()
+    );
+  }
+  void doIndexTestSqlTest(
+      String dataSource,
+      String indexTaskFilePath,
+      String queryFilePath,
+      Function<String, String> taskSpecTransform
+  ) throws IOException
+  {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
-    final String taskSpec = StringUtils.replace(
-        getResourceAsString(indexTaskFilePath),
-        "%%DATASOURCE%%",
-        fullDatasourceName
+    final String taskSpec = taskSpecTransform.apply(
+        StringUtils.replace(
+            getResourceAsString(indexTaskFilePath),
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        )
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName, false, true);
+    Pair<Boolean, Boolean> dummyPair = new Pair<>(false, false);
+    submitTaskAndWait(taskSpec, fullDatasourceName, false, true, dummyPair);
     try {
-      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
+      sqlQueryHelper.testQueriesFromFile(queryFilePath);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -252,7 +306,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String taskSpec,
       String dataSourceName,
       boolean waitForNewVersion,
-      boolean waitForSegmentsToLoad
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   )
   {
     final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
@@ -277,6 +332,18 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
               taskID
           )
       );
+    }
+
+    if (segmentAvailabilityConfirmationPair.lhs != null && segmentAvailabilityConfirmationPair.lhs) {
+      TaskReport reportRaw = indexer.getTaskReport(taskID).get("ingestionStatsAndErrors");
+      IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
+      IngestionStatsAndErrorsTaskReportData reportData = (IngestionStatsAndErrorsTaskReportData) report.getPayload();
+      if (segmentAvailabilityConfirmationPair.rhs != null) {
+        Assert.assertEquals(
+            Boolean.valueOf(reportData.isSegmentAvailabilityConfirmed()),
+            segmentAvailabilityConfirmationPair.rhs
+        );
+      }
     }
 
     // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing
@@ -321,6 +388,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialDimensionCardinalityTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }
@@ -389,8 +457,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
-                          SecondaryPartitionType.LINEAR
+      Assert.assertEquals(
+          compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
+          SecondaryPartitionType.LINEAR
       );
     }
   }

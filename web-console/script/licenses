@@ -25,21 +25,18 @@ const START_MARKER_LINE = '# Web console modules start';
 const END_MARKER_LINE = '# Web console modules end';
 const SEPARATOR = '\n\n---\n\n';
 
-const extraLinesForLib = {
-  tslib: `notice: |
-  /*! *****************************************************************************
-  Copyright (c) Microsoft Corporation. All rights reserved.
-  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-  this file except in compliance with the License. You may obtain a copy of the
-  License at http://www.apache.org/licenses/LICENSE-2.0
-  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-  MERCHANTABLITY OR NON-INFRINGEMENT.
-  See the Apache Version 2.0 License for specific language governing permissions
-  and limitations under the License.
-  ***************************************************************************** */`
-}
+const extraLinesForLib = {};
+
+const extraPackages = {
+  // This is a OSS font so it is not listed by the npm scraper but we still want to attribute it so pretend to inject it
+  // as a phantom package
+  'opensans@1.101.0': {
+    licenses: 'Apache-2.0',
+    repository: 'https://github.com/google/fonts/tree/master/apache/opensans',
+    publisher: 'Google',
+    url: 'https://fonts.google.com/specimen/Open+Sans',
+  },
+};
 
 function injectConsoleLicenses(consoleLicenses) {
   const text = fs.readFileSync(LICENSES_FILE, 'utf-8');
@@ -85,11 +82,13 @@ checker.init(
     start: '.',
     production: true,
   },
-  function(err, packages) {
+  function (err, packages) {
     if (err) {
       console.log('err', err);
       return;
     }
+
+    Object.assign(packages, extraPackages);
 
     const seen = {};
     const mapped = Object.keys(packages)
@@ -123,6 +122,11 @@ checker.init(
           case 'BSD-3-Clause':
             properLicenseName = 'BSD-3-Clause License';
             licenseExt = 'BSD3';
+            break;
+
+          case '0BSD':
+            properLicenseName = 'Zero-Clause BSD';
+            licenseExt = '0BSD';
             break;
 
           default:

@@ -53,7 +53,12 @@ public class ScheduledExecutors
           public Signal call()
           {
             runnable.run(); // (Exceptions are handled for us)
-            return Signal.REPEAT;
+            if (exec.isShutdown()) {
+              log.warn("ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)", this, delay);
+              return Signal.STOP;
+            } else {
+              return Signal.REPEAT;
+            }
           }
         }
     );

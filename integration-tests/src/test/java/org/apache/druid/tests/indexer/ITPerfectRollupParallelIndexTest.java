@@ -23,9 +23,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
@@ -52,7 +54,8 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
   public static Object[][] resources()
   {
     return new Object[][]{
-        {new HashedPartitionsSpec(null, 2, null)},
+        {new HashedPartitionsSpec(null, 2, null, HashPartitionFunction.MURMUR3_32_ABS)},
+        {new HashedPartitionsSpec(null, 2, null, null)},
         {new SingleDimensionPartitionsSpec(2, null, "namespace", false)}
     };
   }
@@ -75,6 +78,11 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
               "%%FORCE_GUARANTEED_ROLLUP%%",
               Boolean.toString(true)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
           return StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
@@ -93,7 +101,8 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
 
       doReindexTest(
@@ -101,7 +110,9 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_INGEST_SEGMENT_DATASOURCE,
           rollupTransform,
           INDEX_INGEST_SEGMENT_TASK,
-          INDEX_QUERIES_RESOURCE
+          INDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
+
       );
 
       // with DruidInputSource instead of IngestSegmentFirehose
@@ -110,7 +121,8 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_DRUID_INPUT_SOURCE_DATASOURCE,
           rollupTransform,
           INDEX_DRUID_INPUT_SOURCE_TASK,
-          INDEX_QUERIES_RESOURCE
+          INDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
     }
   }

@@ -37,17 +37,9 @@ public class LogUsedSegments implements CoordinatorDuty
   {
     log.debug("Starting coordination. Getting used segments.");
 
-    DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
-    for (DataSegment segment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
-      if (segment.getSize() < 0) {
-        log.makeAlert("No size on a segment")
-           .addData("segment", segment)
-           .emit();
-      }
-    }
-
-    // Log info about all used segments
+    // Log info about all used segments only if debug logging is enabled
     if (log.isDebugEnabled()) {
+      DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
       log.debug("Used Segments");
       for (DataSegment dataSegment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
         log.debug("  %s", dataSegment);

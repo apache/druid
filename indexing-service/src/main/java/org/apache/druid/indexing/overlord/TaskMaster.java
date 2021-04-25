@@ -42,7 +42,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -50,7 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster implements TaskCountStatsProvider
+public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -336,6 +338,66 @@ public class TaskMaster implements TaskCountStatsProvider
     }
     catch (Exception ex) {
       // fail silently since we are stopping anyway
+    }
+  }
+
+  @Override
+  @Nullable
+  public Long getTotalTaskSlotCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getTotalTaskSlotCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  @Nullable
+  public Long getIdleTaskSlotCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getIdleTaskSlotCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  @Nullable
+  public Long getUsedTaskSlotCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getUsedTaskSlotCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  @Nullable
+  public Long getLazyTaskSlotCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getLazyTaskSlotCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  @Nullable
+  public Long getBlacklistedTaskSlotCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getBlacklistedTaskSlotCount();
+    } else {
+      return null;
     }
   }
 }

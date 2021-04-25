@@ -35,6 +35,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -201,7 +202,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
       closeOnFailure.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryInterruptedException(e);
+      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime;
 
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class FireDepartmentMetrics
 {
+  private static final long DEFAULT_PROCESSING_COMPLETION_TIME = -1L;
+
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
@@ -45,6 +47,7 @@ public class FireDepartmentMetrics
   private final AtomicLong sinkCount = new AtomicLong(0);
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
+  private final AtomicLong messageProcessingCompletionTime = new AtomicLong(DEFAULT_PROCESSING_COMPLETION_TIME);
 
   public void incrementProcessed()
   {
@@ -129,6 +132,23 @@ public class FireDepartmentMetrics
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
     this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+  }
+
+  public void markProcessingDone()
+  {
+    markProcessingDone(System.currentTimeMillis());
+  }
+
+  @VisibleForTesting
+  void markProcessingDone(long timestamp)
+  {
+    this.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, timestamp);
+  }
+
+  @VisibleForTesting
+  public long processingCompletionTime()
+  {
+    return messageProcessingCompletionTime.get();
   }
 
   public long processed()
@@ -241,37 +261,9 @@ public class FireDepartmentMetrics
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
-    retVal.messageGap.set(System.currentTimeMillis() - messageMaxTimestamp.get());
+    retVal.messageProcessingCompletionTime.set(messageProcessingCompletionTime.get());
+    retVal.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, System.currentTimeMillis());
+    retVal.messageGap.set(retVal.messageProcessingCompletionTime.get() - messageMaxTimestamp.get());
     return retVal;
-  }
-
-  /**
-   * merge other FireDepartmentMetrics, will modify this object's data
-   *
-   * @return this object
-   */
-  public FireDepartmentMetrics merge(FireDepartmentMetrics other)
-  {
-    Preconditions.checkNotNull(other, "Cannot merge a null FireDepartmentMetrics");
-    FireDepartmentMetrics otherSnapshot = other.snapshot();
-    processedCount.addAndGet(otherSnapshot.processed());
-    processedWithErrorsCount.addAndGet(otherSnapshot.processedWithErrors());
-    thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
-    rowOutputCount.addAndGet(otherSnapshot.rowOutput());
-    unparseableCount.addAndGet(otherSnapshot.unparseable());
-    dedupCount.addAndGet(otherSnapshot.dedup());
-    numPersists.addAndGet(otherSnapshot.numPersists());
-    persistTimeMillis.addAndGet(otherSnapshot.persistTimeMillis());
-    persistBackPressureMillis.addAndGet(otherSnapshot.persistBackPressureMillis());
-    failedPersists.addAndGet(otherSnapshot.failedPersists());
-    failedHandoffs.addAndGet(otherSnapshot.failedHandoffs());
-    mergeTimeMillis.addAndGet(otherSnapshot.mergeTimeMillis());
-    mergeCpuTime.addAndGet(otherSnapshot.mergeCpuTime());
-    persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
-    handOffCount.addAndGet(otherSnapshot.handOffCount());
-    sinkCount.addAndGet(otherSnapshot.sinkCount());
-    messageMaxTimestamp.set(Math.max(messageMaxTimestamp(), otherSnapshot.messageMaxTimestamp()));
-    messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
-    return this;
   }
 }

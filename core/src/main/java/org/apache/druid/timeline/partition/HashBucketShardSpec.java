@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.InputRow;
+import com.google.common.base.Preconditions;
 
 import java.util.List;
 import java.util.Objects;
@@ -40,6 +40,7 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
   private final int bucketId;
   private final int numBuckets;
   private final List<String> partitionDimensions;
+  private final HashPartitionFunction partitionFunction;
   private final ObjectMapper jsonMapper;
 
   @JsonCreator
@@ -47,6 +48,7 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numBuckets") int numBuckets,
       @JsonProperty("partitionDimensions") List<String> partitionDimensions,
+      @JsonProperty("partitionFunction") HashPartitionFunction partitionFunction,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -55,6 +57,7 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
     this.partitionDimensions = partitionDimensions == null
                                ? HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS
                                : partitionDimensions;
+    this.partitionFunction = Preconditions.checkNotNull(partitionFunction, "partitionFunction");
     this.jsonMapper = jsonMapper;
   }
 
@@ -77,23 +80,34 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
     return partitionDimensions;
   }
 
-  @Override
-  public BuildingHashBasedNumberedShardSpec convert(int partitionId)
+  @JsonProperty
+  public HashPartitionFunction getPartitionFunction()
   {
-    return new BuildingHashBasedNumberedShardSpec(partitionId, bucketId, numBuckets, partitionDimensions, jsonMapper);
+    return partitionFunction;
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
+  public BuildingHashBasedNumberedShardSpec convert(int partitionId)
   {
-    // not in use
-    throw new UnsupportedOperationException();
+    return new BuildingHashBasedNumberedShardSpec(
+        partitionId,
+        bucketId,
+        numBuckets,
+        partitionDimensions,
+        partitionFunction,
+        jsonMapper
+    );
   }
 
   @Override
   public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
-    return HashBasedNumberedShardSpec.createHashLookup(jsonMapper, partitionDimensions, shardSpecs, numBuckets);
+    return new HashPartitioner(
+        jsonMapper,
+        partitionFunction,
+        partitionDimensions,
+        numBuckets
+    ).createHashLookup(shardSpecs);
   }
 
   @Override
@@ -108,22 +122,24 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
     HashBucketShardSpec that = (HashBucketShardSpec) o;
     return bucketId == that.bucketId &&
            numBuckets == that.numBuckets &&
-           Objects.equals(partitionDimensions, that.partitionDimensions);
+           Objects.equals(partitionDimensions, that.partitionDimensions) &&
+           partitionFunction == that.partitionFunction;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucketId, numBuckets, partitionDimensions);
+    return Objects.hash(bucketId, numBuckets, partitionDimensions, partitionFunction);
   }
 
   @Override
   public String toString()
   {
-    return "HashBucket{" +
-           ", bucketId=" + bucketId +
+    return "HashBucketShardSpec{" +
+           "bucketId=" + bucketId +
            ", numBuckets=" + numBuckets +
            ", partitionDimensions=" + partitionDimensions +
+           ", partitionFunction=" + partitionFunction +
            '}';
   }
 }

@@ -38,7 +38,6 @@ import java.util.List;
 public class CsvInputFormat extends FlatTextInputFormat
 {
   private static final char SEPARATOR = ',';
-  private static final RFC4180Parser PARSER = createOpenCsvParser();
 
   @JsonCreator
   public CsvInputFormat(
@@ -68,6 +67,8 @@ public class CsvInputFormat extends FlatTextInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
+    final RFC4180Parser parser = createOpenCsvParser();
+
     return new DelimitedValueReader(
         inputRowSchema,
         source,
@@ -75,7 +76,7 @@ public class CsvInputFormat extends FlatTextInputFormat
         getColumns(),
         isFindColumnsFromHeader(),
         getSkipHeaderRows(),
-        line -> Arrays.asList(PARSER.parseLine(line))
+        line -> Arrays.asList(parser.parseLine(line))
     );
   }
 

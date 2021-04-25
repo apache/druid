@@ -43,6 +43,7 @@ public class CacheKeyBuilderTest
         .appendBoolean(false)
         .appendString("test")
         .appendInt(10)
+        .appendLong(Long.MAX_VALUE)
         .appendFloat(0.1f)
         .appendDouble(2.3)
         .appendByteArray(CacheKeyBuilder.STRING_SEPARATOR) // test when an item is same with the separator
@@ -57,6 +58,7 @@ public class CacheKeyBuilderTest
                              + 1                                         // bool
                              + 4                                         // 'test'
                              + Integer.BYTES                             // 10
+                             + Long.BYTES                                // Long.MAX_VALUE
                              + Float.BYTES                               // 0.1f
                              + Double.BYTES                              // 2.3
                              + CacheKeyBuilder.STRING_SEPARATOR.length   // byte array
@@ -64,7 +66,7 @@ public class CacheKeyBuilderTest
                              + Integer.BYTES + 5 * 2 + 1                 // 'test1' 'test2'
                              + cacheable.getCacheKey().length            // cacheable
                              + Integer.BYTES + 4                         // cacheable list
-                             + 11;                                       // type keys
+                             + 12;                                       // type keys
     Assert.assertEquals(expectedSize, actual.length);
 
     final byte[] expected = ByteBuffer.allocate(expectedSize)
@@ -75,6 +77,8 @@ public class CacheKeyBuilderTest
                                       .put(StringUtils.toUtf8("test"))
                                       .put(CacheKeyBuilder.INT_KEY)
                                       .putInt(10)
+                                      .put(CacheKeyBuilder.LONG_KEY)
+                                      .putLong(Long.MAX_VALUE)
                                       .put(CacheKeyBuilder.FLOAT_KEY)
                                       .putFloat(0.1f)
                                       .put(CacheKeyBuilder.DOUBLE_KEY)

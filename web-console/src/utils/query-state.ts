@@ -18,29 +18,40 @@
 
 export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 
-export class QueryState<T> {
+export interface QueryStateOptions<T, E extends Error = Error> {
+  loading?: boolean;
+  error?: E;
+  data?: T;
+  lastData?: T;
+}
+
+export class QueryState<T, E extends Error = Error> {
   static INIT: QueryState<any> = new QueryState({});
+  static LOADING: QueryState<any> = new QueryState({ loading: true });
 
   public state: QueryStateState = 'init';
-  public error?: string;
+  public error?: E;
   public data?: T;
+  public lastData?: T;
 
-  constructor(opts: { loading?: boolean; error?: string; data?: T }) {
-    if (opts.error) {
-      if (opts.data) {
+  constructor(opts: QueryStateOptions<T, E>) {
+    const hasData = typeof opts.data !== 'undefined';
+    if (typeof opts.error !== 'undefined') {
+      if (hasData) {
         throw new Error('can not have both error and data');
       } else {
         this.state = 'error';
         this.error = opts.error;
       }
     } else {
-      if (opts.data) {
+      if (hasData) {
         this.state = 'data';
         this.data = opts.data;
       } else {
         this.state = opts.loading ? 'loading' : 'init';
       }
     }
+    this.lastData = opts.lastData;
   }
 
   isInit(): boolean {
@@ -49,5 +60,28 @@ export class QueryState<T> {
 
   isLoading(): boolean {
     return this.state === 'loading';
+  }
+
+  get loading(): boolean {
+    return this.state === 'loading';
+  }
+
+  isError(): boolean {
+    return this.state === 'error';
+  }
+
+  getErrorMessage(): string | undefined {
+    const { error } = this;
+    if (!error) return;
+    return error.message;
+  }
+
+  isEmpty(): boolean {
+    const { data } = this;
+    return Boolean(data && Array.isArray(data) && data.length === 0);
+  }
+
+  getSomeData(): T | undefined {
+    return this.data || this.lastData;
   }
 }

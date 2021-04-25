@@ -41,7 +41,7 @@ public class TestNGGroup
 
   public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
-  public static final String OTHER_INDEX = "other-index";
+  public static final String COMPACTION = "compaction";
 
   public static final String APPEND_INGESTION = "append-ingestion";
 
@@ -54,12 +54,21 @@ public class TestNGGroup
 
   public static final String QUERY_RETRY = "query-retry";
 
+  public static final String QUERY_ERROR = "query-error";
+
+  public static final String CLI_INDEXER = "cli-indexer";
+
   public static final String REALTIME_INDEX = "realtime-index";
 
   /**
    * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
    */
   public static final String SECURITY = "security";
+
+  /**
+   * This group can only be run individually using -Dgroups=ldap-security since it requires specific test data setup.
+   */
+  public static final String LDAP_SECURITY = "ldap-security";
 
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
@@ -142,4 +151,6 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
+
+  public static final String HIGH_AVAILABILTY = "high-availability";
 }

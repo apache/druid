@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
@@ -34,7 +32,6 @@ import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -48,10 +45,8 @@ import org.apache.druid.segment.data.IndexedInts;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ExpressionSelectors
@@ -136,70 +131,45 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
-    Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredBindingsList();
+    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
+  }
 
-    if (columns.size() == 1) {
-      final String column = Iterables.getOnlyElement(columns);
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-
-      if (capabilities != null && capabilities.getType() == ValueType.LONG) {
-        // Optimization for expressions that hit one long column and nothing else.
+  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      ExpressionPlan plan
+  )
+  {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+      final String column = plan.getSingleInputName();
+      final ValueType inputType = plan.getSingleInputType();
+      if (inputType == ValueType.LONG) {
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
-            expression,
+            plan.getExpression(),
             !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
-      } else if (capabilities != null
-                 && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded().isTrue()
-                 && capabilities.hasMultipleValues().isFalse()
-                 && exprDetails.getArrayBindings().isEmpty()) {
-        // Optimization for expressions that hit one scalar string column and nothing else.
+      } else if (inputType == ValueType.STRING) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
-            expression
+            plan.getExpression()
         );
       }
     }
+    final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
 
-    final Pair<Set<String>, Set<String>> arrayUsage =
-        examineColumnSelectorFactoryArrays(columnSelectorFactory, exprDetails, columns);
-    final Set<String> actualArrays = arrayUsage.lhs;
-    final Set<String> unknownIfArrays = arrayUsage.rhs;
-
-    final List<String> needsApplied =
-        columns.stream()
-               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayBindings().contains(c))
-               .collect(Collectors.toList());
-    final Expr finalExpr;
-    if (needsApplied.size() > 0) {
-      finalExpr = Parser.applyUnappliedBindings(expression, exprDetails, needsApplied);
-    } else {
-      finalExpr = expression;
-    }
-
-    final Expr.ObjectBinding bindings = createBindings(exprDetails, columnSelectorFactory);
-
+    // Optimization for constant expressions
     if (bindings.equals(ExprUtils.nilBindings())) {
-      // Optimization for constant expressions.
-      return new ConstantExprEvalSelector(expression.eval(bindings));
+      return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
-    if (unknownIfArrays.size() > 0) {
-      return new RowBasedExpressionColumnValueSelector(
-          finalExpr,
-          exprDetails,
-          bindings,
-          unknownIfArrays
-      );
+    if (plan.any(ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.INCOMPLETE_INPUTS)) {
+      return new RowBasedExpressionColumnValueSelector(plan, bindings);
     }
 
     // generic expression value selector for fully known input types
-    return new ExpressionColumnValueSelector(finalExpr, bindings);
+    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings);
   }
 
   /**
@@ -212,39 +182,19 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
-    Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredBindingsList();
+    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (columns.size() == 1) {
-      final String column = Iterables.getOnlyElement(columns);
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-
-      // Optimization for dimension selectors that wrap a single underlying string column.
-      // The string column can be multi-valued, but if so, it must be implicitly mappable (i.e. the expression is
-      // not treating it as an array and not wanting to output an array
-      if (capabilities != null
-          && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded().isTrue()
-          && canMapOverDictionary(exprDetails, capabilities.hasMultipleValues())
-      ) {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
+      final String column = plan.getSingleInputName();
+      if (plan.getSingleInputType() == ValueType.STRING) {
         return new SingleStringInputDimensionSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
+            columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );
       }
     }
 
-    final Pair<Set<String>, Set<String>> arrayUsage =
-        examineColumnSelectorFactoryArrays(columnSelectorFactory, exprDetails, columns);
-    final Set<String> actualArrays = arrayUsage.lhs;
-    final Set<String> unknownIfArrays = arrayUsage.rhs;
-
-
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
-    final boolean multiVal = actualArrays.size() > 0 ||
-                             exprDetails.getArrayBindings().size() > 0 ||
-                             unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
@@ -252,90 +202,20 @@ public class ExpressionSelectors
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
       return DimensionSelector.constant(null);
-    } else if (extractionFn == null) {
-
-      if (multiVal) {
-        return new MultiValueExpressionDimensionSelector(baseSelector);
-      } else {
-        class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-        {
-          @Override
-          protected String getValue()
-          {
-            return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-          }
-        }
-        return new DefaultExpressionDimensionSelector();
-      }
     } else {
-      if (multiVal) {
-        class ExtractionMultiValueDimensionSelector extends MultiValueExpressionDimensionSelector
-        {
-          private ExtractionMultiValueDimensionSelector()
-          {
-            super(baseSelector);
-          }
-
-          @Override
-          String getValue(ExprEval evaluated)
-          {
-            assert !evaluated.isArray();
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
-          }
-
-          @Override
-          List<String> getArray(ExprEval evaluated)
-          {
-            assert evaluated.isArray();
-            return Arrays.stream(evaluated.asStringArray())
-                         .map(x -> extractionFn.apply(NullHandling.emptyToNullIfNeeded(x)))
-                         .collect(Collectors.toList());
-          }
-
-          @Override
-          String getArrayValue(ExprEval evaluated, int i)
-          {
-            assert evaluated.isArray();
-            String[] stringArray = evaluated.asStringArray();
-            assert i < stringArray.length;
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(stringArray[i]));
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-            inspector.visit("extractionFn", extractionFn);
-          }
-        }
-        return new ExtractionMultiValueDimensionSelector();
-
+      if (plan.any(
+          ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+          ExpressionPlan.Trait.NEEDS_APPLIED,
+          ExpressionPlan.Trait.UNKNOWN_INPUTS,
+          ExpressionPlan.Trait.INCOMPLETE_INPUTS
+      )) {
+        return ExpressionMultiValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       } else {
-        class ExtractionExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-        {
-          @Override
-          protected String getValue()
-          {
-            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("baseSelector", baseSelector);
-            inspector.visit("extractionFn", extractionFn);
-          }
-        }
-        return new ExtractionExpressionDimensionSelector();
+        return ExpressionSingleValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       }
     }
   }
+
 
   /**
    * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)
@@ -344,56 +224,65 @@ public class ExpressionSelectors
    * This function should only be called if you have already determined that an expression is over a single column,
    * and that single column has a dictionary.
    *
-   * @param exprDetails       result of calling {@link Expr#analyzeInputs()} on an expression
+   * @param bindingAnalysis       result of calling {@link Expr#analyzeInputs()} on an expression
    * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
    */
   public static boolean canMapOverDictionary(
-      final Expr.BindingDetails exprDetails,
+      final Expr.BindingAnalysis bindingAnalysis,
       final ColumnCapabilities.Capable hasMultipleValues
   )
   {
-    Preconditions.checkState(exprDetails.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
-    return !hasMultipleValues.isUnknown() && !exprDetails.hasInputArrays() && !exprDetails.isOutputArray();
+    Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
+    return !hasMultipleValues.isUnknown() && !bindingAnalysis.hasInputArrays() && !bindingAnalysis.isOutputArray();
   }
 
   /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingDetails} which
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
-  private static Expr.ObjectBinding createBindings(
-      Expr.BindingDetails bindingDetails,
+  public static Expr.ObjectBinding createBindings(
+      Expr.BindingAnalysis bindingAnalysis,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
+    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    return createBindings(columnSelectorFactory, columns);
+  }
+
+  /**
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
+   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
+   * are used as array or scalar inputs
+   */
+  public static Expr.ObjectBinding createBindings(
+      ColumnSelectorFactory columnSelectorFactory,
+      List<String> columns
+  )
+  {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = bindingDetails.getRequiredBindingsList();
     for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory
-          .getColumnCapabilities(columnName);
+      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal
         );
-      } else if (nativeType == null) {
-        // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
+      } else if (nativeType == null || ValueType.isArray(nativeType)) {
+        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
         supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
         // Unhandleable ValueType (COMPLEX).
@@ -493,10 +382,10 @@ public class ExpressionSelectors
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
-        if (val instanceof Number || val instanceof String) {
+        if (val instanceof Number || val instanceof String || (val != null && val.getClass().isArray())) {
           return val;
         } else if (val instanceof List) {
-          return coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         } else {
           return null;
         }
@@ -505,7 +394,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         }
         return null;
       };
@@ -513,70 +402,6 @@ public class ExpressionSelectors
       // No numbers or strings.
       return null;
     }
-  }
-
-  /**
-   * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
-   */
-  public static Object coerceListToArray(@Nullable List<?> val)
-  {
-    if (val != null && val.size() > 0) {
-      Class coercedType = null;
-
-      for (Object elem : val) {
-        if (elem != null) {
-          coercedType = convertType(coercedType, elem.getClass());
-        }
-      }
-
-      if (coercedType == Long.class || coercedType == Integer.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).longValue() : null).toArray(Long[]::new);
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).doubleValue() : null).toArray(Double[]::new);
-      }
-      // default to string
-      return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
-    }
-    return new String[]{null};
-  }
-
-  private static Class convertType(@Nullable Class existing, Class next)
-  {
-    if (Number.class.isAssignableFrom(next) || next == String.class) {
-      if (existing == null) {
-        return next;
-      }
-      // string wins everything
-      if (existing == String.class) {
-        return existing;
-      }
-      if (next == String.class) {
-        return next;
-      }
-      // all numbers win over Integer
-      if (existing == Integer.class) {
-        return next;
-      }
-      if (existing == Float.class) {
-        // doubles win over floats
-        if (next == Double.class) {
-          return next;
-        }
-        return existing;
-      }
-      if (existing == Long.class) {
-        if (next == Integer.class) {
-          // long beats int
-          return existing;
-        }
-        // double and float win over longs
-        return next;
-      }
-      // otherwise double
-      return Double.class;
-    }
-    throw new UOE("Invalid array expression type: %s", next);
   }
 
   /**
@@ -596,37 +421,5 @@ public class ExpressionSelectors
       default:
         return eval.value();
     }
-  }
-
-  /**
-   * Returns pair of columns which are definitely multi-valued, or 'actual' arrays, and those which we are unable to
-   * discern from the {@link ColumnSelectorFactory#getColumnCapabilities(String)}, or 'unknown' arrays.
-   */
-  private static Pair<Set<String>, Set<String>> examineColumnSelectorFactoryArrays(
-      ColumnSelectorFactory columnSelectorFactory,
-      Expr.BindingDetails exprDetails,
-      List<String> columns
-  )
-  {
-    final Set<String> actualArrays = new HashSet<>();
-    final Set<String> unknownIfArrays = new HashSet<>();
-    for (String column : columns) {
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-      if (capabilities != null) {
-        if (capabilities.hasMultipleValues().isTrue()) {
-          actualArrays.add(column);
-        } else if (
-            capabilities.getType().equals(ValueType.STRING) &&
-            capabilities.hasMultipleValues().isMaybeTrue() &&
-            !exprDetails.getArrayBindings().contains(column)
-        ) {
-          unknownIfArrays.add(column);
-        }
-      } else {
-        unknownIfArrays.add(column);
-      }
-    }
-
-    return new Pair<>(actualArrays, unknownIfArrays);
   }
 }

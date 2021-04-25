@@ -58,6 +58,12 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setComplexTypeName(String typeName)
+  {
+    this.capabilitiesBuilder.setComplexTypeName(typeName);
+    return this;
+  }
+
   public ColumnBuilder setHasMultipleValues(boolean hasMultipleValues)
   {
     this.capabilitiesBuilder.setHasMultipleValues(hasMultipleValues);

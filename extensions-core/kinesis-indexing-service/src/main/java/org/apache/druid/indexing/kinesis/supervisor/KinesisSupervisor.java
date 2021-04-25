@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
@@ -39,6 +39,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -53,6 +54,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -72,7 +74,7 @@ import java.util.stream.Collectors;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
  */
-public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
+public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
@@ -150,7 +152,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected List<SeekableStreamIndexTask<String, String>> createIndexTasks(
+  protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
       ObjectMapper sortingMapper,
@@ -164,7 +166,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
 
-    List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
+    List<SeekableStreamIndexTask<String, String, ByteEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KinesisIndexTask(
@@ -182,7 +184,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
 
   @Override
-  protected RecordSupplier<String, String> setupRecordSupplier() throws RuntimeException
+  protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier() throws RuntimeException
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
     KinesisIndexTaskTuningConfig taskTuningConfig = spec.getTuningConfig();
@@ -375,6 +377,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  // not yet supported, will be implemented in the future maybe? need to find a proper way to measure kinesis lag.
+  @Override
+  public LagStats computeLagStats()
+  {
+    throw new UnsupportedOperationException("Compute Lag Stats is not supported in KinesisSupervisor yet.");
   }
 
   @Override

@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
  */
-public abstract class WorkerTaskManager
+public class WorkerTaskManager
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
@@ -596,6 +596,12 @@ public abstract class WorkerTaskManager
     }
   }
 
+  public boolean isWorkerEnabled()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+    return !disabled.get();
+  }
+
   private static class TaskDetails
   {
     private final Task task;
@@ -776,7 +782,13 @@ public abstract class WorkerTaskManager
   //watches task assignments and updates task statuses inside Zookeeper. When the transition to HTTP is complete
   //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
   //and the methods below should be removed.
-  protected abstract void taskStarted(String taskId);
+  protected void taskStarted(String taskId)
+  {
 
-  protected abstract void taskAnnouncementChanged(TaskAnnouncement announcement);
+  }
+
+  protected void taskAnnouncementChanged(TaskAnnouncement announcement)
+  {
+
+  }
 }

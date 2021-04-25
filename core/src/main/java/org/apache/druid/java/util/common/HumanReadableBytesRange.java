@@ -64,7 +64,7 @@ public @interface HumanReadableBytesRange
   Class<?>[] groups() default {};
 
   //ConstraintValidator requires
-  String message() default "value is out of range";
+  String message() default "value must be in the range of [{min}, {max}]";
 
   //ConstraintValidator requires
   Class<? extends Payload>[] payload() default {};
