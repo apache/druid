@@ -137,7 +137,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
-      @JsonProperty("maxNonPrimaryReplicantsToLoad") int maxNonPrimaryReplicantsToLoad
+      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -185,6 +185,16 @@ public class CoordinatorDynamicConfig
     this.pauseCoordination = pauseCoordination;
     this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
 
+    if (maxNonPrimaryReplicantsToLoad == null) {
+      log.debug(
+          "maxNonPrimaryReplicantsToLoad was null! This is likely because your metastore does not "
+          + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+          + "to the Druid default of %d. It is recommended that you re-submit your dynamic config with your "
+          + "desired value for maxNonPrimaryReplicantsToLoad",
+          Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
+      );
+      maxNonPrimaryReplicantsToLoad = Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD;
+    }
     Preconditions.checkArgument(
         maxNonPrimaryReplicantsToLoad >= 0,
         "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
