@@ -43,9 +43,9 @@ import java.util.List;
 public class BatchAppenderatorTest extends InitializedNullHandlingTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
-      si("2000/2001", "A", 0),
-      si("2000/2001", "A", 1),
-      si("2001/2002", "A", 0)
+      createSegmentId("2000/2001", "A", 0),
+      createSegmentId("2000/2001", "A", 1),
+      createSegmentId("2001/2002", "A", 0)
   );
 
   @Test
@@ -64,19 +64,19 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // add
       Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), null)
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
                       .getNumRowsInSegment()
       );
 
       Assert.assertEquals(
           2,
-          appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), null)
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null)
                       .getNumRowsInSegment()
       );
 
       Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), null)
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
                       .getNumRowsInSegment()
       );
 
@@ -125,17 +125,18 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
-  private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
+  private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
         AppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)
+
     );
   }
 
-  static InputRow ir(String ts, String dim, Object met)
+  static InputRow createInputRow(String ts, String dim, Object met)
   {
     return new MapBasedInputRow(
         DateTimes.of(ts).getMillis(),
