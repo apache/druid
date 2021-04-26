@@ -23,7 +23,7 @@ import { ShowJson } from './show-json';
 
 describe('rule editor', () => {
   it('matches snapshot', () => {
-    const showJson = <ShowJson endpoint={'test'} downloadFilename={'test'} />;
+    const showJson = <ShowJson endpoint="test" downloadFilename="test" />;
     const { container } = render(showJson);
     expect(container.firstChild).toMatchSnapshot();
   });

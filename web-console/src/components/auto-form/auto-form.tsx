@@ -155,7 +155,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     };
   }
 
-  private fieldChange = (field: Field<T>, newValue: any) => {
+  private readonly fieldChange = (field: Field<T>, newValue: any) => {
     const { model } = this.props;
     if (!model) return;
 
@@ -181,7 +181,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     this.modelChange(newModel);
   };
 
-  private modelChange = (newModel: T) => {
+  private readonly modelChange = (newModel: T) => {
     const { globalAdjustment, fields, onChange, model } = this.props;
 
     // Delete things that are not defined now (but were defined prior to the change)
@@ -406,7 +406,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     }
   }
 
-  private renderField = (field: Field<T>) => {
+  private readonly renderField = (field: Field<T>) => {
     const { model } = this.props;
     if (!model) return;
 

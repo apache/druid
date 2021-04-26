@@ -46,6 +46,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
+import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -71,6 +72,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.KillAuditLog;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
@@ -214,14 +216,14 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            final ConditionalMultibind<CoordinatorDuty> conditionalMultibind = ConditionalMultibind.create(
+            // Binding for Set of indexing service coordinator Ddty
+            final ConditionalMultibind<CoordinatorDuty> conditionalIndexingServiceDutyMultibind = ConditionalMultibind.create(
                 properties,
                 binder,
                 CoordinatorDuty.class,
                 CoordinatorIndexingServiceDuty.class
             );
-
-            if (conditionalMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
+            if (conditionalIndexingServiceDutyMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
               throw new UnsupportedOperationException(
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
@@ -230,17 +232,29 @@ public class CliCoordinator extends ServerRunnable
                   + "for more details about compaction."
               );
             }
-
-            conditionalMultibind.addConditionBinding(
+            conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
-            conditionalMultibind.addConditionBinding(
+            conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.pendingSegments.on",
                 "true",
                 Predicates.equalTo("true"),
                 KillStalePendingSegments.class
+            );
+
+            // Binding for Set of metadata store management coordinator Ddty
+            final ConditionalMultibind<CoordinatorDuty> conditionalMetadataStoreManagementDutyMultibind = ConditionalMultibind.create(
+                properties,
+                binder,
+                CoordinatorDuty.class,
+                CoordinatorMetadataStoreManagementDuty.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.audit.on",
+                Predicates.equalTo("true"),
+                KillAuditLog.class
             );
 
             bindNodeRoleAndAnnouncer(

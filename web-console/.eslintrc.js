@@ -16,14 +16,24 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
-
-export function useRenderSpy(componentName: string, props: Record<string, any>) {
-  console.log(`Render on ${componentName}`);
-  const propKeys: string[] = Object.keys(props).sort();
-  for (const key of propKeys) {
-    useEffect(() => {
-      console.log(`${key} changed`);
-    }, [(props as any)[key]]);
-  }
-}
+module.exports = {
+  env: {
+    browser: true,
+  },
+  extends: ['@awesome-code-style'],
+  parserOptions: {
+    project: 'tsconfig.json',
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
+  rules: {
+    'header/header': [
+      2,
+      'block',
+      { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
+    ],
+  },
+};

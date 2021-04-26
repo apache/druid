@@ -46,7 +46,7 @@ export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectM
         {inlineMode ? (
           <>
             <p>To get started, please paste some data in the box to the left.</p>
-            <p>Click "Apply" to verify your data with Druid.</p>
+            <p>Click &quot;Apply&quot to verify your data with Druid.</p>
           </>
         ) : (
           <p>To get started, please specify what data you want to ingest.</p>

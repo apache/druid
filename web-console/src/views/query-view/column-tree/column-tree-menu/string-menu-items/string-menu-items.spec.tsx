@@ -26,9 +26,9 @@ describe('string menu', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const stringMenu = (
       <StringMenuItems
-        table={'table'}
-        schema={'schema'}
-        columnName={'cityName'}
+        table="table"
+        schema="schema"
+        columnName="cityName"
         parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
@@ -41,9 +41,9 @@ describe('string menu', () => {
   it('matches snapshot when menu is opened for column inside group by', () => {
     const stringMenu = (
       <StringMenuItems
-        table={'table'}
-        schema={'schema'}
-        columnName={'channel'}
+        table="table"
+        schema="schema"
+        columnName="channel"
         parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />

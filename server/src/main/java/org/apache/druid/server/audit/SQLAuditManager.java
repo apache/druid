@@ -41,6 +41,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.Query;
+import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -227,6 +228,24 @@ public class SQLAuditManager implements AuditManager
       throws IllegalArgumentException
   {
     return fetchAuditHistoryLastEntries(null, type, limit);
+  }
+
+  @Override
+  public int removeAuditLogsOlderThan(final long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    return dbi.withHandle(
+        handle -> {
+          Update sql = handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :date_time",
+                  getAuditTable()
+              )
+          );
+          return sql.bind("date_time", dateTime.toString())
+                    .execute();
+        }
+    );
   }
 
   private List<AuditEntry> fetchAuditHistoryLastEntries(final String key, final String type, int limit)
