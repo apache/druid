@@ -536,7 +536,7 @@ public class GroupByBenchmark
     @Param({"onheap", "offheap"})
     private String indexType;
 
-    IncrementalIndex<?> incIndex;
+    IncrementalIndex incIndex;
 
     @Setup(Level.Trial)
     public void setup(GroupByBenchmark global) throws JsonProcessingException
@@ -585,7 +585,7 @@ public class GroupByBenchmark
       for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment %d/%d", i + 1, numSegments);
 
-        final IncrementalIndex<?> incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
+        final IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
         global.generator.reset(RNG_SEED + i).addToIndex(incIndex, global.rowsPerSegment);
 
         log.info(
@@ -622,7 +622,7 @@ public class GroupByBenchmark
     }
   }
 
-  private IncrementalIndex<?> makeIncIndex(boolean withRollup)
+  private IncrementalIndex makeIncIndex(boolean withRollup)
   {
     return appendableIndexSpec.builder()
         .setIndexSchema(

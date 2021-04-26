@@ -99,7 +99,7 @@ public class IncrementalIndexCreator implements Closeable
      * @param args a list of arguments that are used to configure the builder
      * @return a new instance of an incremental-index
      */
-    IncrementalIndex<?> createIndex(AppendableIndexBuilder builder, Object... args);
+    IncrementalIndex createIndex(AppendableIndexBuilder builder, Object... args);
   }
 
   private final Closer closer = Closer.create();
@@ -152,7 +152,7 @@ public class IncrementalIndexCreator implements Closeable
    * @param args The arguments for the index-generator
    * @return An incremental-index instance
    */
-  public final IncrementalIndex<?> createIndex(Object... args)
+  public final IncrementalIndex createIndex(Object... args)
   {
     return createIndex(indexCreator, args);
   }
@@ -163,7 +163,7 @@ public class IncrementalIndexCreator implements Closeable
    * @param args The arguments for the index-generator
    * @return An incremental-index instance
    */
-  public final IncrementalIndex<?> createIndex(IndexCreator indexCreator, Object... args)
+  public final IncrementalIndex createIndex(IndexCreator indexCreator, Object... args)
   {
     return closer.register(indexCreator.createIndex(appendableIndexSpec.builder(), args));
   }

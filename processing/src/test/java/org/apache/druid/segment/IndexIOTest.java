@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -257,7 +256,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
@@ -274,7 +273,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
       .setMaxRowCount(1000000)
       .build();
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
