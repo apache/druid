@@ -36,14 +36,18 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -166,6 +170,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
+  private long awaitSegmentAvailabilityTimeoutMillis;
+
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
@@ -200,6 +206,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
+
+    awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -494,6 +502,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   /**
+   * Attempt to wait for indexed segments to become available on the cluster.
+   * @param reportsMap Map containing information with published segments that we are going to wait for.
+   */
+  private void waitForSegmentAvailability(Map<String, PushedSegmentsReport> reportsMap)
+  {
+    ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    reportsMap.values()
+              .forEach(report -> {
+                segmentsToWaitFor.addAll(report.getNewSegments());
+              });
+    segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+        toolbox,
+        segmentsToWaitFor,
+        awaitSegmentAvailabilityTimeoutMillis
+    );
+  }
+
+  /**
    * Run the single phase parallel indexing for best-effort rollup. In this mode, each sub task created by
    * the supervisor task reads data and generates segments individually.
    */
@@ -508,8 +534,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
+        waitForSegmentAvailability(runner.getReports());
+      }
     }
-    return TaskStatus.fromCode(getId(), state);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   /**
@@ -646,9 +680,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
+        waitForSegmentAvailability(mergeRunner.getReports());
+      }
     }
 
-    return TaskStatus.fromCode(getId(), state);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
@@ -708,9 +750,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
+      if (awaitSegmentAvailabilityTimeoutMillis > 0) {
+        waitForSegmentAvailability(mergeRunner.getReports());
+      }
     }
 
-    return TaskStatus.fromCode(getId(), mergeState);
+    TaskStatus taskStatus = TaskStatus.fromCode(getId(), mergeState);
+    toolbox.getTaskReportFileWriter().write(
+        getId(),
+        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
+    );
+    return taskStatus;
   }
 
   private static Map<Interval, Union> mergeCardinalityReports(Collection<DimensionCardinalityReport> reports)
@@ -976,6 +1026,30 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  /**
+   * Generate an IngestionStatsAndErrorsTaskReport for the task.
+   *
+   * @param taskStatus {@link TaskStatus}
+   * @param segmentAvailabilityConfirmed Whether or not the segments were confirmed to be available for query when
+   *                                     when the task completed.
+   * @return
+   */
+  private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                IngestionState.COMPLETED,
+                new HashMap<>(),
+                new HashMap<>(),
+                taskStatus.getErrorMsg(),
+                segmentAvailabilityConfirmed
+            )
+        )
+    );
+  }
+
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
   {
     return new IndexTuningConfig(
@@ -1001,7 +1075,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions(),
-        tuningConfig.getMaxColumnsToMerge()
+        tuningConfig.getMaxColumnsToMerge(),
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
     );
   }
 

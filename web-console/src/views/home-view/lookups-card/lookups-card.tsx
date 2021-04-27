@@ -22,8 +22,7 @@ import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface LookupsCardProps {
@@ -47,9 +46,9 @@ export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardPro
   return (
     <HomeViewCard
       className="lookups-card"
-      href={'#lookups'}
+      href="#lookups"
       icon={IconNames.PROPERTIES}
-      title={'Lookups'}
+      title="Lookups"
       loading={lookupsCountState.loading}
       error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}
     >

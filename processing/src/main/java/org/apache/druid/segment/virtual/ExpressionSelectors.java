@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
@@ -242,13 +241,26 @@ public class ExpressionSelectors
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
-  private static Expr.ObjectBinding createBindings(
+  public static Expr.ObjectBinding createBindings(
       Expr.BindingAnalysis bindingAnalysis,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
-    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    return createBindings(columnSelectorFactory, columns);
+  }
+
+  /**
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
+   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
+   * are used as array or scalar inputs
+   */
+  public static Expr.ObjectBinding createBindings(
+      ColumnSelectorFactory columnSelectorFactory,
+      List<String> columns
+  )
+  {
+    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
@@ -269,8 +281,8 @@ public class ExpressionSelectors
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal
         );
-      } else if (nativeType == null) {
-        // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
+      } else if (nativeType == null || ValueType.isArray(nativeType)) {
+        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
         supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
         // Unhandleable ValueType (COMPLEX).
@@ -370,10 +382,10 @@ public class ExpressionSelectors
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
-        if (val instanceof Number || val instanceof String) {
+        if (val instanceof Number || val instanceof String || (val != null && val.getClass().isArray())) {
           return val;
         } else if (val instanceof List) {
-          return coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         } else {
           return null;
         }
@@ -382,7 +394,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return coerceListToArray((List) val);
+          return ExprEval.coerceListToArray((List) val, true);
         }
         return null;
       };
@@ -390,70 +402,6 @@ public class ExpressionSelectors
       // No numbers or strings.
       return null;
     }
-  }
-
-  /**
-   * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
-   */
-  public static Object coerceListToArray(@Nullable List<?> val)
-  {
-    if (val != null && val.size() > 0) {
-      Class coercedType = null;
-
-      for (Object elem : val) {
-        if (elem != null) {
-          coercedType = convertType(coercedType, elem.getClass());
-        }
-      }
-
-      if (coercedType == Long.class || coercedType == Integer.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).longValue() : null).toArray(Long[]::new);
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).doubleValue() : null).toArray(Double[]::new);
-      }
-      // default to string
-      return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
-    }
-    return new String[]{null};
-  }
-
-  private static Class convertType(@Nullable Class existing, Class next)
-  {
-    if (Number.class.isAssignableFrom(next) || next == String.class) {
-      if (existing == null) {
-        return next;
-      }
-      // string wins everything
-      if (existing == String.class) {
-        return existing;
-      }
-      if (next == String.class) {
-        return next;
-      }
-      // all numbers win over Integer
-      if (existing == Integer.class) {
-        return next;
-      }
-      if (existing == Float.class) {
-        // doubles win over floats
-        if (next == Double.class) {
-          return next;
-        }
-        return existing;
-      }
-      if (existing == Long.class) {
-        if (next == Integer.class) {
-          // long beats int
-          return existing;
-        }
-        // double and float win over longs
-        return next;
-      }
-      // otherwise double
-      return Double.class;
-    }
-    throw new UOE("Invalid array expression type: %s", next);
   }
 
   /**

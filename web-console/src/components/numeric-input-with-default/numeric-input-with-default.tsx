@@ -37,13 +37,11 @@ export const NumericInputWithDefault = React.memo(function NumericInputWithDefau
       value={effectiveValue}
       onValueChange={(valueAsNumber, valueAsString, inputElement) => {
         setHasChanged(true);
-        if (!onValueChange) return;
-        return onValueChange(valueAsNumber, valueAsString, inputElement);
+        onValueChange?.(valueAsNumber, valueAsString, inputElement);
       }}
       onBlur={e => {
         setHasChanged(false);
-        if (!onBlur) return;
-        return onBlur(e);
+        onBlur?.(e);
       }}
       {...rest}
     />

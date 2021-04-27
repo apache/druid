@@ -23,7 +23,7 @@ import { LookupValuesTable } from './lookup-values-table';
 
 describe('rule editor', () => {
   it('matches snapshot', () => {
-    const showJson = <LookupValuesTable lookupId={'test'} downloadFilename={'test'} />;
+    const showJson = <LookupValuesTable lookupId="test" downloadFilename="test" />;
     const { container } = render(showJson);
     expect(container.firstChild).toMatchSnapshot();
   });

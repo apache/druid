@@ -439,10 +439,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(
-        conglomerate,
-        temporaryFolder.newFolder()
-    );
+    walker = createQuerySegmentWalker();
   }
 
   @After
@@ -450,6 +447,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  {
+    return CalciteTests.createMockWalker(
+        conglomerate,
+        temporaryFolder.newFolder()
+    );
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -718,13 +723,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-    for (int i = 0; i < results.size(); i++) {
-      Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
-          expectedResults.get(i),
-          results.get(i)
-      );
-    }
+    assertResultsEquals(sql, expectedResults, results);
 
     if (expectedQueries != null) {
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
@@ -741,6 +740,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             recordedQueries.get(i)
         );
       }
+    }
+  }
+
+  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+  {
+    for (int i = 0; i < results.size(); i++) {
+      Assert.assertArrayEquals(
+          StringUtils.format("result #%d: %s", i + 1, sql),
+          expectedResults.get(i),
+          results.get(i)
+      );
     }
   }
 
@@ -849,6 +859,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
+  protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
+  {
+    return (boolean) queryContext.getOrDefault(
+        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
+        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
+    );
+  }
+
   /**
    * This is a provider of query contexts that should be used by join tests.
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should
@@ -862,23 +880,48 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return new Object[]{
           // default behavior
           QUERY_CONTEXT_DEFAULT,
-          // filter value re-writes enabled
+          // all rewrites enabled
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
               .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
               .build(),
-          // rewrite values enabled but filter re-writes disabled.
-          // This should be drive the same behavior as the previous config
+          // filter-on-value-column rewrites disabled, everything else enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+              .build(),
+          // filter rewrites fully disabled, join-to-filter enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+              .build(),
+          // filter rewrites disabled, but value column filters still set to true (it should be ignored and this should
+          // behave the same as the previous context)
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
               .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
               .build(),
-          // filter re-writes disabled
+          // filter rewrites fully enabled, join-to-filter disabled
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+              .build(),
+          // all rewrites disabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
               .build(),
           };
     }

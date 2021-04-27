@@ -41,6 +41,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
 
+  @Config("druid.coordinator.period.metadataStoreManagementPeriod")
+  @Default("PT1H")
+  public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
+
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();
@@ -59,6 +63,14 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.maxSegments")
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();
+
+  @Config("druid.coordinator.kill.audit.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorAuditKillPeriod();
+
+  @Config("druid.coordinator.kill.audit.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorAuditKillDurationToRetain();
 
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()

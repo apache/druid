@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,7 +52,7 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   {
     this.expression = expression;
     this.filterTuning = filterTuning;
-    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.parsed = Parser.lazyParse(expression, macroTable);
   }
 
   @VisibleForTesting

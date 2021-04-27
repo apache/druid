@@ -19,12 +19,20 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.inject.Inject;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
+import java.util.function.Function;
 
 @Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -57,6 +65,14 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_TASK = "/indexer/wikipedia_index_with_merge_column_limit_task.json";
   private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE = "wikipedia_index_with_merge_column_limit_test";
 
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_PAUSED =
+      CoordinatorDynamicConfig.builder().withPauseCoordination(true).build();
+  private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_DEFAULT =
+      CoordinatorDynamicConfig.builder().build();
+
+  @Inject
+  CoordinatorResourceTestClient coordinatorClient;
+
   @Test
   public void testIndexData() throws Exception
   {
@@ -67,25 +83,43 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
         final Closeable ignored3 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
     ) {
+
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
+          transform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
       doReindexTest(
           INDEX_DATASOURCE,
           reindexDatasource,
           REINDEX_TASK,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
       doReindexTest(
           INDEX_DATASOURCE,
           reindexDatasourceWithDruidInputSource,
           REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
     }
   }
@@ -106,19 +140,22 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_WITH_TIMESTAMP_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
       doReindexTest(
           INDEX_WITH_TIMESTAMP_DATASOURCE,
           reindexDatasource,
           REINDEX_TASK,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
       doReindexTest(
           INDEX_WITH_TIMESTAMP_DATASOURCE,
           reindexDatasourceWithDruidInputSource,
           REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
-          REINDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
     }
   }
@@ -139,19 +176,102 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           MERGE_INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
       doReindexTest(
           MERGE_INDEX_DATASOURCE,
           reindexDatasource,
           MERGE_REINDEX_TASK,
-          MERGE_REINDEX_QUERIES_RESOURCE
+          MERGE_REINDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
       );
       doReindexTest(
           MERGE_INDEX_DATASOURCE,
           reindexDatasourceWithDruidInputSource,
           MERGE_REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
-          MERGE_INDEX_QUERIES_RESOURCE
+          MERGE_INDEX_QUERIES_RESOURCE,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  /**
+   * Test that task reports indicate the ingested segments were loaded before the configured timeout expired.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testIndexDataAwaitSegmentAvailability() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("600000")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          transform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(true, true)
+      );
+    }
+  }
+
+  /**
+   * Test that the task still succeeds if the segments do not become available before the configured wait timeout
+   * expires.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testIndexDataAwaitSegmentAvailabilityFailsButTaskSucceeds() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_PAUSED);
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("1")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          transform,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          false,
+          false,
+          new Pair<>(true, false)
+      );
+      coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()), "Segment Load"
       );
     }
   }
@@ -169,7 +289,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
     }
   }

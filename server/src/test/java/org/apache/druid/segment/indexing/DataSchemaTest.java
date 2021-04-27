@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -202,7 +201,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     Assert.assertNull(row2);
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testOverlapMetricNameAndDim()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
@@ -234,10 +233,80 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         null,
         jsonMapper
     );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "Cannot specify a column more than once: [metric1] seen in dimensions list, metricsSpec list"
+    );
+
     schema.getParser();
   }
 
-  @Test(expected = IAE.class)
+  @Test
+  public void testOverlapTimeAndDim()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "Cannot specify a column more than once: [__time] seen in dimensions list, "
+        + "primary timestamp (__time cannot appear as a dimension or metric)"
+    );
+
+    DataSchema schema = new DataSchema(
+        IdUtilsTest.VALID_ID_CHARS,
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(ImmutableList.of("__time", "dimA", "dimB", "metric1")),
+            ImmutableList.of("dimC"),
+            null
+        ),
+        null,
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        null,
+        jsonMapper
+    );
+  }
+
+  @Test
+  public void testOverlapTimeAndDimLegacy()
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                    "__time",
+                    "dimA",
+                    "dimB",
+                    "metric1"
+                )), ImmutableList.of("dimC"), null),
+                null,
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    DataSchema schema = new DataSchema(
+        IdUtilsTest.VALID_ID_CHARS,
+        parser,
+        null,
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        jsonMapper
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "Cannot specify a column more than once: [__time] seen in dimensions list, primary timestamp "
+        + "(__time cannot appear as a dimension or metric)"
+    );
+
+    schema.getParser();
+  }
+
+  @Test
   public void testDuplicateAggregators()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
@@ -257,6 +326,12 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "Cannot specify a column more than once: [metric1] seen in metricsSpec list (2 occurrences); "
+        + "[metric3] seen in metricsSpec list (2 occurrences)"
+    );
+
     DataSchema schema = new DataSchema(
         IdUtilsTest.VALID_ID_CHARS,
         parser,
@@ -264,12 +339,13 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
             new DoubleSumAggregatorFactory("metric1", "col3"),
+            new DoubleSumAggregatorFactory("metric3", "col4"),
+            new DoubleSumAggregatorFactory("metric3", "col5"),
             },
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
         jsonMapper
     );
-    schema.getParser();
   }
 
   @Test
@@ -559,6 +635,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     DimensionsSpec oldDimSpec = Mockito.mock(DimensionsSpec.class);
     DimensionsSpec newDimSpec = Mockito.mock(DimensionsSpec.class);
     AggregatorFactory aggFactory = Mockito.mock(AggregatorFactory.class);
+    Mockito.when(aggFactory.getName()).thenReturn("myAgg");
     TransformSpec transSpec = Mockito.mock(TransformSpec.class);
     Map<String, Object> parserMap = Mockito.mock(Map.class);
     Mockito.when(newDimSpec.withDimensionExclusions(ArgumentMatchers.any(Set.class))).thenReturn(newDimSpec);

@@ -202,6 +202,15 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     testFunctions(types, templates, args);
   }
 
+  @Test
+  public void testStringFns()
+  {
+    testExpression("s1 + s2", types);
+    testExpression("s1 + '-' + s2", types);
+    testExpression("concat(s1, s2)", types);
+    testExpression("concat(s1,'-',s2,'-',l1,'-',d1)", types);
+  }
+
   static void testFunctions(Map<String, ExprType> types, String[] templates, String[] args)
   {
     for (String template : templates) {
@@ -404,29 +413,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
                               Arrays.stream(arg2).flatMap(a2 -> Arrays.stream(arg3).map(a3 -> new String[]{a1, a2, a3}))
                  )
                  .toArray(String[][]::new);
-  }
-
-  static class SettableObjectBinding implements Expr.ObjectBinding
-  {
-    private final Map<String, Object> bindings;
-
-    SettableObjectBinding()
-    {
-      this.bindings = new HashMap<>();
-    }
-
-    @Nullable
-    @Override
-    public Object get(String name)
-    {
-      return bindings.get(name);
-    }
-
-    public SettableObjectBinding withBinding(String name, @Nullable Object value)
-    {
-      bindings.put(name, value);
-      return this;
-    }
   }
 
   static class SettableVectorInputBinding implements Expr.VectorInputBinding

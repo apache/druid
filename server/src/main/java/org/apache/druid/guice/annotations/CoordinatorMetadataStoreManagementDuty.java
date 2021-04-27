@@ -17,34 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.guice.annotations;
 
-import com.google.inject.Inject;
-import org.apache.druid.client.coordinator.CoordinatorClient;
+import com.google.inject.BindingAnnotation;
 
-public class CoordinatorBasedSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ */
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface CoordinatorMetadataStoreManagementDuty
 {
-
-  private final CoordinatorClient client;
-  private final CoordinatorBasedSegmentHandoffNotifierConfig config;
-
-  @Inject
-  public CoordinatorBasedSegmentHandoffNotifierFactory(
-      CoordinatorClient client,
-      CoordinatorBasedSegmentHandoffNotifierConfig config
-  )
-  {
-    this.client = client;
-    this.config = config;
-  }
-
-  @Override
-  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
-  {
-    return new CoordinatorBasedSegmentHandoffNotifier(
-        dataSource,
-        client,
-        config
-    );
-  }
 }

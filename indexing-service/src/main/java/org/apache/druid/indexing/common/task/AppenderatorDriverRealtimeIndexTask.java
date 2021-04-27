@@ -581,6 +581,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
+  /**
+   * Return a map of reports for the task.
+   *
+   * A successfull task should always have a null errorMsg. A falied task should always have a non-null
+   * errorMsg.
+   *
+   * @return Map of reports for the task.
+   */
   private Map<String, TaskReport> getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
@@ -590,7 +598,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                errorMsg == null
             )
         )
     );

@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -78,7 +79,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(

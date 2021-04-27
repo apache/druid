@@ -20,7 +20,6 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { SnitchDialog } from '..';
 import {
   AutoForm,
   ExternalLink,
@@ -33,6 +32,7 @@ import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
 import { getDruidErrorMessage } from '../../utils';
+import { SnitchDialog } from '..';
 
 import './coordinator-dynamic-config-dialog.scss';
 

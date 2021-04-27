@@ -148,7 +148,6 @@ public class NestedQueryPushDownTest
 
   @Before
   public void setup() throws Exception
-
   {
     tmpDir = FileUtils.createTempDir();
 

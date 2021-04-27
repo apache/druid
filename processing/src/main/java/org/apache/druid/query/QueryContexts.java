@@ -54,6 +54,7 @@ public class QueryContexts
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
+  public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   // This flag control whether a sql join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, druid can push down the join operation to
@@ -80,6 +81,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
@@ -274,12 +276,22 @@ public class QueryContexts
   {
     return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
+
   public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
   {
     return parseBoolean(
         query,
         JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
         DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
+  }
+
+  public static <T> boolean getEnableRewriteJoinToFilter(Query<T> query)
+  {
+    return parseBoolean(
+        query,
+        REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
+        DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
     );
   }
 

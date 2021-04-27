@@ -44,7 +44,7 @@ There are two actions:
 
 In practice, most deployments will only need to define two classes of users: 
 
-* Admins, who have WRITE action permissions on all resource types. These users will add datasources and administer the system.  
+* Administrators, who have WRITE action permissions on all resource types. These users will add datasources and administer the system.  
 * Data users, who only need READ access to DATASOURCE. These users should access Query APIs only through an API gateway. Other APIs and permissions include functionality that should be limited to server admins. 
 
 It is important to note that WRITE access to DATASOURCE grants a user broad access. For instance, such users will have access to the Druid file system, S3 buckets, and credentials, among other things. As such, the ability to add and manage datasources should be allocated selectively to administrators.   
