@@ -28,7 +28,7 @@ blocks:
           value: "-DskipTests -Djacoco.skip=true"
       prologue:
         commands:
-          - sem-version java 8
+          - sem-version java 11
           - checkout
       jobs:
         - name: "Install"
@@ -44,7 +44,7 @@ blocks:
       env_vars: *env_vars
       prologue:
         commands:
-          - sem-version java 8
+          - sem-version java 11
           - checkout
           - cache restore
       jobs:
