@@ -1066,7 +1066,7 @@ Sample specs:
 |type|This should be `azure`.|None|yes|
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
-|objects|JSON array of Azure objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
