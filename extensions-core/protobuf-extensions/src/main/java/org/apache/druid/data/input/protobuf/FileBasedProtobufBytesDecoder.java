@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.Set;
 
 public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
@@ -52,6 +53,18 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
     initDescriptor();
+  }
+
+  @JsonProperty
+  public String getDescriptor()
+  {
+    return descriptorFilePath;
+  }
+
+  @JsonProperty
+  public String getProtoMessageType()
+  {
+    return protoMessageType;
   }
 
   @VisibleForTesting
@@ -123,4 +136,27 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     }
     return desc;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    FileBasedProtobufBytesDecoder that = (FileBasedProtobufBytesDecoder) o;
+
+    return Objects.equals(descriptorFilePath, that.descriptorFilePath) &&
+        Objects.equals(protoMessageType, that.protoMessageType);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(descriptorFilePath, protoMessageType);
+  }
+
 }

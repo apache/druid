@@ -25,9 +25,9 @@ describe('clearable-input', () => {
   it('matches snapshot', () => {
     const centerMessage = (
       <ClearableInput
-        className={'testClassName'}
-        value={'testValue'}
-        placeholder={'testPlaceholder'}
+        className="testClassName"
+        value="testValue"
+        placeholder="testPlaceholder"
         onChange={() => {}}
       />
     );

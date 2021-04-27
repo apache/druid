@@ -124,7 +124,7 @@ public class JoinAndLookupBenchmark
   {
     tmpDir = FileUtils.createTempDir();
     ColumnConfig columnConfig = () -> columnCacheSizeBytes;
-    index = JoinTestHelper.createFactIndexBuilder(tmpDir, rows).buildMMappedIndex(columnConfig);
+    index = JoinTestHelper.createFactIndexBuilder(columnConfig, tmpDir, rows).buildMMappedIndex();
 
     final String prefix = "c.";
 
@@ -147,6 +147,7 @@ public class JoinAndLookupBenchmark
         JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
             new JoinFilterPreAnalysisKey(
                 new JoinFilterRewriteConfig(
+                    false,
                     false,
                     false,
                     false,
@@ -185,6 +186,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesLookupLongKey,
@@ -220,6 +222,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesLookupLongKey,
@@ -252,6 +255,7 @@ public class JoinAndLookupBenchmark
         JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
             new JoinFilterPreAnalysisKey(
                 new JoinFilterRewriteConfig(
+                    false,
                     false,
                     false,
                     false,

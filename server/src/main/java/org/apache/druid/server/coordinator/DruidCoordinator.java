@@ -47,6 +47,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
+import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -150,6 +151,7 @@ public class DruidCoordinator
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
+  private final Set<CoordinatorDuty> metadataStoreManagementDuties;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
@@ -164,6 +166,7 @@ public class DruidCoordinator
   private ListeningExecutorService balancerExec;
 
   private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
@@ -182,6 +185,7 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
+      @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
@@ -206,6 +210,7 @@ public class DruidCoordinator
         self,
         new ConcurrentHashMap<>(),
         indexingServiceDuties,
+        metadataStoreManagementDuties,
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
@@ -230,6 +235,7 @@ public class DruidCoordinator
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<CoordinatorDuty> indexingServiceDuties,
+      Set<CoordinatorDuty> metadataStoreManagementDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
@@ -255,6 +261,7 @@ public class DruidCoordinator
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
     this.indexingServiceDuties = indexingServiceDuties;
+    this.metadataStoreManagementDuties = metadataStoreManagementDuties;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -665,6 +672,12 @@ public class DruidCoordinator
             )
         );
       }
+      dutiesRunnables.add(
+          Pair.of(
+              new DutiesRunnable(makeMetadataStoreManagementDuties(), startingLeaderCounter, METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP),
+              config.getCoordinatorMetadataStoreManagementPeriod()
+          )
+      );
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
         // CompactSegmentsDuty can takes a non trival amount of time to complete.
@@ -745,6 +758,19 @@ public class DruidCoordinator
 
     log.debug(
         "Done making indexing service duties %s",
+        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
+    );
+    return ImmutableList.copyOf(duties);
+  }
+
+  private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
+  {
+    List<CoordinatorDuty> duties = ImmutableList.<CoordinatorDuty>builder()
+                                                .addAll(metadataStoreManagementDuties)
+                                                .build();
+
+    log.debug(
+        "Done making metadata store management duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(duties);

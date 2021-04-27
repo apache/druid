@@ -24,12 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -42,73 +41,40 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
+public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final String DATA_SOURCE = "foo";
-
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
-  private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
-      PlannerContext.CTX_SQL_QUERY_ID, "dummy"
+  private static final AuthenticationResult AUTH_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
+      ImmutableSet.of(new TDigestSketchQuantileSqlAggregator(), new TDigestGenerateSketchSqlAggregator()),
+      ImmutableSet.of()
   );
 
-  @BeforeClass
-  public static void setUpClass()
-  {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
-
-  @Before
-  public void setUp() throws Exception
+  @Override
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     TDigestSketchModule.registerSerde();
     for (Module mod : new TDigestSketchModule().getJacksonModules()) {
@@ -116,7 +82,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     }
 
     final QueryableIndex index =
-        IndexBuilder.create()
+        IndexBuilder.create(CalciteTests.getJsonMapper())
                     .tmpDir(temporaryFolder.newFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
@@ -136,9 +102,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                     .rows(CalciteTests.ROWS1)
                     .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
-                   .dataSource(DATA_SOURCE)
+                   .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
@@ -146,39 +112,45 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                    .build(),
         index
     );
+  }
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new TDigestSketchQuantileSqlAggregator(), new TDigestGenerateSketchSqlAggregator()),
-        ImmutableSet.of()
-    );
-    SchemaPlus rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-    sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
-        new PlannerFactory(
-            rootSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            CalciteTests.createExprMacroTable(),
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper(),
-            CalciteTests.DRUID_SCHEMA_NAME
-        )
+  @Override
+  public List<Object[]> getResults(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final String sql,
+      final AuthenticationResult authenticationResult
+  ) throws Exception
+  {
+    return getResults(
+        plannerConfig,
+        queryContext,
+        parameters,
+        sql,
+        authenticationResult,
+        OPERATOR_TABLE,
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
     );
   }
 
-  @After
-  public void tearDown() throws Exception
+  private SqlLifecycle getSqlLifecycle()
   {
-    walker.close();
-    walker = null;
+    return getSqlLifecycleFactory(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        OPERATOR_TABLE,
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    ).factorize();
   }
 
   @Test
   public void testComputingSketchOnNumericValues() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT\n"
                        + "TDIGEST_GENERATE_SKETCH(m1, 200)"
                        + "FROM foo";
@@ -186,9 +158,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
     final List<String[]> expectedResults = ImmutableList.of(
         new String[]{
@@ -207,16 +179,56 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
               .aggregators(ImmutableList.of(
                   new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
               ))
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .context(TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
   }
 
   @Test
+  public void testComputingSketchOnCastedString() throws Exception
+  {
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "TDIGEST_GENERATE_SKETCH(CAST(dim1 AS DOUBLE), 200)"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "CAST(\"dim1\", 'DOUBLE')",
+                          ValueType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0:agg", "v0", 200)
+                  ))
+                  .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                  .build()
+        ),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault()
+            ? new String[]{
+                "\"AAAAAQAAAAAAAAAAQCQzMzMzMzNAaQAAAAAAAAAAAAY/8AAAAAAAAAAAAAAAAAAAP/AAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQCQzMzMzMzM=\""
+            }
+            : new String[]{
+                "\"AAAAAT/wAAAAAAAAQCQzMzMzMzNAaQAAAAAAAAAAAAM/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQCQzMzMzMzM=\""
+            }
+        )
+    );
+  }
+
+  @Test
   public void testDefaultCompressionForTDigestGenerateSketchAgg() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT\n"
                        + "TDIGEST_GENERATE_SKETCH(m1)"
                        + "FROM foo";
@@ -224,9 +236,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     // Log query
     sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
 
     // Verify query
@@ -238,7 +250,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
               .aggregators(ImmutableList.of(
                   new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
               ))
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .context(TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
@@ -247,7 +259,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testComputingQuantileOnPreAggregatedSketch() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT\n"
                        + "TDIGEST_QUANTILE(qsketch_m1, 0.1),\n"
                        + "TDIGEST_QUANTILE(qsketch_m1, 0.4),\n"
@@ -258,9 +270,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[]{
@@ -296,7 +308,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                   new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a0:agg"), 0.8f),
                   new TDigestSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 1.0f)
               )
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .context(TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
@@ -305,16 +317,16 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testGeneratingSketchAndComputingQuantileOnFly() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT TDIGEST_QUANTILE(x, 0.0), TDIGEST_QUANTILE(x, 0.5), TDIGEST_QUANTILE(x, 1.0)\n"
                        + "FROM (SELECT dim1, TDIGEST_GENERATE_SKETCH(m1, 200) AS x FROM foo group by dim1)";
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[]{
@@ -348,7 +360,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                                                 new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
                                             )
                                         )
-                                        .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                                        .setContext(TIMESERIES_CONTEXT_DEFAULT)
                                         .build()
                         )
                     )
@@ -366,7 +378,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                             new TDigestSketchToQuantilePostAggregator("_a2", makeFieldAccessPostAgg("_a0:agg"), 1.0f)
                         )
                     )
-                    .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                    .setContext(TIMESERIES_CONTEXT_DEFAULT)
                     .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
@@ -375,7 +387,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testQuantileOnNumericValues() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT\n"
                        + "TDIGEST_QUANTILE(m1, 0.0), TDIGEST_QUANTILE(m1, 0.5), TDIGEST_QUANTILE(m1, 1.0)\n"
                        + "FROM foo";
@@ -383,9 +395,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[]{
@@ -418,7 +430,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                   new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a0:agg"), 0.5f),
                   new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a0:agg"), 1.0f)
               )
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .context(TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
@@ -427,7 +439,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testCompressionParamForTDigestQuantileAgg() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    SqlLifecycle sqlLifecycle = getSqlLifecycle();
     final String sql = "SELECT\n"
                        + "TDIGEST_QUANTILE(m1, 0.0), TDIGEST_QUANTILE(m1, 0.5, 200), TDIGEST_QUANTILE(m1, 1.0, 300)\n"
                        + "FROM foo";
@@ -435,9 +447,9 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
     // Log query
     sqlLifecycle.runSimple(
         sql,
-        QUERY_CONTEXT_DEFAULT,
+        TIMESERIES_CONTEXT_DEFAULT,
         DEFAULT_PARAMETERS,
-        authenticationResult
+        AUTH_RESULT
     ).toList();
 
     // Verify query
@@ -462,12 +474,64 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                   new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.5f),
                   new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 1.0f)
               )
-              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .context(TIMESERIES_CONTEXT_DEFAULT)
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
   }
 
+  @Test
+  public void testQuantileOnCastedString() throws Exception
+  {
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  TDIGEST_QUANTILE(CAST(dim1 AS DOUBLE), 0.0),\n"
+        + "  TDIGEST_QUANTILE(CAST(dim1 AS DOUBLE), 0.5),\n"
+        + "  TDIGEST_QUANTILE(CAST(dim1 AS DOUBLE), 1.0)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "CAST(\"dim1\", 'DOUBLE')",
+                          ValueType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(new TDigestSketchAggregatorFactory("a0:agg", "v0", 100))
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          0.0
+                      ),
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a1",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          0.5
+                      ),
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a2",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          1.0
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault()
+            ? new Object[]{0.0, 0.5, 10.1}
+            : new Object[]{1.0, 2.0, 10.1}
+        )
+    );
+  }
 
   private static PostAggregator makeFieldAccessPostAgg(String name)
   {

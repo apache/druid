@@ -29,6 +29,7 @@ import org.apache.druid.query.expression.ExprUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -58,6 +59,7 @@ public class JoinConditionAnalysis
   private final boolean isAlwaysTrue;
   private final boolean canHashJoin;
   private final Set<String> rightKeyColumns;
+  private final Set<String> requiredColumns;
 
   private JoinConditionAnalysis(
       final String originalExpression,
@@ -80,6 +82,7 @@ public class JoinConditionAnalysis
                                                                     ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
     rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).collect(Collectors.toSet());
+    requiredColumns = computeRequiredColumns(rightPrefix, equiConditions, nonEquiConditions);
   }
 
   /**
@@ -192,6 +195,15 @@ public class JoinConditionAnalysis
     return rightKeyColumns;
   }
 
+  /**
+   * Returns the set of column names required by this join condition. Columns from the right-hand side are returned
+   * with their prefixes included.
+   */
+  public Set<String> getRequiredColumns()
+  {
+    return requiredColumns;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -216,5 +228,25 @@ public class JoinConditionAnalysis
   public String toString()
   {
     return originalExpression;
+  }
+
+  private static Set<String> computeRequiredColumns(
+      final String rightPrefix,
+      final List<Equality> equiConditions,
+      final List<Expr> nonEquiConditions
+  )
+  {
+    final Set<String> requiredColumns = new HashSet<>();
+
+    for (Equality equality : equiConditions) {
+      requiredColumns.add(rightPrefix + equality.getRightColumn());
+      requiredColumns.addAll(equality.getLeftExpr().analyzeInputs().getRequiredBindings());
+    }
+
+    for (Expr expr : nonEquiConditions) {
+      requiredColumns.addAll(expr.analyzeInputs().getRequiredBindings());
+    }
+
+    return requiredColumns;
   }
 }
