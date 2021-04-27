@@ -180,5 +180,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     // This would throw an exception without InDimFilter's null-checking lambda wrapping.
     Assert.assertFalse(matcher.matches());
+
+    row.put("dim", "foo");
+    // Now it should match.
+    Assert.assertTrue(matcher.matches());
+
+    row.put("dim", "fox");
+    // Now it *shouldn't* match.
+    Assert.assertFalse(matcher.matches());
   }
 }
