@@ -24,8 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,7 +38,10 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class InDimFilterTest extends InitializedNullHandlingTest
 {
@@ -143,5 +151,34 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final InDimFilter filter = new InDimFilter("dim", Collections.singleton("v1"), null);
     Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize());
+  }
+
+  @Test
+  public void testContainsNullWhenValuesSetIsTreeSet()
+  {
+    // Regression test for NullPointerException caused by programmatically-generated InDimFilters that use
+    // TreeSets with natural comparators. These Sets throw NullPointerException on contains(null).
+    // InDimFilter wraps these contains methods in null-checking lambdas.
+
+    final TreeSet<String> values = new TreeSet<>();
+    values.add("foo");
+    values.add("bar");
+
+    final InDimFilter filter = new InDimFilter("dim", values, null);
+
+    final Map<String, Object> row = new HashMap<>();
+    row.put("dim", null);
+
+    final RowBasedColumnSelectorFactory<MapBasedRow> columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        RowAdapters.standardRow(),
+        () -> new MapBasedRow(0, row),
+        RowSignature.builder().add("dim", ValueType.STRING).build(),
+        true
+    );
+
+    final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
+
+    // This would throw an exception without InDimFilter's null-checking lambda wrapping.
+    Assert.assertFalse(matcher.matches());
   }
 }
