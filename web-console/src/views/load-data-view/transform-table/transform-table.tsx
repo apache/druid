@@ -101,7 +101,9 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+          Cell: function TransformTableCell(row) {
+            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+          },
         };
       })}
       defaultPageSize={50}

@@ -17,10 +17,10 @@
  */
 
 export * from './about-dialog/about-dialog';
-export * from './doctor-dialog/doctor-dialog';
 export * from './async-action-dialog/async-action-dialog';
 export * from './compaction-dialog/compaction-dialog';
 export * from './coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
+export * from './doctor-dialog/doctor-dialog';
 export * from './history-dialog/history-dialog';
 export * from './lookup-edit-dialog/lookup-edit-dialog';
 export * from './overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';

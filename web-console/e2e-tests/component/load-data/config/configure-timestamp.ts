@@ -16,14 +16,17 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
-
-export function useRenderSpy(componentName: string, props: Record<string, any>) {
-  console.log(`Render on ${componentName}`);
-  const propKeys: string[] = Object.keys(props).sort();
-  for (const key of propKeys) {
-    useEffect(() => {
-      console.log(`${key} changed`);
-    }, [(props as any)[key]]);
+/**
+ * Data loader configure timestamp step configuration.
+ */
+export class ConfigureTimestampConfig {
+  constructor(props: ConfigureTimestampConfigProps) {
+    Object.assign(this, props);
   }
 }
+
+interface ConfigureTimestampConfigProps {
+  readonly timestampExpression: string;
+}
+
+export interface ConfigureTimestampConfig extends ConfigureTimestampConfigProps {}

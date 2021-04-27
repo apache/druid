@@ -35,7 +35,7 @@ export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
   const { label, info, inlineInfo, children } = props;
 
   const popover = (
-    <Popover content={info} position="left-bottom" boundary={'viewport'}>
+    <Popover content={info} position="left-bottom" boundary="viewport">
       <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
     </Popover>
   );

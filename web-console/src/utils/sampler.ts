@@ -20,6 +20,7 @@ import * as JSONBig from 'json-bigint-native';
 
 import {
   DimensionsSpec,
+  getDimensionNamesFromTransforms,
   getSpecType,
   getTimestampSchema,
   IngestionSpec,
@@ -418,7 +419,8 @@ export async function sampleForTimestamp(
   }
 
   const sampleTimeData = sampleTime.data;
-  return Object.assign({}, sampleColumns, {
+  return {
+    ...sampleColumns,
     data: sampleColumns.data.map((d, i) => {
       // Merge the column sample with the time column sample
       if (!d.parsed) return d;
@@ -426,7 +428,7 @@ export async function sampleForTimestamp(
       d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
       return d;
     }),
-  });
+  };
 }
 
 export async function sampleForTransform(
@@ -464,7 +466,7 @@ export async function sampleForTransform(
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
         columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
-      }).concat(transforms.map(t => t.name)),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 
@@ -523,7 +525,7 @@ export async function sampleForFilter(
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
         columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
-      }).concat(transforms.map(t => t.name)),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 

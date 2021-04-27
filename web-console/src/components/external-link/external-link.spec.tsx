@@ -24,7 +24,7 @@ import { ExternalLink } from './external-link';
 describe('external link', () => {
   it('matches snapshot', () => {
     const externalLink = (
-      <ExternalLink href={'http://test/'}>
+      <ExternalLink href="http://test/">
         <div>hello world</div>
       </ExternalLink>
     );

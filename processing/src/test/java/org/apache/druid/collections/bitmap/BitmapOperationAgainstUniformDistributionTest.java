@@ -26,7 +26,7 @@ import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.util.BitSet;
 
-public class BitmapOperationAgainstUniformDistributionTest extends BitmapOperationTest
+public class BitmapOperationAgainstUniformDistributionTest extends BitmapOperationTestBase
 {
   public static final double DENSITY = 0.01;
   public static final int MIN_INTERSECT = 50;

@@ -32,6 +32,7 @@ import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -58,6 +59,7 @@ import java.util.stream.IntStream;
 public class TestHelper
 {
   public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ColumnConfig NO_CACHE_COLUMN_CONFIG = () -> 0;
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -66,8 +68,7 @@ public class TestHelper
 
   public static IndexIO getTestIndexIO()
   {
-    ColumnConfig noCacheColumnConfig = () -> 0;
-    return getTestIndexIO(noCacheColumnConfig);
+    return getTestIndexIO(NO_CACHE_COLUMN_CONFIG);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
@@ -352,7 +353,9 @@ public class TestHelper
       final Object expectedValue = expectedMap.get(key);
       final Object actualValue = actualMap.get(key);
 
-      if (expectedValue instanceof Float || expectedValue instanceof Double) {
+      if (expectedValue != null && expectedValue.getClass().isArray()) {
+        Assert.assertArrayEquals((Object[]) expectedValue, (Object[]) actualValue);
+      } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
             StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
@@ -382,7 +385,23 @@ public class TestHelper
       final Object expectedValue = expected.get(i);
       final Object actualValue = actual.get(i);
 
-      if (expectedValue instanceof Float || expectedValue instanceof Double) {
+
+      if (expectedValue != null && expectedValue.getClass().isArray()) {
+        // spilled results will materialize into lists, coerce them back to arrays if we expected arrays
+        if (actualValue instanceof List) {
+          Assert.assertEquals(
+              message,
+              (Object[]) expectedValue,
+              (Object[]) ExprEval.coerceListToArray((List) actualValue, true)
+          );
+        } else {
+          Assert.assertArrayEquals(
+              message,
+              (Object[]) expectedValue,
+              (Object[]) actualValue
+          );
+        }
+      } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
             message,
             ((Number) expectedValue).doubleValue(),

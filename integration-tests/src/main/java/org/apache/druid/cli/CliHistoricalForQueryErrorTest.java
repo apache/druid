@@ -25,19 +25,19 @@ import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.server.coordination.ServerManagerForQueryRetryTest;
+import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
 
 import java.util.Properties;
 
 @Command(
-    name = "historical-for-query-retry-test",
-    description = "Runs a Historical node modified for query retry test"
+    name = "historical-for-query-error-test",
+    description = "Runs a Historical node modified for query error test"
 )
-public class CliHistoricalForQueryRetryTest extends CliHistorical
+public class CliHistoricalForQueryErrorTest extends CliHistorical
 {
-  private static final Logger log = new Logger(CliHistoricalForQueryRetryTest.class);
+  private static final Logger log = new Logger(CliHistoricalForQueryErrorTest.class);
 
-  public CliHistoricalForQueryRetryTest()
+  public CliHistoricalForQueryErrorTest()
   {
     super();
   }
@@ -46,12 +46,12 @@ public class CliHistoricalForQueryRetryTest extends CliHistorical
   @Override
   public void configure(Properties properties)
   {
-    log.info("Historical is configured for testing query retry on missing segments");
+    log.info("Historical is configured for testing query error on missing segments");
   }
 
   @Override
   public void bindQuerySegmentWalker(Binder binder)
   {
-    binder.bind(QuerySegmentWalker.class).to(ServerManagerForQueryRetryTest.class).in(LazySingleton.class);
+    binder.bind(QuerySegmentWalker.class).to(ServerManagerForQueryErrorTest.class).in(LazySingleton.class);
   }
 }

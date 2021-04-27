@@ -38,10 +38,13 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -155,6 +158,19 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isSkipEmptyBuckets()
   {
     return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.emptyList(),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

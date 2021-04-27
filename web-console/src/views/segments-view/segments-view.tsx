@@ -39,6 +39,8 @@ import { Api } from '../../singletons';
 import {
   addFilter,
   booleanCustomTableFilter,
+  Capabilities,
+  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
@@ -52,14 +54,13 @@ import {
   QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
-import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Segment ID',
     'Datasource',
     'Start',
@@ -231,7 +232,7 @@ END AS "partitioning"`,
     return 'Sub minute';
   }
 
-  private segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
 
   private lastTableState: TableState | undefined;
 
@@ -342,9 +343,9 @@ END AS "partitioning"`,
           setIntermediateQuery(sqlQuery);
           return await queryDruidSql({ query: sqlQuery });
         } else if (capabilities.hasCoordinatorAccess()) {
-          let datasourceList: string[] = (await Api.instance.get(
-            '/druid/coordinator/v1/metadata/datasources',
-          )).data;
+          let datasourceList: string[] = (
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+          ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
@@ -364,9 +365,11 @@ END AS "partitioning"`,
 
           const n = Math.min(datasourceList.length, maxResults);
           for (let i = 0; i < n && results.length < maxResults; i++) {
-            const segments = (await Api.instance.get(
-              `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
-            )).data.segments;
+            const segments = (
+              await Api.instance.get(
+                `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+              )
+            ).data.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
@@ -422,7 +425,7 @@ END AS "partitioning"`,
     this.segmentsQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
     const { hiddenColumns } = this.state;
     if (tableState) this.lastTableState = tableState;

@@ -92,7 +92,7 @@ public class ExpressionPostAggregator implements PostAggregator
         ordering,
         macroTable,
         ImmutableMap.of(),
-        Suppliers.memoize(() -> Parser.parse(expression, macroTable))
+        Parser.lazyParse(expression, macroTable)
     );
   }
 

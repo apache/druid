@@ -136,7 +136,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     const monthStart = floorMonth(now);
     const yearStart = floorYear(now);
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
+      <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
         {filterMenuItem(`Latest day`, fillWithColumn(LATEST_DAY, columnName))}
         {filterMenuItem(`Latest week`, fillWithColumn(LATEST_WEEK, columnName))}
@@ -170,7 +170,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
-        text={`Remove filter`}
+        text="Remove filter"
         onClick={() => {
           onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
@@ -186,7 +186,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
-        text={'Remove group by'}
+        text="Remove group by"
         onClick={() => {
           onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
         }}
@@ -211,7 +211,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     }
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(
           SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('PT1H')]),
           `${columnName}_by_hour`,
@@ -266,7 +266,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     }
 
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
+      <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}
         {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
       </MenuItem>

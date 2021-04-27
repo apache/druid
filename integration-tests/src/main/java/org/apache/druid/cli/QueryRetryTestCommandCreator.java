@@ -26,6 +26,6 @@ public class QueryRetryTestCommandCreator implements CliCommandCreator
   @Override
   public void addCommands(CliBuilder builder)
   {
-    builder.withGroup("server").withCommands(CliHistoricalForQueryRetryTest.class);
+    builder.withGroup("server").withCommands(CliHistoricalForQueryErrorTest.class);
   }
 }

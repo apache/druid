@@ -42,7 +42,7 @@ export function bootstrapReactTable() {
     NoDataComponent: NoData,
     FilterComponent: makeTextFilter(),
     PaginationComponent: ReactTableCustomPagination,
-    AggregatedComponent: (opt: any) => {
+    AggregatedComponent: function Aggregated(opt: any) {
       const { subRows, column } = opt;
       const previewValues = subRows
         .filter((d: any) => typeof d[column.id] !== 'undefined')

@@ -35,7 +35,7 @@ export function BarUnit(props: BarChartUnitProps) {
   const { x, y, width, height, style, onClick, onHover, offHover } = props;
   return (
     <rect
-      className={`bar-chart-unit`}
+      className="bar-chart-unit"
       x={x}
       y={y}
       width={width}

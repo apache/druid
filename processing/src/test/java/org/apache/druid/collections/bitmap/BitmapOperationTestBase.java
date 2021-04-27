@@ -35,7 +35,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 
-public class BitmapOperationTest
+public abstract class BitmapOperationTestBase
 {
   public static final int BITMAP_LENGTH = 500_000;
   public static final int NUM_BITMAPS = 1000;
