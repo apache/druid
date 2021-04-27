@@ -48,6 +48,7 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
@@ -421,8 +422,35 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     return true;
   }
 
+  @Override
+  public int removeRulesOlderThan(long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    synchronized (lock) {
+      return dbi.withHandle(
+          handle -> {
+            Update sql = handle.createStatement(
+                StringUtils.format(
+                    "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s) and datasource!=:default_rule and version < :date_time",
+                    getRulesTable(),
+                    getSegmentsTable()
+                )
+            );
+            return sql.bind("default_rule", config.getDefaultRule())
+                      .bind("date_time", dateTime.toString())
+                      .execute();
+          }
+      );
+    }
+  }
+
   private String getRulesTable()
   {
     return dbTables.getRulesTable();
+  }
+
+  private String getSegmentsTable()
+  {
+    return dbTables.getSegmentsTable();
   }
 }
