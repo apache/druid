@@ -55,15 +55,12 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     && wget ${BASH_URL} -O /bin/bash \
     && chmod 755 /bin/bash
 
-COPY --from=extractor /opt /opt
-COPY ./docker/druid.sh /druid.sh
-
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
-COPY --chown=druid:druid --from=builder /opt /opt
-COPY distribution/docker/druid.sh /druid.sh
-COPY distribution/docker/peon.sh /peon.sh
+COPY --chown=druid:druid --from=extractor /opt /opt
+COPY ./docker/druid.sh /druid.sh
+COPY ./docker/peon.sh /peon.sh
 
 # create necessary directories which could be mounted as volume
 #   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
