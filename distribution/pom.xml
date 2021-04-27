@@ -50,7 +50,6 @@
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
-        <skipDockerMysql>true</skipDockerMysql>
     </properties>
 
     <build>
@@ -587,7 +586,7 @@
                       <goal>tag</goal>
                     </goals>
                     <configuration>
-                      <repository>docker.io/apache/incubator-druid</repository>
+                      <repository>docker.io/apache/druid</repository>
                       <tag>latest</tag>
                       <dockerfile>docker/Dockerfile</dockerfile>
                     </configuration>
@@ -599,35 +598,33 @@
                       <goal>tag</goal>
                     </goals>
                     <configuration>
-                      <repository>docker.io/apache/incubator-druid</repository>
+                      <repository>docker.io/apache/druid</repository>
                       <tag>${project.version}</tag>
                       <dockerfile>docker/Dockerfile</dockerfile>
                     </configuration>
                   </execution>
                   <execution>
-                    <id>tag-latest-mysql</id>
+                    <id>tag-latest-jdk11</id>
                     <goals>
                       <goal>build</goal>
                       <goal>tag</goal>
                     </goals>
                     <configuration>
-                      <repository>docker.io/apache/incubator-druid-mysql</repository>
-                      <tag>latest</tag>
-                      <dockerfile>docker/Dockerfile.mysql</dockerfile>
-                      <skip>${skipDockerMysql}</skip>
+                      <repository>docker.io/apache/druid</repository>
+                      <tag>latest-jdk11</tag>
+                      <dockerfile>docker/Dockerfile.java11</dockerfile>
                     </configuration>
                   </execution>
                   <execution>
-                    <id>tag-version-mysql</id>
+                    <id>tag-version-jdk11</id>
                     <goals>
                       <goal>build</goal>
                       <goal>tag</goal>
                     </goals>
                     <configuration>
-                      <repository>docker.io/apache/incubator-druid-mysql</repository>
-                      <tag>${project.version}</tag>
-                      <dockerfile>docker/Dockerfile.mysql</dockerfile>
-                      <skip>${skipDockerMysql}</skip>
+                      <repository>docker.io/apache/druid</repository>
+                      <tag>${project.version}-jdk11</tag>
+                      <dockerfile>docker/Dockerfile.java11</dockerfile>
                     </configuration>
                   </execution>
                 </executions>
