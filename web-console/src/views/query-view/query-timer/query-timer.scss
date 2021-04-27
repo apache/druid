@@ -16,25 +16,8 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import { QueryResult } from 'druid-query-toolkit';
-import React from 'react';
-
-import { QueryExtraInfo } from './query-extra-info';
-
-describe('QueryExtraInfo', () => {
-  it('matches snapshot', () => {
-    const queryExtraInfo = (
-      <QueryExtraInfo
-        queryResult={QueryResult.BLANK.attachQueryId(
-          'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
-        ).changeQueryDuration(8000)}
-        onDownload={() => {}}
-        onLoadMore={() => {}}
-      />
-    );
-
-    const { container } = render(queryExtraInfo);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+.query-timer {
+  line-height: 30px;
+  white-space: nowrap;
+  pointer-events: none;
+}
