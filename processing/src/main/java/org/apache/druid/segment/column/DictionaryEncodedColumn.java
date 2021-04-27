@@ -29,8 +29,10 @@ import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public interface DictionaryEncodedColumn<ActualType extends Comparable<? super ActualType>> extends BaseColumn
 {
@@ -42,7 +44,24 @@ public interface DictionaryEncodedColumn<ActualType extends Comparable<? super A
 
   IndexedInts getMultiValueRow(int rowNum);
 
+  @Nullable
   ActualType lookupName(int id);
+
+  /**
+   * Returns a ByteBuffer pointing to the underlying bytes for the value of a particular dictionary id.
+   *
+   * The returned buffer is in big-endian order. It is not reused, so callers may modify the position, limit, byte
+   * order, etc of the buffer.
+   *
+   * The returned buffer points to the original data, so callers must take care not to use it outside the valid
+   * lifetime of this column.
+   *
+   * @param id id to lookup the dictionary value for
+   *
+   * @return dictionary value for the given id, or null if the value is itself null
+   */
+  @Nullable
+  ByteBuffer lookupNameBinary(int id);
 
   int lookupId(ActualType name);
 

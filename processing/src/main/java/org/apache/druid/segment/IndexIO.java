@@ -356,6 +356,7 @@ public class IndexIO
       }
 
       Map<String, GenericIndexed<String>> dimValueLookups = new HashMap<>();
+      Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups = new HashMap<>();
       Map<String, VSizeColumnarMultiInts> dimColumns = new HashMap<>();
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = new HashMap<>();
 
@@ -369,7 +370,9 @@ public class IndexIO
             fileDimensionName
         );
 
-        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.STRING_STRATEGY));
+        // Duplicate the first buffer since we are reading the dictionary twice.
+        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer.duplicate(), GenericIndexed.STRING_STRATEGY));
+        dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY));
         dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
 
@@ -399,6 +402,7 @@ public class IndexIO
           timestamps,
           metrics,
           dimValueLookups,
+          dimValueUtf8Lookups,
           dimColumns,
           bitmaps,
           spatialIndexed,
@@ -441,6 +445,7 @@ public class IndexIO
             .setDictionaryEncodedColumnSupplier(
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
+                    index.getDimValueUtf8Lookup(dimension),
                     null,
                     Suppliers.ofInstance(index.getDimColumn(dimension)),
                     columnConfig.columnCacheSizeBytes()
