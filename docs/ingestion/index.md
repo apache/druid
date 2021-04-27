@@ -27,7 +27,7 @@ Loading data in Druid is called _ingestion_ or _indexing_, and consists of readi
 segments based on that data.
 
 In most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes
-(or the [Indexer](../design/indexer.md) processes) do the work of loading data. One exception is
+(or the [Indexer](../design/indexer.md) processes) load your source data. One exception is
 Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce job on YARN (although MiddleManager or Indexer
 processes are still involved in starting and monitoring the Hadoop jobs). 
 
