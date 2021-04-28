@@ -34,4 +34,12 @@ public interface MetadataSupervisorManager
   Map<String, List<VersionedSupervisorSpec>> getAll();
 
   Map<String, SupervisorSpec> getLatest();
+
+  /**
+   * Remove terminated supervisor created older than the given timestamp.
+   *
+   * @param timestamp timestamp in milliseconds
+   * @return number of supervisor removed
+   */
+  int removeRulesOlderThan(long timestamp);
 }

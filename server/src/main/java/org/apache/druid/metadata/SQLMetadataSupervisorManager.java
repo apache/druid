@@ -35,11 +35,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
@@ -247,6 +249,28 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             }
         )
     );
+  }
+
+  @Override
+  public int removeRulesOlderThan(long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    synchronized (lock) {
+      return dbi.withHandle(
+          handle -> {
+            Update sql = handle.createStatement(
+                StringUtils.format(
+                    "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s) and datasource!=:default_rule and version < :date_time",
+                    getRulesTable(),
+                    getSegmentsTable()
+                )
+            );
+            return sql.bind("default_rule", config.getDefaultRule())
+                      .bind("date_time", dateTime.toString())
+                      .execute();
+          }
+      );
+    }
   }
 
   private String getSupervisorsTable()
