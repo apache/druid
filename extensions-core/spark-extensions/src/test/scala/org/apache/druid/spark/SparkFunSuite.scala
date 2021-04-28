@@ -19,19 +19,23 @@
 
 package org.apache.druid.spark
 
-import java.util.UUID
-
 import org.apache.druid.java.util.common.FileUtils
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
 
+import java.io.File
+import java.util.UUID
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
-import scala.reflect.io.Directory
 
 class SparkFunSuite extends AnyFunSuite with BeforeAndAfterEach {
+  // Suppress verbose Spark INFO logs during tests
+  Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
+  // Suppress allocation warning during local tests
+  Logger.getLogger("org.apache.druid.java.util.common.io.NativeIO").setLevel(Level.ERROR)
 
   private val localSparkContext = new ThreadLocal[SparkContext]
   private val localSparkSession = new ThreadLocal[SparkSession]
@@ -72,6 +76,6 @@ class SparkFunSuite extends AnyFunSuite with BeforeAndAfterEach {
 
     sparkContext.stop()
     // TODO whenever: This still leaks one tempdir per mvn test run.
-    Directory(sparkContext.getConf.get("spark.local.dir")).deleteRecursively()
+    FileUtils.deleteDirectory(new File(sparkContext.getConf.get("spark.local.dir")).getCanonicalFile)
   }
 }

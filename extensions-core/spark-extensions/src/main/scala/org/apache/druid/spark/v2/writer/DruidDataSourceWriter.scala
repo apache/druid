@@ -101,7 +101,7 @@ class DruidDataSourceWriter(
     logWarn(s"Aborting the following commits: ${segments.mkString(", ")}")
 
     val segmentKiller: DataSegmentKiller = SegmentWriterRegistry.getSegmentKiller(
-      conf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
+      conf.dive(DruidConfigurationKeys.writerPrefix).get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
       conf
     )
     segments.foreach(segment =>

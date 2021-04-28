@@ -77,7 +77,7 @@ class DruidDataWriterFactory(
         MAPPER.writeValueAsString(dataSchema),
         writerConf.get(DruidConfigurationKeys.shardSpecTypeDefaultKey),
         writerConf.getInt(DruidConfigurationKeys.rowsPerPersistDefaultKey),
-        conf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
+        writerConf.get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
         conf,
         version,
         partitionIdToDruidPartitionsMap,

@@ -19,7 +19,6 @@
 
 package org.apache.druid.spark.v2.reader
 
-import org.apache.druid.common.config.NullHandling
 import org.apache.druid.spark.SparkFunSuite
 import org.apache.druid.spark.configuration.SerializableHadoopConfiguration
 import org.apache.spark.sql.vectorized.ColumnarBatch

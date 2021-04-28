@@ -22,7 +22,6 @@ package org.apache.druid.spark.registries
 import org.apache.datasketches.hll.HllSketch
 import org.apache.datasketches.quantiles.DoublesSketch
 import org.apache.datasketches.tuple.ArrayOfDoublesSketch
-import org.apache.druid.guice.BloomFilterSerializersModule
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule
 import org.apache.druid.query.aggregation.datasketches.theta.{SketchHolder, SketchModule}
@@ -151,12 +150,6 @@ object ComplexMetricRegistry extends Logging {
           () => new ArrayOfDoublesSketchModule().configure(null), // scalastyle:ignore null
           classOf[ArrayOfDoublesSketch],
           sketch => sketch.asInstanceOf[ArrayOfDoublesSketch].toByteArray
-      )),
-    // Bloom Filters
-    BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME -> ((_: Boolean) =>
-      register(
-        BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME,
-        () => new BloomFilterSerializersModule()
       )),
     // Quantiles Sketches
     DoublesSketchModule.DOUBLES_SKETCH -> ((shouldCompact: Boolean) =>

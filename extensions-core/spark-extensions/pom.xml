@@ -55,22 +55,104 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.jayway.jsonpath</groupId>
+                    <artifactId>json-path</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.opencsv</groupId>
+                    <artifactId>opencsv</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.airlift</groupId>
+                    <artifactId>airline</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.timeandspace</groupId>
+                    <artifactId>cron-scheduler</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.thisptr</groupId>
+                    <artifactId>jackson-jq</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.druid</groupId>
+                    <artifactId>druid-console</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.gridkit.lab</groupId>
+                    <artifactId>jvm-attach-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.hyperic</groupId>
+                    <artifactId>sigar</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logging</groupId>
+                    <artifactId>jboss-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.mozilla</groupId>
+                    <artifactId>rhino</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.skife.config</groupId>
+                    <artifactId>config-magic</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.ibm.icu</groupId>
+                    <artifactId>icu4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.maven</groupId>
+                    <artifactId>maven-artifact</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.mozilla</groupId>
+                    <artifactId>rhino</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.skife.config</groupId>
+                    <artifactId>config-magic</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-sql</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
+
         <!-- Extensions included since we won't be running in a Druid cluster and can't use injection -->
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -81,11 +163,6 @@
             <groupId>org.apache.datasketches</groupId>
             <artifactId>datasketches-java</artifactId>
             <version>${datasketches.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-bloom-filter</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -107,6 +184,7 @@
             <artifactId>postgresql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+
         <!--
           Excluding transitive dependencies from deep storage extensions to keep dependency size manangeable. Users
           should provide the appropriate jars for their deep storage on their Spark clusters or depend on them directly
@@ -187,20 +265,20 @@
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.apache.commons</groupId>
                     <artifactId>commons-lang3</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -246,6 +324,11 @@
 
 
         <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-scala_2.12</artifactId>
+            <version>2.10.5</version>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
@@ -271,11 +354,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-scala_2.12</artifactId>
-            <version>2.10.5</version>
-        </dependency>
-        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
             <scope>provided</scope>
@@ -290,6 +368,12 @@
             <artifactId>joda-time</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-dbcp2</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -298,19 +382,11 @@
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <groupId>com.fasterxml.jackson</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>com.fasterxml.jackson</groupId>
+                    <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
@@ -339,11 +415,26 @@
             <version>${scala.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.hyperic</groupId>
+                    <artifactId>sigar</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -355,10 +446,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.major.version}</artifactId>
             <version>3.1.1</version>
-            <scope>compile</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -482,6 +578,55 @@
                         <goals>
                             <goal>check</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                    <!-- Pattern matching for *sigar* doesn't seem to be supported, so listing all current sigar resources-->
+                                    <resources>
+                                        <resource>.sigar_shellrc</resource>
+                                        <resource>libsigar-ppc64-linux.so</resource>
+                                        <resource>libsigar-universal-macosx.dylib</resource>
+                                        <resource>sigar-amd64-winnt.dll</resource>
+                                        <resource>libsigar-amd64-freebsd-6.so</resource>
+                                        <resource>libsigar-ppc-linux.so</resource>
+                                        <resource>libsigar-x86-freebsd-5.so</resource>
+                                        <resource>sigar-x86-winnt.lib</resource>
+                                        <resource>libsigar-amd64-linux.so</resource>
+                                        <resource>libsigar-ppc64-aix-5.so</resource>
+                                        <resource>libsigar-x86-freebsd-6.so</resource>
+                                        <resource>libsigar-amd64-solaris.so</resource>
+                                        <resource>libsigar-sparc64-solaris.so</resource>
+                                        <resource>sigar-x86-winnt.dll</resource>
+                                        <resource>libsigar-ia64-hpux-11.sl</resource>
+                                        <resource>libsigar-x86-solaris.so</resource>
+                                        <resource>libsigar-ia64-linux.so</resource>
+                                        <resource>libsigar-s39</resource>0<resource>x-linux.so</resource>
+                                        <resource>libsigar-x86-linux.so</resource>
+                                        <resource>libsigar-pa-hpux-11.sl</resource>
+                                        <resource>libsigar-universal64-macosx.dylib</resource>
+                                        <resource>libsigar-ppc-aix-5.so</resource>
+                                        <resource>libsigar-sparc-solaris.so</resource>
+                                    </resources>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                                    <addHeader>false</addHeader>
+                                </transformer>
+                            </transformers>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -26,17 +26,19 @@ Druid cluster.
 
 Sample Code:
 ```scala
-val metadataProperties = Map[String, String](
-  "metadataDbType" -> "mysql",
-  "metadataConnectUri" -> "jdbc:mysql://druid.metadata.server:3306/druid",
-  "metadataUser" -> "druid",
-  "metadataPassword" -> "diurd"
+val properties = Map[String, String](
+  "metadata.dbType" -> "mysql",
+  "metadata.connectUri" -> "jdbc:mysql://druid.metadata.server:3306/druid",
+  "metadata.user" -> "druid",
+  "metadata.password" -> "diurd",
+  "broker.host" -> "localhost",
+  "broker.port" -> 8082
 )
 
 sparkSession
   .read
   .format("druid")
-  .options(Map[String, String]("table" -> "dataSource") ++ metadataProperties)
+  .options(Map[String, String]("table" -> "dataSource") ++ properties)
   .load()
 ```
 
@@ -47,7 +49,7 @@ sparkSession
   .read
   .format("druid")
   .schema(schema)
-  .options(Map[String, String]("table" -> "dataSource") ++ metadataProperties)
+  .options(Map[String, String]("table" -> "dataSource") ++ properties)
   .load()
 ```
 
@@ -61,17 +63,17 @@ running cluster entirely.
 Sample Code:
 ```scala
 val metadataProperties = Map[String, String](
-  "metadataDbType" -> "mysql",
-  "metadataConnectUri" -> "jdbc:mysql://druid.metadata.server:3306/druid",
-  "metadataUser" -> "druid",
-  "metadataPassword" -> "diurd"
+  "metadata.dbType" -> "mysql",
+  "metadata.connectUri" -> "jdbc:mysql://druid.metadata.server:3306/druid",
+  "metadata.user" -> "druid",
+  "metadata.password" -> "diurd"
 )
 
 val writerConfigs = Map[String, String] (
   "table" -> "dataSource",
-  "version" -> 1,
-  "deepStorageType" -> "local",
-  "storageDirectory" -> "/mnt/druid/druid-segments/"
+  "writer.version" -> 1,
+  "writer.deepStorageType" -> "local",
+  "writer.storageDirectory" -> "/mnt/druid/druid-segments/"
 )
 
 df
@@ -164,7 +166,7 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
 |`table`|The Druid data source to write to|Yes||
-|`deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
+|`writer.deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
 |`writer.version`|The version of the segments to be written|No|The current Unix epoch time|
 |`writer.dimensions`|A list of the dimensions to write to Druid. If not set, all dimensions in the dataframe that aren't either explicitly set as metric or timestamp columns or excluded via `excludedDimensions` will be used|No||
 |`writer.metrics`|The [metrics spec](../../ingestion/index.md#metricsspec) used to define the metrics for the segments written to Druid. `fieldName` must match a column in the source dataframe|No|`[]`|
