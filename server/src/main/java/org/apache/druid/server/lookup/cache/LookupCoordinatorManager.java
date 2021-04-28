@@ -245,7 +245,7 @@ public class LookupCoordinatorManager
           }
         }
       }
-      return configManager.set(LOOKUP_CONFIG_KEY, priorSpec, updatedSpec, auditInfo).isOk();
+      return configManager.set(LOOKUP_CONFIG_KEY, updatedSpec, auditInfo).isOk();
     }
   }
 
@@ -272,7 +272,7 @@ public class LookupCoordinatorManager
         return false;
       }
 
-      return configManager.set(LOOKUP_CONFIG_KEY, priorSpec, updateSpec, auditInfo).isOk();
+      return configManager.set(LOOKUP_CONFIG_KEY, updateSpec, auditInfo).isOk();
     }
   }
 
@@ -306,7 +306,7 @@ public class LookupCoordinatorManager
       } else {
         updateSpec.put(tier, updateTierSpec);
       }
-      return configManager.set(LOOKUP_CONFIG_KEY, priorSpec, updateSpec, auditInfo).isOk();
+      return configManager.set(LOOKUP_CONFIG_KEY, updateSpec, auditInfo).isOk();
     }
   }
 
@@ -517,7 +517,6 @@ public class LookupCoordinatorManager
 
         configManager.set(
             LOOKUP_CONFIG_KEY,
-            null,
             converted,
             new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
         );

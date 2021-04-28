@@ -47,8 +47,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ConfigManager
 {
   private static final Logger log = new Logger(ConfigManager.class);
-  private static final int NUM_RETRIES = 5;
-  private static final long UPDATE_RETRY_DELAY = 1000;
 
   private final Object lock = new Object();
   private boolean started = false;
@@ -173,8 +171,12 @@ public class ConfigManager
     return holder.getReference();
   }
 
+  public <T> SetResult set(final String key, final ConfigSerde<T> serde, final T obj)
+  {
+    return set(key, serde, null, obj);
+  }
 
-  public <T> SetResult set(final String key, final ConfigSerde<T> serde, final T oldObject, final T newObject)
+  public <T> SetResult set(final String key, final ConfigSerde<T> serde, @Nullable final T oldObject, final T newObject)
   {
     if (newObject == null || !started) {
       if (newObject == null) {

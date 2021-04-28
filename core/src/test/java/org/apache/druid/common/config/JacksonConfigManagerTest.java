@@ -122,7 +122,7 @@ public class JacksonConfigManagerTest
         "127.0.0.1"
     );
 
-    jacksonConfigManager.set(key, null, val, auditInfo);
+    jacksonConfigManager.set(key, val, auditInfo);
 
     ArgumentCaptor<ConfigSerde> configSerdeCapture = ArgumentCaptor.forClass(
         ConfigSerde.class);

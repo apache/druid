@@ -77,6 +77,18 @@ public class JacksonConfigManager
    * Set the config and add audit entry
    *
    * @param key of the config to set
+   * @param val new config value to insert
+   * @param auditInfo metadata regarding the change to config, for audit purposes
+   */
+  public <T> SetResult set(String key, T val, AuditInfo auditInfo)
+  {
+    return set(key, null, val, auditInfo);
+  }
+
+  /**
+   * Set the config and add audit entry
+   *
+   * @param key of the config to set
    * @param oldValue old config value. If not null, then the update will only succeed if the insert
    *                 happens when current database entry is the same as this value. If null, then the insert
    *                 will not consider the current database entry.

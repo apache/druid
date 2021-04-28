@@ -85,7 +85,6 @@ public class CoordinatorDynamicConfigsResource
 
       final SetResult setResult = manager.set(
           CoordinatorDynamicConfig.CONFIG_KEY,
-          current,
           dynamicConfigBuilder.build(current),
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
