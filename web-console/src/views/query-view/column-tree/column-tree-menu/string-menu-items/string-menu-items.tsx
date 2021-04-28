@@ -56,7 +56,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     }
 
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
+      <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(ref.isNotNull())}
         {filterMenuItem(ref.equal(EMPTY_LITERAL), false)}
         {filterMenuItem(ref.like(EMPTY_LITERAL), false)}
@@ -72,7 +72,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
-        text={`Remove filter`}
+        text="Remove filter"
         onClick={() => {
           onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
@@ -88,7 +88,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
-        text={'Remove group by'}
+        text="Remove group by"
         onClick={() => {
           onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
         }}
@@ -112,7 +112,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     }
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(SqlRef.column(columnName))}
         {groupByMenuItem(
           SqlFunction.simple('SUBSTRING', [
@@ -150,7 +150,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     }
 
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
+      <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(SqlFunction.decorated('COUNT', 'DISTINCT', [ref]), `dist_${columnName}`)}
         {aggregateMenuItem(
           SqlFunction.simple('COUNT', [SqlRef.STAR], ref.equal(EMPTY_LITERAL)),
@@ -175,7 +175,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       <MenuItem icon={IconNames.JOIN_TABLE} text={parsedQuery.hasJoin() ? `Replace join` : `Join`}>
         <MenuItem
           icon={IconNames.LEFT_JOIN}
-          text={`Left join`}
+          text="Left join"
           onClick={() => {
             onQueryChange(
               parsedQuery.addJoin(
@@ -196,7 +196,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
         />
         <MenuItem
           icon={IconNames.INNER_JOIN}
-          text={`Inner join`}
+          text="Inner join"
           onClick={() => {
             onQueryChange(
               parsedQuery.addJoin(
@@ -227,7 +227,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     return (
       <MenuItem
         icon={IconNames.EXCHANGE}
-        text={`Remove join`}
+        text="Remove join"
         onClick={() => onQueryChange(parsedQuery.removeAllJoins())}
       />
     );

@@ -26,7 +26,7 @@ describe('query plan dialog', () => {
     const queryPlanDialog = (
       <QueryPlanDialog
         setQueryString={() => null}
-        explainResult={'test'}
+        explainResult="test"
         explainError={undefined}
         onClose={() => {}}
       />

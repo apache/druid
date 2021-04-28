@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -106,7 +107,7 @@ public class ExpressionTransform implements Transform
     } else {
       Object raw = row.getRaw(column);
       if (raw instanceof List) {
-        return ExpressionSelectors.coerceListToArray((List) raw);
+        return ExprEval.coerceListToArray((List) raw, true);
       }
       return raw;
     }

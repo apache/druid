@@ -59,12 +59,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     if (config.isDeterminingPartitions()) {
       job = createPartitionJob(config);
       config.setHadoopJobIdFileName(hadoopJobIdFile);
-      boolean jobSucceeded = JobHelper.runSingleJob(job);
-      JobHelper.maybeDeleteIntermediatePath(
-          jobSucceeded,
-          config.getSchema()
-      );
-      return jobSucceeded;
+      return JobHelper.runSingleJob(job, config);
     } else {
       final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
       final int shardsPerInterval;

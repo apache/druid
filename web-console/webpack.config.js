@@ -44,8 +44,8 @@ module.exports = env => {
   const plugins = [
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({ NODE_ENV: mode }),
-      global: {},
-      NODE_ENV: JSON.stringify(mode),
+      'global': {},
+      'NODE_ENV': JSON.stringify(mode),
     }),
   ];
 
@@ -89,20 +89,6 @@ module.exports = env => {
     },
     module: {
       rules: [
-        {
-          test: /\.tsx?$/,
-          enforce: 'pre',
-          use: [
-            {
-              loader: 'tslint-loader',
-              options: {
-                configFile: 'tslint.json',
-                emitErrors: true,
-                fix: false, // Set this to true to auto fix errors
-              },
-            },
-          ],
-        },
         {
           test: /\.tsx?$/,
           exclude: /node_modules/,

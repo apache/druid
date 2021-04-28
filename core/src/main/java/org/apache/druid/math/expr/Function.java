@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -384,13 +385,13 @@ public interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      return ImmutableSet.of(args.get(1));
+      return ImmutableSet.of(getScalarArgument(args));
     }
 
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      return ImmutableSet.of(args.get(0));
+      return ImmutableSet.of(getArrayArgument(args));
     }
 
     @Override
@@ -402,12 +403,22 @@ public interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final ExprEval arrayExpr = args.get(0).eval(bindings);
-      final ExprEval scalarExpr = args.get(1).eval(bindings);
+      final ExprEval arrayExpr = getArrayArgument(args).eval(bindings);
+      final ExprEval scalarExpr = getScalarArgument(args).eval(bindings);
       if (arrayExpr.asArray() == null) {
         return ExprEval.of(null);
       }
       return doApply(arrayExpr, scalarExpr);
+    }
+
+    Expr getScalarArgument(List<Expr> args)
+    {
+      return args.get(1);
+    }
+
+    Expr getArrayArgument(List<Expr> args)
+    {
+      return args.get(0);
     }
 
     abstract ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr);
@@ -450,14 +461,129 @@ public interface Function
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
 
-      if (arrayExpr1.asArray() == null || arrayExpr2.asArray() == null) {
-        return ExprEval.of(null);
+      if (arrayExpr1.asArray() == null) {
+        return arrayExpr1;
+      }
+      if (arrayExpr2.asArray() == null) {
+        return arrayExpr2;
       }
 
       return doApply(arrayExpr1, arrayExpr2);
     }
 
     abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
+  }
+
+  /**
+   * Scaffolding for a 2 argument {@link Function} which accepts one array and one scalar input and adds the scalar
+   * input to the array in some way.
+   */
+  abstract class ArrayAddElementFunction extends ArrayScalarFunction
+  {
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExprType arrayType = getArrayArgument(args).getOutputType(inspector);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      switch (arrayExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(add(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              add(
+                  arrayExpr.asLongArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()
+              ).toArray(Long[]::new)
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              add(
+                  arrayExpr.asDoubleArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()
+              ).toArray(Double[]::new)
+          );
+      }
+
+      throw new RE("Unable to add to unknown array type %s", arrayExpr.type());
+    }
+
+    abstract <T> Stream<T> add(T[] array, @Nullable T val);
+  }
+
+  /**
+   * Base scaffolding for functions which accept 2 array arguments and combine them in some way
+   */
+  abstract class ArraysMergeFunction extends ArraysFunction
+  {
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExprType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+
+      if (array1 == null) {
+        return ExprEval.of(null);
+      }
+      if (array2 == null) {
+        return lhsExpr;
+      }
+
+      switch (lhsExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(
+              merge(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
+          );
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              merge(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              merge(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
+          );
+      }
+      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
+    }
+
+    abstract <T> Stream<T> merge(T[] array1, T[] array2);
   }
 
   abstract class ReduceFunction implements Function
@@ -3168,7 +3294,7 @@ public interface Function
     }
   }
 
-  class ArrayAppendFunction extends ArrayScalarFunction
+  class ArrayAppendFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3177,48 +3303,7 @@ public interface Function
     }
 
     @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Nullable
-    @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      ExprType arrayType = args.get(0).getOutputType(inspector);
-      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
-    }
-
-    @Override
-    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
-    {
-      switch (arrayExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.append(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              this.append(
-                  arrayExpr.asLongArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
-              )
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              this.append(
-                  arrayExpr.asDoubleArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
-              )
-          );
-      }
-
-      throw new RE("Unable to append to unknown type %s", arrayExpr.type());
-    }
-
-    private <T> Stream<T> append(T[] array, T val)
+    <T> Stream<T> add(T[] array, @Nullable T val)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(val);
@@ -3226,7 +3311,36 @@ public interface Function
     }
   }
 
-  class ArrayConcatFunction extends ArraysFunction
+  class ArrayPrependFunction extends ArrayAddElementFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_prepend";
+    }
+
+    @Override
+    Expr getScalarArgument(List<Expr> args)
+    {
+      return args.get(0);
+    }
+
+    @Override
+    Expr getArrayArgument(List<Expr> args)
+    {
+      return args.get(1);
+    }
+
+    @Override
+    <T> Stream<T> add(T[] array, @Nullable T val)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array));
+      l.add(0, val);
+      return l.stream();
+    }
+  }
+
+  class ArrayConcatFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -3235,61 +3349,43 @@ public interface Function
     }
 
     @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
-
-    @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Nullable
-    @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      ExprType arrayType = args.get(0).getOutputType(inspector);
-      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
-    }
-
-    @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
-    {
-      final Object[] array1 = lhsExpr.asArray();
-      final Object[] array2 = rhsExpr.asArray();
-
-      if (array1 == null) {
-        return ExprEval.of(null);
-      }
-      if (array2 == null) {
-        return lhsExpr;
-      }
-
-      switch (lhsExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(
-              cat(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
-          );
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              cat(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              cat(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
-          );
-      }
-      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
-    }
-
-    private <T> Stream<T> cat(T[] array1, T[] array2)
+    <T> Stream<T> merge(T[] array1, T[] array2)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array1));
+      l.addAll(Arrays.asList(array2));
+      return l.stream();
+    }
+  }
+
+  class ArraySetAddFunction extends ArrayAddElementFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_set_add";
+    }
+
+    @Override
+    <T> Stream<T> add(T[] array, @Nullable T val)
+    {
+      Set<T> l = new HashSet<>(Arrays.asList(array));
+      l.add(val);
+      return l.stream();
+    }
+  }
+
+  class ArraySetAddAllFunction extends ArraysMergeFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_set_add_all";
+    }
+
+    @Override
+    <T> Stream<T> merge(T[] array1, T[] array2)
+    {
+      Set<T> l = new HashSet<>(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }
@@ -3436,95 +3532,6 @@ public interface Function
           return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
       }
       throw new RE("Unable to slice to unknown type %s", expr.type());
-    }
-  }
-
-  class ArrayPrependFunction implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "array_prepend";
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
-    }
-
-    @Nullable
-    @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      ExprType arrayType = args.get(1).getOutputType(inspector);
-      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
-    }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(0));
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(1));
-    }
-
-    @Override
-    public boolean hasArrayInputs()
-    {
-      return true;
-    }
-
-    @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval scalarExpr = args.get(0).eval(bindings);
-      final ExprEval arrayExpr = args.get(1).eval(bindings);
-      if (arrayExpr.asArray() == null) {
-        return ExprEval.of(null);
-      }
-      switch (arrayExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.prepend(scalarExpr.asString(), arrayExpr.asStringArray()).toArray(String[]::new));
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              this.prepend(
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong(),
-                  arrayExpr.asLongArray()).toArray(Long[]::new
-              )
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              this.prepend(
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble(),
-                  arrayExpr.asDoubleArray()).toArray(Double[]::new
-              )
-          );
-      }
-
-      throw new RE("Unable to prepend to unknown type %s", arrayExpr.type());
-    }
-
-    private <T> Stream<T> prepend(T val, T[] array)
-    {
-      List<T> l = new ArrayList<>(Arrays.asList(array));
-      l.add(0, val);
-      return l.stream();
     }
   }
 }

@@ -20,14 +20,13 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
-  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
   MoreButton,
   RefreshButton,
   TableColumnSelector,
@@ -68,7 +67,7 @@ const allColumns: string[] = [
 ];
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: allColumns,
+  'full': allColumns,
   'no-sql': allColumns,
   'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
 };
@@ -152,7 +151,7 @@ interface ServiceResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8
@@ -438,14 +437,15 @@ ORDER BY "rank" DESC, "service" DESC`;
             },
             Aggregated: row => {
               switch (row.row._pivotVal) {
-                case 'historical':
+                case 'historical': {
                   const originalHistoricals = row.subRows.map(r => r._original);
                   const totalCurr = sum(originalHistoricals, s => s.curr_size);
                   const totalMax = sum(originalHistoricals, s => s.max_size);
                   return fillIndicator(totalCurr / totalMax);
+                }
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
@@ -456,6 +456,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
+                }
 
                 default:
                   return '';
@@ -469,7 +470,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return fillIndicator(row.value);
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
@@ -477,6 +478,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   } else {
                     return '- / -';
                   }
+                }
 
                 default:
                   return '';
@@ -511,7 +513,7 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
-                case 'historical':
+                case 'historical': {
                   const {
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -524,6 +526,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     segmentsToDrop,
                     segmentsToDropSize,
                   );
+                }
 
                 case 'indexer':
                 case 'middle_manager':

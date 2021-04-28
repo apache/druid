@@ -111,12 +111,12 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     info: (
       <>
         The maximum number of segments that could be queued for loading to any given server. This
-        parameter could be used to speed up segments loading process, especially if there are "slow"
-        nodes in the cluster (with low loading speed) or if too much segments scheduled to be
-        replicated to some particular node (faster loading could be preferred to better segments
-        distribution). Desired value depends on segments loading speed, acceptable replication time
-        and number of nodes. Value 1000 could be a start point for a rather big cluster. Default
-        value is 0 (loading queue is unbounded)
+        parameter could be used to speed up segments loading process, especially if there are
+        &quot;slow&quot; nodes in the cluster (with low loading speed) or if too much segments
+        scheduled to be replicated to some particular node (faster loading could be preferred to
+        better segments distribution). Desired value depends on segments loading speed, acceptable
+        replication time and number of nodes. Value 1000 could be a start point for a rather big
+        cluster. Default value is 0 (loading queue is unbounded)
       </>
     ),
   },
@@ -166,9 +166,9 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     emptyValue: [],
     info: (
       <>
-        List of historical services to 'decommission'. Coordinator will not assign new segments to
-        'decommissioning' services, and segments will be moved away from them to be placed on
-        non-decommissioning services at the maximum rate specified by{' '}
+        List of historical services to &apos;decommission&apos;. Coordinator will not assign new
+        segments to &apos;decommissioning&apos; services, and segments will be moved away from them
+        to be placed on non-decommissioning services at the maximum rate specified by{' '}
         <Code>decommissioningMaxPercentOfMaxSegmentsToMove</Code>.
       </>
     ),
@@ -179,16 +179,16 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     defaultValue: 70,
     info: (
       <>
-        The maximum number of segments that may be moved away from 'decommissioning' services to
-        non-decommissioning (that is, active) services during one Coordinator run. This value is
-        relative to the total maximum segment movements allowed during one run which is determined
-        by <Code>maxSegmentsToMove</Code>. If
+        The maximum number of segments that may be moved away from &apos;decommissioning&apos;
+        services to non-decommissioning (that is, active) services during one Coordinator run. This
+        value is relative to the total maximum segment movements allowed during one run which is
+        determined by <Code>maxSegmentsToMove</Code>. If
         <Code>decommissioningMaxPercentOfMaxSegmentsToMove</Code> is 0, segments will neither be
-        moved from or to 'decommissioning' services, effectively putting them in a sort of
-        "maintenance" mode that will not participate in balancing or assignment by load rules.
-        Decommissioning can also become stalled if there are no available active services to place
-        the segments. By leveraging the maximum percent of decommissioning segment movements, an
-        operator can prevent active services from overload by prioritizing balancing, or decrease
+        moved from or to &apos;decommissioning&apos; services, effectively putting them in a sort of
+        &quot;maintenance&quot; mode that will not participate in balancing or assignment by load
+        rules. Decommissioning can also become stalled if there are no available active services to
+        place the segments. By leveraging the maximum percent of decommissioning segment movements,
+        an operator can prevent active services from overload by prioritizing balancing, or decrease
         decommissioning time instead. The value should be between 0 and 100.
       </>
     ),
@@ -205,8 +205,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         server, Druid iterates over the segments on the server, considering them for moving. The
         default config of 100% means that every segment on every server is a candidate to be moved.
         This should make sense for most small to medium-sized clusters. However, an admin may find
-        it preferable to drop this value lower if they don't think that it is worthwhile to consider
-        every single segment in the cluster each time it is looking for a segment to move.
+        it preferable to drop this value lower if they don&apos;t think that it is worthwhile to
+        consider every single segment in the cluster each time it is looking for a segment to move.
       </>
     ),
   },

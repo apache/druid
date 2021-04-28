@@ -74,7 +74,7 @@ export const EditContextDialog = React.memo(function EditContextDialog(
   }
 
   return (
-    <Dialog className="edit-context-dialog" isOpen onClose={onClose} title={'Edit query context'}>
+    <Dialog className="edit-context-dialog" isOpen onClose={onClose} title="Edit query context">
       <TextArea value={queryContextString} onChange={handleTextChange} autoFocus />
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
         {error && (
@@ -82,10 +82,10 @@ export const EditContextDialog = React.memo(function EditContextDialog(
             {error}
           </Callout>
         )}
-        <div className={'edit-context-dialog-buttons'}>
-          <Button text={'Close'} onClick={onClose} />
+        <div className="edit-context-dialog-buttons">
+          <Button text="Close" onClick={onClose} />
           <Button
-            text={'Save'}
+            text="Save"
             intent={Intent.PRIMARY}
             disabled={Boolean(error)}
             onClick={

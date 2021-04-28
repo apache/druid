@@ -17,22 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.math.expr;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
+import com.google.common.collect.Maps;
 
-import java.io.IOException;
-import java.net.URI;
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * This class exists for testing purposes, see {@link JobHelperPowerMockTest}. Using the
- * raw {@link FileSystem} class resulted in errors with java assist.
+ * Simple map backed object binding
  */
-public class FileSystemHelper
+public class SettableObjectBinding implements Expr.ObjectBinding
 {
-  public static FileSystem get(URI uri, Configuration conf) throws IOException
+  private final Map<String, Object> bindings;
+
+  public SettableObjectBinding()
   {
-    return FileSystem.get(uri, conf);
+    this.bindings = new HashMap<>();
+  }
+
+  public SettableObjectBinding(int expectedSize)
+  {
+    this.bindings = Maps.newHashMapWithExpectedSize(expectedSize);
+  }
+
+  @Nullable
+  @Override
+  public Object get(String name)
+  {
+    return bindings.get(name);
+  }
+
+  public SettableObjectBinding withBinding(String name, @Nullable Object value)
+  {
+    bindings.put(name, value);
+    return this;
   }
 }

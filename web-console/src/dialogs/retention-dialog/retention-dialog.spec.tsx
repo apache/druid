@@ -25,7 +25,7 @@ describe('retention dialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog
-        datasource={'test-datasource'}
+        datasource="test-datasource"
         rules={[
           {
             period: 'P1000Y',

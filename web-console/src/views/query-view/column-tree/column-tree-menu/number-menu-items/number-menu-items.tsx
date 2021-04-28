@@ -50,7 +50,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     }
 
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
+      <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(ref.greaterThan(NINE_THOUSAND))}
         {filterMenuItem(ref.lessThanOrEqual(NINE_THOUSAND))}
       </MenuItem>
@@ -64,7 +64,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
-        text={`Remove filter`}
+        text="Remove filter"
         onClick={() => {
           onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
@@ -89,7 +89,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     }
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(ref)}
         {groupByMenuItem(
           SqlFunction.simple('TRUNC', [ref, SqlLiteral.create(-1)]),
@@ -107,7 +107,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
-        text={'Remove group by'}
+        text="Remove group by"
         onClick={() => {
           onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
         }}
@@ -132,7 +132,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     }
 
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
+      <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(SqlFunction.simple('SUM', [ref]), `sum_${columnName}`)}
         {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
         {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}

@@ -183,9 +183,9 @@ class NullLongExpr extends ConstantExpr<Long>
 
 class LongArrayExpr extends ConstantExpr<Long[]>
 {
-  LongArrayExpr(Long[] value)
+  LongArrayExpr(@Nullable Long[] value)
   {
-    super(ExprType.LONG_ARRAY, Preconditions.checkNotNull(value, "value"));
+    super(ExprType.LONG_ARRAY, value);
   }
 
   @Override
@@ -320,9 +320,9 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class DoubleArrayExpr extends ConstantExpr<Double[]>
 {
-  DoubleArrayExpr(Double[] value)
+  DoubleArrayExpr(@Nullable Double[] value)
   {
-    super(ExprType.DOUBLE_ARRAY, Preconditions.checkNotNull(value, "value"));
+    super(ExprType.DOUBLE_ARRAY, value);
   }
 
   @Override
@@ -426,9 +426,9 @@ class StringExpr extends ConstantExpr<String>
 
 class StringArrayExpr extends ConstantExpr<String[]>
 {
-  StringArrayExpr(String[] value)
+  StringArrayExpr(@Nullable String[] value)
   {
-    super(ExprType.STRING_ARRAY, Preconditions.checkNotNull(value, "value"));
+    super(ExprType.STRING_ARRAY, value);
   }
 
   @Override

@@ -68,17 +68,17 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
 
   function renderBarChart() {
     return (
-      <div className={'bar-chart-container'}>
+      <div className="bar-chart-container">
         <svg
           width={width}
           height={height}
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          preserveAspectRatio={'xMinYMin meet'}
+          preserveAspectRatio="xMinYMin meet"
           style={{ marginTop: '20px' }}
         >
           <ChartAxis
-            className={'gridline-x'}
-            transform={'translate(60, 0)'}
+            className="gridline-x"
+            transform="translate(60, 0)"
             scale={axisLeft(yScale)
               .ticks(5)
               .tickSize(-width)
@@ -86,13 +86,13 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
               .tickSizeOuter(0)}
           />
           <ChartAxis
-            className={'axis--x'}
+            className="axis--x"
             transform={`translate(65, ${height})`}
             scale={axisBottom(xScale)}
           />
           <ChartAxis
-            className={'axis--y'}
-            transform={'translate(60, 0)'}
+            className="axis--y"
+            transform="translate(60, 0)"
             scale={axisLeft(yScale)
               .ticks(5)
               .tickFormat((e: number) => formatTick(e))}
@@ -110,7 +110,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
             />
             {hoverOn && (
               <g
-                className={'hovered-bar'}
+                className="hovered-bar"
                 onClick={() => {
                   setHoverOn(undefined);
                   changeActiveDatasource(hoverOn.datasource ?? null);
@@ -131,13 +131,13 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
   }
 
   return (
-    <div className={'bar-chart'}>
-      <div className={'bar-chart-tooltip'}>
+    <div className="bar-chart">
+      <div className="bar-chart-tooltip">
         <div>Datasource: {hoverOn ? hoverOn.datasource : ''}</div>
         <div>Time: {hoverOn ? hoverOn.xValue : ''}</div>
         <div>
           {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${
-            hoverOn ? formatTick(hoverOn.yValue as number) : ''
+            hoverOn ? formatTick(hoverOn.yValue!) : ''
           }`}
         </div>
       </div>

@@ -19,6 +19,8 @@
 
 package org.apache.druid.math.expr;
 
+import it.unimi.dsi.fastutil.bytes.Byte2ObjectArrayMap;
+import it.unimi.dsi.fastutil.bytes.Byte2ObjectMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ValueType;
 
@@ -29,13 +31,32 @@ import javax.annotation.Nullable;
  */
 public enum ExprType
 {
-  DOUBLE,
-  LONG,
-  STRING,
-  DOUBLE_ARRAY,
-  LONG_ARRAY,
-  STRING_ARRAY;
+  DOUBLE((byte) 0x01),
+  LONG((byte) 0x02),
+  STRING((byte) 0x03),
+  DOUBLE_ARRAY((byte) 0x04),
+  LONG_ARRAY((byte) 0x05),
+  STRING_ARRAY((byte) 0x06);
 
+  private static final Byte2ObjectMap<ExprType> TYPE_BYTES = new Byte2ObjectArrayMap<>(ExprType.values().length);
+
+  static {
+    for (ExprType type : ExprType.values()) {
+      TYPE_BYTES.put(type.getId(), type);
+    }
+  }
+
+  final byte id;
+
+  ExprType(byte id)
+  {
+    this.id = id;
+  }
+
+  public byte getId()
+  {
+    return id;
+  }
 
   public boolean isNumeric()
   {
@@ -45,6 +66,11 @@ public enum ExprType
   public boolean isScalar()
   {
     return isScalar(this);
+  }
+
+  public static ExprType fromByte(byte id)
+  {
+    return TYPE_BYTES.get(id);
   }
 
   /**
@@ -177,5 +203,4 @@ public enum ExprType
     }
     return elementType;
   }
-
 }

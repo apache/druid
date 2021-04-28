@@ -53,7 +53,7 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
+  private readonly capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
   static shownNotifications() {
     AppToaster.show({
@@ -119,47 +119,47 @@ export class ConsoleApplication extends React.PureComponent<
     }, 50);
   }
 
-  private goToLoadData = (supervisorId?: string, taskId?: string) => {
+  private readonly goToLoadData = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   };
 
-  private goToDatasources = (datasource: string) => {
+  private readonly goToDatasources = (datasource: string) => {
     this.datasource = datasource;
     window.location.hash = 'datasources';
     this.resetInitialsWithDelay();
   };
 
-  private goToSegments = (datasource: string, onlyUnavailable = false) => {
+  private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
     this.datasource = datasource;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
     this.resetInitialsWithDelay();
   };
 
-  private goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
+  private readonly goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
     this.taskGroupId = taskGroupId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
+  private readonly goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToQuery = (initQuery: string) => {
+  private readonly goToQuery = (initQuery: string) => {
     this.initQuery = initQuery;
     window.location.hash = 'query';
     this.resetInitialsWithDelay();
   };
 
-  private wrapInViewContainer = (
+  private readonly wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' | 'thin' = 'normal',
@@ -174,12 +174,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedHomeView = () => {
+  private readonly wrappedHomeView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(null, <HomeView capabilities={capabilities} />);
   };
 
-  private wrappedLoadDataView = () => {
+  private readonly wrappedLoadDataView = () => {
     const { exampleManifestsUrl } = this.props;
 
     return this.wrapInViewContainer(
@@ -194,7 +194,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedQueryView = () => {
+  private readonly wrappedQueryView = () => {
     const { defaultQueryContext, mandatoryQueryContext } = this.props;
 
     return this.wrapInViewContainer(
@@ -208,7 +208,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedDatasourcesView = () => {
+  private readonly wrappedDatasourcesView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
@@ -222,7 +222,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedSegmentsView = () => {
+  private readonly wrappedSegmentsView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
@@ -235,7 +235,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedIngestionView = () => {
+  private readonly wrappedIngestionView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'ingestion',
@@ -251,7 +251,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedServicesView = () => {
+  private readonly wrappedServicesView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'services',
@@ -263,7 +263,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedLookupsView = () => {
+  private readonly wrappedLookupsView = () => {
     return this.wrapInViewContainer('lookups', <LookupsView />);
   };
 

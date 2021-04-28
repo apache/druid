@@ -16,14 +16,27 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-export function useRenderSpy(componentName: string, props: Record<string, any>) {
-  console.log(`Render on ${componentName}`);
-  const propKeys: string[] = Object.keys(props).sort();
-  for (const key of propKeys) {
-    useEffect(() => {
-      console.log(`${key} changed`);
-    }, [(props as any)[key]]);
-  }
-}
+import { QueryTimer } from './query-timer';
+
+describe('QueryTimer', () => {
+  beforeEach(() => {
+    let nowCalls = 0;
+    jest.spyOn(Date, 'now').mockImplementation(() => {
+      return 1619201218452 + 2000 * nowCalls++;
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('matches snapshot', () => {
+    const queryTimer = <QueryTimer />;
+
+    const { container } = render(queryTimer);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

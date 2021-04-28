@@ -177,14 +177,17 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
-| array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
+| array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_set_add(arr,expr) | adds expr to arr and converts the array to a new array composed of the unique set of elements. The resulting array type determined by the type of the array |
+| array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
 ## Apply functions
+Apply functions allow for special 'lambda' expressions to be defined and applied to array inputs to enable free-form transformations.
 
 | function | description |
 | --- | --- |
@@ -196,6 +199,26 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
+
+### Lambda expressions syntax
+Lambda expressions are a sort of function definition, where new identifiers can be defined and passed as input to the expression body
+```
+(identifier1 ...) -> expr
+```
+e.g.
+```
+(x, y) -> x + y 
+```
+The identifier arguments of a lambda expression correspond to the elements of the array it is being applied to. For example:
+```
+map((x) -> x + 1, some_multi_value_column)
+```
+will map each element of `some_multi_value_column` to the identifier `x` so that the lambda expression body can be evaluated for each `x`. The scoping rules are that lambda arguments will override identifiers which are defined externally from the lambda expression body. Using the same example:
+
+```
+map((x) -> x + 1, x)
+```
+in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
 
 ## Reduction functions
 

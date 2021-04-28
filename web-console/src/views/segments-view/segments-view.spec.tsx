@@ -26,7 +26,7 @@ describe('segments-view', () => {
   it('matches snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView
-        datasource={'test'}
+        datasource="test"
         onlyUnavailable={false}
         goToQuery={() => {}}
         capabilities={Capabilities.FULL}
