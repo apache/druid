@@ -22,6 +22,8 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
@@ -93,6 +95,20 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final InDimFilter dimFilter1 = new InDimFilter("dim", ImmutableList.of("v1", "v2"), null);
     final InDimFilter dimFilter2 = new InDimFilter("dim", ImmutableList.of("v2", "v1"), null);
     Assert.assertArrayEquals(dimFilter1.getCacheKey(), dimFilter2.getCacheKey());
+  }
+
+  @Test
+  public void testGetCacheKeyReturningSameKeyForSetsOfDifferentTypesAndComparators()
+  {
+    final Set<String> reverseOrderSet = new TreeSet<>(Ordering.natural().reversed());
+    final InDimFilter dimFilter1 = new InDimFilter("dim", Sets.newTreeSet(Arrays.asList("v1", "v2")));
+    final InDimFilter dimFilter2 = new InDimFilter("dim", Sets.newHashSet("v2", "v1"));
+    final InDimFilter dimFilter3 = new InDimFilter("dim", ImmutableSortedSet.copyOf(Arrays.asList("v2", "v1")));
+    reverseOrderSet.addAll(Arrays.asList("v1", "v2"));
+    final InDimFilter dimFilter4 = new InDimFilter("dim", reverseOrderSet);
+    Assert.assertArrayEquals(dimFilter1.getCacheKey(), dimFilter2.getCacheKey());
+    Assert.assertArrayEquals(dimFilter1.getCacheKey(), dimFilter3.getCacheKey());
+    Assert.assertArrayEquals(dimFilter1.getCacheKey(), dimFilter4.getCacheKey());
   }
 
   @Test
