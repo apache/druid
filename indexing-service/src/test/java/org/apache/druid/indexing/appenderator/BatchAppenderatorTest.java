@@ -37,8 +37,8 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BatchAppenderatorTest extends InitializedNullHandlingTest
 {
@@ -81,7 +81,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // getSegments
-      Assert.assertEquals(IDENTIFIERS.subList(0, 2), sorted(appenderator.getSegments()));
+      Assert.assertEquals(IDENTIFIERS.subList(0, 2),
+                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
 
       // getRowCount
       Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
@@ -103,7 +104,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       ).get();
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
-          sorted(
               Lists.transform(
                   segmentsAndCommitMetadata.getSegments(),
                   new Function<DataSegment, SegmentIdWithShardSpec>()
@@ -114,12 +114,11 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
                       return SegmentIdWithShardSpec.fromDataSegment(input);
                     }
                   }
-              )
-          )
+              ).stream().sorted().collect(Collectors.toList())
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
+      Assert.assertEquals(tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
+                          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList()));
 
-      // clear
       appenderator.clear();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
     }
@@ -150,23 +149,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     );
   }
 
-  private static <T> List<T> sorted(final List<T> xs)
-  {
-    final List<T> xsSorted = Lists.newArrayList(xs);
-    Collections.sort(
-        xsSorted,
-        (T a, T b) -> {
-          if (a instanceof SegmentIdWithShardSpec && b instanceof SegmentIdWithShardSpec) {
-            return ((SegmentIdWithShardSpec) a).compareTo(((SegmentIdWithShardSpec) b));
-          } else if (a instanceof DataSegment && b instanceof DataSegment) {
-            return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
-          } else {
-            throw new IllegalStateException("BAD");
-          }
-        }
-    );
-    return xsSorted;
-  }
 
 }
 

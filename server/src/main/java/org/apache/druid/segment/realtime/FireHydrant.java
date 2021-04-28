@@ -34,53 +34,17 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
- *
  */
 public class FireHydrant
 {
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;
-  private File persistedFile;
-  private SegmentId persistedSegmentId;
-
-  /**
-   * @return The persisted file path. This is needed to recreate mapped files before merging.
-   * it will be null for real time hydrants.
-   */
-  public @Nullable File getPersistedFile()
-  {
-    return persistedFile;
-  }
-
-  /**
-   * @return The persisted segment id. This is needed to recreate mapped files before merging.
-   * It will be null for real time hydrants
-   */
-  public @Nullable SegmentId getPersistedSegmentId()
-  {
-    return persistedSegmentId;
-  }
-
-  /**
-   * This is to support the case of batch ingestion where the hydrant is persisted but not memory mapped.
-   * We need to remember the persisted file path in order to regenerate the memory mapped index to
-   * prepare for merging after all physical segments are built
-   *
-   * @param persistedFile The file that was persisted when this hydrant was persisted
-   */
-  public void setPersistedMetadata(File persistedFile, SegmentId segmentId)
-  {
-    this.persistedFile = persistedFile;
-    this.persistedSegmentId = segmentId;
-  }
-
 
   public FireHydrant(IncrementalIndex index, int count, SegmentId segmentId)
   {

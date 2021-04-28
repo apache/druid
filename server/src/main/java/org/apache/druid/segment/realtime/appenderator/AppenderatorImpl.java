@@ -72,6 +72,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -164,13 +165,18 @@ public class AppenderatorImpl implements Appenderator
   private volatile Throwable persistError;
 
   private final boolean isRealTime;
+  // Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
+  // in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
+  // at merge time. This is necessary since batch appenderator will not map the QueryableIndex
+  // at persist time in order to minimize its memory footprint.
+  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata = new HashMap<>();
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   * <p>
+   *
    * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
    * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   * <p>
+   *
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
@@ -787,6 +793,7 @@ public class AppenderatorImpl implements Appenderator
    * @param identifier    sink identifier
    * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
+   *
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
@@ -854,18 +861,28 @@ public class AppenderatorImpl implements Appenderator
 
           // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
           if (!isRealTime()) {
+
+            // sanity
+            Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
+            if (persistedMetadata == null) {
+              throw new ISE("Persisted metadata for batch hydrant [%s] is null!", fireHydrant);
+            }
+
+            File persistedFile = persistedMetadata.lhs;
+            SegmentId persistedSegmentId = persistedMetadata.rhs;
+
             // sanity:
-            if (fireHydrant.getPersistedFile() == null) {
-              throw new ISE("Persisted file for batch hydrant is null!");
-            } else if (fireHydrant.getPersistedSegmentId() == null) {
+            if (persistedFile == null) {
+              throw new ISE("Persisted file for batch hydrant [%s] is null!", fireHydrant);
+            } else if (persistedSegmentId == null) {
               throw new ISE(
                   "Persisted segmentId for batch hydrant in file [%s] is null!",
-                  fireHydrant.getPersistedFile().getPath()
+                  persistedFile.getPath()
               );
             }
             fireHydrant.swapSegment(new QueryableIndexSegment(
-                indexIO.loadIndex(fireHydrant.getPersistedFile()),
-                fireHydrant.getPersistedSegmentId()
+                indexIO.loadIndex(persistedFile),
+                persistedSegmentId
             ));
           }
 
@@ -949,7 +966,6 @@ public class AppenderatorImpl implements Appenderator
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);
     }
-
   }
 
   @Override
@@ -1451,6 +1467,7 @@ public class AppenderatorImpl implements Appenderator
    *
    * @param indexToPersist hydrant to persist
    * @param identifier     the segment this hydrant is going to be part of
+   *
    * @return the number of rows persisted
    */
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
@@ -1495,7 +1512,7 @@ public class AppenderatorImpl implements Appenderator
           segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
         } else {
           // remember file path & segment id to rebuild the queryable index for merge:
-          indexToPersist.setPersistedMetadata(persistedFile, indexToPersist.getSegmentId());
+          persistedHydrantMetadata.put(indexToPersist, new Pair<>(persistedFile, indexToPersist.getSegmentId()));
         }
         indexToPersist.swapSegment(segmentToSwap);
 
