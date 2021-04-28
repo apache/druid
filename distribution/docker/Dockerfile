@@ -52,7 +52,7 @@ RUN addgroup -S -g 1000 druid \
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
 RUN mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt \
+ && chown -R druid:druid /opt/druid/var \
  && chmod 775 /opt/druid/var
 
 USER druid
