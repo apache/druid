@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -103,7 +104,10 @@ public class IndexedTableJoinable implements Joinable
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
       // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
       // The hopes are that this will improve locality and therefore improve performance.
-      final Set<String> allValues = new TreeSet<>();
+      //
+      // Note: we are using Comparators.naturalNullsFirst() because it prevents the need for lambda-wrapping in
+      // InDimFilter's "createStringPredicate" method.
+      final Set<String> allValues = new TreeSet<>(Comparators.naturalNullsFirst());
 
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));

@@ -1,5 +1,5 @@
 ---
-id: druid-kubernetes
+id: kubernetes
 title: "Kubernetes"
 ---
 

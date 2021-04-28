@@ -48,7 +48,8 @@ ORDER BY "Count" DESC`);
           false,
           true,
         ).attachQuery({}, parsedQuery)}
-        onQueryChange={() => null}
+        onQueryChange={() => {}}
+        onLoadMore={() => {}}
       />
     );
 
