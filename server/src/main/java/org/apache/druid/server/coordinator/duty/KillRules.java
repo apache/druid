@@ -61,7 +61,7 @@ public class KillRules implements CoordinatorDuty
       lastKillTime = System.currentTimeMillis();
 
       long timestamp = System.currentTimeMillis() - retainDuration;
-      int ruleRemoved = params.getDatabaseRuleManager().removeRulesOlderThan(timestamp);
+      int ruleRemoved = params.getDatabaseRuleManager().removeRulesForEmptyDatasourcesOlderThan(timestamp);
       ServiceEmitter emitter = params.getEmitter();
       emitter.emit(
           new ServiceMetricEvent.Builder().build(

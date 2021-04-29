@@ -237,7 +237,7 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(1, allRules.get("test_dataSource").size());
 
     // Now delete rules
-    ruleManager.removeRulesOlderThan(System.currentTimeMillis());
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
 
     // Verify that rule was deleted
     ruleManager.poll();
@@ -270,7 +270,7 @@ public class SQLMetadataRuleManagerTest
 
     // This will not delete the rule as the rule was created just now so it will have the created timestamp later than
     // the timestamp 2012-01-01T00:00:00Z
-    ruleManager.removeRulesOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
 
     // Verify that rule was not deleted
     ruleManager.poll();
@@ -322,7 +322,7 @@ public class SQLMetadataRuleManagerTest
     publisher.publishSegment(dataSegment);
 
     // This will not delete the rule as the datasource has segment in the segment metadata table
-    ruleManager.removeRulesOlderThan(System.currentTimeMillis());
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
 
     // Verify that rule was not deleted
     ruleManager.poll();
@@ -342,7 +342,7 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get("_default").size());
     // Delete everything
-    ruleManager.removeRulesOlderThan(System.currentTimeMillis());
+    ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
     // Verify the default rule was not deleted
     ruleManager.poll();
     allRules = ruleManager.getAllRules();

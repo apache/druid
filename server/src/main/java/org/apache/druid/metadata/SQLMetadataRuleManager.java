@@ -390,6 +390,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                               .build(),
                     handle
                 );
+                // Note that the method removeRulesForEmptyDatasourcesOlderThan depends on the version field
+                // to be a timestamp
                 String version = auditTime.toString();
                 handle.createStatement(
                     StringUtils.format(
@@ -423,13 +425,18 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   }
 
   @Override
-  public int removeRulesOlderThan(long timestamp)
+  public int removeRulesForEmptyDatasourcesOlderThan(long timestamp)
   {
+    // Note that this DELETE SQL depends on the version field to be a timestamp. Hence, this
+    // method depends on overrideRule method to set version to timestamp when the rule entry is created
     DateTime dateTime = DateTimes.utc(timestamp);
     synchronized (lock) {
       return dbi.withHandle(
           handle -> {
             Update sql = handle.createStatement(
+                // Note that this query could be expensive when the segments table is large
+                // However, since currently this query is run very infrequent (by default once a day by the KillRules Coordinator duty)
+                // and the inner query on segment table is a READ (no locking), it is keep this way.
                 StringUtils.format(
                     "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s) and datasource!=:default_rule and version < :date_time",
                     getRulesTable(),

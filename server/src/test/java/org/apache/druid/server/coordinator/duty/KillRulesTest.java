@@ -102,7 +102,7 @@ public class KillRulesTest
     );
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verify(mockRuleManager).removeRulesOlderThan(ArgumentMatchers.anyLong());
+    Mockito.verify(mockRuleManager).removeRulesForEmptyDatasourcesOlderThan(ArgumentMatchers.anyLong());
     Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 

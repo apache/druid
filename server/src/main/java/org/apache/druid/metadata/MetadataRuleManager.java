@@ -49,5 +49,5 @@ public interface MetadataRuleManager
    * @param timestamp timestamp in milliseconds
    * @return number of rules removed
    */
-  int removeRulesOlderThan(long timestamp);
+  int removeRulesForEmptyDatasourcesOlderThan(long timestamp);
 }
