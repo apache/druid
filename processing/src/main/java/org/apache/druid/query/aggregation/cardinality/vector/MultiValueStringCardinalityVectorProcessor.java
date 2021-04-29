@@ -56,7 +56,7 @@ public class MultiValueStringCardinalityVectorProcessor implements CardinalityVe
         final IndexedInts ids = vector[i];
         final int sz = ids.size();
 
-        for (int j = 0 ; j < sz; j++) {
+        for (int j = 0; j < sz; j++) {
           final String value = selector.lookupName(ids.get(j));
           StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, value);
         }
@@ -82,7 +82,7 @@ public class MultiValueStringCardinalityVectorProcessor implements CardinalityVe
         final IndexedInts ids = vector[rows != null ? rows[i] : i];
         final int sz = ids.size();
 
-        for (int j = 0 ; j < sz; j++) {
+        for (int j = 0; j < sz; j++) {
           final String s = selector.lookupName(ids.get(j));
           if (NullHandling.replaceWithDefault() || s != null) {
             final int position = positions[i] + positionOffset;
