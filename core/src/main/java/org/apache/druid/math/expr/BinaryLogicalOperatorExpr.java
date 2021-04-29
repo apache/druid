@@ -455,8 +455,8 @@ class BinOrExpr extends BinaryOpExprBase
 
     final ExprEval rightVal;
     if (NullHandling.sqlCompatible() || leftVal.type() == ExprType.STRING) {
-      // true/null, null/true, null/null -> true
-      // false/null, null/false -> null
+      // true/null, null/true -> true
+      // false/null, null/false, null/null -> null
       if (leftVal.value() == null) {
         rightVal = right.eval(bindings);
         if (rightVal.value() == null || !rightVal.asBoolean()) {

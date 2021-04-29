@@ -266,4 +266,24 @@ supported features:
 * other: `parse_long` is supported for numeric and string types
 
 ## Legacy logical operator mode
-In earlier releases of Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, for example `100 && 10` would result in `10`, and they did not honor 'SQL compatible null handling mode' (`druid.generic.useDefaultValueForNull=false`). This behavior has been changed so that these operations output 'homogeneous' boolean values, e.g. `100 && 10` results in `1`, and behave correctly in SQL compatible null handling mode, where `null` is treated as 'unknown'. To revert to the behavior in previous druid versions, `druid.generic.useLegacyLogicalOperators` can be set to false in your Druid configuration.
+In earlier releases of Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, but this behavior has been changed so that these operations output 'homogeneous' boolean values.
+
+Old behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+
+Current behavior:
+* `100 && 11` -> `1`
+* `0.7 || 0.3` -> `1.0`
+
+Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
+
+For the "or" operator:
+* `true || null`, `null || true`, `-> `true`
+* `false || null`, `null || false`, `null || null`-> `null`
+
+For the "and" operator:
+* `true && null`, `null && true`, `null && null` -> `null`
+* `false && null`, `null && false` -> `false`
+
+To revert to the behavior of previous Druid versions, `druid.generic.useLegacyLogicalOperators` can be set to `true` in your Druid configuration.
