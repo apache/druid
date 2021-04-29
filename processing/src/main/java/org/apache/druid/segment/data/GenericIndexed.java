@@ -118,17 +118,23 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
     @Override
     @Nullable
-    public byte[] toBytes(@Nullable ByteBuffer val)
+    public byte[] toBytes(@Nullable ByteBuffer buf)
     {
-      // Not expected to be used.
-      throw new UnsupportedOperationException();
+      if (buf == null) {
+        return null;
+      }
+
+      // This method doesn't have javadocs and I'm not sure if it is OK to modify the "val" argument. Copy defensively.
+      final ByteBuffer dup = buf.duplicate();
+      final byte[] bytes = new byte[dup.remaining()];
+      dup.get(bytes);
+      return bytes;
     }
 
     @Override
     public int compare(ByteBuffer o1, ByteBuffer o2)
     {
-      // Not expected to be used.
-      throw new UnsupportedOperationException();
+      return o1.compareTo(o2);
     }
   };
 

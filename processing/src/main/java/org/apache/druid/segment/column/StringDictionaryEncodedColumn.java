@@ -105,9 +105,22 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     return cachedDictionary.get(id);
   }
 
-  @Override
+
+  /**
+   * Returns the value for a particular dictionary id as UTF-8 bytes.
+   *
+   * The returned buffer is in big-endian order. It is not reused, so callers may modify the position, limit, byte
+   * order, etc of the buffer.
+   *
+   * The returned buffer points to the original data, so callers must take care not to use it outside the valid
+   * lifetime of this column.
+   *
+   * @param id id to lookup the dictionary value for
+   *
+   * @return dictionary value for the given id, or null if the value is itself null
+   */
   @Nullable
-  public ByteBuffer lookupNameBinary(int id)
+  public ByteBuffer lookupNameUtf8(int id)
   {
     return dictionaryUtf8.get(id);
   }
@@ -158,7 +171,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameBinary(id);
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
@@ -399,7 +412,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameBinary(id);
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
@@ -497,7 +510,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameBinary(id);
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
