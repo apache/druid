@@ -20,8 +20,10 @@
 package org.apache.druid.sql.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -37,6 +39,24 @@ public class SqlBindings
   )
   {
     Multibinder.newSetBinder(binder, SqlAggregator.class).addBinding().to(aggregatorClass);
+  }
+
+  /**
+   * Add a choice for {@code APPROX_COUNT_DISTINCT} implementation.
+   *
+   * The SqlAggregator's {@link SqlAggregator#calciteFunction()} method will be ignored and replaced by the
+   * version from {@link org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator}. For sane results,
+   * the provided aggregator class must be compatible with that function signature.
+   */
+  public static void addApproxCountDistinctChoice(
+      final Binder binder,
+      final String name,
+      final Class<? extends SqlAggregator> clazz
+  )
+  {
+    PolyBind.optionBinder(binder, Key.get(SqlAggregator.class, ApproxCountDistinct.class))
+            .addBinding(name)
+            .to(clazz);
   }
 
   public static void addOperatorConversion(

@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.inject.Guice;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,6 +65,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -74,6 +75,7 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
@@ -97,6 +99,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 @RunWith(Parameterized.class)
 public class HllSketchSqlAggregatorTest extends CalciteTestBase
@@ -195,18 +198,20 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(
-            new HllSketchApproxCountDistinctSqlAggregator(),
-            new HllSketchObjectSqlAggregator()
-        ),
-        ImmutableSet.of(
-            new HllSketchEstimateOperatorConversion(),
-            new HllSketchEstimateWithErrorBoundsOperatorConversion(),
-            new HllSketchSetUnionOperatorConversion(),
-            new HllSketchToStringOperatorConversion()
-        )
-    );
+
+    final DruidOperatorTable operatorTable = Guice.createInjector(
+        binder -> {
+          // Set default APPROX_COUNT_DISTINCT to HLL.
+          final Properties props = new Properties();
+          props.setProperty(
+              SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE,
+              HllSketchApproxCountDistinctSqlAggregator.NAME
+          );
+          binder.bind(Properties.class).toInstance(props);
+        },
+        new HllSketchModule(),
+        new SqlAggregationModule()
+    ).getInstance(DruidOperatorTable.class);
 
     SchemaPlus rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
@@ -243,8 +248,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "  SUM(cnt),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
+                       + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn, using generic A.C.D.
+                       + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression, using COUNT DISTINCT
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
                        + "FROM druid.foo";
