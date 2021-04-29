@@ -65,6 +65,8 @@ The following built-in functions are available.
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
 |case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|isnull|isnull(expr) returns 1 if the value is null, else 0|
+|notnull|notnull(expr) returns 1 if teh value is not null, else 0|
 |bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## String functions
@@ -254,7 +256,14 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* boolean functions: `isnull`, `notnull` are supported for string and numeric types
+* conditional functions: `nvl` is supported for string and numeric types
+* string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
+
+## Legacy logical operator mode
+In earlier releases of Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, for example `100 && 10` would result in `10`, and they did not honor 'SQL compatible null handling mode' (`druid.generic.useDefaultValueForNull=false`). This behavior has been changed so that these operations output 'homogeneous' boolean values, e.g. `100 && 10` results in `1`, and behave correctly in SQL compatible null handling mode, where `null` is treated as 'unknown'. To revert to the behavior in previous druid versions, `druid.generic.useLegacyLogicalOperators` can be set to false in your Druid configuration.

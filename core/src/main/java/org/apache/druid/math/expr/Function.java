@@ -791,7 +791,7 @@ public interface Function
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorProcessors.constantDouble(PI, inspector.getMaxVectorSize());
+      return VectorProcessors.constant(PI, inspector.getMaxVectorSize());
     }
   }
 
@@ -2209,6 +2209,18 @@ public interface Function
     {
       return ExprTypeConversion.conditional(inspector, args);
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+    }
   }
 
   class IsNullFunc implements Function
@@ -2240,6 +2252,18 @@ public interface Function
     {
       return ExprType.LONG;
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNull(inspector, args.get(0));
+    }
   }
 
   class IsNotNullFunc implements Function
@@ -2270,6 +2294,19 @@ public interface Function
     public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExprType.LONG;
+    }
+
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNotNull(inspector, args.get(0));
     }
   }
 

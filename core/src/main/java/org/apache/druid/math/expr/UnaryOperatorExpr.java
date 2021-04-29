@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -178,5 +179,17 @@ class UnaryNotExpr extends UnaryExpr
       return ExprType.LONG;
     }
     return implicitCast;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return expr.canVectorize(inspector);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.not(inspector, expr);
   }
 }

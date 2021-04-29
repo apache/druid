@@ -213,6 +213,25 @@ public interface Expr
       return areNumeric(Arrays.asList(args));
     }
 
+    default boolean areSameTypes(List<Expr> args)
+    {
+      ExprType currentType = null;
+      boolean allSame = true;
+      for (Expr arg : args) {
+        ExprType argType = arg.getOutputType(this);
+        if (currentType == null) {
+          currentType = argType;
+        }
+        allSame &= argType == currentType;
+      }
+      return allSame;
+    }
+
+    default boolean areSameTypes(Expr... args)
+    {
+      return areSameTypes(Arrays.asList(args));
+    }
+
     /**
      * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
      * value of true.

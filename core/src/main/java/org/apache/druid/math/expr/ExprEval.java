@@ -470,6 +470,26 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
+  public static ExprEval ofNull(ExprType type)
+  {
+    switch (type) {
+      case LONG:
+        return ofLong(null);
+      case DOUBLE:
+        return ofDouble(null);
+      case LONG_ARRAY:
+        return ofLongArray(null);
+      case DOUBLE_ARRAY:
+        return ofDoubleArray(null);
+      case STRING_ARRAY:
+        return ofStringArray(null);
+      case STRING:
+      default:
+        return of(null);
+    }
+  }
+
+
   @Nullable
   public static Number computeNumber(@Nullable String value)
   {
