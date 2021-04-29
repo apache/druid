@@ -98,6 +98,19 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetCacheKeyForNullVsEmptyString()
+  {
+    final InDimFilter inDimFilter1 = new InDimFilter("dimTest", Arrays.asList(null, "abc"), null);
+    final InDimFilter inDimFilter2 = new InDimFilter("dimTest", Arrays.asList("", "abc"), null);
+
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
+    } else {
+      Assert.assertArrayEquals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey());
+    }
+  }
+
+  @Test
   public void testGetCacheKeyReturningSameKeyForSetsOfDifferentTypesAndComparators()
   {
     final Set<String> reverseOrderSet = new TreeSet<>(Ordering.natural().reversed());
@@ -116,6 +129,22 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final InDimFilter inDimFilter1 = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
     final InDimFilter inDimFilter2 = new InDimFilter("dimTest", Collections.singletonList("good,bad"), null);
+    Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
+  }
+
+  @Test
+  public void testGetCacheKeyDifferentKeysForNullAndFourZeroChars()
+  {
+    final InDimFilter inDimFilter1 = new InDimFilter("dimTest", Arrays.asList(null, "abc"), null);
+    final InDimFilter inDimFilter2 = new InDimFilter("dimTest", Arrays.asList("\0\0\0\0", "abc"), null);
+    Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
+  }
+
+  @Test
+  public void testGetCacheKeyDifferentKeysWhenStringBoundariesMove()
+  {
+    final InDimFilter inDimFilter1 = new InDimFilter("dimTest", Arrays.asList("bar", "foo"), null);
+    final InDimFilter inDimFilter2 = new InDimFilter("dimTest", Arrays.asList("barf", "oo"), null);
     Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
   }
 
