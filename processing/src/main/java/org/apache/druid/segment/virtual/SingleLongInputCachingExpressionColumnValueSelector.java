@@ -29,6 +29,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Like {@link ExpressionColumnValueSelector}, but caches the most recently computed value and re-uses it in the case
@@ -46,7 +47,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   private final LruEvalCache lruEvalCache;
 
   // Last read input value.
-  private long lastInput;
+  private Long lastInput;
 
   // Last computed output value, or null if there is none.
   @Nullable
@@ -97,17 +98,11 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public ExprEval getObject()
   {
-    // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
-    if (selector.isNull()) {
-      bindings.set(null);
-      return expression.eval(bindings);
-    }
-    // No assert for null handling, as the delegate selector already has it.
-    final long input = selector.getLong();
-    final boolean cached = input == lastInput && lastOutput != null;
+    final Long input = selector.isNull() ? null : selector.getLong();
+    final boolean cached = Objects.equals(input, lastInput) && lastOutput != null;
 
     if (!cached) {
-      if (lruEvalCache == null) {
+      if (lruEvalCache == null || input == null) {
         bindings.set(input);
         lastOutput = expression.eval(bindings);
       } else {
