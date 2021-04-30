@@ -235,7 +235,7 @@ public interface Appenderator extends QuerySegmentWalker
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
-    AppenderatorAddResult(
+    public AppenderatorAddResult(
         SegmentIdWithShardSpec identifier,
         int numRowsInSegment,
         boolean isPersistRequired
