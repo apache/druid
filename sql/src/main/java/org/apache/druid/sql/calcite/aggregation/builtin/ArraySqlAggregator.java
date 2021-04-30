@@ -61,11 +61,12 @@ import java.util.stream.Collectors;
 public class ArraySqlAggregator implements SqlAggregator
 {
   private static final String NAME = "ARRAY_AGG";
+  private static final SqlAggFunction FUNCTION = new ArrayAggFunction();
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return new ArrayAggFunction();
+    return FUNCTION;
   }
 
   @Nullable
@@ -114,19 +115,24 @@ public class ArraySqlAggregator implements SqlAggregator
     final String initialvalue;
     final ValueType elementType;
     final ValueType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
-    switch (druidType) {
-      case LONG_ARRAY:
-        initialvalue = "<LONG>[]";
-        elementType = ValueType.LONG;
-        break;
-      case DOUBLE_ARRAY:
-        initialvalue = "<DOUBLE>[]";
-        elementType = ValueType.DOUBLE;
-        break;
-      default:
-        initialvalue = "[]";
-        elementType = ValueType.STRING;
-        break;
+    if (druidType == null) {
+      initialvalue = "[]";
+      elementType = ValueType.STRING;
+    } else {
+      switch (druidType) {
+        case LONG_ARRAY:
+          initialvalue = "<LONG>[]";
+          elementType = ValueType.LONG;
+          break;
+        case DOUBLE_ARRAY:
+          initialvalue = "<DOUBLE>[]";
+          elementType = ValueType.DOUBLE;
+          break;
+        default:
+          initialvalue = "[]";
+          elementType = ValueType.STRING;
+          break;
+      }
     }
     List<VirtualColumn> virtualColumns = new ArrayList<>();
 
