@@ -1141,6 +1141,7 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
+isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
@@ -1150,6 +1151,7 @@ lpad
 ltrim
 nextUp
 nextafter
+notnull
 nvl
 parse_long
 regexp_extract

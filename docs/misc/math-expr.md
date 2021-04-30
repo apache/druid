@@ -63,10 +63,10 @@ The following built-in functions are available.
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
-|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
+|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
 |isnull|isnull(expr) returns 1 if the value is null, else 0|
-|notnull|notnull(expr) returns 1 if teh value is not null, else 0|
+|notnull|notnull(expr) returns 1 if the value is not null, else 0|
 |bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## String functions
@@ -279,7 +279,7 @@ Current behavior:
 Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
 
 For the "or" operator:
-* `true || null`, `null || true`, `-> `true`
+* `true || null`, `null || true`, -> `true`
 * `false || null`, `null || false`, `null || null`-> `null`
 
 For the "and" operator:
