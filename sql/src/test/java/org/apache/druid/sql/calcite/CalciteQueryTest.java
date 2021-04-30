@@ -17915,7 +17915,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY_AGG(dim1), ARRAY_AGG(DISTINCT dim1) FROM foo WHERE dim1 is not null",
+        "SELECT ARRAY_AGG(dim1), ARRAY_AGG(DISTINCT dim1), ARRAY_AGG(DISTINCT dim1) FILTER(WHERE dim1 = 'shazbot') FROM foo WHERE dim1 is not null",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -17933,7 +17933,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"dim1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -17946,9 +17946,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"dim1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a2",
+                                  ImmutableSet.of("dim1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  "array_set_add(\"__acc\", \"dim1\")",
+                                  "array_set_add_all(\"__acc\", \"a2\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, o)",
+                                  new HumanReadableBytes(1024),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              selector("dim1", "shazbot", null)
                           )
                       )
                   )
@@ -17957,8 +17973,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"2\",\"abc\",\"def\",\"10.1\"]"}
-            : new Object[]{"[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]"}
+            ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
+            : new Object[]{"[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
         )
     );
   }
@@ -17985,7 +18001,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"dim3\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -17998,7 +18014,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"dim3\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           )
@@ -18037,7 +18053,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"l1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18050,7 +18066,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"l1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18063,7 +18079,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"d1\")",
                               "array_concat(\"__acc\", \"a2\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18076,7 +18092,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"d1\")",
                               "array_set_add_all(\"__acc\", \"a3\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18089,7 +18105,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"f1\")",
                               "array_concat(\"__acc\", \"a4\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18102,7 +18118,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"f1\")",
                               "array_set_add_all(\"__acc\", \"a5\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           )
@@ -18156,7 +18172,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"dim1\")",
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           )
@@ -18197,7 +18213,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"v0\")",
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           )
@@ -18235,7 +18251,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_append(\"__acc\", \"l1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(128),
                               TestExprMacroTable.INSTANCE
                           ),
@@ -18248,7 +18264,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add(\"__acc\", \"l1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
-                              null,
+                              "if(array_length(o) == 0, null, o)",
                               new HumanReadableBytes(128),
                               TestExprMacroTable.INSTANCE
                           )
@@ -18314,7 +18330,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                       "array_set_add(\"__acc\", \"dim1\")",
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
-                                                      null,
+                                                      "if(array_length(o) == 0, null, o)",
                                                       new HumanReadableBytes(1024),
                                                       TestExprMacroTable.INSTANCE
                                                   )
@@ -18405,7 +18421,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 "array_set_add(\"__acc\", \"dim1\")",
                                                 "array_set_add_all(\"__acc\", \"a0\")",
                                                 null,
-                                                null,
+                                                "if(array_length(o) == 0, null, o)",
                                                 new HumanReadableBytes(1024),
                                                 TestExprMacroTable.INSTANCE
                                             )
@@ -18481,7 +18497,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                       "array_set_add(\"__acc\", \"dim1\")",
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
-                                                      null,
+                                                      "if(array_length(o) == 0, null, o)",
                                                       new HumanReadableBytes(1024),
                                                       TestExprMacroTable.INSTANCE
                                                   )

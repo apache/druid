@@ -363,9 +363,11 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     Expr finalizeExpr = finalizeExpression.get();
     ExprEval<?> initialVal = initialCombineValue.get();
     if (finalizeExpr != null) {
-      return ExprType.toValueType(
-          finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, initialVal)).type()
-      );
+      ExprEval eval = finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, initialVal));
+      // this might be wrong from time to time, but if evaluating the finalizer on the initial value produces null
+      // then we cannot safely assume the type since non-vectorized expressions might report all null values as string
+      // typed, so just assume it preserves the initial value
+      return ExprType.toValueType(eval.value() == null ? initialValue.get().type() : eval.type());
     }
     return ExprType.toValueType(initialVal.type());
   }

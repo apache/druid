@@ -150,7 +150,7 @@ public class ArraySqlAggregator implements SqlAggregator
               StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
               null,
-              null,
+              "if(array_length(o) == 0, null, o)",
               maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
               macroTable
           )
@@ -167,7 +167,7 @@ public class ArraySqlAggregator implements SqlAggregator
               StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
               null,
-              null,
+              "if(array_length(o) == 0, null, o)",
               maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
               macroTable
           )
