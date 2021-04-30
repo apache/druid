@@ -61,7 +61,6 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -73,7 +72,6 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -87,9 +85,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -105,7 +101,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-public class AppenderatorImpl implements Appenderator
+public class RealtimeAppenderator implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
@@ -116,7 +112,7 @@ public class AppenderatorImpl implements Appenderator
   // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
 
-  private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
+  private static final EmittingLogger log = new EmittingLogger(RealtimeAppenderator.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
 
@@ -167,19 +163,6 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile Throwable persistError;
 
-  private final boolean isRealTime;
-  /**
-   * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
-   * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
-   * at merge time. This is necessary since batch appenderator will not map the QueryableIndex
-   * at persist time in order to minimize its memory footprint. This has to be synchronized since the
-   * map bay be accessed from multiple threads.
-   * Use {@link IdentityHashMap} to better reflect the fact that the key needs to be interpreted
-   * with reference semantics.
-   */
-  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
-      Collections.synchronizedMap(new IdentityHashMap<>());
-
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -189,7 +172,7 @@ public class AppenderatorImpl implements Appenderator
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
-  AppenderatorImpl(
+  RealtimeAppenderator(
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
@@ -202,8 +185,7 @@ public class AppenderatorImpl implements Appenderator
       IndexMerger indexMerger,
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean isRealTime
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     this.myId = id;
@@ -219,7 +201,6 @@ public class AppenderatorImpl implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-    this.isRealTime = isRealTime;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -557,9 +538,6 @@ public class AppenderatorImpl implements Appenderator
           futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
         }
 
-        // Re-initialize hydrant map:
-        persistedHydrantMetadata.clear();
-
         // Await dropping.
         Futures.allAsList(futures).get();
       }
@@ -870,34 +848,6 @@ public class AppenderatorImpl implements Appenderator
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
-
-          // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
-          if (!isRealTime()) {
-
-            // sanity
-            Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
-            if (persistedMetadata == null) {
-              throw new ISE("Persisted metadata for batch hydrant [%s] is null!", fireHydrant);
-            }
-
-            File persistedFile = persistedMetadata.lhs;
-            SegmentId persistedSegmentId = persistedMetadata.rhs;
-
-            // sanity:
-            if (persistedFile == null) {
-              throw new ISE("Persisted file for batch hydrant [%s] is null!", fireHydrant);
-            } else if (persistedSegmentId == null) {
-              throw new ISE(
-                  "Persisted segmentId for batch hydrant in file [%s] is null!",
-                  persistedFile.getPath()
-              );
-            }
-            fireHydrant.swapSegment(new QueryableIndexSegment(
-                indexIO.loadIndex(persistedFile),
-                persistedSegmentId
-            ));
-          }
-
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
@@ -944,15 +894,6 @@ public class AppenderatorImpl implements Appenderator
           exception -> exception instanceof Exception,
           5
       );
-
-      if (!isRealTime()) {
-        // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
-        // mapped file references
-        // can generate OOMs during merge if enough of them are held back...
-        for (FireHydrant fireHydrant : sink) {
-          fireHydrant.swapSegment(null);
-        }
-      }
 
       final long pushFinishTime = System.nanoTime();
 
@@ -1079,13 +1020,6 @@ public class AppenderatorImpl implements Appenderator
       throw new ISE("Failed to shutdown executors during close()");
     }
   }
-
-  @Override
-  public boolean isRealTime()
-  {
-    return isRealTime;
-  }
-
 
   private void lockBasePersistDirectory()
   {
@@ -1404,8 +1338,6 @@ public class AppenderatorImpl implements Appenderator
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
               }
               hydrant.swapSegment(null);
-              // remove hydrant from persisted metadata:
-              persistedHydrantMetadata.remove(hydrant);
             }
 
             if (removeOnDiskData) {
@@ -1520,15 +1452,11 @@ public class AppenderatorImpl implements Appenderator
             numRows
         );
 
-        // Map only when this appenderator is being driven by a real time task:
-        Segment segmentToSwap = null;
-        if (isRealTime()) {
-          segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
-        } else {
-          // remember file path & segment id to rebuild the queryable index for merge:
-          persistedHydrantMetadata.put(indexToPersist, new Pair<>(persistedFile, indexToPersist.getSegmentId()));
-        }
-        indexToPersist.swapSegment(segmentToSwap);
+        // Swap incremental index with queryable index:
+        indexToPersist.swapSegment(new QueryableIndexSegment(
+            indexIO.loadIndex(persistedFile),
+            indexToPersist.getSegmentId()
+        ));
 
         return numRows;
       }
@@ -1568,12 +1496,10 @@ public class AppenderatorImpl implements Appenderator
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     int total;
     total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
-    if (isRealTime()) {
-      // for real time add references to byte memory mapped references..
-      total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
-               (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-               ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
-    }
+    // for real time add references to byte memory mapped references..
+    total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+             (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+             ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
     return total;
   }
 

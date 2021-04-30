@@ -63,7 +63,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new AppenderatorImpl(
+    return new RealtimeAppenderator(
         id,
         schema,
         config,
@@ -89,8 +89,7 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler,
-        true
+        parseExceptionHandler
     );
   }
 
@@ -107,7 +106,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new AppenderatorImpl(
+    return new BatchAppenderator(
         id,
         schema,
         config,
@@ -120,8 +119,7 @@ public class Appenderators
         indexMerger,
         null,
         rowIngestionMeters,
-        parseExceptionHandler,
-        false
+        parseExceptionHandler
     );
   }
 }
