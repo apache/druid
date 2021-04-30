@@ -1496,7 +1496,6 @@ file12
 file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
-APPROX_COUNT_DISTINCT_BUILTIN
 APPROX_QUANTILE
 BIGINT
 CATALOG_NAME
@@ -1651,6 +1650,7 @@ GiB
 5MB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace

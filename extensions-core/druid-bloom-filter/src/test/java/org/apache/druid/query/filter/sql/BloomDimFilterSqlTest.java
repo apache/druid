@@ -22,7 +22,6 @@ package org.apache.druid.query.filter.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -50,6 +49,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -79,6 +79,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
             )
         );
       },
+      new SqlAggregationModule(),
       new BloomFilterExtensionModule()
   );
 
@@ -365,10 +366,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
       final AuthenticationResult authenticationResult
   ) throws Exception
   {
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(),
-        ImmutableSet.of(INJECTOR.getInstance(BloomFilterOperatorConversion.class))
-    );
+    final DruidOperatorTable operatorTable = INJECTOR.getInstance(DruidOperatorTable.class);
     return getResults(
         plannerConfig,
         queryContext,
