@@ -29,6 +29,7 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -38,18 +39,25 @@ import java.util.function.Function;
 
 public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregatesProcessor<DimensionSelector>
 {
+  private final ColumnCapabilities capabilities;
   private final Function<Object, Comparable<?>> dimensionValueConverter;
   private HashMap<Comparable<?>, Aggregator[]> aggregatesStore;
 
-  public StringTopNColumnAggregatesProcessor(final ValueType dimensionType)
+  public StringTopNColumnAggregatesProcessor(final ColumnCapabilities capabilities, final ValueType dimensionType)
   {
+    this.capabilities = capabilities;
     this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(ValueType.STRING, dimensionType);
   }
 
   @Override
   public int getCardinality(DimensionSelector selector)
   {
-    return selector.getValueCardinality();
+    // only report the underlying selector cardinality if the column the selector is for is dictionary encoded, and
+    // the dictionary values are unique, that is they have a 1:1 mapping between dictionaryId and column value
+    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+      return selector.getValueCardinality();
+    }
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -108,7 +116,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       Aggregator[][] rowSelector
   )
   {
-    if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
+    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
       return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
     } else {
       return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
