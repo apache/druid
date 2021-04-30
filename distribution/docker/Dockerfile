@@ -46,13 +46,13 @@ COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 
 RUN addgroup -S -g 1000 druid \
- && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid \
- && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt \
- && chmod 775 /opt/druid/var
+ && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
+RUN mkdir /opt/druid/var \
+ && chown druid:druid /opt/druid/var \
+ && chmod 775 /opt/druid/var
 
 USER druid
 VOLUME /opt/druid/var
