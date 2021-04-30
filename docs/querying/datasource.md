@@ -273,7 +273,7 @@ Join datasources allow you to do a SQL-style join of two datasources. Stacking j
 you to join arbitrarily many datasources.
 
 In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all datasources
-other than the leftmost "base" table must fit in memory. It also means that the join condition must be an equality. This
+other than the leftmost "base" datasource must fit in memory. It also means that the join condition must be an equality. This
 feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
 [query](#query) datasources.
 
