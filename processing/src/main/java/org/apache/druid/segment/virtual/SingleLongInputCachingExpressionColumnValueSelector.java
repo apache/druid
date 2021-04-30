@@ -47,6 +47,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   private final LruEvalCache lruEvalCache;
 
   // Last read input value.
+  @Nullable
   private Long lastInput;
 
   // Last computed output value, or null if there is none.
