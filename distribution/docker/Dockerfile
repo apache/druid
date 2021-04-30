@@ -37,7 +37,7 @@ RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
       -Dmaven.javadoc.skip=true \
       ; fi
 
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
+RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
