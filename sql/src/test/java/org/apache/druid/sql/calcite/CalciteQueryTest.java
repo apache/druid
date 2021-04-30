@@ -4926,8 +4926,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLongPredicateIsNull() throws Exception
   {
-    if (NullHandling.replaceWithDefault()) {
-      testQuery(
+    testQuery(
           "SELECT l1 is null FROM druid.numfoo",
           ImmutableList.of(
             newScanQueryBuilder()
@@ -4935,44 +4934,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .intervals(querySegmentSpec(Filtration.eternity()))
             .columns("v0")
             .virtualColumns(
-            expressionVirtualColumn("v0", "0", ValueType.LONG)
+            expressionVirtualColumn("v0", NullHandling.replaceWithDefault() ? "0" : "isnull(\"l1\")", ValueType.LONG)
         )
           .context(QUERY_CONTEXT_DEFAULT)
           .build()
         ),
-          ImmutableList.of(
-            new Object[]{false},
-            new Object[]{false},
-            new Object[]{false},
-            new Object[]{false},
-            new Object[]{false},
-            new Object[]{false}
-          )
-      );
-    } else {
-      testQuery(
-          "SELECT l1 is null FROM druid.numfoo",
-          ImmutableList.of(
-             newScanQueryBuilder()
-             .dataSource(CalciteTests.DATASOURCE3)
-             .intervals(querySegmentSpec(Filtration.eternity()))
-             .columns("v0")
-             .virtualColumns(
-               expressionVirtualColumn("v0", "isnull(\"l1\")", ValueType.LONG)
-             )
-             .context(QUERY_CONTEXT_DEFAULT)
-             .build()
-           ),
-           ImmutableList.of(
-             new Object[]{false},
-             new Object[]{false},
-             new Object[]{false},
-             new Object[]{true},
-             new Object[]{true},
-             new Object[]{true}
-           )
-      );
-    }
+              NullHandling.replaceWithDefault() ?
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false}
+                      ) :
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{true},
+                              new Object[]{true},
+                              new Object[]{true}
+                      )
+    );
   }
 
   @Test
