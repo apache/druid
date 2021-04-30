@@ -954,6 +954,12 @@ public abstract class ExprEval<T>
       if (!isStringValueCached()) {
         if (value == null) {
           cacheStringValue(null);
+        } else if (value.length == 1) {
+          if (value[0] == null) {
+            cacheStringValue(null);
+          } else {
+            cacheStringValue(String.valueOf(value[0]));
+          }
         } else {
           cacheStringValue(Arrays.toString(value));
         }
@@ -965,6 +971,9 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
+      if (value != null && value.length == 1) {
+        return value[0] == null;
+      }
       return false;
     }
 
@@ -1025,6 +1034,54 @@ public abstract class ExprEval<T>
       return ExprType.LONG_ARRAY;
     }
 
+    @Override
+    public int asInt()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0;
+        }
+        return value[0].intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0L;
+        }
+        return value[0];
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0.0;
+        }
+        return value[0].doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return false;
+        }
+        return Evals.asBoolean(value[0]);
+      }
+      return super.asBoolean();
+    }
+
     @Nullable
     @Override
     public String[] asStringArray()
@@ -1053,6 +1110,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case LONG_ARRAY:
           return this;
         case DOUBLE_ARRAY:
@@ -1084,6 +1156,54 @@ public abstract class ExprEval<T>
       return ExprType.DOUBLE_ARRAY;
     }
 
+    @Override
+    public int asInt()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0;
+        }
+        return value[0].intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0L;
+        }
+        return value[0].longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return 0.0;
+        }
+        return value[0];
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return false;
+        }
+        return Evals.asBoolean(value[0]);
+      }
+      return super.asBoolean();
+    }
+
     @Nullable
     @Override
     public String[] asStringArray()
@@ -1112,6 +1232,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case LONG_ARRAY:
           return ExprEval.ofLongArray(asLongArray());
         case DOUBLE_ARRAY:
@@ -1146,6 +1281,66 @@ public abstract class ExprEval<T>
     public ExprType type()
     {
       return ExprType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      if (value != null && value.length == 1) {
+        return computeNumber(value[0]) == null;
+      }
+      return false;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (value != null && value.length == 1) {
+        Number number = computeNumber(value[0]);
+        if (number == null) {
+          return 0;
+        }
+        return number.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (value != null && value.length == 1) {
+        Number number = computeNumber(value[0]);
+        if (number == null) {
+          return 0L;
+        }
+        return number.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (value != null && value.length == 1) {
+        Number number = computeNumber(value[0]);
+        if (number == null) {
+          return 0.0;
+        }
+        return number.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (value != null && value.length == 1) {
+        if (value[0] == null) {
+          return false;
+        }
+        return Evals.asBoolean(value[0]);
+      }
+      return super.asBoolean();
     }
 
     @Nullable
@@ -1184,6 +1379,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case STRING_ARRAY:
           return this;
         case LONG_ARRAY:

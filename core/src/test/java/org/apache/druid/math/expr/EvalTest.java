@@ -21,14 +21,20 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  */
 public class EvalTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private long evalLong(String x, Expr.ObjectBinding bindings)
   {
     ExprEval ret = eval(x, bindings);
@@ -142,6 +148,156 @@ public class EvalTest extends InitializedNullHandlingTest
         eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString()
     );
     Assert.assertEquals("x", eval("nvl(if(x == 9223372036854775806, '', 'x'), 'NULL')", bindings).asString());
+  }
+
+  @Test
+  public void testArrayToScalar()
+  {
+    Assert.assertEquals(1L, ExprEval.ofLongArray(new Long[]{1L}).asLong());
+    Assert.assertEquals(0L, ExprEval.ofLongArray(new Long[]{null}).asLong());
+    Assert.assertEquals(1.0, ExprEval.ofLongArray(new Long[]{1L}).asDouble(), 0.0);
+    Assert.assertEquals("1", ExprEval.ofLongArray(new Long[]{1L}).asString());
+    Assert.assertEquals(0L, ExprEval.ofLongArray(new Long[]{1L, 2L}).asLong());
+    Assert.assertEquals(0.0, ExprEval.ofLongArray(new Long[]{1L, 2L}).asDouble(), 0.0);
+    Assert.assertEquals("[1, 2]", ExprEval.ofLongArray(new Long[]{1L, 2L}).asString());
+
+    Assert.assertEquals(1.1, ExprEval.ofDoubleArray(new Double[]{1.1}).asDouble(), 0.0);
+    Assert.assertEquals(0.0, ExprEval.ofDoubleArray(new Double[]{null}).asDouble(), 0.0);
+    Assert.assertEquals(1L, ExprEval.ofDoubleArray(new Double[]{1.1}).asLong());
+    Assert.assertEquals("1.1", ExprEval.ofDoubleArray(new Double[]{1.1}).asString());
+    Assert.assertEquals(0.0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asDouble(), 0.0);
+    Assert.assertEquals(0L, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asLong());
+    Assert.assertEquals("[1.1, 2.2]", ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asString());
+
+
+    Assert.assertEquals("foo", ExprEval.ofStringArray(new String[]{"foo"}).asString());
+    Assert.assertEquals(0L, ExprEval.ofStringArray(new String[]{"foo"}).asLong());
+    Assert.assertEquals(0.0, ExprEval.ofStringArray(new String[]{"foo"}).asDouble(), 0.0);
+    Assert.assertEquals("1", ExprEval.ofStringArray(new String[]{"1"}).asString());
+    Assert.assertEquals(1L, ExprEval.ofStringArray(new String[]{"1"}).asLong());
+    Assert.assertEquals(1.0, ExprEval.ofStringArray(new String[]{"1"}).asDouble(), 0.0);
+    Assert.assertEquals("[1, 2.2]", ExprEval.ofStringArray(new String[]{"1", "2.2"}).asString());
+    Assert.assertEquals(0L, ExprEval.ofStringArray(new String[]{"1", "2.2"}).asLong());
+    Assert.assertEquals(0.0, ExprEval.ofStringArray(new String[]{"1", "2.2"}).asDouble(), 0.0);
+
+
+    Assert.assertEquals(1L, ExprEval.ofLongArray(new Long[]{1L}).castTo(ExprType.LONG).value());
+    Assert.assertEquals(0L, ExprEval.ofLongArray(new Long[]{null}).castTo(ExprType.LONG).value());
+    Assert.assertEquals(1.0, ExprEval.ofLongArray(new Long[]{1L}).castTo(ExprType.DOUBLE).asDouble(), 0.0);
+    Assert.assertEquals("1", ExprEval.ofLongArray(new Long[]{1L}).castTo(ExprType.STRING).value());
+
+    Assert.assertEquals(1.1, ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExprType.DOUBLE).asDouble(), 0.0);
+    Assert.assertEquals(0.0, ExprEval.ofDoubleArray(new Double[]{null}).castTo(ExprType.DOUBLE).asDouble(), 0.0);
+    Assert.assertEquals(1L, ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExprType.LONG).value());
+    Assert.assertEquals("1.1", ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExprType.STRING).value());
+
+    Assert.assertEquals("foo", ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExprType.STRING).value());
+    Assert.assertEquals(0L, ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExprType.LONG).value());
+    Assert.assertEquals(0.0, ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExprType.DOUBLE).asDouble(), 0.0);
+    Assert.assertEquals("1", ExprEval.ofStringArray(new String[]{"1"}).castTo(ExprType.STRING).value());
+    Assert.assertEquals(1L, ExprEval.ofStringArray(new String[]{"1"}).castTo(ExprType.LONG).value());
+    Assert.assertEquals(1.0, ExprEval.ofStringArray(new String[]{"1"}).castTo(ExprType.DOUBLE).asDouble(), 0.0);
+  }
+
+  @Test
+  public void testStringArrayToScalarStringBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type STRING");
+    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExprType.STRING);
+  }
+
+  @Test
+  public void testStringArrayToScalarLongBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type LONG");
+    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExprType.LONG);
+  }
+
+  @Test
+  public void testStringArrayToScalarDoubleBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type DOUBLE");
+    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExprType.DOUBLE);
+  }
+
+  @Test
+  public void testLongArrayToScalarStringBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type STRING");
+    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExprType.STRING);
+  }
+
+  @Test
+  public void testLongArrayToScalarLongBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type LONG");
+    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExprType.LONG);
+  }
+
+  @Test
+  public void testLongArrayToScalarDoubleBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type DOUBLE");
+    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExprType.DOUBLE);
+  }
+
+  @Test
+  public void testDoubleArrayToScalarStringBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type STRING");
+    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExprType.STRING);
+  }
+
+  @Test
+  public void testDoubleArrayToScalarLongBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type LONG");
+    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExprType.LONG);
+  }
+
+  @Test
+  public void testDoubleArrayToScalarDoubleBadCast()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("invalid type DOUBLE");
+    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExprType.DOUBLE);
+  }
+
+  @Test
+  public void testIsNumericNull()
+  {
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertFalse(ExprEval.ofLong(1L).isNumericNull());
+      Assert.assertTrue(ExprEval.ofLong(null).isNumericNull());
+
+      Assert.assertFalse(ExprEval.ofDouble(1.0).isNumericNull());
+      Assert.assertTrue(ExprEval.ofDouble(null).isNumericNull());
+
+      Assert.assertTrue(ExprEval.of(null).isNumericNull());
+      Assert.assertTrue(ExprEval.of("one").isNumericNull());
+      Assert.assertFalse(ExprEval.of("1").isNumericNull());
+
+      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
+      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
+
+      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
+      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
+
+      Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
+      Assert.assertFalse(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
+    }
   }
 
   @Test
