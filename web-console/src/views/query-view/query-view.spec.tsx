@@ -21,7 +21,7 @@ import React from 'react';
 
 import { QueryView } from './query-view';
 
-describe('sql view', () => {
+describe('QueryView', () => {
   it('matches snapshot', () => {
     const sqlView = shallow(<QueryView initQuery="test" />);
     expect(sqlView).toMatchSnapshot();

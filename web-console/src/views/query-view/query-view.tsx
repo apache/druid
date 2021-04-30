@@ -62,6 +62,7 @@ import { QueryError } from './query-error/query-error';
 import { QueryExtraInfo } from './query-extra-info/query-extra-info';
 import { QueryInput } from './query-input/query-input';
 import { QueryOutput } from './query-output/query-output';
+import { QueryTimer } from './query-timer/query-timer';
 import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
@@ -241,7 +242,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
           context = { ...queryContext, ...(mandatoryQueryContext || {}) };
           if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit;
+            context.sqlOuterLimit = wrapQueryLimit + 1;
           }
         }
 
@@ -270,7 +271,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
           context = { ...queryContext, ...(mandatoryQueryContext || {}) };
           if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit;
+            context.sqlOuterLimit = wrapQueryLimit + 1;
           }
         }
 
@@ -295,11 +296,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   componentDidMount(): void {
-    const { liveQueryMode, queryString } = this.state;
+    const { initQuery } = this.props;
+    const { liveQueryMode } = this.state;
 
     this.metadataQueryManager.runQuery(null);
 
-    if (liveQueryMode !== 'off' && queryString) {
+    if (liveQueryMode !== 'off' && initQuery) {
       this.handleRun();
     }
   }
@@ -324,7 +326,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
   }
 
-  handleDownload = (filename: string, format: string) => {
+  private readonly handleDownload = (filename: string, format: string) => {
     const { queryResultState } = this.state;
     const queryResult = queryResultState.data;
     if (!queryResult) return;
@@ -356,6 +358,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     const lineBreak = '\n';
     downloadFile(lines.join(lineBreak), format, filename);
+  };
+
+  private readonly handleLoadMore = () => {
+    this.setState(
+      ({ wrapQueryLimit }) => ({
+        wrapQueryLimit: wrapQueryLimit ? wrapQueryLimit * 10 : undefined,
+      }),
+      this.handleRun,
+    );
   };
 
   renderExplainDialog() {
@@ -495,8 +506,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             {this.renderWrapQueryLimitSelector()}
             {this.renderLiveQueryModeSelector()}
             {queryResult && (
-              <QueryExtraInfo queryResult={queryResult} onDownload={this.handleDownload} />
+              <QueryExtraInfo
+                queryResult={queryResult}
+                onDownload={this.handleDownload}
+                onLoadMore={this.handleLoadMore}
+              />
             )}
+            {queryResultState.loading && <QueryTimer />}
           </div>
         </div>
         <div className="output-pane">
@@ -505,6 +521,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               runeMode={runeMode}
               queryResult={someQueryResult}
               onQueryChange={this.handleQueryChange}
+              onLoadMore={this.handleLoadMore}
             />
           )}
           {queryResultState.error && (
@@ -527,9 +544,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           )}
           {queryResultState.isInit() && (
             <div className="init-state">
-              <p>
-                Enter a query and click <Code>Run</Code>
-              </p>
+              {emptyQuery ? (
+                <p>
+                  Enter a query and click <Code>Run</Code>
+                </p>
+              ) : (
+                <p>
+                  Click <Code>Run</Code> to execute the query
+                </p>
+              )}
             </div>
           )}
         </div>

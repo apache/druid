@@ -76,7 +76,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     return new DruidQueryRel(
         scanRel.getCluster(),
         scanRel.getCluster().traitSetOf(Convention.NONE),
-        table,
+        Preconditions.checkNotNull(table, "table"),
         druidTable,
         queryMaker,
         PartialDruidQuery.create(scanRel)
@@ -91,7 +91,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     return new DruidQueryRel(
         valuesRel.getCluster(),
-        valuesRel.getCluster().traitSetOf(Convention.NONE),
+        valuesRel.getTraitSet(), // the traitSet of valuesRel should be kept
         null,
         druidTable,
         queryMaker,

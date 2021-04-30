@@ -115,6 +115,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
@@ -156,7 +157,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // from a table.
     testQuery(
         "SELECT REGEXP_EXTRACT('foo', '^(.)')",
-        ImmutableList.of(),
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(new Object[]{0L}),
+                          RowSignature.builder().add("ZERO", ValueType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "'f'",
+                          ValueType.STRING,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .columns("v0")
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(
             new Object[]{"f"}
         )
@@ -166,13 +189,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionContainingNull() throws Exception
   {
-    List<String> expectedResult = new ArrayList<>();
-    expectedResult.add("Hello");
-    expectedResult.add(null);
     testQuery(
         "SELECT ARRAY ['Hello', NULL]",
-        ImmutableList.of(),
-        ImmutableList.of(new Object[]{expectedResult})
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(new Object[]{0L}),
+                          RowSignature.builder().add("ZERO", ValueType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "array('Hello',null)",
+                          ValueType.STRING,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .columns("v0")
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{"[\"Hello\",null]"})
     );
   }
 
@@ -7549,7 +7591,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT dim2 FROM druid.foo ORDER BY dim2 LIMIT 0",
-        ImmutableList.of(),
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(),
+                          RowSignature.builder().add("dim2", ValueType.STRING).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim2")
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of()
     );
   }

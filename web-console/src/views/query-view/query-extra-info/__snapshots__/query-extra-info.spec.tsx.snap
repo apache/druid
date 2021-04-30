@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`query extra info matches snapshot 1`] = `
+exports[`QueryExtraInfo matches snapshot 1`] = `
 <div
   class="query-extra-info"
 >
