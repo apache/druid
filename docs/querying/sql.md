@@ -153,8 +153,8 @@ top-level and table-level. Queries that use UNION ALL in any other way will not 
 #### Top-level
 
 UNION ALL can be used at the very top outer layer of a SQL query (not in a subquery, and not in the FROM clause). In
-this case, the underlying queries will be run separately, back to back, and their results will all be returned in
-one result set.
+this case, the underlying queries will be run separately, back to back. Their results will be concatenated together
+and appear one after the other.
 
 For example:
 
@@ -164,14 +164,15 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-When UNION ALL occurs at the top level of a query like this, the results from the unioned queries are concatenated
-together and appear one after the other.
+With top-level UNION ALL, no further processing can be done after the UNION ALL. For example, the results of the
+UNION ALL cannot have GROUP BY, ORDER BY, or any other operators applied to them.
 
 #### Table-level
 
 UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in a subquery in the
-FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs
-(no expressions, column aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
+FROM clause, and the lower-level subqueries that are inputs to the UNION ALL operator must be simple table SELECTs.
+Features like expressions, column aliasing, JOIN, GROUP BY, ORDER BY, and so on cannot be used. The query will run
+natively using a [union datasource](datasource.md#union).
 
 The same columns must be selected from each table in the same order, and those columns must either have the same types,
 or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
@@ -190,7 +191,7 @@ FROM (
 GROUP BY col1
 ```
 
-When UNION ALL occurs at the table level, the rows from the unioned tables are not guaranteed to be processed in
+With table-level UNION ALL, the rows from the unioned tables are not guaranteed to be processed in
 any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
 use [ORDER BY](#order-by) on the outer query.
 
@@ -322,7 +323,7 @@ Only the COUNT aggregation can accept DISTINCT.
 |Function|Notes|
 |--------|-----|
 |`COUNT(*)`|Counts the number of rows.|
-|`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted.|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is set to true in query contexts or broker configurations.|
 |`SUM(expr)`|Sums numbers.|
 |`MIN(expr)`|Takes the minimum of numbers.|
 |`MAX(expr)`|Takes the maximum of numbers.|
@@ -954,6 +955,14 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 }
 ```
 
+It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
+improvements for larger result sets. To use it apply the following connection url instead, everything else remains the same
+```
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica-protobuf/;serialization=protobuf";
+```
+
+> The protobuf endpoint is also known to work with the official [Golang Avatica driver](https://github.com/apache/calcite-avatica-go)
+
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
 ["INFORMATION_SCHEMA" tables](#metadata-tables).
 
@@ -1007,6 +1016,7 @@ Connection context can be specified as JDBC connection properties or as a "conte
 |`sqlQueryId`|Unique identifier given to this SQL query. For HTTP client, it will be returned in `X-Druid-SQL-Query-Id` header.|auto-generated|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the Broker (default: UTC)|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
+|`useGroupingSetForExactDistinct`|Whether to use grouping sets to execute queries with multiple exact distinct aggregations.|druid.sql.planner.useGroupingSetForExactDistinct on the Broker (default: false)|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.md) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
 
 ## Metadata tables

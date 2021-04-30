@@ -320,6 +320,11 @@ public class CompactSegments implements CoordinatorDuty
           queryGranularitySpec = null;
         }
 
+        Boolean dropExisting = null;
+        if (config.getIoConfig() != null) {
+          dropExisting = config.getIoConfig().isDropExisting();
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
@@ -327,6 +332,7 @@ public class CompactSegments implements CoordinatorDuty
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             queryGranularitySpec,
+            dropExisting,
             newAutoCompactionContext(config.getTaskContext())
         );
 

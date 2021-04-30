@@ -141,6 +141,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return listResources(DATA_RESOURCE_ROOT)
         .stream()
         .filter(resource -> !SUPERVISOR_SPEC_TEMPLATE_FILE.equals(resource))
+        .filter(resource -> !SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE.equals(resource))
         .collect(Collectors.toList());
   }
 

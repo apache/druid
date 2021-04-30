@@ -22,7 +22,7 @@ import React from 'react';
 
 import { QueryExtraInfo } from './query-extra-info';
 
-describe('query extra info', () => {
+describe('QueryExtraInfo', () => {
   it('matches snapshot', () => {
     const queryExtraInfo = (
       <QueryExtraInfo
@@ -30,6 +30,7 @@ describe('query extra info', () => {
           'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
         ).changeQueryDuration(8000)}
         onDownload={() => {}}
+        onLoadMore={() => {}}
       />
     );
 

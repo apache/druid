@@ -198,7 +198,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           null,
           new LocalInputSource(inputDir, filter),
           inputFormat,
-          appendToExisting
+          appendToExisting,
+          null
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(

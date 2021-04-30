@@ -39,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 {
@@ -46,7 +47,11 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private static final Logger LOGGER = new Logger(SchemaRegistryBasedProtobufBytesDecoder.class);
 
   private final SchemaRegistryClient registry;
-  private int identityMapCapacity;
+  private final String url;
+  private final int capacity;
+  private final List<String> urls;
+  private final Map<String, ?> config;
+  private final Map<String, String> headers;
 
   @JsonCreator
   public SchemaRegistryBasedProtobufBytesDecoder(
@@ -57,23 +62,62 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       @JsonProperty("headers") @Nullable Map<String, String> headers
   )
   {
-    this.identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
+    this.url = url;
+    this.capacity = capacity == null ? Integer.MAX_VALUE : capacity;
+    this.urls = urls;
+    this.config = config;
+    this.headers = headers;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(url), identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), config, headers);
+      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), this.config, this.headers);
     } else {
-      this.registry = new CachedSchemaRegistryClient(urls, identityMapCapacity, Collections.singletonList(new ProtobufSchemaProvider()), config, headers);
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), this.config, this.headers);
     }
+  }
+
+  @JsonProperty
+  public String getUrl()
+  {
+    return url;
+  }
+
+  @JsonProperty
+  public int getCapacity()
+  {
+    return capacity;
+  }
+
+  @JsonProperty
+  public List<String> getUrls()
+  {
+    return urls;
+  }
+
+  @JsonProperty
+  public Map<String, ?> getConfig()
+  {
+    return config;
+  }
+
+  @JsonProperty
+  public Map<String, String> getHeaders()
+  {
+    return headers;
   }
 
   @VisibleForTesting
   int getIdentityMapCapacity()
   {
-    return this.identityMapCapacity;
+    return this.capacity;
   }
 
   @VisibleForTesting
   SchemaRegistryBasedProtobufBytesDecoder(SchemaRegistryClient registry)
   {
+    this.url = null;
+    this.capacity = Integer.MAX_VALUE;
+    this.urls = null;
+    this.config = null;
+    this.headers = null;
     this.registry = registry;
   }
 
@@ -107,5 +151,35 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       LOGGER.error(e.getMessage());
       throw new ParseException(e, "Fail to decode protobuf message!");
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SchemaRegistryBasedProtobufBytesDecoder that = (SchemaRegistryBasedProtobufBytesDecoder) o;
+
+    return Objects.equals(url, that.url) &&
+        Objects.equals(capacity, that.capacity) &&
+        Objects.equals(urls, that.urls) &&
+        Objects.equals(config, that.config) &&
+        Objects.equals(headers, that.headers);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = url != null ? url.hashCode() : 0;
+    result = 31 * result + capacity;
+    result = 31 * result + (urls != null ? urls.hashCode() : 0);
+    result = 31 * result + (config != null ? config.hashCode() : 0);
+    result = 31 * result + (headers != null ? headers.hashCode() : 0);
+    return result;
   }
 }

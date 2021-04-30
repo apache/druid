@@ -364,6 +364,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -468,7 +469,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null,
               new SettableSplittableLocalInputSource(inputDir, "test_*", splittableInputSource),
               DEFAULT_INPUT_FORMAT,
-              appendToExisting
+              appendToExisting,
+              null
           ),
           tuningConfig
       );

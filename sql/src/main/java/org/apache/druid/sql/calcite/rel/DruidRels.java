@@ -31,7 +31,7 @@ public class DruidRels
   public static Optional<DruidTable> druidTableIfLeafRel(final DruidRel<?> druidRel)
   {
     if (druidRel instanceof DruidQueryRel) {
-      return Optional.of(druidRel.getTable().unwrap(DruidTable.class));
+      return Optional.of(((DruidQueryRel) druidRel).getDruidTable());
     } else {
       return Optional.empty();
     }

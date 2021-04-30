@@ -73,6 +73,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -776,6 +777,19 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public Sequence<ResultRow> postProcess(Sequence<ResultRow> results)
   {
     return postProcessingFn.apply(results);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        dimensions,
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

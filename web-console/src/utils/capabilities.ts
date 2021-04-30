@@ -46,9 +46,9 @@ export class Capabilities {
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
 
-  private queryType: QueryType;
-  private coordinator: boolean;
-  private overlord: boolean;
+  private readonly queryType: QueryType;
+  private readonly coordinator: boolean;
+  private readonly overlord: boolean;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
@@ -108,7 +108,7 @@ export class Capabilities {
 
   static async detectCapabilities(): Promise<Capabilities | undefined> {
     const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride as any);
+    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride);
 
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;

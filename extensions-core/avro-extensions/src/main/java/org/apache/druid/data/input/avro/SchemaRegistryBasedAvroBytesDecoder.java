@@ -45,6 +45,11 @@ import java.util.Objects;
 public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 {
   private final SchemaRegistryClient registry;
+  private final String url;
+  private final int capacity;
+  private final List<String> urls;
+  private final Map<String, ?> config;
+  private final Map<String, String> headers;
 
   @JsonCreator
   public SchemaRegistryBasedAvroBytesDecoder(
@@ -55,18 +60,57 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       @JsonProperty("headers") @Nullable Map<String, String> headers
   )
   {
-    int identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
+    this.url = url;
+    this.capacity = capacity == null ? Integer.MAX_VALUE : capacity;
+    this.urls = urls;
+    this.config = config;
+    this.headers = headers;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(url, identityMapCapacity, config, headers);
+      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, this.config, this.headers);
     } else {
-      this.registry = new CachedSchemaRegistryClient(urls, identityMapCapacity, config, headers);
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, this.config, this.headers);
     }
+  }
+
+  @JsonProperty
+  public String getUrl()
+  {
+    return url;
+  }
+
+  @JsonProperty
+  public int getCapacity()
+  {
+    return capacity;
+  }
+
+  @JsonProperty
+  public List<String> getUrls()
+  {
+    return urls;
+  }
+
+  @JsonProperty
+  public Map<String, ?> getConfig()
+  {
+    return config;
+  }
+
+  @JsonProperty
+  public Map<String, String> getHeaders()
+  {
+    return headers;
   }
 
   //For UT only
   @VisibleForTesting
   SchemaRegistryBasedAvroBytesDecoder(SchemaRegistryClient registry)
   {
+    this.url = null;
+    this.capacity = Integer.MAX_VALUE;
+    this.urls = null;
+    this.config = null;
+    this.headers = null;
     this.registry = registry;
   }
 
@@ -114,12 +158,21 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
 
-    return Objects.equals(registry, that.registry);
+    return Objects.equals(url, that.url) &&
+        Objects.equals(capacity, that.capacity) &&
+        Objects.equals(urls, that.urls) &&
+        Objects.equals(config, that.config) &&
+        Objects.equals(headers, that.headers);
   }
 
   @Override
   public int hashCode()
   {
-    return registry != null ? registry.hashCode() : 0;
+    int result = url != null ? url.hashCode() : 0;
+    result = 31 * result + capacity;
+    result = 31 * result + (urls != null ? urls.hashCode() : 0);
+    result = 31 * result + (config != null ? config.hashCode() : 0);
+    result = 31 * result + (headers != null ? headers.hashCode() : 0);
+    return result;
   }
 }

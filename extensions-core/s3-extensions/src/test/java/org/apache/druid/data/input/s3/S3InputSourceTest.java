@@ -42,6 +42,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -513,7 +514,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(
@@ -557,7 +558,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(

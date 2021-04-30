@@ -24,7 +24,7 @@
             },
             "timestampSpec": {
                 "column": "__time",
-                "format": "iso"
+                "format": "millis"
             },
             "dimensionsSpec": {
                 "dimensions": [

@@ -38,10 +38,11 @@ Base64-encoded
 ByteBuffer
 CIDR
 CORS
+CNF
 CPUs
 CSVs
 Ceph
-CNF
+CloudWatch
 ColumnDescriptor
 Corretto
 DDL
@@ -124,6 +125,7 @@ JsonProperty
 KMS
 Kerberized
 Kerberos
+KeyStores
 Kinesis
 Kubernetes
 LRU
@@ -218,6 +220,7 @@ codec
 colocated
 colocation
 compactable
+compactionTask
 config
 configs
 consumerProperties
@@ -258,6 +261,7 @@ firehoses
 fromPigAvroStorage
 frontends
 granularities
+granularitySpec
 gzip
 gzipped
 hadoop
@@ -280,6 +284,7 @@ javadoc
 joinable
 kerberos
 keystore
+keytool
 keytab
 kubernetes
 laning
@@ -300,6 +305,7 @@ mergeable
 metadata
 millis
 misconfiguration
+misconfigured
 mostAvailableSize
 multitenancy
 multitenant
@@ -312,6 +318,7 @@ netflow
 non-nullable
 noop
 numerics
+numShards
 parameterized
 parseable
 partitioner
@@ -365,6 +372,7 @@ reingest
 reingesting
 reingestion
 repo
+requireSSL
 rollup
 rollups
 rsync
@@ -380,6 +388,8 @@ sharding
 skipHeaderRows
 smooshed
 splittable
+ssl
+sslmode
 stdout
 storages
 stringified
@@ -415,6 +425,7 @@ unparsed
 unsetting
 untrusted
 useFilterCNF
+useSSL
 uptime
 uris
 urls
@@ -630,6 +641,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+protoBytesDecoder
 flattenSpec
 jq
 org.apache.druid.extensions
@@ -970,6 +982,7 @@ InputSplit
 JobHistory
 a.example.com
 assumeGrouped
+awaitSegmentAvailabilityTimeoutMillis
 cleanupOnFailure
 combineText
 connectURI
@@ -1034,7 +1047,9 @@ baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
+countryName
 dataSchema's
+dropExisting
 foldCase
 forceGuaranteedRollup
 httpAuthenticationPassword
@@ -1059,6 +1074,7 @@ timeChunk
 totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
+awaitSegmentAvailabilityTimeoutMillis
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1084,6 +1100,8 @@ arr1
 arr2
 array_append
 array_concat
+array_set_add
+array_set_add_all
 array_contains
 array_length
 array_offset
@@ -1529,6 +1547,7 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
+druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
 error_msg
 exprs
@@ -1561,6 +1580,7 @@ timestamp_expr
 tls_port
 total_size
 useApproximateCountDistinct
+useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
  - ../docs/querying/timeseriesquery.md
@@ -1640,6 +1660,7 @@ HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost
+IOConfig
 JRE8u60
 KeyManager
 L1
@@ -1664,6 +1685,7 @@ PT1S
 PT24H
 PT300S
 PT30S
+PT3600S
 PT5M
 PT5S
 PT60S
@@ -1778,6 +1800,7 @@ successfulSending
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
+timestampSpec
 tmp
 tmpfs
 truststore
@@ -1853,3 +1876,5 @@ MiB
 GiB
 TiB
 PiB
+protobuf
+Golang

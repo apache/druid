@@ -33,7 +33,7 @@ describe('query input', () => {
 
   it('correctly formats helper HTML', () => {
     expect(
-      QueryInput.completerToHtml({
+      QueryInput.makeDocHtml({
         caption: 'COUNT',
         syntax: 'COUNT(*)',
         description: 'Counts the number of things',

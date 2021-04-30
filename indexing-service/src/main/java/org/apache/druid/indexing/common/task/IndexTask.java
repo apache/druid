@@ -525,7 +525,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                segmentAvailabilityConfirmationCompleted
             )
         )
     );
@@ -854,9 +855,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+    Set<DataSegment> segmentsFoundForDrop = null;
+    if (ingestionSchema.getIOConfig().isDropExisting()) {
+      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+    }
+
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
+               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -910,8 +916,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
+          awaitPublish(driver.publishAll(inputSegments, segmentsFoundForDrop, publisher, annotateFunction), pushTimeout);
       appenderator.close();
+
+      // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
+      // for awaitSegmentAvailabilityTimeoutMillis
+      if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
+        ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+        ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
+        segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+            toolbox,
+            segmentsToWaitFor,
+            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        );
+      }
 
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
@@ -1033,13 +1051,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
+    private final boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1052,13 +1072,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+      if (this.dropExisting && this.appendToExisting) {
+        throw new IAE("Cannot both drop existing segments and append to existing segments. "
+                      + "Either dropExisting or appendToExisting should be set to false");
+      }
     }
 
     // old constructor for backward compatibility
     @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, dropExisting);
     }
 
     @Nullable
@@ -1113,6 +1138,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     {
       return appendToExisting;
     }
+
+    @Override
+    @JsonProperty
+    public boolean isDropExisting()
+    {
+      return dropExisting;
+    }
   }
 
   public static class IndexTuningConfig implements AppenderatorConfig
@@ -1149,6 +1181,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final boolean logParseExceptions;
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
+    private final long awaitSegmentAvailabilityTimeoutMillis;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1218,7 +1251,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this(
@@ -1245,7 +1279,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
 
       Preconditions.checkArgument(
@@ -1256,7 +1291,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1276,7 +1311,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Boolean logParseExceptions,
         @Nullable Integer maxParseExceptions,
         @Nullable Integer maxSavedParseExceptions,
-        @Nullable Integer maxColumnsToMerge
+        @Nullable Integer maxColumnsToMerge,
+        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1317,6 +1353,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.logParseExceptions = logParseExceptions == null
                                 ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
+      if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
+        this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
+      } else {
+        this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+      }
     }
 
     @Override
@@ -1339,7 +1380,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1362,7 +1404,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          maxColumnsToMerge
+          maxColumnsToMerge,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1554,6 +1597,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
 
+    @JsonProperty
+    public long getAwaitSegmentAvailabilityTimeoutMillis()
+    {
+      return awaitSegmentAvailabilityTimeoutMillis;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -1580,7 +1629,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
+             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
+             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
     }
 
     @Override
@@ -1603,7 +1653,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           logParseExceptions,
           maxParseExceptions,
           maxSavedParseExceptions,
-          segmentWriteOutMediumFactory
+          segmentWriteOutMediumFactory,
+          awaitSegmentAvailabilityTimeoutMillis
       );
     }
 
@@ -1627,6 +1678,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxParseExceptions=" + maxParseExceptions +
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+             ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
              '}';
     }
   }

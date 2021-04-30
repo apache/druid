@@ -109,14 +109,14 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -1486,11 +1486,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       @Override
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
+          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1505,7 +1506,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(
+        directory.getPath(),
+        null,
+        null,
+        50000,
+        null,
+        true,
+        null,
+        null,
+        null,
+        false
+    );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,

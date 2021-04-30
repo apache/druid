@@ -35,6 +35,7 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
@@ -46,7 +47,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
@@ -101,7 +101,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class DruidAvaticaHandlerTest extends CalciteTestBase
+public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
 {
   private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
   {
@@ -200,20 +200,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     druidMeta = injector.getInstance(DruidMeta.class);
-    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        druidMeta,
-        new DruidNode("dummy", "dummy", false, 1, null, true, false),
-        new AvaticaMonitor()
-    );
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(druidMeta);
     final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    url = StringUtils.format(
-        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-        port,
-        DruidAvaticaHandler.AVATICA_PATH
-    );
+    url = this.getJdbcConnectionString(port);
     client = DriverManager.getConnection(url, "regularUser", "druid");
     superuserClient = DriverManager.getConnection(url, CalciteTests.TEST_SUPERUSER_NAME, "druid");
 
@@ -347,7 +339,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 "PLAN",
                 StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
                                    DUMMY_SQL_QUERY_ID
-                )
+                ),
+                "RESOURCES",
+                "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
             )
         ),
         getRows(resultSet)
@@ -432,6 +426,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
         ),
         getRows(
@@ -498,6 +498,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -884,20 +890,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", false, 1, null, true, false),
-        new AvaticaMonitor()
-    );
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
     final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
-    String smallFrameUrl = StringUtils.format(
-        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-        port,
-        DruidAvaticaHandler.AVATICA_PATH
-    );
+    String smallFrameUrl = this.getJdbcConnectionString(port);
     Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
 
     final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
@@ -982,20 +980,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", false, 1, null, true, false),
-        new AvaticaMonitor()
-    );
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
     final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
-    String smallFrameUrl = StringUtils.format(
-        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-        port,
-        DruidAvaticaHandler.AVATICA_PATH
-    );
+    String smallFrameUrl = this.getJdbcConnectionString(port);
     Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
 
     // use a prepared statement because avatica currently ignores fetchSize on the initial fetch of a Statement
@@ -1325,6 +1315,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         )
     );
   }
+
+  protected abstract String getJdbcConnectionString(int port);
+
+  protected abstract AbstractAvaticaHandler getAvaticaHandler(DruidMeta druidMeta);
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException
   {

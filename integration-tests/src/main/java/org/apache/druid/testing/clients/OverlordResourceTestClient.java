@@ -223,7 +223,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  private Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
+  public Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(

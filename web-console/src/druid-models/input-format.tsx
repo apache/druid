@@ -42,7 +42,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'type',
     label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf', 'avro_stream'],
     required: true,
     info: (
       <>
@@ -127,7 +127,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf'),
+    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf', 'avro_stream'),
     info: (
       <>
         Specifies if the binary column which is not logically marked as a string should be treated
@@ -142,5 +142,5 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 }
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf');
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream');
 }

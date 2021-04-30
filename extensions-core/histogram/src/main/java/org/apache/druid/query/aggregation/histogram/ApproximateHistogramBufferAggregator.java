@@ -45,6 +45,9 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    if (selector.isNull()) {
+      return;
+    }
     innerAggregator.aggregate(buf, position, selector.getFloat());
   }
 

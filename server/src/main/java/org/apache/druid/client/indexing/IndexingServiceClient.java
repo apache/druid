@@ -41,6 +41,7 @@ public interface IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   );
 
