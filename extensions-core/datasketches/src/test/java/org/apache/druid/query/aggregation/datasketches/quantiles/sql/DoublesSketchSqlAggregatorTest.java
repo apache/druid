@@ -77,7 +77,6 @@ import java.util.Map;
 
 public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final AuthenticationResult AUTH_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
       ImmutableSet.of(
           new DoublesSketchApproxQuantileSqlAggregator(),
@@ -683,24 +682,24 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 1.0d,
                 "[0.0,0.0,1.0]",
                 "\n"
-                + "### Quantiles HeapUpdateDoublesSketch SUMMARY: \n"
-                + "   Empty                        : false\n"
-                + "   Direct, Capacity bytes       : false, \n"
-                + "   Estimation Mode              : false\n"
-                + "   K                            : 128\n"
-                + "   N                            : 6\n"
-                + "   Levels (Needed, Total, Valid): 0, 0, 0\n"
-                + "   Level Bit Pattern            : 0\n"
-                + "   BaseBufferCount              : 6\n"
-                + "   Combined Buffer Capacity     : 8\n"
-                + "   Retained Items               : 6\n"
-                + "   Compact Storage Bytes        : 80\n"
-                + "   Updatable Storage Bytes      : 96\n"
-                + "   Normalized Rank Error        : 1.406%\n"
-                + "   Normalized Rank Error (PMF)  : 1.711%\n"
-                + "   Min Value                    : 1.000000e+00\n"
-                + "   Max Value                    : 1.000000e+00\n"
-                + "### END SKETCH SUMMARY\n"
+                  + "### Quantiles HeapUpdateDoublesSketch SUMMARY: \n"
+                  + "   Empty                        : false\n"
+                  + "   Direct, Capacity bytes       : false, \n"
+                  + "   Estimation Mode              : false\n"
+                  + "   K                            : 128\n"
+                  + "   N                            : 6\n"
+                  + "   Levels (Needed, Total, Valid): 0, 0, 0\n"
+                  + "   Level Bit Pattern            : 0\n"
+                  + "   BaseBufferCount              : 6\n"
+                  + "   Combined Buffer Capacity     : 8\n"
+                  + "   Retained Items               : 6\n"
+                  + "   Compact Storage Bytes        : 80\n"
+                  + "   Updatable Storage Bytes      : 96\n"
+                  + "   Normalized Rank Error        : 1.406%\n"
+                  + "   Normalized Rank Error (PMF)  : 1.711%\n"
+                  + "   Min Value                    : 1.000000e+00\n"
+                  + "   Max Value                    : 1.000000e+00\n"
+                  + "### END SKETCH SUMMARY\n"
             }
         )
     );
@@ -731,7 +730,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               new FieldAccessPostAggregator("p1", "a0:agg"),
                               0.5
                           ),
-                          new DoublesSketchToQuantilePostAggregator("s1", new FieldAccessPostAggregator("s0", "p0"), 0.5),
+                          new DoublesSketchToQuantilePostAggregator(
+                              "s1",
+                              new FieldAccessPostAggregator("s0", "p0"),
+                              0.5
+                          ),
                           new DoublesSketchToQuantilePostAggregator(
                               "s3",
                               new FieldAccessPostAggregator("s2", "p0"),
