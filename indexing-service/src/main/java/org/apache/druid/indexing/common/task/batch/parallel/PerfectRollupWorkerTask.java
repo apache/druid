@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  * Base class for parallel indexing perfect rollup worker tasks.
  */
-abstract class PerfectRollupWorkerTask extends AbstractBatchIndexTask
+abstract class PerfectRollupWorkerTask extends AbstractBatchSubtask
 {
   private final GranularitySpec granularitySpec;
   private final DataSchema dataSchema;

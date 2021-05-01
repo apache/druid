@@ -72,7 +72,21 @@ public final class SegmentPublisherHelper
       if (firstShardSpec instanceof OverwriteShardSpec) {
         annotateFn = annotateAtomicUpdateGroupFn(segmentsPerInterval.size());
       } else if (firstShardSpec instanceof BuildingShardSpec) {
-        annotateFn = annotateCorePartitionSetSizeFn(segmentsPerInterval.size());
+        // sanity check
+        // BuildingShardSpec is used in non-appending mode. In this mode,
+        // the segments in each interval should have contiguous partitionIds,
+        // so that they can be queryable (see PartitionHolder.isComplete()).
+        int expectedCorePartitionSetSize = segmentsPerInterval.size();
+        int actualCorePartitionSetSize = Math.toIntExact(
+            segmentsPerInterval
+                .stream()
+                .filter(segment -> segment.getShardSpec().getPartitionNum() < expectedCorePartitionSetSize)
+                .count()
+        );
+        if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
+          throw new ISE("Cannot publish segments due to incomplete time chunk");
+        }
+        annotateFn = annotateCorePartitionSetSizeFn(expectedCorePartitionSetSize);
       } else if (firstShardSpec instanceof BucketNumberedShardSpec) {
         throw new ISE("Cannot publish segments with shardSpec[%s]", firstShardSpec);
       } else {

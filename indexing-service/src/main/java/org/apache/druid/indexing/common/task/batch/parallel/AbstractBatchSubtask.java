@@ -19,41 +19,33 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
+public abstract class AbstractBatchSubtask extends AbstractBatchIndexTask
 {
-  @JsonCreator
-  public LegacySinglePhaseSubTask(
-      @JsonProperty("id") @Nullable final String id,
-      @JsonProperty("groupId") final String groupId,
-      @JsonProperty("resource") final TaskResource taskResource,
-      @JsonProperty("supervisorTaskId") final String supervisorTaskId,
-      @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
-      @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context
-  )
+  protected AbstractBatchSubtask(String id, String dataSource, Map<String, Object> context)
   {
-    super(
-        id,
-        groupId,
-        taskResource,
-        supervisorTaskId,
-        null,
-        numAttempts,
-        ingestionSchema,
-        context
-    );
+    super(id, dataSource, context);
   }
 
-  @Override
-  public String getType()
+  protected AbstractBatchSubtask(
+      String id,
+      @Nullable String groupId,
+      @Nullable TaskResource taskResource,
+      String dataSource,
+      @Nullable Map<String, Object> context
+  )
   {
-    return SinglePhaseSubTask.OLD_TYPE_NAME;
+    super(id, groupId, taskResource, dataSource, context);
   }
+
+  /**
+   * Returns the ID of {@link SubTaskSpec} that is assigned to this subtask.
+   * This ID is used to identify duplicate work of retry tasks for the same spec.
+   */
+  public abstract String getSubtaskSpecId();
 }

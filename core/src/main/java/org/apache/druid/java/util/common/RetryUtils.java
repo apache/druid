@@ -81,7 +81,7 @@ public class RetryUtils
     Preconditions.checkArgument(quietTries >= 0, "quietTries >= 0");
     int nTry = 0;
     final int maxRetries = maxTries - 1;
-    while (true) {
+    while (!Thread.currentThread().isInterrupted()) {
       try {
         nTry++;
         return f.perform();
@@ -98,6 +98,10 @@ public class RetryUtils
         }
       }
     }
+    if (cleanupAfterFailure != null) {
+      cleanupAfterFailure.cleanup();
+    }
+    throw new RE("Current thread is interrupted after [%s] tries", nTry);
   }
 
   public static <T> T retry(final Task<T> f, Predicate<Throwable> shouldRetry, final int maxTries) throws Exception

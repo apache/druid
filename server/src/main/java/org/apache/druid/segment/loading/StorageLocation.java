@@ -165,6 +165,14 @@ public class StorageLocation
     }
   }
 
+  public synchronized void release(String segmentFilePath, long segmentSize)
+  {
+    final File segmentFile = new File(path, segmentFilePath);
+    if (files.remove(segmentFile)) {
+      currSizeBytes -= segmentSize;
+    }
+  }
+
   /**
    * This method is only package-private to use it in unit tests. Production code must not call this method directly.
    * Use {@link #reserve} instead.
