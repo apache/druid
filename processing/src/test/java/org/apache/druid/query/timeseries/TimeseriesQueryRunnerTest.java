@@ -1684,7 +1684,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(makeContext(ImmutableMap.of("skipEmptyBuckets", "true")))
+                                  .context(makeContext(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, "true")))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
@@ -2556,7 +2556,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       makeContext(
                                           ImmutableMap.of(
                                               TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              "skipEmptyBuckets", true
+                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
                                           )
                                       )
                                   )
@@ -2687,7 +2687,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       makeContext(
                                           ImmutableMap.of(
                                               TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              "skipEmptyBuckets", true
+                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
                                           )
                                       )
                                   )

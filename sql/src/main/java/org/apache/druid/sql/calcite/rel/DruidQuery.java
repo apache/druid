@@ -784,8 +784,6 @@ public class DruidQuery
     final boolean descending;
     int timeseriesLimit = 0;
     final Map<String, Object> theContext = new HashMap<>();
-    theContext.put("skipEmptyBuckets", true);
-    theContext.putAll(plannerContext.getQueryContext());
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
@@ -841,6 +839,11 @@ public class DruidQuery
       // More than one dimension, timeseries cannot handle.
       return null;
     }
+
+    if (!Granularities.ALL.equals(queryGranularity)) {
+      theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
+    }
+    theContext.putAll(plannerContext.getQueryContext());
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
