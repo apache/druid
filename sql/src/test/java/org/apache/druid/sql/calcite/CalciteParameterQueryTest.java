@@ -495,7 +495,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(),
+        ImmutableList.of(new Object[]{0L}),
         ImmutableList.of(
             new SqlParameter(SqlType.DOUBLE, 1.1),
             new SqlParameter(SqlType.FLOAT, 100000001.0)
@@ -641,7 +641,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(),
+        ImmutableList.of(new Object[]{0L}),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
   }

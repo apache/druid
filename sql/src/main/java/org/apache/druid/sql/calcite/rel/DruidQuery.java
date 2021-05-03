@@ -840,6 +840,9 @@ public class DruidQuery
       return null;
     }
 
+    // An aggregation query should return one row per group, with no grouping (e.g. ALL granularity), the entire table
+    // is the group, so we should not skip empty buckets. When there are no results, this means we return the
+    // initialized state for given aggregators instead of nothing.
     if (!Granularities.ALL.equals(queryGranularity)) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
