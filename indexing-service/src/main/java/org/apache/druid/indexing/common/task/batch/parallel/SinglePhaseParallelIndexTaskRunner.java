@@ -43,8 +43,10 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -218,9 +220,16 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   }
 
   /**
-   * Allocate a new segment for the given timestamp locally.
-   * Since the segments returned by this method overwrites any existing segments, this method should be called only
-   * when the {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   * Allocate a new segment for the given timestamp locally. This method is called when dynamic partitioning is used
+   * and {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   *
+   * The allocation algorithm is similar to the Overlord-based segment allocation. It keeps the segment allocation
+   * history per sequenceName. If the prevSegmentId is found in the segment allocation history, this method
+   * returns the next segmentId right after the prevSegmentId in the history. Since the sequenceName is unique
+   * per {@link SubTaskSpec} (it is the ID of subtaskSpec), this algorithm guarantees that the same set of segmentIds
+   * are created in the same order for the same subtaskSpec.
+   *
+   * @see org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator#allocatePendingSegmentWithSegmentLineageCheck
    */
   public SegmentIdWithShardSpec allocateNewSegment(
       String dataSource,

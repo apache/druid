@@ -1117,9 +1117,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     }
 
-    ParallelIndexTaskRunner runner = getCurrentRunner();
+    ParallelIndexTaskRunner runner = Preconditions.checkNotNull(getCurrentRunner(), "runner");
     if (!(runner instanceof SinglePhaseParallelIndexTaskRunner)) {
-      throw new ISE("WTH?");
+      throw new ISE(
+          "Expected [%s], but [%s] is in use",
+          SinglePhaseParallelIndexTaskRunner.class.getName(),
+          runner.getClass().getName()
+      );
     }
 
     final boolean useLineageBasedSegmentAllocation = getContextValue(
