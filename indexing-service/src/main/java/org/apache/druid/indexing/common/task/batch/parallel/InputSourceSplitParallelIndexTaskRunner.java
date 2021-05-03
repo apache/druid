@@ -106,7 +106,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
     );
 
     return createSubTaskSpec(
-        getBaseSubtaskSpecName()+ "_" + getAndIncrementNextSpecId(),
+        getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
         getContext(),
