@@ -86,7 +86,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -165,11 +167,17 @@ public class AppenderatorImpl implements Appenderator
   private volatile Throwable persistError;
 
   private final boolean isRealTime;
-  // Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
-  // in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
-  // at merge time. This is necessary since batch appenderator will not map the QueryableIndex
-  // at persist time in order to minimize its memory footprint.
-  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata = new HashMap<>();
+  /**
+   * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
+   * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
+   * at merge time. This is necessary since batch appenderator will not map the QueryableIndex
+   * at persist time in order to minimize its memory footprint. This has to be synchronized since the
+   * map bay be accessed from multiple threads.
+   * Use {@link IdentityHashMap} to better reflect the fact that the key needs to be interpreted
+   * with reference semantics.
+   */
+  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
+      Collections.synchronizedMap(new IdentityHashMap<>());
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -547,6 +555,9 @@ public class AppenderatorImpl implements Appenderator
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
           futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
         }
+
+        // Re-initialize hydrant map:
+        persistedHydrantMetadata.clear();
 
         // Await dropping.
         Futures.allAsList(futures).get();
@@ -1392,6 +1403,8 @@ public class AppenderatorImpl implements Appenderator
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
               }
               hydrant.swapSegment(null);
+              // remove hydrant from persisted metadata:
+              persistedHydrantMetadata.remove(hydrant);
             }
 
             if (removeOnDiskData) {
