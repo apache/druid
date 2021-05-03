@@ -80,9 +80,6 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
-  private volatile boolean legacySegmentAllocationUsed = false;
-  private volatile boolean lineageBasedSegmentAllocationUsed = false;
-
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
@@ -193,16 +190,6 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   @Deprecated
   public SegmentIdWithShardSpec allocateNewSegment(String dataSource, DateTime timestamp) throws IOException
   {
-    if (lineageBasedSegmentAllocationUsed) {
-      String errorMsg = "Both the legacy segment allocation API and the new lineage-based segment allocation API are "
-                        + "in use. Consider setting druid.indexer.task.useLineageBasedSegmentAllocation to false "
-                        + "if you are upgrading your cluster.";
-      LOG.error(errorMsg);
-      stopGracefully();
-      throw new RuntimeException(errorMsg); // will be propagated to the API caller
-    }
-    legacySegmentAllocationUsed = true;
-
     NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, intervalAndVersion.lhs);
@@ -233,16 +220,6 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
       @Nullable String prevSegmentId
   ) throws IOException
   {
-    if (legacySegmentAllocationUsed) {
-      String errorMsg = "Both the legacy segment allocation API and the new lineage-based segment allocation API are "
-                        + "in use. Consider setting druid.indexer.task.useLineageBasedSegmentAllocation to false "
-                        + "if you are upgrading your cluster.";
-      LOG.error(errorMsg);
-      stopGracefully();
-      throw new RuntimeException(errorMsg); // will be propagated to the API caller
-    }
-    lineageBasedSegmentAllocationUsed = true;
-
     NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
 
     MutableObject<SegmentIdWithShardSpec> segmentIdHolder = new MutableObject<>();
