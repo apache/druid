@@ -80,8 +80,8 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
-  private boolean legacySegmentAllocationUsed = false;
-  private boolean lineageBasedSegmentAllocationUsed = false;
+  private volatile boolean legacySegmentAllocationUsed = false;
+  private volatile boolean lineageBasedSegmentAllocationUsed = false;
 
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,

@@ -40,7 +40,7 @@ public class TaskConfig
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
 
-  private static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = false;
+  private static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = true;
 
   @JsonProperty
   private final String baseDir;
