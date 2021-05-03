@@ -21,14 +21,14 @@ import React from 'react';
 
 import { QueryView } from './query-view';
 
-describe('sql view', () => {
+describe('QueryView', () => {
   it('matches snapshot', () => {
-    const sqlView = shallow(<QueryView initQuery={'test'} />);
+    const sqlView = shallow(<QueryView initQuery="test" />);
     expect(sqlView).toMatchSnapshot();
   });
 
   it('matches snapshot with query', () => {
-    const sqlView = shallow(<QueryView initQuery={'SELECT +3'} />);
+    const sqlView = shallow(<QueryView initQuery="SELECT +3" />);
     expect(sqlView).toMatchSnapshot();
   });
 

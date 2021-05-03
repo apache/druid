@@ -56,7 +56,7 @@ export function addFilterRaw(filters: Filter[], id: string, value: string): Filt
 }
 
 export function makeTextFilter(placeholder = ''): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function TextFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <InputGroup
@@ -73,7 +73,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
 }
 
 export function makeBooleanFilter(): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function BooleanFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <HTMLSelect
@@ -318,7 +318,7 @@ export function sortWithPrefixSuffix(
 // ----------------------------
 
 export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType: string = '';
+  let blobType;
   switch (type) {
     case 'json':
       blobType = 'application/json';

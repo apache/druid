@@ -62,9 +62,10 @@ export function getDruidErrorMessage(e: any): string {
         ).join(' / ') || e.message
       );
 
-    case 'string':
+    case 'string': {
       const htmlResp = parseHtmlError(data);
       return htmlResp ? `HTML Error: ${htmlResp}` : e.message;
+    }
 
     default:
       return e.message;
@@ -73,8 +74,8 @@ export function getDruidErrorMessage(e: any): string {
 
 export class DruidError extends Error {
   static parsePosition(errorMessage: string): RowColumn | undefined {
-    const range = String(errorMessage).match(
-      /from line (\d+), column (\d+) to line (\d+), column (\d+)/i,
+    const range = /from line (\d+), column (\d+) to line (\d+), column (\d+)/i.exec(
+      String(errorMessage),
     );
     if (range) {
       return {
@@ -86,7 +87,7 @@ export class DruidError extends Error {
       };
     }
 
-    const single = String(errorMessage).match(/at line (\d+), column (\d+)/i);
+    const single = /at line (\d+), column (\d+)/i.exec(String(errorMessage));
     if (single) {
       return {
         match: single[0],
@@ -108,7 +109,7 @@ export class DruidError extends Error {
   static getSuggestion(errorMessage: string): QuerySuggestion | undefined {
     // == is used instead of =
     // ex: Encountered "= =" at line 3, column 15. Was expecting one of
-    const matchEquals = errorMessage.match(/Encountered "= =" at line (\d+), column (\d+)./);
+    const matchEquals = /Encountered "= =" at line (\d+), column (\d+)./.exec(errorMessage);
     if (matchEquals) {
       const line = Number(matchEquals[1]);
       const column = Number(matchEquals[2]);
@@ -124,8 +125,8 @@ export class DruidError extends Error {
 
     // Incorrect quoting on table
     // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
-    const matchQuotes = errorMessage.match(
-      /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/,
+    const matchQuotes = /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
+      errorMessage,
     );
     if (matchQuotes) {
       const line = Number(matchQuotes[1]);
@@ -144,7 +145,7 @@ export class DruidError extends Error {
     }
 
     // , before FROM
-    const matchComma = errorMessage.match(/Encountered "(FROM)" at/i);
+    const matchComma = /Encountered "(FROM)" at/i.exec(errorMessage);
     if (matchComma) {
       const fromKeyword = matchComma[1];
       return {
@@ -212,7 +213,7 @@ export class DruidError extends Error {
 }
 
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
-  let runeResultResp: AxiosResponse<any>;
+  let runeResultResp: AxiosResponse;
   try {
     runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
   } catch (e) {
@@ -222,7 +223,7 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
 }
 
 export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
-  let sqlResultResp: AxiosResponse<any>;
+  let sqlResultResp: AxiosResponse;
   try {
     sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload);
   } catch (e) {

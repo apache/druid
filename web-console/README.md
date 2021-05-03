@@ -30,7 +30,6 @@ This is the Druid web console that servers as a data management interface for Dr
 3. Run `npm run compile` to compile the scss files (this usually needs to be done only once)
 4. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
 
-
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
@@ -42,25 +41,48 @@ To try the console in (say) coordinator mode you could run it as such:
 
 You should use a TypeScript friendly IDE (such as [WebStorm](https://www.jetbrains.com/webstorm/), or [VS Code](https://code.visualstudio.com/)) to develop the web console.
 
-The console relies on [tslint](https://palantir.github.io/tslint/), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce the code style.
+The console relies on [eslint](https://eslint.org) (and various plugins), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce code style. If you are going to do any non-trivial development you should set up your IDE to automatically lint and fix your code as you make changes.
 
-If you are going to do any non-trivial development you should set up file watchers in your IDE to automatically fix your code as you type.
+#### Configuring WebStorm
 
-If you do not set up auto file watchers then even a trivial change such as a typo fix might draw the ire of the code style enforcement (it might require some lines to be re-wrapped).
-If you find yourself in that position you should run on or more of:
+- **Preferences | Languages & Frameworks | JavaScript | Code Quality Tools | ESLint**
+  - Select "Automatic ESLint Configuration"
+  - Check "Run eslint --fix on save"
 
-- `npm run tslint-fix`
-- `npm run sasslint-fix`
-- `npm run prettify`
+- **Preferences | Languages & Frameworks | JavaScript | Prettier**
+  - Set "Run for files" to `{**/*,*}.{js,ts,jsx,tsx,css,scss}`
+  - Check "On code reformat"
+  - Check "On save"
 
-To get your code into an acceptable state.
+#### Configuring VS Code
+- Install `dbaeumer.vscode-eslint` extension
+- Install `esbenp.prettier-vscode` extension
+- Open User Settings (JSON) and set the following:
+  ```json
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true
+    }
+  ```
+
+#### Auto-fixing manually
+It is also possible to auto-fix and format code without making IDE changes by running the following script:
+
+- `npm run autofix` &mdash; run code linters and formatter
+  
+You could also run fixers individually:
+
+- `npm run eslint-fix` &mdash; run code linter and fix issues
+- `npm run sasslint-fix` &mdash; run style linter and fix issues
+- `npm run prettify` &mdash; reformat code and styles
 
 ### Updating the list of license files
 
 If you change the dependencies of the console in any way please run `script/licenses` (from the web-console directory).
 It will analyze the changes and update the `../licenses` file as needed.
 
-Please be conscious of not introducing dependencies on packages with Apache incompatible licenses. 
+Please be conscious of not introducing dependencies on packages with Apache incompatible licenses.
 
 ### Running end-to-end tests
 
@@ -92,7 +114,6 @@ Like so: `DRUID_E2E_TEST_HEADLESS=false npm run test-e2e`
 The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to target a web console running on a
 non-default port (i.e., not port `8888`). For example, this environment variable can be used to target the
 development mode of the web console (started via `npm start`), which runs on port `18081`.
-
 
 ## Description of the directory structure
 

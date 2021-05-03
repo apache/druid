@@ -166,7 +166,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
         <p>The format of the data in the lookup files.</p>
         <p>
           The <Code>simpleJson</Code> lookupParseSpec does not take any parameters. It is simply a
-          line delimited JSON file where the field is the key, and the field's value is the value.
+          line delimited JSON file where the field is the key, and the field&apos;s value is the
+          value.
         </p>
       </>
     ),

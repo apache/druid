@@ -93,6 +93,51 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
+  /**
+   * An ObjectStrategy that returns a big-endian ByteBuffer pointing to the original data.
+   *
+   * The returned ByteBuffer is a fresh read-only instance, so it is OK for callers to modify its position, limit, etc.
+   * However, it does point to the original data, so callers must take care not to use it if the original data may
+   * have been freed.
+   */
+  public static final ObjectStrategy<ByteBuffer> BYTE_BUFFER_STRATEGY = new ObjectStrategy<ByteBuffer>()
+  {
+    @Override
+    public Class<ByteBuffer> getClazz()
+    {
+      return ByteBuffer.class;
+    }
+
+    @Override
+    public ByteBuffer fromByteBuffer(final ByteBuffer buffer, final int numBytes)
+    {
+      final ByteBuffer dup = buffer.asReadOnlyBuffer();
+      dup.limit(buffer.position() + numBytes);
+      return dup;
+    }
+
+    @Override
+    @Nullable
+    public byte[] toBytes(@Nullable ByteBuffer buf)
+    {
+      if (buf == null) {
+        return null;
+      }
+
+      // This method doesn't have javadocs and I'm not sure if it is OK to modify the "val" argument. Copy defensively.
+      final ByteBuffer dup = buf.duplicate();
+      final byte[] bytes = new byte[dup.remaining()];
+      dup.get(bytes);
+      return bytes;
+    }
+
+    @Override
+    public int compare(ByteBuffer o1, ByteBuffer o2)
+    {
+      return o1.compareTo(o2);
+    }
+  };
+
   public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
   {
     @Override

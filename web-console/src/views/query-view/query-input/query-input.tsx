@@ -198,12 +198,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     }
   }
 
-  private handleAceContainerResize = (entries: IResizeEntry[]) => {
+  private readonly handleAceContainerResize = (entries: IResizeEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
-  private handleChange = (value: string) => {
+  private readonly handleChange = (value: string) => {
     // This gets the event as a second arg
     const { onQueryStringChange } = this.props;
     onQueryStringChange(value);

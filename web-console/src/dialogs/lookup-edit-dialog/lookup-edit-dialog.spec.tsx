@@ -28,9 +28,9 @@ describe('LookupEditDialog', () => {
         onClose={() => {}}
         onSubmit={() => {}}
         onChange={() => {}}
-        lookupName={'test'}
-        lookupTier={'test'}
-        lookupVersion={'test'}
+        lookupName="test"
+        lookupTier="test"
+        lookupVersion="test"
         lookupSpec={{ type: 'map', map: { a: 1 } }}
         isEdit={false}
         allLookupTiers={['__default', 'alt-tier']}

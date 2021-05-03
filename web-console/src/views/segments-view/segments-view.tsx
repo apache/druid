@@ -23,10 +23,10 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
-  ActionCell,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
   BracedText,
   MoreButton,
   RefreshButton,
@@ -39,6 +39,8 @@ import { Api } from '../../singletons';
 import {
   addFilter,
   booleanCustomTableFilter,
+  Capabilities,
+  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
@@ -52,14 +54,13 @@ import {
   QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
-import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Segment ID',
     'Datasource',
     'Start',
@@ -231,7 +232,7 @@ END AS "partitioning"`,
     return 'Sub minute';
   }
 
-  private segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
 
   private lastTableState: TableState | undefined;
 
@@ -424,7 +425,7 @@ END AS "partitioning"`,
     this.segmentsQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
     const { hiddenColumns } = this.state;
     if (tableState) this.lastTableState = tableState;

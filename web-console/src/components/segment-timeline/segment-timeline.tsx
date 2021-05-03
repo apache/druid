@@ -22,8 +22,7 @@ import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
 import { Api } from '../../singletons';
-import { Capabilities } from '../../utils';
-import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
+import { Capabilities, formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
 import { Loader } from '../loader/loader';
 
@@ -138,9 +137,9 @@ export class SegmentTimeline extends React.PureComponent<
           total: segmentSize,
         };
       } else {
-        const countDataEntry = countData[day][datasource];
+        const countDataEntry: number | undefined = countData[day][datasource];
         countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
-        const sizeDataEntry = sizeData[day][datasource];
+        const sizeDataEntry: number | undefined = sizeData[day][datasource];
         sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
         countData[day].total += count;
         sizeData[day].total += segmentSize;
@@ -219,8 +218,12 @@ export class SegmentTimeline extends React.PureComponent<
     return singleDatasourceData;
   }
 
-  private dataQueryManager: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
-  private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
+  private readonly dataQueryManager: QueryManager<
+    { capabilities: Capabilities; timeSpan: number },
+    any
+  >;
+
+  private readonly chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {
     super(props);
@@ -342,8 +345,7 @@ ORDER BY "start" DESC`;
       prevProps.chartHeight !== this.props.chartHeight
     ) {
       const scales: BarChartScales | undefined = this.calculateScales();
-      let dataToRender: BarUnitData[] | undefined;
-      dataToRender = activeDatasource
+      const dataToRender: BarUnitData[] | undefined = activeDatasource
         ? singleDatasourceData
           ? singleDatasourceData[activeDataType][activeDatasource]
           : undefined
@@ -456,7 +458,7 @@ ORDER BY "start" DESC`;
     if (error) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when loading data: {error.message}</span>
+          <span className="no-data-text">Error when loading data: {error.message}</span>
         </div>
       );
     }
@@ -464,7 +466,7 @@ ORDER BY "start" DESC`;
     if (xScale === null || yScale === null) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when calculating scales</span>
+          <span className="no-data-text">Error when calculating scales</span>
         </div>
       );
     }
@@ -472,7 +474,7 @@ ORDER BY "start" DESC`;
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className={'no-data-text'}>No data available for the time span selected</span>
+          <span className="no-data-text">No data available for the time span selected</span>
         </div>
       );
     }
@@ -483,7 +485,7 @@ ORDER BY "start" DESC`;
     ) {
       return (
         <div>
-          <span className={'no-data-text'}>
+          <span className="no-data-text">
             No data available for <i>{activeDatasource}</i>
           </span>
         </div>
@@ -517,20 +519,20 @@ ORDER BY "start" DESC`;
     const { datasources, activeDataType, activeDatasource, timeSpan } = this.state;
 
     return (
-      <div className={'segment-timeline app-view'}>
+      <div className="segment-timeline app-view">
         {this.renderStackedBarChart()}
-        <div className={'side-control'}>
+        <div className="side-control">
           <FormGroup>
             <RadioGroup
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Total size'} value={'sizeData'} />
-              <Radio label={'Segment count'} value={'countData'} />
+              <Radio label="Total size" value="sizeData" />
+              <Radio label="Segment count" value="countData" />
             </RadioGroup>
           </FormGroup>
 
-          <FormGroup label={'Datasource:'}>
+          <FormGroup label="Datasource:">
             <HTMLSelect
               onChange={(e: any) =>
                 this.setState({
@@ -540,7 +542,7 @@ ORDER BY "start" DESC`;
               value={activeDatasource == null ? 'all' : activeDatasource}
               fill
             >
-              <option value={'all'}>Show all</option>
+              <option value="all">Show all</option>
               {datasources.map(d => {
                 return (
                   <option key={d} value={d}>
@@ -551,7 +553,7 @@ ORDER BY "start" DESC`;
             </HTMLSelect>
           </FormGroup>
 
-          <FormGroup label={'Period:'}>
+          <FormGroup label="Period:">
             <HTMLSelect
               onChange={(e: any) => this.onTimeSpanChange(e.target.value)}
               value={timeSpan}

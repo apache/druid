@@ -23,7 +23,6 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
@@ -72,7 +71,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
     this.fieldName = fieldName;
     this.expression = expression;
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
+    this.fieldExpression = Parser.lazyParse(expression, macroTable);
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,

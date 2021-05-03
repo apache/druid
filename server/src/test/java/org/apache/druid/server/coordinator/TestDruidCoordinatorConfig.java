@@ -27,9 +27,14 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorStartDelay;
   private final Duration coordinatorPeriod;
   private final Duration coordinatorIndexingPeriod;
+  private final Duration metadataStoreManagementPeriod;
   private final Duration loadTimeoutDelay;
   private final Duration coordinatorKillPeriod;
   private final Duration coordinatorKillDurationToRetain;
+  private final Duration coordinatorAuditKillPeriod;
+  private final Duration coordinatorAuditKillDurationToRetain;
+  private final Duration coordinatorRuleKillPeriod;
+  private final Duration coordinatorRuleKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
 
@@ -37,9 +42,14 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorStartDelay,
       Duration coordinatorPeriod,
       Duration coordinatorIndexingPeriod,
+      Duration metadataStoreManagementPeriod,
       Duration loadTimeoutDelay,
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
+      Duration coordinatorAuditKillPeriod,
+      Duration coordinatorAuditKillDurationToRetain,
+      Duration coordinatorRuleKillPeriod,
+      Duration coordinatorRuleKillDurationToRetain,
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay
   )
@@ -47,9 +57,14 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorStartDelay = coordinatorStartDelay;
     this.coordinatorPeriod = coordinatorPeriod;
     this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
+    this.metadataStoreManagementPeriod = metadataStoreManagementPeriod;
     this.loadTimeoutDelay = loadTimeoutDelay;
     this.coordinatorKillPeriod = coordinatorKillPeriod;
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
+    this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
+    this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
+    this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
+    this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
   }
@@ -73,6 +88,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public Duration getCoordinatorMetadataStoreManagementPeriod()
+  {
+    return metadataStoreManagementPeriod;
+  }
+
+  @Override
   public Duration getCoordinatorKillPeriod()
   {
     return coordinatorKillPeriod;
@@ -82,6 +103,30 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorKillDurationToRetain()
   {
     return coordinatorKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorAuditKillPeriod()
+  {
+    return coordinatorAuditKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorAuditKillDurationToRetain()
+  {
+    return coordinatorAuditKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorRuleKillPeriod()
+  {
+    return coordinatorRuleKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorRuleKillDurationToRetain()
+  {
+    return coordinatorRuleKillDurationToRetain;
   }
 
   @Override

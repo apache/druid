@@ -20,13 +20,13 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { SnitchDialog } from '..';
 import { AutoForm, ExternalLink } from '../../components';
-import { OverlordDynamicConfig, OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
 import { getDruidErrorMessage } from '../../utils';
+import { SnitchDialog } from '..';
 
 import './overlord-dynamic-config-dialog.scss';
 

@@ -24,11 +24,11 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
-  ActionCell,
-  ActionIcon,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
+  ActionCell,
+  ActionIcon,
   BracedText,
   MoreButton,
   RefreshButton,
@@ -71,7 +71,7 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 import './datasource-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Datasource name',
     'Availability',
     'Availability detail',
@@ -301,8 +301,12 @@ ORDER BY 1`;
     }
   }
 
-  private datasourceQueryManager: QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>;
-  private tiersQueryManager: QueryManager<Capabilities, string[]>;
+  private readonly datasourceQueryManager: QueryManager<
+    DatasourceQuery,
+    DatasourcesAndDefaultRules
+  >;
+
+  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -454,14 +458,14 @@ ORDER BY 1`;
     });
   }
 
-  private handleResize = () => {
+  private readonly handleResize = () => {
     this.setState({
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
     });
   };
 
-  private refresh = (auto: any): void => {
+  private readonly refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
   };
@@ -695,7 +699,7 @@ ORDER BY 1`;
     );
   }
 
-  private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
+  private readonly saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
       await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
@@ -718,7 +722,7 @@ ORDER BY 1`;
     this.fetchDatasourceData();
   };
 
-  private editDefaultRules = () => {
+  private readonly editDefaultRules = () => {
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState(state => {
@@ -735,7 +739,7 @@ ORDER BY 1`;
     }, 50);
   };
 
-  private saveCompaction = async (compactionConfig: any) => {
+  private readonly saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
       await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
@@ -749,7 +753,7 @@ ORDER BY 1`;
     }
   };
 
-  private deleteCompaction = async () => {
+  private readonly deleteCompaction = () => {
     const { compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;
@@ -1417,7 +1421,7 @@ ORDER BY 1`;
           />
         </ViewControlBar>
         {showChart && (
-          <div className={'chart-container'}>
+          <div className="chart-container">
             <SegmentTimeline
               capabilities={capabilities}
               chartHeight={chartHeight}
