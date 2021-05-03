@@ -864,7 +864,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "prefixes": ["s3://foo/bar", "s3://bar/foo"]
+        "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -954,7 +954,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "prefixes": ["gs://foo/bar", "gs://bar/foo"]
+        "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -1033,7 +1033,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "prefixes": ["azure://container/prefix1", "azure://container/prefix2"]
+        "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
         "type": "json"
