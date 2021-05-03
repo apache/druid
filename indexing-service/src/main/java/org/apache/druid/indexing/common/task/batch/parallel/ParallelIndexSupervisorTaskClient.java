@@ -27,8 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -137,50 +135,6 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
     }
     catch (IOException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Segment allocation request used in supervisor-task-based segment allocation protocol.
-   *
-   * @see SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime, String, String)
-   */
-  public static class SegmentAllocationRequest
-  {
-    private final DateTime timestamp;
-    private final String sequenceName;
-    @Nullable
-    private final String prevSegmentId;
-
-    @JsonCreator
-    public SegmentAllocationRequest(
-        @JsonProperty("timestamp") DateTime timestamp,
-        @JsonProperty("sequenceName") String sequenceName,
-        @JsonProperty("prevSegmentId") @Nullable String prevSegmentId
-    )
-    {
-      this.timestamp = timestamp;
-      this.sequenceName = sequenceName;
-      this.prevSegmentId = prevSegmentId;
-    }
-
-    @JsonProperty
-    public DateTime getTimestamp()
-    {
-      return timestamp;
-    }
-
-    @JsonProperty
-    public String getSequenceName()
-    {
-      return sequenceName;
-    }
-
-    @JsonProperty
-    @Nullable
-    public String getPrevSegmentId()
-    {
-      return prevSegmentId;
     }
   }
 }
