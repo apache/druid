@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.indexing;
 
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -105,6 +106,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public TaskPayloadResponse getTaskPayload(String taskId)
   {
     return null;
+  }
+
+  @Override
+  public Map<String, DatasourceIntervals> getLockedIntervals()
+  {
+    return Collections.emptyMap();
   }
 
   @Override

@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -672,6 +673,62 @@ public class TaskLockbox
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Gets a Map containing intervals locked by active tasks. Intervals locked
+   * by revoked TaskLocks are not included in the returned Map.
+   *
+   * @return Map from Task Id to locked intervals.
+   */
+  public Map<String, DatasourceIntervals> getLockedIntervals()
+  {
+    final Map<String, List<Interval>> taskToIntervals = new HashMap<>();
+    final Map<String, String> taskToDatasource = new HashMap<>();
+
+    // Take a lock and populate the maps
+    giant.lock();
+    try {
+      running.forEach(
+          (datasource, datasourceLocks) -> datasourceLocks.forEach(
+              (startTime, startTimeLocks) -> startTimeLocks.forEach(
+                  (interval, taskLockPosses) -> taskLockPosses.forEach(
+                      taskLockPosse -> taskLockPosse.taskIds.forEach(taskId -> {
+                        // Do not proceed if the lock is revoked
+                        if (taskLockPosse.getTaskLock().isRevoked()) {
+                          return;
+                        }
+
+                        String existingDatasource = taskToDatasource
+                            .computeIfAbsent(taskId, k -> datasource);
+
+                        // This should never happen
+                        Preconditions.checkState(
+                            Objects.equal(datasource, existingDatasource),
+                            "Task Id maps to multiple sources: " + taskId
+                        );
+
+                        taskToIntervals
+                            .computeIfAbsent(taskId, k -> new ArrayList<>())
+                            .add(interval);
+                      })
+                  )
+              )
+          )
+      );
+    }
+    finally {
+      giant.unlock();
+    }
+
+    // Construct DatasourceIntervals objects
+    final Map<String, DatasourceIntervals> lockedIntervals = new HashMap<>();
+    taskToDatasource.forEach(
+        (taskId, datasource) -> lockedIntervals.put(
+            taskId, new DatasourceIntervals(datasource, taskToIntervals.get(taskId)))
+    );
+
+    return lockedIntervals;
   }
 
   public void unlock(final Task task, final Interval interval)

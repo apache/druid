@@ -37,11 +37,13 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
+import org.apache.druid.client.indexing.LockedIntervalsResponse;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -892,6 +894,43 @@ public class CompactSegmentsTest
     Assert.assertEquals(2, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
   }
 
+  @Test
+  public void testRunWithLockedIntervals() {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    leaderClient.start();
+    HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+
+    // Lock all intervals for dataSource_1 and dataSource_2
+    final String datasource1 = DATA_SOURCE_PREFIX + 1;
+    leaderClient.lockedIntervals
+        .computeIfAbsent("task1", k -> new DatasourceIntervals(datasource1, new ArrayList<>()))
+        .getIntervals().add(Intervals.of("2017/2018"));
+
+    final String datasource2 = DATA_SOURCE_PREFIX + 2;
+    leaderClient.lockedIntervals
+        .computeIfAbsent("task2", k -> new DatasourceIntervals(datasource2, new ArrayList<>()))
+        .getIntervals().add(Intervals.of("2017/2018"));
+
+    // Lock all intervals but one for dataSource_0
+    final String datasource0 = DATA_SOURCE_PREFIX + 0;
+    leaderClient.lockedIntervals
+        .computeIfAbsent("task0", k -> new DatasourceIntervals(datasource0, new ArrayList<>()))
+        .getIntervals().add(Intervals.of("2017-01-01T13:00:00Z/2017-02-01"));
+
+    // Verify that only one compaction task is submitted for dataSource_0
+    CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
+    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
+    Assert.assertEquals(1, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    Assert.assertEquals(1, leaderClient.submittedCompactionTasks.size());
+
+    final ClientCompactionTaskQuery compactionTask = leaderClient.submittedCompactionTasks.get(0);
+    Assert.assertEquals(datasource0, compactionTask.getDataSource());
+    Assert.assertEquals(
+        Intervals.of("2017-01-01T00:00:00/2017-01-01T12:00:00"),
+        compactionTask.getIoConfig().getInputSpec().getInterval()
+    );
+  }
+
   private void verifySnapshot(
       CompactSegments compactSegments,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
@@ -1183,6 +1222,12 @@ public class CompactSegmentsTest
   {
     private final ObjectMapper jsonMapper;
 
+    // Map from Task Id to the intervals locked by that task
+    private final Map<String, DatasourceIntervals> lockedIntervals = new HashMap<>();
+
+    // List of submitted compaction tasks for verification in the tests
+    private final List<ClientCompactionTaskQuery> submittedCompactionTasks = new ArrayList<>();
+
     private int compactVersionSuffix = 0;
 
     private TestDruidLeaderClient(ObjectMapper jsonMapper)
@@ -1209,6 +1254,8 @@ public class CompactSegmentsTest
                  || urlString.contains("/druid/indexer/v1/pendingTasks")
                  || urlString.contains("/druid/indexer/v1/runningTasks")) {
         return createStringFullResponseHolder(jsonMapper.writeValueAsString(Collections.emptyList()));
+      } else if (urlString.contains(("/druid/indexer/v1/lockedIntervals"))) {
+        return handleLockedIntervals();
       } else {
         throw new IAE("Cannot handle request for url[%s]", request.getUrl());
       }
@@ -1252,6 +1299,8 @@ public class CompactSegmentsTest
         throw new IAE("Cannot run non-compaction task");
       }
       final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) taskQuery;
+      submittedCompactionTasks.add(compactionTaskQuery);
+
       final Interval intervalToCompact = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
       final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(
           compactionTaskQuery.getDataSource()
@@ -1267,6 +1316,12 @@ public class CompactSegmentsTest
           compactionTaskQuery.getTuningConfig()
       );
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
+    }
+
+    private StringFullResponseHolder handleLockedIntervals() throws IOException
+    {
+      LockedIntervalsResponse response = new LockedIntervalsResponse(lockedIntervals);
+      return createStringFullResponseHolder(jsonMapper.writeValueAsString(response));
     }
 
     private void compactSegments(

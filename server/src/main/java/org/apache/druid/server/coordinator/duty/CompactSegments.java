@@ -28,6 +28,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -117,6 +118,8 @@ public class CompactSegments implements CoordinatorDuty
         // dataSource -> list of intervals of compaction tasks
         final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
             compactionConfigList.size());
+        final Map<String, DatasourceIntervals> taskToLockedIntervals = Maps.newHashMap(
+            indexingServiceClient.getLockedIntervals());
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactionTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
@@ -139,6 +142,9 @@ public class CompactSegments implements CoordinatorDuty
                          compactionTaskQuery.getGranularitySpec().getSegmentGranularity(),
                          configuredSegmentGranularity);
                 indexingServiceClient.cancelTask(status.getId());
+
+                // Remove this from the locked intervals
+                taskToLockedIntervals.remove(status.getId());
                 continue;
               }
             }
@@ -153,6 +159,17 @@ public class CompactSegments implements CoordinatorDuty
             throw new ISE("task[%s] is not a compactionTask", status.getId());
           }
         }
+
+        // Skip all the locked intervals
+        LOG.debug(
+            "Skipping the following intervals for Compaction as they are currently locked: %s",
+            taskToLockedIntervals
+        );
+        taskToLockedIntervals.forEach(
+            (taskId, datasourceIntervals) -> compactionTaskIntervals
+                .computeIfAbsent(datasourceIntervals.getDatasource(), ds -> new ArrayList<>())
+                .addAll(datasourceIntervals.getIntervals())
+        );
 
         final CompactionSegmentIterator iterator =
             policy.reset(compactionConfigs, dataSources, compactionTaskIntervals);

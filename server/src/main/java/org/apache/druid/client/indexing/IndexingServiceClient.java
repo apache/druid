@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.indexing;
 
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -65,6 +66,13 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskPayloadResponse getTaskPayload(String taskId);
+
+  /**
+   * Gets all intervals currently locked by active Tasks.
+   *
+   * @return Map from Task Id to the intervals locked by that task.
+   */
+  Map<String, DatasourceIntervals> getLockedIntervals();
 
   SamplerResponse sample(SamplerSpec samplerSpec);
 }

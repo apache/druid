@@ -614,6 +614,11 @@ Retrieve information about the segments of a task.
 
 Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a task. Only works for completed tasks.
 
+* `/druid/indexer/v1/lockedIntervals`
+
+Retrieve the list of Intervals locked by currently running ingestion/compaction tasks. The response contains a Map from
+Task IDs to the list of Intervals locked by the respective Tasks.
+
 ##### POST
 
 * `/druid/indexer/v1/task`

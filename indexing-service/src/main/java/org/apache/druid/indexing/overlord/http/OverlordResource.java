@@ -228,6 +228,35 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/lockedIntervals")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTaskLockedIntervals(@Context HttpServletRequest request)
+  {
+    // Perform authorization check
+    final ResourceAction resourceAction = new ResourceAction(
+        new Resource("lockedIntervals", ResourceType.STATE),
+        Action.READ
+    );
+    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+        request, resourceAction, authorizerMapper
+    );
+    if (!authResult.isAllowed()) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.FORBIDDEN)
+                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                  .build()
+      );
+    }
+
+    // Build the response
+    final LockedIntervalsResponse response = new LockedIntervalsResponse(
+        taskStorageQueryAdapter.getLockedIntervals()
+    );
+    log.warn("Found Intervals: %s", response.getLockedIntervals());
+    return Response.ok(response).build();
+  }
+
+  @GET
   @Path("/task/{taskid}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(TaskResourceFilter.class)
@@ -299,7 +328,9 @@ public class OverlordResource
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
-                taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
+                taskInfo.getStatus().getLocation() == null
+                ? TaskLocation.unknown()
+                : taskInfo.getStatus().getLocation(),
                 taskInfo.getDataSource(),
                 taskInfo.getStatus().getErrorMsg()
             )
@@ -619,7 +650,11 @@ public class OverlordResource
         createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(
+              maxCompletedTasks,
+              createdTimeDuration,
+              dataSource
+          );
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());

@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -44,6 +45,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -329,6 +331,32 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           {
           }
       );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Map<String, DatasourceIntervals> getLockedIntervals()
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              "/druid/indexer/v1/lockedIntervals"
+          )
+      );
+
+      final LockedIntervalsResponse response = jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<LockedIntervalsResponse>()
+          {
+          }
+      );
+      return response == null || response.getLockedIntervals() == null
+             ? Collections.emptyMap()
+             : response.getLockedIntervals();
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
