@@ -101,20 +101,26 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public ExprEval getObject()
   {
-    final Long input = selector.isNull() ? null : selector.getLong();
-    final boolean cached = (Objects.equals(input, lastInput) && lastOutput != null) || (input == null && lastInputIsNull);
+    boolean cached;
+    boolean currentInputIsNull = false;
+    if (selector.isNull()) {
+      cached = lastInputIsNull;
+      currentInputIsNull = true;
+    } else {
+      cached = selector.getLong() == lastInput && lastOutput != null;
+    }
 
     if (!cached) {
-      if (lruEvalCache == null || input == null) {
-        bindings.set(input);
+      if (lruEvalCache == null || currentInputIsNull) {
+        bindings.set(null);
         lastOutput = expression.eval(bindings);
       } else {
-        lastOutput = lruEvalCache.compute(input);
+        lastOutput = lruEvalCache.compute(selector.isNull() ? null : selector.getLong());
       }
 
-      lastInputIsNull = input == null ? true : false;
+      lastInputIsNull = currentInputIsNull? true : false;
       if (!lastInputIsNull) {
-        lastInput = input;
+        lastInput = selector.getLong();
       }
     }
 
