@@ -116,7 +116,17 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       Aggregator[][] rowSelector
   )
   {
-    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+    final boolean notUnknown = selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    final boolean unique = capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
+    // we must know cardinality to use array based aggregation
+    // we check for uniquely dictionary encoded values because non-unique (meaning dictionary ids do not have a 1:1
+    // relation with values) negates many of the benefits of array aggregation:
+    // - if different dictionary ids map to the same value but dictionary ids are unique to that value, then array
+    //   aggregation will be correct but will still have to potentially perform many map lookups and lose the
+    //   performance benefit array aggregation is trying to provide
+    // - in cases where the same dictionary ids map to different values, results can be entirely incorrect since an
+    //   aggregator for a different value might be chosen from the array based on the re-used dictionary id
+    if (notUnknown && unique) {
       return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
     } else {
       return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
