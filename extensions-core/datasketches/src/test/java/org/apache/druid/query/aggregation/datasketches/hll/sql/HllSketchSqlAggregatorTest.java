@@ -364,6 +364,27 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllSketchPostAggs() throws Exception
   {
+    final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
+                                 + "  Log Config K   : 12\n"
+                                 + "  Hll Target     : HLL_4\n"
+                                 + "  Current Mode   : LIST\n"
+                                 + "  Memory         : false\n"
+                                 + "  LB             : 2.0\n"
+                                 + "  Estimate       : 2.000000004967054\n"
+                                 + "  UB             : 2.000099863468538\n"
+                                 + "  OutOfOrder Flag: false\n"
+                                 + "  Coupon Count   : 2\n";
+
+    final String otherSketchSummary = "### HLL SKETCH SUMMARY: \n"
+                                      + "  LOG CONFIG K   : 12\n"
+                                      + "  HLL TARGET     : HLL_4\n"
+                                      + "  CURRENT MODE   : LIST\n"
+                                      + "  MEMORY         : FALSE\n"
+                                      + "  LB             : 2.0\n"
+                                      + "  ESTIMATE       : 2.000000004967054\n"
+                                      + "  UB             : 2.000099863468538\n"
+                                      + "  OUTOFORDER FLAG: FALSE\n"
+                                      + "  COUPON COUNT   : 2\n";
     testQuery(
         "SELECT\n"
         + "  DS_HLL(dim2),\n"
@@ -484,26 +505,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 "[2.000000004967054,2.0,2.000099863468538]",
                 "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
                 2L,
-                "### HLL SKETCH SUMMARY: \n"
-                + "  Log Config K   : 12\n"
-                + "  Hll Target     : HLL_4\n"
-                + "  Current Mode   : LIST\n"
-                + "  Memory         : false\n"
-                + "  LB             : 2.0\n"
-                + "  Estimate       : 2.000000004967054\n"
-                + "  UB             : 2.000099863468538\n"
-                + "  OutOfOrder Flag: false\n"
-                + "  Coupon Count   : 2\n",
-                "### HLL SKETCH SUMMARY: \n"
-                + "  LOG CONFIG K   : 12\n"
-                + "  HLL TARGET     : HLL_4\n"
-                + "  CURRENT MODE   : LIST\n"
-                + "  MEMORY         : FALSE\n"
-                + "  LB             : 2.0\n"
-                + "  ESTIMATE       : 2.000000004967054\n"
-                + "  UB             : 2.000099863468538\n"
-                + "  OUTOFORDER FLAG: FALSE\n"
-                + "  COUPON COUNT   : 2\n",
+                sketchSummary,
+                otherSketchSummary,
                 2.0
             }
         )
@@ -513,6 +516,17 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testtHllSketchPostAggsPostSort() throws Exception
   {
+    final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
+                                 + "  Log Config K   : 12\n"
+                                 + "  Hll Target     : HLL_4\n"
+                                 + "  Current Mode   : LIST\n"
+                                 + "  Memory         : false\n"
+                                 + "  LB             : 2.0\n"
+                                 + "  Estimate       : 2.000000004967054\n"
+                                 + "  UB             : 2.000099863468538\n"
+                                 + "  OutOfOrder Flag: false\n"
+                                 + "  Coupon Count   : 2\n";
+
     final String sql = "SELECT DS_HLL(dim2) as y FROM druid.foo ORDER BY HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) DESC LIMIT 10";
 
     testQuery(
@@ -547,16 +561,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 2.000000004967054d,
-                "### HLL SKETCH SUMMARY: \n"
-                + "  Log Config K   : 12\n"
-                + "  Hll Target     : HLL_4\n"
-                + "  Current Mode   : LIST\n"
-                + "  Memory         : false\n"
-                + "  LB             : 2.0\n"
-                + "  Estimate       : 2.000000004967054\n"
-                + "  UB             : 2.000099863468538\n"
-                + "  OutOfOrder Flag: false\n"
-                + "  Coupon Count   : 2\n"
+                sketchSummary
             }
         )
     );
