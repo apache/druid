@@ -29,7 +29,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Like {@link ExpressionColumnValueSelector}, but caches the most recently computed value and re-uses it in the case
@@ -50,11 +49,15 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   private long lastInput;
 
   // Last read input value is null.
-  private boolean lastInputIsNull;
+  private boolean cachedIsNull = false;
 
   // Last computed output value, or null if there is none.
   @Nullable
   private ExprEval lastOutput;
+
+  // Computed output value for null.
+  @Nullable
+  private ExprEval outputForNull;
 
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
@@ -104,7 +107,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     boolean cached;
     boolean currentInputIsNull = false;
     if (selector.isNull()) {
-      cached = lastInputIsNull;
+      cached = cachedIsNull;
       currentInputIsNull = true;
     } else {
       cached = selector.getLong() == lastInput && lastOutput != null;
@@ -112,19 +115,19 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
     if (!cached) {
       if (lruEvalCache == null || currentInputIsNull) {
-        bindings.set(null);
-        lastOutput = expression.eval(bindings);
+        bindings.set(currentInputIsNull ? null : selector.getLong());
+        outputForNull = expression.eval(bindings);
       } else {
-        lastOutput = lruEvalCache.compute(selector.isNull() ? null : selector.getLong());
+        lastOutput = lruEvalCache.compute(selector.getLong());
       }
 
-      lastInputIsNull = currentInputIsNull? true : false;
-      if (!lastInputIsNull) {
+      cachedIsNull = currentInputIsNull ? true : false;
+      if (!currentInputIsNull) {
         lastInput = selector.getLong();
       }
     }
 
-    return lastOutput;
+    return (lruEvalCache == null || currentInputIsNull) ? outputForNull : lastOutput;
   }
 
   @Override
