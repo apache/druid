@@ -47,8 +47,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   private final LruEvalCache lruEvalCache;
 
   // Last read input value.
-  @Nullable
-  private Long lastInput;
+  private long lastInput;
+
+  // Last read input value is null.
+  private boolean lastInputIsNull;
 
   // Last computed output value, or null if there is none.
   @Nullable
@@ -100,7 +102,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   public ExprEval getObject()
   {
     final Long input = selector.isNull() ? null : selector.getLong();
-    final boolean cached = Objects.equals(input, lastInput) && lastOutput != null;
+    final boolean cached = (Objects.equals(input, lastInput) && lastOutput != null) || (input == null && lastInputIsNull);
 
     if (!cached) {
       if (lruEvalCache == null || input == null) {
@@ -110,7 +112,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
         lastOutput = lruEvalCache.compute(input);
       }
 
-      lastInput = input;
+      lastInputIsNull = input == null ? true : false;
+      if (!lastInputIsNull) {
+        lastInput = input;
+      }
     }
 
     return lastOutput;
