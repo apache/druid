@@ -571,7 +571,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n"
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1)\n"
+        + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1),\n"
+        + "  DS_THETA(dim2, 1024),\n"
+        + "  DS_THETA(thetasketch_dim1, 1024)\n"
         + "FROM druid.foo WHERE dim2 = 0",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -596,13 +598,29 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null
+                          ),
+                          new SketchMergeAggregatorFactory(
+                              "a2",
+                              "dim2",
+                              1024,
+                              null,
+                              null,
+                              null
+                          ),
+                          new SketchMergeAggregatorFactory(
+                              "a3",
+                              "thetasketch_dim1",
+                              1024,
+                              null,
+                              null,
+                              null
                           )
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{0L, 0L})
+        ImmutableList.of(new Object[]{0L, 0L, "0.0", "0.0"})
     );
   }
 }

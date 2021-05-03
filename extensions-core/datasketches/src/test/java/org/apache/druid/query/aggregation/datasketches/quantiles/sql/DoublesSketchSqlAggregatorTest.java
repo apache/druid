@@ -727,7 +727,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_DS(m1, 0.01),\n"
-        + "APPROX_QUANTILE_DS(qsketch_m1, 0.01)\n"
+        + "APPROX_QUANTILE_DS(qsketch_m1, 0.01),\n"
+        + "DS_QUANTILES_SKETCH(m1),\n"
+        + "DS_QUANTILES_SKETCH(qsketch_m1)\n"
         + "FROM foo WHERE dim2 = 0",
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
@@ -737,7 +739,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
-                      new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null)
+                      new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),
+                      new DoublesSketchAggregatorFactory("a2:agg", "m1", null),
+                      new DoublesSketchAggregatorFactory("a3:agg", "qsketch_m1", null)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
@@ -749,7 +753,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 Double.NaN,
-                Double.NaN
+                Double.NaN,
+                "0",
+                "0"
             }
         )
     );
