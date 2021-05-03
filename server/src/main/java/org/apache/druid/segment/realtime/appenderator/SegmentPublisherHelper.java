@@ -84,7 +84,10 @@ public final class SegmentPublisherHelper
                 .count()
         );
         if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
-          throw new ISE("Cannot publish segments due to incomplete time chunk");
+          throw new ISE(
+              "Cannot publish segments due to incomplete time chunk. Segments are [%s]",
+              segmentsPerInterval.stream().map(DataSegment::getId).collect(Collectors.toList())
+          );
         }
         annotateFn = annotateCorePartitionSetSizeFn(expectedCorePartitionSetSize);
       } else if (firstShardSpec instanceof BucketNumberedShardSpec) {

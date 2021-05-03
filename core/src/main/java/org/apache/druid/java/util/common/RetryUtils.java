@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -77,6 +78,28 @@ public class RetryUtils
       @Nullable final String messageOnRetry
   ) throws Exception
   {
+    return retry(
+        f,
+        shouldRetry,
+        quietTries,
+        maxTries,
+        cleanupAfterFailure,
+        messageOnRetry,
+        false
+    );
+  }
+
+  @VisibleForTesting
+  static <T> T retry(
+      final Task<T> f,
+      final Predicate<Throwable> shouldRetry,
+      final int quietTries,
+      final int maxTries,
+      @Nullable final CleanupAfterFailure cleanupAfterFailure,
+      @Nullable final String messageOnRetry,
+      boolean skipSleep
+  ) throws Exception
+  {
     Preconditions.checkArgument(maxTries > 0, "maxTries > 0");
     Preconditions.checkArgument(quietTries >= 0, "quietTries >= 0");
     int nTry = 0;
@@ -91,7 +114,9 @@ public class RetryUtils
           cleanupAfterFailure.cleanup();
         }
         if (nTry < maxTries && shouldRetry.apply(e)) {
-          awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
+          if (!skipSleep) {
+            awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
+          }
         } else {
           Throwables.propagateIfInstanceOf(e, Exception.class);
           throw new RuntimeException(e);

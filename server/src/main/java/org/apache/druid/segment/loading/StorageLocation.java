@@ -165,12 +165,14 @@ public class StorageLocation
     }
   }
 
-  public synchronized void release(String segmentFilePath, long segmentSize)
+  public synchronized boolean release(String segmentFilePath, long segmentSize)
   {
     final File segmentFile = new File(path, segmentFilePath);
     if (files.remove(segmentFile)) {
       currSizeBytes -= segmentSize;
+      return true;
     }
+    return false;
   }
 
   /**
@@ -219,5 +221,13 @@ public class StorageLocation
   public synchronized long currSizeBytes()
   {
     return currSizeBytes;
+  }
+
+  @VisibleForTesting
+  boolean contains(String relativePath)
+  {
+    final File segmentFileToAdd = new File(path, relativePath);
+    //noinspection FieldAccessNotGuarded
+    return files.contains(segmentFileToAdd);
   }
 }

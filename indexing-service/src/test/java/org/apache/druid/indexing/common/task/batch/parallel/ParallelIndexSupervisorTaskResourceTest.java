@@ -678,7 +678,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           .getGivenOrDefaultPartitionsSpec();
       final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
           toolbox,
-          getId(),
+          getSubtaskSpecId(),
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
@@ -689,9 +689,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
       final SegmentIdWithShardSpec segmentIdentifier = segmentAllocator.allocate(
           new MapBasedInputRow(DateTimes.of("2017-01-01"), Collections.emptyList(), Collections.emptyMap()),
-          getId(),
+          getSubtaskSpecId(),
           null,
-          true
+          false
       );
 
       final DataSegment segment = new DataSegment(
