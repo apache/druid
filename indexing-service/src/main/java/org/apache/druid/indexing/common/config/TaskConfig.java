@@ -40,6 +40,8 @@ public class TaskConfig
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
 
+  private static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = false;
+
   @JsonProperty
   private final String baseDir;
 
@@ -70,6 +72,9 @@ public class TaskConfig
   @JsonProperty
   private final boolean ignoreTimestampSpecForDruidInputSource;
 
+  @JsonProperty
+  private final boolean useLineageBasedSegmentAllocation;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -81,7 +86,8 @@ public class TaskConfig
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
-      @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource
+      @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
+      @JsonProperty("useLineageBasedSegmentAllocation") @Nullable Boolean useLineageBasedSegmentAllocation
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -107,6 +113,9 @@ public class TaskConfig
       this.shuffleDataLocations = shuffleDataLocations;
     }
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
+    this.useLineageBasedSegmentAllocation = useLineageBasedSegmentAllocation == null
+                                            ? DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
+                                            : useLineageBasedSegmentAllocation;
   }
 
   @JsonProperty
@@ -187,6 +196,12 @@ public class TaskConfig
   public boolean isIgnoreTimestampSpecForDruidInputSource()
   {
     return ignoreTimestampSpecForDruidInputSource;
+  }
+
+  @JsonProperty
+  public boolean isUseLineageBasedSegmentAllocation()
+  {
+    return useLineageBasedSegmentAllocation;
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)

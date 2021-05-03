@@ -304,10 +304,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
-    final boolean useLineageBasedSegmentAllocation = getContextValue(
-        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-        SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
-    );
+    final boolean useLineageBasedSegmentAllocation = toolbox.getConfig().isUseLineageBasedSegmentAllocation();
     // subtaskSpecId is used as the sequenceName, so that retry tasks for the same spec
     // can allocate the same set of segments.
     final String sequenceName = useLineageBasedSegmentAllocation

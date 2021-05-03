@@ -2868,7 +2868,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        false
+        false,
+        null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();

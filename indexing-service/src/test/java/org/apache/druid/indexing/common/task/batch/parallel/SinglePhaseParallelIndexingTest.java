@@ -79,8 +79,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         new Object[]{LockGranularity.SEGMENT, true}
     );
   }
-  private static final double TRANSIENT_TASK_FAILURE_RATE = 0.3;
-  private static final double TRANSIENT_API_FAILURE_RATE = 0.3;
 
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
 
@@ -91,7 +89,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
-    super(TRANSIENT_TASK_FAILURE_RATE, TRANSIENT_API_FAILURE_RATE);
+    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
   }

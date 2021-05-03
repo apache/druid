@@ -67,9 +67,6 @@ import java.util.stream.Collectors;
  */
 class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
-  public static final String CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = "useLineageBasedSegmentAllocation";
-  public static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = true;
-
   private static final Logger LOG = new Logger(SinglePhaseParallelIndexTaskRunner.class);
 
   private static final String PHASE_NAME = "segment generation";
@@ -198,8 +195,8 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   {
     if (lineageBasedSegmentAllocationUsed) {
       String errorMsg = "Both the legacy segment allocation API and the new lineage-based segment allocation API are "
-                        + "in use. Consider setting useLineageBasedSegmentAllocation to false in taskContext if you "
-                        + "are upgrading your cluster.";
+                        + "in use. Consider setting druid.indexer.task.useLineageBasedSegmentAllocation to false "
+                        + "if you are upgrading your cluster.";
       LOG.error(errorMsg);
       stopGracefully();
       throw new RuntimeException(errorMsg); // will be propagated to the API caller
@@ -238,8 +235,8 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   {
     if (legacySegmentAllocationUsed) {
       String errorMsg = "Both the legacy segment allocation API and the new lineage-based segment allocation API are "
-                        + "in use. Consider setting useLineageBasedSegmentAllocation to false in taskContext if you "
-                        + "are upgrading your cluster.";
+                        + "in use. Consider setting druid.indexer.task.useLineageBasedSegmentAllocation to false "
+                        + "if you are upgrading your cluster.";
       LOG.error(errorMsg);
       stopGracefully();
       throw new RuntimeException(errorMsg); // will be propagated to the API caller
