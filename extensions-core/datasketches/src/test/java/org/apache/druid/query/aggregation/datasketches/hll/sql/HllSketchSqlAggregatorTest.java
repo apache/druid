@@ -251,69 +251,74 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + ")",
         ImmutableList.of(
             GroupByQuery.builder()
-                    .setDataSource(
-                        new QueryDataSource(
-                            Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(CalciteTests.DATASOURCE1)
-                                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(
-                                      Filtration.eternity()
-                                  )))
-                                  .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
-                                  .aggregators(
-                                      Collections.singletonList(
-                                          new HllSketchBuildAggregatorFactory(
-                                              "a0:a",
-                                              "cnt",
-                                              null,
-                                              null,
-                                              ROUND
+                        .setDataSource(
+                            new QueryDataSource(
+                                Druids.newTimeseriesQueryBuilder()
+                                      .dataSource(CalciteTests.DATASOURCE1)
+                                      .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                          Filtration.eternity()
+                                      )))
+                                      .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
+                                      .aggregators(
+                                          Collections.singletonList(
+                                              new HllSketchBuildAggregatorFactory(
+                                                  "a0:a",
+                                                  "cnt",
+                                                  null,
+                                                  null,
+                                                  ROUND
+                                              )
                                           )
                                       )
-                                  )
-                                  .postAggregators(
-                                      ImmutableList.of(
-                                          new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                      .postAggregators(
+                                          ImmutableList.of(
+                                              new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                          )
                                       )
-                                  )
-                                  .context(QUERY_CONTEXT_DEFAULT)
-                                  .build()
-                                  .withOverriddenContext(
-                                      BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
-                                          ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true, "sqlQueryId", "dummy"),
-                                          "d0"
+                                      .context(QUERY_CONTEXT_DEFAULT)
+                                      .build()
+                                      .withOverriddenContext(
+                                          BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
+                                              ImmutableMap.of(
+                                                  TimeseriesQuery.SKIP_EMPTY_BUCKETS,
+                                                  true,
+                                                  "sqlQueryId",
+                                                  "dummy"
+                                              ),
+                                              "d0"
+                                          )
                                       )
-                                  )
-                        )
-                    )
-                    .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                    .setGranularity(Granularities.ALL)
-                    .setAggregatorSpecs(
-                        NullHandling.replaceWithDefault()
-                        ? Arrays.asList(
-                            new LongSumAggregatorFactory("_a0:sum", "a0"),
-                            new CountAggregatorFactory("_a0:count")
-                        )
-                        : Arrays.asList(
-                            new LongSumAggregatorFactory("_a0:sum", "a0"),
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("_a0:count"),
-                                BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("a0", null, null))
                             )
                         )
-                    )
-                    .setPostAggregatorSpecs(
-                        ImmutableList.of(
-                            new ArithmeticPostAggregator(
-                                "_a0",
-                                "quotient",
-                                ImmutableList.of(
-                                    new FieldAccessPostAggregator(null, "_a0:sum"),
-                                    new FieldAccessPostAggregator(null, "_a0:count")
+                        .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(
+                            NullHandling.replaceWithDefault()
+                            ? Arrays.asList(
+                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new CountAggregatorFactory("_a0:count")
+                            )
+                            : Arrays.asList(
+                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a0:count"),
+                                    BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("a0", null, null))
                                 )
                             )
                         )
-                    )
-                    .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "_a0",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a0:sum"),
+                                        new FieldAccessPostAggregator(null, "_a0:count")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         expectedResults
@@ -441,7 +446,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0"), false),
                           new ExpressionPostAggregator("p6", "(p5 + 1)", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2"), false),
-                          new HllSketchToEstimatePostAggregator("p10", new FieldAccessPostAggregator("p9", "a0"), false),
+                          new HllSketchToEstimatePostAggregator(
+                              "p10",
+                              new FieldAccessPostAggregator("p9", "a0"),
+                              false
+                          ),
                           new ExpressionPostAggregator("p11", "abs(p10)", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimateWithBoundsPostAggregator(
                               "p13",
