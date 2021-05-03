@@ -224,10 +224,9 @@ public class StorageLocation
   }
 
   @VisibleForTesting
-  boolean contains(String relativePath)
+  synchronized boolean contains(String relativePath)
   {
     final File segmentFileToAdd = new File(path, relativePath);
-    //noinspection FieldAccessNotGuarded
     return files.contains(segmentFileToAdd);
   }
 }
