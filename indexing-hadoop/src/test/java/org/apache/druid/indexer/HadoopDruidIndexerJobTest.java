@@ -27,6 +27,7 @@ import org.junit.runner.RunWith;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.List;
@@ -36,7 +37,12 @@ import java.util.List;
     JobHelper.class,
     IndexGeneratorJob.class
 })
-@PowerMockIgnore({"javax.net.ssl.*"})
+@PowerMockIgnore({"javax.net.ssl.*", "org.apache.logging.log4j.*"})
+@SuppressStaticInitializationFor({
+    "org.apache.druid.indexer.HadoopDruidIndexerConfig",
+    "org.apache.druid.indexer.JobHelper",
+    "org.apache.druid.indexer.IndexGeneratorJob"
+})
 public class HadoopDruidIndexerJobTest
 {
   private HadoopDruidIndexerConfig config;

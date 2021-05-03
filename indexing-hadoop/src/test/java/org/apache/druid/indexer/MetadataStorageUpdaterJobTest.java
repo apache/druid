@@ -27,6 +27,7 @@ import org.junit.runner.RunWith;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.List;
@@ -37,6 +38,11 @@ import java.util.stream.Collectors;
     IndexGeneratorJob.class
 })
 @PowerMockIgnore({"javax.net.ssl.*"})
+@SuppressStaticInitializationFor({
+    "org.apache.druid.indexer.HadoopIngestionSpec",
+    "org.apache.druid.indexer.HadoopDruidIndexerConfig",
+    "org.apache.druid.indexer.IndexGeneratorJob"
+})
 public class MetadataStorageUpdaterJobTest
 {
   private static final List<DataSegmentAndIndexZipFilePath> DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS = ImmutableList.of(
