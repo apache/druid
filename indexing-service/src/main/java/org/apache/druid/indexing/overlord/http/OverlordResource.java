@@ -328,9 +328,7 @@ public class OverlordResource
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
-                taskInfo.getStatus().getLocation() == null
-                ? TaskLocation.unknown()
-                : taskInfo.getStatus().getLocation(),
+                taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
                 taskInfo.getDataSource(),
                 taskInfo.getStatus().getErrorMsg()
             )
@@ -650,11 +648,7 @@ public class OverlordResource
         createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(
-              maxCompletedTasks,
-              createdTimeDuration,
-              dataSource
-          );
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());
