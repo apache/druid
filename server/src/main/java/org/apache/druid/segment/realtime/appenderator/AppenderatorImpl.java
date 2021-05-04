@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.collections4.IterableUtils;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -587,8 +588,8 @@ public class AppenderatorImpl implements Appenderator
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    AtomicLong totalHydrantsCount = new AtomicLong();
-    AtomicLong totalHydrantsPersisted = new AtomicLong();
+    MutableLong totalHydrantsCount = new MutableLong();
+    MutableLong totalHydrantsPersisted = new MutableLong();
     final long totalSinks = sinks.size();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
@@ -597,7 +598,7 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("No sink for identifier: %s", identifier);
       }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
-      totalHydrantsCount.addAndGet(hydrants.size());
+      totalHydrantsCount.add(hydrants.size());
       currentHydrants.put(identifier.toString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
@@ -609,14 +610,14 @@ public class AppenderatorImpl implements Appenderator
         if (!hydrant.hasSwapped()) {
           log.debug("Hydrant[%s] hasn't persisted yet, persisting. Segment[%s]", hydrant, identifier);
           indexesToPersist.add(Pair.of(hydrant, identifier));
-          totalHydrantsPersisted.addAndGet(1);
+          totalHydrantsPersisted.add(1);
         }
       }
 
       if (sink.swappable()) {
         // It is swappable. Get the old one to persist it and create a new one:
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
-        totalHydrantsPersisted.addAndGet(1);
+        totalHydrantsPersisted.add(1);
       }
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
@@ -683,8 +684,8 @@ public class AppenderatorImpl implements Appenderator
                   rowIngestionMeters.getProcessed(),
                   totalPersistedRows.get(),
                   totalSinks,
-                  totalHydrantsCount.get(),
-                  totalHydrantsPersisted.get()
+                  totalHydrantsCount.longValue(),
+                  totalHydrantsPersisted.longValue()
               );
 
               // return null if committer is null
