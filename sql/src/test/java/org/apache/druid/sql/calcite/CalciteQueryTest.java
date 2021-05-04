@@ -22,11 +22,13 @@ package org.apache.druid.sql.calcite;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -52,6 +54,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
@@ -80,11 +83,13 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -95,6 +100,7 @@ import org.apache.druid.query.groupby.GroupByQuery.Builder;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -17883,6 +17889,627 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{0.0f, 0.0f},
             new Object[]{0.0f, 0.0f}
         )
+    );
+  }
+
+  @Test
+  public void testArrayAgg() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(dim1), ARRAY_AGG(DISTINCT dim1), ARRAY_AGG(DISTINCT dim1) FILTER(WHERE dim1 = 'shazbot') FROM foo WHERE dim1 is not null",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(not(selector("dim1", null, null)))
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("dim1"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_append(\"__acc\", \"dim1\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("dim1"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"dim1\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a2",
+                                  ImmutableSet.of("dim1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  "array_set_add(\"__acc\", \"dim1\")",
+                                  "array_set_add_all(\"__acc\", \"a2\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, o)",
+                                  new HumanReadableBytes(1024),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              selector("dim1", "shazbot", null)
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
+            : new Object[]{"[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggMultiValue() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(dim3), ARRAY_AGG(DISTINCT dim3) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("dim3"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_append(\"__acc\", \"dim3\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("dim3"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"dim3\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[\"a\",\"b\",\"b\",\"c\",\"d\",null,null,null]", "[null,\"a\",\"b\",\"c\",\"d\"]"}
+            : new Object[]{"[\"a\",\"b\",\"b\",\"c\",\"d\",\"\",null,null]", "[\"\",null,\"a\",\"b\",\"c\",\"d\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggNumeric() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(l1), ARRAY_AGG(DISTINCT l1), ARRAY_AGG(d1), ARRAY_AGG(DISTINCT d1), ARRAY_AGG(f1), ARRAY_AGG(DISTINCT f1) FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("l1"),
+                              "__acc",
+                              "<LONG>[]",
+                              "<LONG>[]",
+                              "array_append(\"__acc\", \"l1\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("l1"),
+                              "__acc",
+                              "<LONG>[]",
+                              "<LONG>[]",
+                              "array_set_add(\"__acc\", \"l1\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a2",
+                              ImmutableSet.of("d1"),
+                              "__acc",
+                              "<DOUBLE>[]",
+                              "<DOUBLE>[]",
+                              "array_append(\"__acc\", \"d1\")",
+                              "array_concat(\"__acc\", \"a2\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a3",
+                              ImmutableSet.of("d1"),
+                              "__acc",
+                              "<DOUBLE>[]",
+                              "<DOUBLE>[]",
+                              "array_set_add(\"__acc\", \"d1\")",
+                              "array_set_add_all(\"__acc\", \"a3\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a4",
+                              ImmutableSet.of("f1"),
+                              "__acc",
+                              "<DOUBLE>[]",
+                              "<DOUBLE>[]",
+                              "array_append(\"__acc\", \"f1\")",
+                              "array_concat(\"__acc\", \"a4\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a5",
+                              ImmutableSet.of("f1"),
+                              "__acc",
+                              "<DOUBLE>[]",
+                              "<DOUBLE>[]",
+                              "array_set_add(\"__acc\", \"f1\")",
+                              "array_set_add_all(\"__acc\", \"a5\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{
+                "[7,325323,0,0,0,0]",
+                "[0,7,325323]",
+                "[1.0,1.7,0.0,0.0,0.0,0.0]",
+                "[1.0,0.0,1.7]",
+                "[1.0,0.10000000149011612,0.0,0.0,0.0,0.0]",
+                "[1.0,0.10000000149011612,0.0]"
+            }
+            : new Object[]{
+                "[7,325323,0,null,null,null]",
+                "[0,null,7,325323]",
+                "[1.0,1.7,0.0,null,null,null]",
+                "[1.0,0.0,null,1.7]",
+                "[1.0,0.10000000149011612,0.0,null,null,null]",
+                "[1.0,0.10000000149011612,0.0,null]"
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggToString() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT dim1), ',') FROM foo WHERE dim1 is not null",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(not(selector("dim1", null, null)))
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("dim1"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"dim1\")",
+                              "array_set_add_all(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{"1,2,abc,def,10.1"} : new Object[]{",1,2,abc,def,10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggExpression() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT CONCAT(dim1, dim2)), ',') FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "concat(\"dim1\",\"dim2\")", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{"1a,a,2,abc,10.1,defabc"} : new Object[]{"null,1a,a,2,defabc"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggMaxBytes() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, 128) FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("l1"),
+                              "__acc",
+                              "<LONG>[]",
+                              "<LONG>[]",
+                              "array_append(\"__acc\", \"l1\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(128),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("l1"),
+                              "__acc",
+                              "<LONG>[]",
+                              "<LONG>[]",
+                              "array_set_add(\"__acc\", \"l1\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(128),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[7,325323,0,0,0,0]", "[0,7,325323]"}
+            : new Object[]{"[7,325323,0,null,null,null]", "[0,null,7,325323]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggAsArrayFromJoin() throws Exception
+  {
+    cannotVectorize();
+    List<Object[]> expectedResults;
+    if (useDefault) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
+          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
+          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
+          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
+          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
+          new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"}
+      );
+    }
+    testQuery(
+        "SELECT numfoo.dim4, j.arr, ARRAY_TO_STRING(j.arr, ',') FROM numfoo INNER JOIN (SELECT dim4, ARRAY_AGG(DISTINCT dim1) as arr FROM numfoo WHERE dim1 is not null GROUP BY 1) as j ON numfoo.dim4 = j.dim4",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          new QueryDataSource(
+                              GroupByQuery.builder()
+                                          .setDataSource(CalciteTests.DATASOURCE3)
+                                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                                          .setGranularity(Granularities.ALL)
+                                          .setDimFilter(not(selector("dim1", null, null)))
+                                          .setDimensions(new DefaultDimensionSpec("dim4", "_d0"))
+                                          .setAggregatorSpecs(
+                                              aggregators(
+                                                  new ExpressionLambdaAggregatorFactory(
+                                                      "a0",
+                                                      ImmutableSet.of("dim1"),
+                                                      "__acc",
+                                                      "[]",
+                                                      "[]",
+                                                      "array_set_add(\"__acc\", \"dim1\")",
+                                                      "array_set_add_all(\"__acc\", \"a0\")",
+                                                      null,
+                                                      "if(array_length(o) == 0, null, o)",
+                                                      new HumanReadableBytes(1024),
+                                                      TestExprMacroTable.INSTANCE
+                                                  )
+                                              )
+                                          )
+                                          .setContext(QUERY_CONTEXT_DEFAULT)
+                                          .build()
+                          ),
+                          "j0.",
+                          "(\"dim4\" == \"j0._d0\")",
+                          JoinType.INNER,
+                          null
+                      )
+                  )
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array_to_string(\"j0.a0\",',')", ValueType.STRING)
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim4", "j0.a0", "v0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+
+        ),
+        expectedResults
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayAggFromSubquery() throws Exception
+  {
+    cannotVectorize();
+    // yo, can't group on array types right now so expect failure
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [STRING_ARRAY]");
+    testQuery(
+        "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testArrayAggArrayContainsSubquery() throws Exception
+  {
+    cannotVectorize();
+    List<Object[]> expectedResults;
+    if (useDefault) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"10.1", ""},
+          new Object[]{"2", ""},
+          new Object[]{"1", "a"},
+          new Object[]{"def", "abc"},
+          new Object[]{"abc", ""}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{"", "a"},
+          new Object[]{"10.1", null},
+          new Object[]{"2", ""},
+          new Object[]{"1", "a"},
+          new Object[]{"def", "abc"},
+          new Object[]{"abc", null}
+      );
+    }
+    testQuery(
+        "SELECT dim1,dim2 FROM foo WHERE ARRAY_CONTAINS((SELECT ARRAY_AGG(DISTINCT dim1) FROM foo WHERE dim1 is not null), dim1)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE1),
+                          new QueryDataSource(
+                              Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .granularity(Granularities.ALL)
+                                    .filters(not(selector("dim1", null, null)))
+                                    .aggregators(
+                                        aggregators(
+                                            new ExpressionLambdaAggregatorFactory(
+                                                "a0",
+                                                ImmutableSet.of("dim1"),
+                                                "__acc",
+                                                "[]",
+                                                "[]",
+                                                "array_set_add(\"__acc\", \"dim1\")",
+                                                "array_set_add_all(\"__acc\", \"a0\")",
+                                                null,
+                                                "if(array_length(o) == 0, null, o)",
+                                                new HumanReadableBytes(1024),
+                                                TestExprMacroTable.INSTANCE
+                                            )
+                                        )
+                                    )
+                                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                                    .build()
+                          ),
+                          "j0.",
+                          "1",
+                          JoinType.LEFT,
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(
+                      new ExpressionDimFilter(
+                          "array_contains(\"j0.a0\",\"dim1\")",
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .columns("dim1", "dim2")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+
+        ),
+        expectedResults
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayContainsSubquery() throws Exception
+  {
+    cannotVectorize();
+    List<Object[]> expectedResults;
+    if (useDefault) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"", 3L},
+          new Object[]{"a", 1L},
+          new Object[]{"abc", 1L}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 2L},
+          new Object[]{"abc", 1L}
+      );
+    }
+    testQuery(
+        "SELECT dim2, COUNT(*) FROM foo WHERE ARRAY_CONTAINS((SELECT ARRAY_AGG(DISTINCT dim1) FROM foo WHERE dim1 is not null), dim1) GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(querySegmentSpec(Filtration.eternity()))
+                                          .granularity(Granularities.ALL)
+                                          .filters(not(selector("dim1", null, null)))
+                                          .aggregators(
+                                              aggregators(
+                                                  new ExpressionLambdaAggregatorFactory(
+                                                      "a0",
+                                                      ImmutableSet.of("dim1"),
+                                                      "__acc",
+                                                      "[]",
+                                                      "[]",
+                                                      "array_set_add(\"__acc\", \"dim1\")",
+                                                      "array_set_add_all(\"__acc\", \"a0\")",
+                                                      null,
+                                                      "if(array_length(o) == 0, null, o)",
+                                                      new HumanReadableBytes(1024),
+                                                      TestExprMacroTable.INSTANCE
+                                                  )
+                                              )
+                                          )
+                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .build()
+                                ),
+                                "j0.",
+                                "1",
+                                JoinType.LEFT,
+                                null
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(
+                            new ExpressionDimFilter(
+                                "array_contains(\"j0.a0\",\"dim1\")",
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setGranularity(Granularities.ALL)
+                        .setLimitSpec(NoopLimitSpec.instance())
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+
+        ),
+        expectedResults
     );
   }
 }

@@ -315,15 +315,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
   {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
-      }
-    };
+    return column -> getColumnCapabilities(index, column);
   }
 
   @Override

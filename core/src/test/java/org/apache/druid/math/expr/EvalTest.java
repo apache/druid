@@ -51,7 +51,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testDoubleEval()
   {
-    Expr.ObjectBinding bindings = Parser.withMap(ImmutableMap.of("x", 2.0d));
+    Expr.ObjectBinding bindings = InputBindings.withMap(ImmutableMap.of("x", 2.0d));
     Assert.assertEquals(2.0, evalDouble("x", bindings), 0.0001);
     Assert.assertEquals(2.0, evalDouble("\"x\"", bindings), 0.0001);
     Assert.assertEquals(304.0, evalDouble("300 + \"x\" * 2", bindings), 0.0001);
@@ -89,7 +89,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testLongEval()
   {
-    Expr.ObjectBinding bindings = Parser.withMap(ImmutableMap.of("x", 9223372036854775807L));
+    Expr.ObjectBinding bindings = InputBindings.withMap(ImmutableMap.of("x", 9223372036854775807L));
 
     Assert.assertEquals(9223372036854775807L, evalLong("x", bindings));
     Assert.assertEquals(9223372036854775807L, evalLong("\"x\"", bindings));
@@ -147,7 +147,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testBooleanReturn()
   {
-    Expr.ObjectBinding bindings = Parser.withMap(
+    Expr.ObjectBinding bindings = InputBindings.withMap(
         ImmutableMap.of("x", 100L, "y", 100L, "z", 100D, "w", 100D)
     );
     ExprEval eval = Parser.parse("x==y", ExprMacroTable.nil()).eval(bindings);
