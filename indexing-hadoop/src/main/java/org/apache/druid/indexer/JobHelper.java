@@ -643,7 +643,7 @@ public class JobHelper
     for (DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath : segmentAndIndexZipFilePaths) {
       Path tmpPath = new Path(segmentAndIndexZipFilePath.getTmpIndexZipFilePath());
       Path finalIndexZipFilePath = new Path(segmentAndIndexZipFilePath.getFinalIndexZipFilePath());
-      final FileSystem outputFS = FileSystemHelper.get(finalIndexZipFilePath.toUri(), configuration);
+      final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
       if (!renameIndexFile(outputFS, tmpPath, finalIndexZipFilePath)) {
         throw new IOE(
             "Unable to rename [%s] to [%s]",
