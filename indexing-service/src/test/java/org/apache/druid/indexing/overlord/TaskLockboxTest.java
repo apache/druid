@@ -1122,33 +1122,30 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervals() {
+  public void testGetLockedIntervals()
+  {
     // Acquire locks for task1
     final Task task1 = NoopTask.create("ds1");
     lockbox.add(task1);
 
-    lockbox.tryLock(
-        task1, new TimeChunkLockRequest(
-            TaskLockType.EXCLUSIVE, task1,
-            Intervals.of("2017-01-01/2017-02-01"), null
-        )
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        task1,
+        Intervals.of("2017-01-01/2017-02-01")
     );
-    lockbox.tryLock(
-        task1, new TimeChunkLockRequest(
-            TaskLockType.EXCLUSIVE, task1,
-            Intervals.of("2017-04-01/2017-05-01"), null
-        )
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        task1,
+        Intervals.of("2017-04-01/2017-05-01")
     );
 
     // Acquire locks for task2
     final Task task2 = NoopTask.create("ds2");
     lockbox.add(task2);
-
-    lockbox.tryLock(
-        task2, new TimeChunkLockRequest(
-            TaskLockType.EXCLUSIVE, task2,
-            Intervals.of("2017-03-01/2017-04-01"), null
-        )
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        task2,
+        Intervals.of("2017-03-01/2017-04-01")
     );
 
     // Verify the locked intervals
@@ -1181,17 +1178,16 @@ public class TaskLockboxTest
   @Test
   public void testGetLockedIntervalsForRevokedLocks() throws Exception
   {
+    // Acquire lock for a low priority task
     final Task lowPriorityTask = NoopTask.create(5);
     lockbox.add(lowPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
-    lockbox.tryLock(
-        lowPriorityTask, new TimeChunkLockRequest(
-            TaskLockType.EXCLUSIVE, lowPriorityTask,
-            Intervals.of("2017/2018"), null
-        )
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        lowPriorityTask,
+        Intervals.of("2017/2018")
     );
 
-    // Verify the locked intervals
     Map<String, DatasourceIntervals> lockedIntervals = lockbox.getLockedIntervals();
     Assert.assertTrue(lockedIntervals.containsKey(lowPriorityTask.getId()));
     Assert.assertEquals(
@@ -1203,11 +1199,10 @@ public class TaskLockboxTest
     // Revoke the lowPriorityTask
     final Task highPriorityTask = NoopTask.create(10);
     lockbox.add(highPriorityTask);
-    lockbox.tryLock(
-        highPriorityTask, new TimeChunkLockRequest(
-            TaskLockType.EXCLUSIVE, highPriorityTask,
-            Intervals.of("2017-05-01/2017-06-01"), null
-        )
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        highPriorityTask,
+        Intervals.of("2017-05-01/2017-06-01")
     );
 
     // Verify the locked intervals

@@ -725,7 +725,9 @@ public class TaskLockbox
     final Map<String, DatasourceIntervals> lockedIntervals = new HashMap<>();
     taskToDatasource.forEach(
         (taskId, datasource) -> lockedIntervals.put(
-            taskId, new DatasourceIntervals(datasource, taskToIntervals.get(taskId)))
+            taskId,
+            new DatasourceIntervals(datasource, taskToIntervals.get(taskId))
+        )
     );
 
     return lockedIntervals;

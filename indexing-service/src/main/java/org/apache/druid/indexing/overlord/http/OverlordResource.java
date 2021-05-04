@@ -237,9 +237,8 @@ public class OverlordResource
         new Resource("lockedIntervals", ResourceType.STATE),
         Action.READ
     );
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
-        request, resourceAction, authorizerMapper
-    );
+    final Access authResult = AuthorizationUtils
+        .authorizeResourceAction(request, resourceAction, authorizerMapper);
     if (!authResult.isAllowed()) {
       throw new WebApplicationException(
           Response.status(Response.Status.FORBIDDEN)
