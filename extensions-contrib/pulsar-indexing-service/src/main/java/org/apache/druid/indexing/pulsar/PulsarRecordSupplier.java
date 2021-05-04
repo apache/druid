@@ -51,8 +51,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 
-public class PulsarRecordSupplier implements RecordSupplier<Integer, String, PulsarRecordEntity>
+public class PulsarRecordSupplier implements RecordSupplier<String, String, PulsarRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
   private MultiTopicsConsumerImpl consumers;
@@ -76,11 +77,11 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public void assign(Set<StreamPartition<Integer>> streamPartitions)
+  public void assign(Set<StreamPartition<String>> streamPartitions)
   {
     List<String> topicPartions = new ArrayList<>();
-    for (StreamPartition<Integer> integerStreamPartition : streamPartitions) {
-      topicPartions.add(integerStreamPartition.getStream() + "+" + integerStreamPartition.getPartitionId());
+    for (StreamPartition<String> integerStreamPartition : streamPartitions) {
+      topicPartions.add(integerStreamPartition.getPartitionId());
     }
     try {
       consumers = (MultiTopicsConsumerImpl) client.newConsumer().topics(topicPartions).subscribe();
@@ -91,7 +92,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public void seek(StreamPartition<Integer> partition, String sequenceNumber)
+  public void seek(StreamPartition<String> partition, String sequenceNumber)
   {
     String[] sequenceNumbers = sequenceNumber.split(":");
     List<ConsumerImpl> consumersList = consumers.getConsumers();
@@ -106,7 +107,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public void seekToEarliest(Set<StreamPartition<Integer>> partitions)
+  public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
     try {
       consumers.seek(MessageId.earliest);
@@ -117,7 +118,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public void seekToLatest(Set<StreamPartition<Integer>> partitions)
+  public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
     try {
       consumers.seek(MessageId.latest);
@@ -128,24 +129,23 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public Set<StreamPartition<Integer>> getAssignment()
+  public Set<StreamPartition<String>> getAssignment()
   {
-    Set<StreamPartition<Integer>> streamPartitions = new HashSet<>();
+    Set<StreamPartition<String>> streamPartitions = new HashSet<>();
     List<String> topicPartitions = consumers.getTopics();
     for (String topicPartition : topicPartitions) {
       //TODO: split regex
       String topic = topicPartition.split("partition-")[0];
-      String partition = topicPartition.split("partition-")[1];
-      streamPartitions.add(new StreamPartition<>(topic, Integer.parseInt(partition)));
+      streamPartitions.add(new StreamPartition<>(topic, topicPartition));
     }
     return streamPartitions;
   }
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<Integer, String, PulsarRecordEntity>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> poll(long timeout)
   {
-    List<OrderedPartitionableRecord<Integer, String, PulsarRecordEntity>> polledRecords = new ArrayList<>();
+    List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> polledRecords = new ArrayList<>();
     Iterator messageIterator = null;
     try {
       messageIterator = consumers.batchReceive().iterator();
@@ -157,7 +157,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
       Message message = (Message) messageIterator.next();
       polledRecords.add(new OrderedPartitionableRecord<>(
           message.getTopicName().split("partition-")[0],
-          Integer.parseInt(message.getTopicName().split("partition-")[1]),
+          message.getTopicName(),
           message.getMessageId().toString(),
           message.getValue() == null ? null : ImmutableList.of(new PulsarRecordEntity(message))
       ));
@@ -166,7 +166,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public String getLatestSequenceNumber(StreamPartition<Integer> partition)
+  public String getLatestSequenceNumber(StreamPartition<String> partition)
   {
     String pos = null;
     List<ConsumerImpl> consumersList = consumers.getConsumers();
@@ -185,28 +185,33 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, String, Pul
   }
 
   @Override
-  public String getEarliestSequenceNumber(StreamPartition<Integer> partition)
+  public String getEarliestSequenceNumber(StreamPartition<String> partition)
   {
     return MessageId.earliest.toString();
   }
 
   @Nullable
   @Override
-  public String getPosition(StreamPartition<Integer> partition)
+  public String getPosition(StreamPartition<String> partition)
   {
     throw new UnsupportedOperationException("getPosition() is not supported in Pulsar");
   }
 
   @Override
-  public Set<Integer> getPartitionIds(String stream)
+  public Set<String> getPartitionIds(String stream)
   {
     Set<Integer> partitions = new HashSet<>();
-    List<String> topicPartitions = consumers.getTopics();
-    for (String topicPartition : topicPartitions) {
-      String partition = topicPartition.split("partition-")[1];
-      partitions.add(Integer.parseInt(partition));
+    List<String> topicPartitions = null;
+    try {
+      topicPartitions = client.getPartitionsForTopic(stream).get();
     }
-    return partitions;
+    catch (InterruptedException e) {
+      log.error(e.getMessage());
+    }
+    catch (ExecutionException e) {
+      log.error(e.getMessage());
+    }
+    return new HashSet<String>(topicPartitions);
   }
 
   @Override

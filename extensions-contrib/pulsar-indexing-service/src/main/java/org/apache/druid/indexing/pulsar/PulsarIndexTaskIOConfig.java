@@ -32,7 +32,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, String>
+public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
@@ -43,14 +43,14 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
       @JsonProperty("baseSequenceName") String baseSequenceName,
       // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
       @JsonProperty("startPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, String> startPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<String, String> startPartitions,
       @JsonProperty("endPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, String> endPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<String, String> endPartitions,
       // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers")
-      @Nullable SeekableStreamStartSequenceNumbers<Integer, String> startSequenceNumbers,
+      @Nullable SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers,
       @JsonProperty("endSequenceNumbers")
-      @Nullable SeekableStreamEndSequenceNumbers<Integer, String> endSequenceNumbers,
+      @Nullable SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
@@ -75,8 +75,8 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : PulsarSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
 
-    final SeekableStreamEndSequenceNumbers<Integer, String> myEndSequenceNumbers = getEndSequenceNumbers();
-    for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
+    final SeekableStreamEndSequenceNumbers<String, String> myEndSequenceNumbers = getEndSequenceNumbers();
+    for (String partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
           myEndSequenceNumbers.getPartitionSequenceNumberMap()
                        .get(partition)
@@ -90,8 +90,8 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
   public PulsarIndexTaskIOConfig(
       int taskGroupId,
       String baseSequenceName,
-      SeekableStreamStartSequenceNumbers<Integer, String> startSequenceNumbers,
-      SeekableStreamEndSequenceNumbers<Integer, String> endSequenceNumbers,
+      SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers,
       Map<String, Object> consumerProperties,
       Long pollTimeout,
       Boolean useTransaction,
@@ -123,10 +123,10 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, String> getStartPartitions()
+  public SeekableStreamEndSequenceNumbers<String, String> getStartPartitions()
   {
     // Converting to start sequence numbers. This is allowed for Pulsar because the start offset is always inclusive.
-    final SeekableStreamStartSequenceNumbers<Integer, String> startSequenceNumbers = getStartSequenceNumbers();
+    final SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers = getStartSequenceNumbers();
     return new SeekableStreamEndSequenceNumbers<>(
         startSequenceNumbers.getStream(),
         startSequenceNumbers.getPartitionSequenceNumberMap()
@@ -139,7 +139,7 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, String> getEndPartitions()
+  public SeekableStreamEndSequenceNumbers<String, String> getEndPartitions()
   {
     return getEndSequenceNumbers();
   }

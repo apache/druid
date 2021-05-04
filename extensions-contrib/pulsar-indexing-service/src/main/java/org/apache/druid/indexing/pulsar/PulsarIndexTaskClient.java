@@ -25,7 +25,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class PulsarIndexTaskClient extends SeekableStreamIndexTaskClient<Integer, String>
+public class PulsarIndexTaskClient extends SeekableStreamIndexTaskClient<String, String>
 {
   PulsarIndexTaskClient(
       HttpClient httpClient,
@@ -49,9 +49,9 @@ public class PulsarIndexTaskClient extends SeekableStreamIndexTaskClient<Integer
   }
 
   @Override
-  protected Class<Integer> getPartitionType()
+  protected Class<String> getPartitionType()
   {
-    return Integer.class;
+    return String.class;
   }
 
   @Override

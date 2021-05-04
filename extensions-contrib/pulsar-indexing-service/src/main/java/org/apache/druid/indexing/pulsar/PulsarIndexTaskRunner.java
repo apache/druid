@@ -50,7 +50,7 @@ import java.util.TreeMap;
 /**
  * Pulsar indexing task runner supporting incremental segments publishing
  */
-public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, String, PulsarRecordEntity>
+public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, PulsarRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(PulsarIndexTaskRunner.class);
   private final PulsarIndexTask task;
@@ -79,18 +79,18 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<Integer, String, PulsarRecordEntity>> getRecords(
-      RecordSupplier<Integer, String, PulsarRecordEntity> recordSupplier,
+  protected List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> getRecords(
+      RecordSupplier<String, String, PulsarRecordEntity> recordSupplier,
       TaskToolbox toolbox
   )
   {
-    List<OrderedPartitionableRecord<Integer, String, PulsarRecordEntity>> records;
+    List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> records;
     records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     return records;
   }
 
   @Override
-  protected SeekableStreamEndSequenceNumbers<Integer, String> deserializePartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<String, String> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -104,8 +104,8 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, String> createDataSourceMetadata(
-      SeekableStreamSequenceNumbers<Integer, String> partitions
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadata(
+      SeekableStreamSequenceNumbers<String, String> partitions
   )
   {
     return new PulsarDataSourceMetadata(partitions);
@@ -120,8 +120,8 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<Integer, String, PulsarRecordEntity> recordSupplier,
-      Set<StreamPartition<Integer>> assignment
+      RecordSupplier<String, String, PulsarRecordEntity> recordSupplier,
+      Set<StreamPartition<String>> assignment
   )
   {
     // do nothing
@@ -140,16 +140,16 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
   }
 
   @Override
-  public TypeReference<List<SequenceMetadata<Integer, String>>> getSequenceMetadataTypeReference()
+  public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<Integer, String>>>()
+    return new TypeReference<List<SequenceMetadata<String, String>>>()
     {
     };
   }
 
   @Nullable
   @Override
-  protected TreeMap<Integer, Map<Integer, String>> getCheckPointsFromContext(
+  protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
       TaskToolbox toolbox,
       String checkpointsString
   ) throws IOException
@@ -158,7 +158,7 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<Integer, String>>>()
+          new TypeReference<TreeMap<Integer, Map<String, String>>>()
           {
           }
       );

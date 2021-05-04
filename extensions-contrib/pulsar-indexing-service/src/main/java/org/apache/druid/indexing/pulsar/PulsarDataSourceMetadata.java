@@ -26,12 +26,12 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
-public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, String>
+public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, String>
 {
 
   @JsonCreator
   public PulsarDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, String> pulsarPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> pulsarPartitions
   )
   {
     super(pulsarPartitions);
@@ -40,10 +40,10 @@ public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<I
   @Override
   public DataSourceMetadata asStartMetadata()
   {
-    final SeekableStreamSequenceNumbers<Integer, String> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<String, String> sequenceNumbers = getSeekableStreamSequenceNumbers();
     if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
       return createConcreteDataSourceMetaData(
-          ((SeekableStreamEndSequenceNumbers<Integer, String>) sequenceNumbers).asStartPartitions(true)
+          ((SeekableStreamEndSequenceNumbers<String, String>) sequenceNumbers).asStartPartitions(true)
       );
     } else {
       return this;
@@ -51,8 +51,8 @@ public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<I
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, String> createConcreteDataSourceMetaData(
-      SeekableStreamSequenceNumbers<Integer, String> seekableStreamSequenceNumbers
+  protected SeekableStreamDataSourceMetadata<String, String> createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers
   )
   {
     return new PulsarDataSourceMetadata(seekableStreamSequenceNumbers);

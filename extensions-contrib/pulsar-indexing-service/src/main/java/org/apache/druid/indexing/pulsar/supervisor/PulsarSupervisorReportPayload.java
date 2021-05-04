@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public class PulsarSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, String>
+public class PulsarSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
   public PulsarSupervisorReportPayload(
       String dataSource,
@@ -35,8 +35,8 @@ public class PulsarSupervisorReportPayload extends SeekableStreamSupervisorRepor
       int partitions,
       int replicas,
       long durationSeconds,
-      @Nullable Map<Integer, String> latestOffsets,
-      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Map<String, String> latestOffsets,
+      @Nullable Map<String, Long> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,

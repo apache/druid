@@ -34,7 +34,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, String, PulsarRecordEntity>
+public class PulsarIndexTask extends SeekableStreamIndexTask<String, String, PulsarRecordEntity>
 {
   private static final String TYPE = "index_pulsar";
 
@@ -78,7 +78,7 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, String, Pu
 
 
   @Override
-  protected SeekableStreamIndexTaskRunner<Integer, String, PulsarRecordEntity> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<String, String, PulsarRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new PulsarIndexTaskRunner(
