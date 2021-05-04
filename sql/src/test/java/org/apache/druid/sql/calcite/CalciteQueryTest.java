@@ -12531,7 +12531,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           useDefault
                           ? new CountAggregatorFactory("a9:count")
                           : new FilteredAggregatorFactory(
-                              new CountAggregatorFactory("9:count"),
+                              new CountAggregatorFactory("a9:count"),
                               not(selector("l1", null, null))
                           ),
                           new DoubleSumAggregatorFactory("a10:sum", "d1"),
