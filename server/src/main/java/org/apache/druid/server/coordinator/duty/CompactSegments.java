@@ -118,7 +118,7 @@ public class CompactSegments implements CoordinatorDuty
         // dataSource -> list of intervals of compaction tasks
         final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
             compactionConfigList.size());
-        final Map<String, DatasourceIntervals> taskToLockedIntervals = Maps.newHashMap(
+        final Map<String, DatasourceIntervals> taskToLockedIntervals = new HashMap<>(
             indexingServiceClient.getLockedIntervals());
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactionTasks) {
