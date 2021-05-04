@@ -151,7 +151,6 @@
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <scope>test</scope>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 
