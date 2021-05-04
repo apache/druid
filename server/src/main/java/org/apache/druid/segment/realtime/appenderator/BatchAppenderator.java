@@ -384,7 +384,7 @@ public class BatchAppenderator implements Appenderator
         }
 
         Futures.addCallback(
-            persistAll(committerSupplier == null ? null : committerSupplier.get()),
+            persistAll(null),
             new FutureCallback<Object>()
             {
               @Override
@@ -564,7 +564,6 @@ public class BatchAppenderator implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-    final Map<String, Integer> currentHydrants = new HashMap<>();
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
@@ -579,7 +578,6 @@ public class BatchAppenderator implements Appenderator
       }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       totalHydrantsCount.add(hydrants.size());
-      currentHydrants.put(identifier.toString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
@@ -602,7 +600,6 @@ public class BatchAppenderator implements Appenderator
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
-    final Object commitMetadata = committer == null ? null : committer.getMetadata();
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
@@ -610,50 +607,15 @@ public class BatchAppenderator implements Appenderator
         new Callable<Object>()
         {
           @Override
-          public Object call() throws IOException
+          public Object call()
           {
             try {
               for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
               }
 
-              if (committer != null) {
-                log.debug(
-                    "Committing metadata[%s] for sinks[%s].",
-                    commitMetadata,
-                    Joiner.on(", ").join(
-                        currentHydrants.entrySet()
-                                       .stream()
-                                       .map(entry -> StringUtils.format(
-                                           "%s:%d",
-                                           entry.getKey(),
-                                           entry.getValue()
-                                       ))
-                                       .collect(Collectors.toList())
-                    )
-                );
-
-                committer.run();
-
-                try {
-                  commitLock.lock();
-                  final Map<String, Integer> commitHydrants = new HashMap<>();
-                  final Committed oldCommit = readCommit();
-                  if (oldCommit != null) {
-                    // merge current hydrants with existing hydrants
-                    commitHydrants.putAll(oldCommit.getHydrants());
-                  }
-                  commitHydrants.putAll(currentHydrants);
-                  writeCommit(new Committed(commitHydrants, commitMetadata));
-                }
-                finally {
-                  commitLock.unlock();
-                }
-              }
-
               log.info(
-                  "Flushed in-memory data with commit metadata [%s] for segments: %s",
-                  commitMetadata,
+                  "Flushed in-memory data for segments: %s",
                   indexesToPersist.stream()
                                   .map(itp -> itp.rhs.asSegmentId().toString())
                                   .distinct()
@@ -669,9 +631,9 @@ public class BatchAppenderator implements Appenderator
               );
 
               // return null if committer is null
-              return commitMetadata;
+              return null;
             }
-            catch (IOException e) {
+            catch (Exception e) {
               metrics.incrementFailedPersists();
               throw e;
             }
