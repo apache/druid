@@ -17,37 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.query.aggregation.cardinality.vector;
 
-import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.server.coordinator.rules.Rule;
-
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
+ * Processor for {@link org.apache.druid.query.aggregation.cardinality.CardinalityVectorAggregator}.
  */
-public interface MetadataRuleManager
+public interface CardinalityVectorProcessor
 {
-  void start();
-
-  void stop();
-
-  void poll();
-
-  Map<String, List<Rule>> getAllRules();
-
-  List<Rule> getRules(String dataSource);
-
-  List<Rule> getRulesWithDefault(String dataSource);
-
-  boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
+  /**
+   * Processor for {@link org.apache.druid.query.aggregation.VectorAggregator#aggregate(ByteBuffer, int, int, int)}
+   * in byRow = false mode.
+   */
+  void aggregate(ByteBuffer buf, int position, int startRow, int endRow);
 
   /**
-   * Remove rules for non-existence datasource (datasource with no segment) created older than the given timestamp.
-   *
-   * @param timestamp timestamp in milliseconds
-   * @return number of rules removed
+   * Processor for {@link org.apache.druid.query.aggregation.VectorAggregator#aggregate(ByteBuffer, int, int, int)}
+   * in byRow = false mode.
    */
-  int removeRulesForEmptyDatasourcesOlderThan(long timestamp);
+  void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset);
 }

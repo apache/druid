@@ -3482,9 +3482,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHavingOnApproximateCountDistinct() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
         ImmutableList.of(
@@ -6297,9 +6294,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT "
         + "SUM(case dim1 when 'abc' then cnt end), "
@@ -7687,9 +7681,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinct() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(cnt), COUNT(distinct dim2), COUNT(distinct unique_dim1) FROM druid.foo",
         ImmutableList.of(
@@ -7722,9 +7713,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfCaseWhen() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "COUNT(DISTINCT CASE WHEN m1 >= 4 THEN m1 END),\n"
@@ -7816,9 +7804,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testApproxCountDistinctWhenHllDisabled() throws Exception
   {
     // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
-
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
 
     testQuery(
         PLANNER_CONFIG_NO_HLL,
@@ -8392,7 +8377,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testAvgDailyCountDistinct() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
+    // Cannot vectorize outer query due to inlined inner query.
     cannotVectorize();
 
     testQuery(
@@ -9064,9 +9049,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctArithmetic() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -9111,7 +9093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfSubstring() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
+    // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
     testQuery(
@@ -11842,7 +11824,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfLookup() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
+    // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
     final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
@@ -15356,7 +15338,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    // Cannot vectorize next test due to "cardinality" aggregator.
+    // Cannot vectorize next test due to extraction dimension spec.
     cannotVectorize();
 
     // semi-join requires time condition on both left and right query

@@ -17,37 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.query.aggregation.cardinality.vector;
 
-import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.server.coordinator.rules.Rule;
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- */
-public interface MetadataRuleManager
+public class NilCardinalityVectorProcessor implements CardinalityVectorProcessor
 {
-  void start();
+  public static final NilCardinalityVectorProcessor INSTANCE = new NilCardinalityVectorProcessor();
 
-  void stop();
+  @Override
+  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+  {
+    // Do nothing.
+  }
 
-  void poll();
-
-  Map<String, List<Rule>> getAllRules();
-
-  List<Rule> getRules(String dataSource);
-
-  List<Rule> getRulesWithDefault(String dataSource);
-
-  boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
-
-  /**
-   * Remove rules for non-existence datasource (datasource with no segment) created older than the given timestamp.
-   *
-   * @param timestamp timestamp in milliseconds
-   * @return number of rules removed
-   */
-  int removeRulesForEmptyDatasourcesOlderThan(long timestamp);
+  @Override
+  public void aggregate(
+      ByteBuffer buf,
+      int numRows,
+      int[] positions,
+      @Nullable int[] rows,
+      int positionOffset
+  )
+  {
+    // Do nothing.
+  }
 }

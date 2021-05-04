@@ -19,12 +19,13 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.joda.time.Duration;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -35,10 +36,10 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class KillAuditLogTest
+public class KillRulesTest
 {
   @Mock
-  private AuditManager mockAuditManager;
+  private MetadataRuleManager mockRuleManager;
 
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
@@ -49,7 +50,13 @@ public class KillAuditLogTest
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  private KillAuditLog killAuditLog;
+  private KillRules killRules;
+
+  @Before
+  public void setup()
+  {
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getDatabaseRuleManager()).thenReturn(mockRuleManager);
+  }
 
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
@@ -62,16 +69,16 @@ public class KillAuditLogTest
         null,
         null,
         null,
+        null,
+        null,
         new Duration(Long.MAX_VALUE),
         new Duration("PT1S"),
-        null,
-        null,
         10,
         null
     );
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
-    killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockAuditManager);
+    killRules = new KillRules(druidCoordinatorConfig);
+    killRules.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verifyZeroInteractions(mockRuleManager);
   }
 
   @Test
@@ -86,16 +93,16 @@ public class KillAuditLogTest
         null,
         null,
         null,
+        null,
+        null,
         new Duration("PT6S"),
         new Duration("PT1S"),
-        null,
-        null,
         10,
         null
     );
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
-    killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verify(mockAuditManager).removeAuditLogsOlderThan(ArgumentMatchers.anyLong());
+    killRules = new KillRules(druidCoordinatorConfig);
+    killRules.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verify(mockRuleManager).removeRulesForEmptyDatasourcesOlderThan(ArgumentMatchers.anyLong());
     Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -110,16 +117,16 @@ public class KillAuditLogTest
         null,
         null,
         null,
+        null,
+        null,
         new Duration("PT3S"),
         new Duration("PT1S"),
-        null,
-        null,
         10,
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    exception.expectMessage("coordinator rule kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
+    killRules = new KillRules(druidCoordinatorConfig);
   }
 
   @Test
@@ -133,15 +140,15 @@ public class KillAuditLogTest
         null,
         null,
         null,
+        null,
+        null,
         new Duration("PT6S"),
         new Duration("PT-1S"),
-        null,
-        null,
         10,
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("coordinator audit kill retainDuration must be >= 0");
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    exception.expectMessage("coordinator rule kill retainDuration must be >= 0");
+    killRules = new KillRules(druidCoordinatorConfig);
   }
 }
