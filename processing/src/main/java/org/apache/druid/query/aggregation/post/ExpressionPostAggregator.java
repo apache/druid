@@ -31,6 +31,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -170,7 +171,7 @@ public class ExpressionPostAggregator implements PostAggregator
         }
     );
 
-    return parsed.get().eval(Parser.withMap(finalizedValues)).value();
+    return parsed.get().eval(InputBindings.withMap(finalizedValues)).value();
   }
 
   @Override
