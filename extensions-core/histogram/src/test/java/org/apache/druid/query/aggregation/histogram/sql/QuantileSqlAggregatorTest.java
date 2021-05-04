@@ -399,4 +399,48 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "APPROX_QUANTILE(hist_m1, 0.01) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "APPROX_QUANTILE(m1, 0.01) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM foo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new ApproximateHistogramAggregatorFactory("a1:agg", "m1", null, null, null, null, false),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new QuantilePostAggregator("a0", "a0:agg", 0.01f),
+                                new QuantilePostAggregator("a1", "a1:agg", 0.01f)
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", Double.NaN, Double.NaN}
+        )
+    );
+  }
 }

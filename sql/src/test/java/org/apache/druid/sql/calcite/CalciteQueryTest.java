@@ -12480,6 +12480,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + " count(*),\n"
+        + " COUNT(DISTINCT dim1),\n"
+        + " APPROX_COUNT_DISTINCT(distinct dim1),\n"
         + " sum(d1),\n"
         + " max(d1),\n"
         + " min(d1),\n"
@@ -12489,46 +12491,77 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " avg(l1),\n"
         + " avg(d1)\n"
         + "FROM druid.numfoo WHERE dim2 = 0",
-        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-                               .dataSource(CalciteTests.DATASOURCE3)
-                               .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
-                               .granularity(Granularities.ALL)
-                               .aggregators(
-                                   aggregators(
-                                       new CountAggregatorFactory("a0"),
-                                       new DoubleSumAggregatorFactory("a1", "d1"),
-                                       new DoubleMaxAggregatorFactory("a2", "d1"),
-                                       new DoubleMinAggregatorFactory("a3", "d1"),
-                                       new LongSumAggregatorFactory("a4", "l1"),
-                                       new LongMaxAggregatorFactory("a5", "l1"),
-                                       new LongMinAggregatorFactory("a6", "l1"),
-                                       new LongSumAggregatorFactory("a7:sum", "l1"),
-                                       useDefault
-                                       ? new CountAggregatorFactory("a7:count")
-                                       : new FilteredAggregatorFactory(
-                                           new CountAggregatorFactory("a7:count"),
-                                           not(selector("l1", null, null))
-                                       ),
-                                       new DoubleSumAggregatorFactory("a8:sum", "d1"),
-                                       useDefault
-                                       ? new CountAggregatorFactory("a8:count")
-                                       : new FilteredAggregatorFactory(
-                                           new CountAggregatorFactory("a8:count"),
-                                           not(selector("d1", null, null))
-                                       )
-                                   )
-                               )
-                               .postAggregators(
-                                   new ArithmeticPostAggregator("a7", "quotient", ImmutableList.of(new FieldAccessPostAggregator(null, "a7:sum"), new FieldAccessPostAggregator(null, "a7:count"))),
-                                   new ArithmeticPostAggregator("a8", "quotient", ImmutableList.of(new FieldAccessPostAggregator(null, "a8:sum"), new FieldAccessPostAggregator(null, "a8:count")))
-                               )
-                               .context(QUERY_CONTEXT_DEFAULT)
-                               .build()),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new CountAggregatorFactory("a0"),
+
+                          new CardinalityAggregatorFactory(
+                              "a1",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new CardinalityAggregatorFactory(
+                              "a2",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new DoubleSumAggregatorFactory("a3", "d1"),
+                          new DoubleMaxAggregatorFactory("a4", "d1"),
+                          new DoubleMinAggregatorFactory("a5", "d1"),
+                          new LongSumAggregatorFactory("a6", "l1"),
+                          new LongMaxAggregatorFactory("a7", "l1"),
+                          new LongMinAggregatorFactory("a8", "l1"),
+                          new LongSumAggregatorFactory("a9:sum", "l1"),
+                          useDefault
+                          ? new CountAggregatorFactory("a9:count")
+                          : new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("9:count"),
+                              not(selector("l1", null, null))
+                          ),
+                          new DoubleSumAggregatorFactory("a10:sum", "d1"),
+                          useDefault
+                          ? new CountAggregatorFactory("a10:count")
+                          : new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a10:count"),
+                              not(selector("d1", null, null))
+                          )
+                      )
+                  )
+                  .postAggregators(
+                      new ArithmeticPostAggregator(
+                          "a9",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a9:sum"),
+                              new FieldAccessPostAggregator(null, "a9:count")
+                          )
+                      ),
+                      new ArithmeticPostAggregator(
+                          "a10",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a10:sum"),
+                              new FieldAccessPostAggregator(null, "a10:count")
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{0L, 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0L, Long.MIN_VALUE, Long.MAX_VALUE, 0L, Double.NaN}
-            : new Object[]{0L, null, null, null, null, null, null, null, null}
+            ? new Object[]{0L, 0L, 0L, 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0L, Long.MIN_VALUE, Long.MAX_VALUE, 0L, Double.NaN}
+            : new Object[]{0L, 0L, 0L, null, null, null, null, null, null, null, null}
         )
     );
   }
@@ -12540,8 +12573,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     testQuery(
         "SELECT\n"
-        + " COUNT(DISTINCT dim1),\n"
-        + " APPROX_COUNT_DISTINCT(distinct dim1),\n"
         + " ANY_VALUE(dim1, 1024),\n"
         + " ANY_VALUE(l1),\n"
         + " EARLIEST(dim1, 1024),\n"
@@ -12549,29 +12580,213 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " LATEST(dim1, 1024),\n"
         + " LATEST(l1)\n"
         + "FROM druid.numfoo WHERE dim2 = 0",
-        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-                               .dataSource(CalciteTests.DATASOURCE3)
-                               .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
-                               .granularity(Granularities.ALL)
-                               .aggregators(
-                                   aggregators(
-                                       new CardinalityAggregatorFactory("a0", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
-                                       new CardinalityAggregatorFactory("a1", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
-                                       new StringAnyAggregatorFactory("a2", "dim1", 1024),
-                                       new LongAnyAggregatorFactory("a3", "l1"),
-                                       new StringFirstAggregatorFactory("a4", "dim1", 1024),
-                                       new LongFirstAggregatorFactory("a5", "l1"),
-                                       new StringLastAggregatorFactory("a6", "dim1", 1024),
-                                       new LongLastAggregatorFactory("a7", "l1")
-                                   )
-                               )
-                               .context(QUERY_CONTEXT_DEFAULT)
-                               .build()),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                          new LongAnyAggregatorFactory("a1", "l1"),
+                          new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                          new LongFirstAggregatorFactory("a3", "l1"),
+                          new StringLastAggregatorFactory("a4", "dim1", 1024),
+                          new LongLastAggregatorFactory("a5", "l1")
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{0L, 0L, "", 0L, "", 0L, "", 0L}
-            : new Object[]{0L, 0L, null, null, null, null, null, null}
+            ? new Object[]{"", 0L, "", 0L, "", 0L}
+            : new Object[]{null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + " dim2,\n"
+        + " count(*) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " COUNT(DISTINCT dim1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " APPROX_COUNT_DISTINCT(distinct dim1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " sum(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " max(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " min(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " sum(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " max(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " min(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " avg(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " avg(d1) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM druid.numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new CardinalityAggregatorFactory("a1", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new CardinalityAggregatorFactory("a2", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleSumAggregatorFactory("a3", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleMaxAggregatorFactory("a4", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleMinAggregatorFactory("a5", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongSumAggregatorFactory("a6", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongMaxAggregatorFactory("a7", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongMinAggregatorFactory("a8", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongSumAggregatorFactory("a9:sum", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                useDefault
+                                ? new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a9:count"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a9:count"),
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleSumAggregatorFactory("a10:sum", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                useDefault
+                                ? new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a10:count"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a10:count"),
+                                    and(not(selector("d1", null, null)), selector("dim1", "nonexistent", null))
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "a9",
+                                    "quotient",
+                                    ImmutableList.of(new FieldAccessPostAggregator(
+                                        null,
+                                        "a9:sum"
+                                    ), new FieldAccessPostAggregator(null, "a9:count"))
+                                ),
+                                new ArithmeticPostAggregator(
+                                    "a10",
+                                    "quotient",
+                                    ImmutableList.of(new FieldAccessPostAggregator(
+                                        null,
+                                        "a10:sum"
+                                    ), new FieldAccessPostAggregator(null, "a10:count"))
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"a", 0L, 0L, 0L, 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0L, Long.MIN_VALUE, Long.MAX_VALUE, 0L, Double.NaN}
+            : new Object[]{"a", 0L, 0L, 0L, null, null, null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValuesNonVectorized() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT\n"
+        + " dim2,\n"
+        + " ANY_VALUE(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " ANY_VALUE(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " EARLIEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " EARLIEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " LATEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " LATEST(l1) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM druid.numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongAnyAggregatorFactory("a1", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongFirstAggregatorFactory("a3", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new StringLastAggregatorFactory("a4", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongLastAggregatorFactory("a5", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"a", "", 0L, "", 0L, "", 0L}
+            : new Object[]{"a", null, null, null, null, null, null}
         )
     );
   }

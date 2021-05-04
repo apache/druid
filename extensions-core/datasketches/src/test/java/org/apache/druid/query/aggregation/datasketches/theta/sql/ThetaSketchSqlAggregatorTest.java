@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchSetPostAggreg
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
@@ -621,6 +622,80 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(new Object[]{0L, 0L, "0.0", "0.0"})
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "  DS_THETA(dim2, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "  DS_THETA(thetasketch_dim1, 1024) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM foo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new SketchMergeAggregatorFactory(
+                                        "a0",
+                                        "v0",
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new SketchMergeAggregatorFactory(
+                                        "a1",
+                                        "thetasketch_dim1",
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new SketchMergeAggregatorFactory(
+                                        "a2",
+                                        "v0",
+                                        1024,
+                                        null,
+                                        null,
+                                        null
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new SketchMergeAggregatorFactory(
+                                        "a3",
+                                        "thetasketch_dim1",
+                                        1024,
+                                        null,
+                                        null,
+                                        null
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{"a", 0L, 0L, "0.0", "0.0"})
     );
   }
 }

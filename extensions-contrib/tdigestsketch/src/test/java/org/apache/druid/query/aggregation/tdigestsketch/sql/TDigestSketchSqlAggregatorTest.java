@@ -29,6 +29,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
@@ -201,38 +202,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"\"AAAAAT/wAAAAAAAAQBgAAAAAAABAWQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""}
-        )
-    );
-  }
-
-  @Test
-  public void testEmptyTimeseriesResults() throws Exception
-  {
-    cannotVectorize();
-
-    testQuery(
-        "SELECT\n"
-        + "TDIGEST_GENERATE_SKETCH(m1),"
-        + "TDIGEST_QUANTILE(qsketch_m1, 0.1)"
-        + "FROM foo WHERE dim2 = 0",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
-                  .granularity(Granularities.ALL)
-                  .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
-                      new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100)
-                  ))
-                  .postAggregators(
-                      new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.1f)
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", Double.NaN}
         )
     );
   }
@@ -458,6 +427,82 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
             NullHandling.replaceWithDefault()
             ? new Object[]{0.0, 0.5, 10.1}
             : new Object[]{1.0, 2.0, 10.1}
+        )
+    );
+  }
+
+  @Test
+  public void testEmptyTimeseriesResults() throws Exception
+  {
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "TDIGEST_GENERATE_SKETCH(m1),"
+        + "TDIGEST_QUANTILE(qsketch_m1, 0.1)"
+        + "FROM foo WHERE dim2 = 0",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                      new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100)
+                  ))
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.1f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", Double.NaN}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "TDIGEST_GENERATE_SKETCH(m1) FILTER(WHERE dim1 = 'nonexistent'),"
+        + "TDIGEST_QUANTILE(qsketch_m1, 0.1) FILTER(WHERE dim1 = 'nonexistent')"
+        + "FROM foo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.1f)
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", Double.NaN}
         )
     );
   }

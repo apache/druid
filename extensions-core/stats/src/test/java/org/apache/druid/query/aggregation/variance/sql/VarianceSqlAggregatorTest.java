@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregator;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorCollector;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
@@ -544,6 +545,86 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             NullHandling.replaceWithDefault()
             ? new Object[]{0.0, 0.0, 0.0, 0.0, 0L, 0L, 0L, 0L}
             : new Object[]{null, null, null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "STDDEV_POP(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV_SAMP(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "VARIANCE(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV_POP(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV_SAMP(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "VARIANCE(l1) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a2:agg", "d1", "sample", "double"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a3:agg", "d1", "sample", "double"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a4:agg", "l1", "population", "long"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a5:agg", "l1", "sample", "long"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a6:agg", "l1", "sample", "long"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new VarianceAggregatorFactory("a7:agg", "l1", "sample", "long"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new StandardDeviationPostAggregator("a0", "a0:agg", "population"),
+                                new StandardDeviationPostAggregator("a1", "a1:agg", "sample"),
+                                new StandardDeviationPostAggregator("a2", "a2:agg", "sample"),
+                                new StandardDeviationPostAggregator("a4", "a4:agg", "population"),
+                                new StandardDeviationPostAggregator("a5", "a5:agg", "sample"),
+                                new StandardDeviationPostAggregator("a6", "a6:agg", "sample")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault()
+            ? new Object[]{"a", 0.0, 0.0, 0.0, 0.0, 0L, 0L, 0L, 0L}
+            : new Object[]{"a", null, null, null, null, null, null, null, null}
         )
     );
   }

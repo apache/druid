@@ -37,12 +37,14 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
@@ -527,6 +529,62 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
+                CalciteTests.getJsonMapper().writeValueAsString(expected1),
+                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    // makes empty bloom filters
+    cannotVectorize();
+
+    BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
+    BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
+
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "BLOOM_FILTER(dim1, 1000) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "BLOOM_FILTER(l1, 1000) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new BloomFilterAggregatorFactory(
+                                        "a0:agg",
+                                        new DefaultDimensionSpec("dim1", "a0:dim1"),
+                                        TEST_NUM_ENTRIES
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new BloomFilterAggregatorFactory(
+                                        "a1:agg",
+                                        new DefaultDimensionSpec("l1", "a1:l1", ValueType.LONG),
+                                        TEST_NUM_ENTRIES
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[] {
+                "a",
                 CalciteTests.getJsonMapper().writeValueAsString(expected1),
                 CalciteTests.getJsonMapper().writeValueAsString(expected2)
             }
