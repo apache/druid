@@ -569,7 +569,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // Map<{group id}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
-  // We keep two separate maps for tracking the current state of partition->task group mappings [partitionGroups] and partition->offset
+  // We keep two separate maps for tracking the current state of task group->partition mappings [partitionGroups] and partition->offset
   // mappings [partitionOffsets]. The starting offset for a new partition in [partitionOffsets] is initially set to getNotSetMarker(). When a new task group
   // is created and is assigned partitions, if the offset for an assigned partition in [partitionOffsets] is getNotSetMarker() it will take the starting
   // offset value from the metadata store, and if it can't find it there, from stream. Once a task begins
