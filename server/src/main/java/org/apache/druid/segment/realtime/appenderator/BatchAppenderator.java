@@ -73,7 +73,6 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -130,7 +129,6 @@ public class BatchAppenderator implements Appenderator
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
 
@@ -190,6 +188,11 @@ public class BatchAppenderator implements Appenderator
       ParseExceptionHandler parseExceptionHandler
   )
   {
+    Preconditions.checkArgument(
+        sinkQuerySegmentWalker == null,
+        "Batch appenderator does not use a versioned timeline"
+    );
+
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -204,13 +207,6 @@ public class BatchAppenderator implements Appenderator
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
-    if (sinkQuerySegmentWalker == null) {
-      this.sinkTimeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
-    } else {
-      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
-    }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
@@ -255,6 +251,10 @@ public class BatchAppenderator implements Appenderator
   ) throws IndexSizeExceededException, SegmentNotWritableException
   {
     throwPersistErrorIfExists();
+    Preconditions.checkArgument(
+        committerSupplier == null,
+        "Batch appenderator does not need a committer!"
+    );
 
     if (!identifier.getDataSource().equals(schema.getDataSource())) {
       throw new IAE(
@@ -483,7 +483,6 @@ public class BatchAppenderator implements Appenderator
 
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
-      sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
     return retVal;
@@ -1223,12 +1222,6 @@ public class BatchAppenderator implements Appenderator
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);
-        sinkTimeline.add(
-            currSink.getInterval(),
-            currSink.getVersion(),
-            identifier.getShardSpec().createChunk(currSink)
-        );
-
         segmentAnnouncer.announceSegment(currSink.getSegment());
       }
       catch (IOException e) {
@@ -1324,11 +1317,6 @@ public class BatchAppenderator implements Appenderator
             }
 
             droppingSinks.remove(identifier);
-            sinkTimeline.remove(
-                sink.getInterval(),
-                sink.getVersion(),
-                identifier.getShardSpec().createChunk(sink)
-            );
             for (FireHydrant hydrant : sink) {
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
