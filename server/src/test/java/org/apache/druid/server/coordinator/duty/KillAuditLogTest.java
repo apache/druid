@@ -65,7 +65,8 @@ public class KillAuditLogTest
         new Duration(Long.MAX_VALUE),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
@@ -87,7 +88,8 @@ public class KillAuditLogTest
         new Duration("PT6S"),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
@@ -109,7 +111,8 @@ public class KillAuditLogTest
         new Duration("PT3S"),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -130,7 +133,8 @@ public class KillAuditLogTest
         new Duration("PT6S"),
         new Duration("PT-1S"),
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator audit kill retainDuration must be >= 0");
