@@ -55,10 +55,11 @@ public class CardinalityBufferAggregator implements BufferAggregator
     // Save position, limit and restore later instead of allocating a new ByteBuffer object
     final int oldPosition = buf.position();
     final int oldLimit = buf.limit();
-    buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-    buf.position(position);
 
     try {
+      buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+      buf.position(position);
+
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
       if (byRow) {
         CardinalityAggregator.hashRow(selectorPluses, collector);

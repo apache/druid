@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -500,13 +501,15 @@ public class OperatorConversions
    * Operand type checker that is used in 'simple' situations: there are a particular number of operands, with
    * particular types, some of which may be optional or nullable, and some of which may be required to be literals.
    */
-  private static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
+  @VisibleForTesting
+  static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   {
     private final List<SqlTypeFamily> operandTypes;
     private final int requiredOperands;
     private final IntSet nullableOperands;
     private final IntSet literalOperands;
 
+    @VisibleForTesting
     DefaultOperandTypeChecker(
         final List<SqlTypeFamily> operandTypes,
         final int requiredOperands,

@@ -166,7 +166,7 @@ class UnaryNotExpr extends UnaryExpr
     }
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
-    return ExprEval.of(!ret.asBoolean(), retType);
+    return ExprEval.ofBoolean(!ret.asBoolean(), retType);
   }
 
   @Nullable

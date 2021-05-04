@@ -34,6 +34,11 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 public class DoubleCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
 {
+  public static void addDoubleToCollector(final HyperLogLogCollector collector, final double n)
+  {
+    collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits(n)).asBytes());
+  }
+
   @Override
   public void hashRow(BaseDoubleColumnValueSelector selector, Hasher hasher)
   {
@@ -46,7 +51,7 @@ public class DoubleCardinalityAggregatorColumnSelectorStrategy
   public void hashValues(BaseDoubleColumnValueSelector selector, HyperLogLogCollector collector)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits(selector.getDouble())).asBytes());
+      addDoubleToCollector(collector, selector.getDouble());
     }
   }
 }

@@ -374,19 +374,9 @@ public abstract class ExprEval<T>
     throw new UOE("Invalid array expression type: %s", next);
   }
 
-  public static ExprEval ofLong(@Nullable Number longValue)
-  {
-    return new LongExprEval(longValue);
-  }
-
   public static ExprEval of(long longValue)
   {
     return new LongExprEval(longValue);
-  }
-
-  public static ExprEval ofDouble(@Nullable Number doubleValue)
-  {
-    return new DoubleExprEval(doubleValue);
   }
 
   public static ExprEval of(double doubleValue)
@@ -402,22 +392,50 @@ public abstract class ExprEval<T>
     return new StringExprEval(stringValue);
   }
 
+  public static ExprEval ofLong(@Nullable Number longValue)
+  {
+    if (longValue == null) {
+      return LongExprEval.OF_NULL;
+    }
+    return new LongExprEval(longValue);
+  }
+
+  public static ExprEval ofDouble(@Nullable Number doubleValue)
+  {
+    if (doubleValue == null) {
+      return DoubleExprEval.OF_NULL;
+    }
+    return new DoubleExprEval(doubleValue);
+  }
+
   public static ExprEval ofLongArray(@Nullable Long[] longValue)
   {
+    if (longValue == null) {
+      return LongArrayExprEval.OF_NULL;
+    }
     return new LongArrayExprEval(longValue);
   }
 
   public static ExprEval ofDoubleArray(@Nullable Double[] doubleValue)
   {
+    if (doubleValue == null) {
+      return DoubleArrayExprEval.OF_NULL;
+    }
     return new DoubleArrayExprEval(doubleValue);
   }
 
   public static ExprEval ofStringArray(@Nullable String[] stringValue)
   {
+    if (stringValue == null) {
+      return StringArrayExprEval.OF_NULL;
+    }
     return new StringArrayExprEval(stringValue);
   }
 
-  public static ExprEval of(boolean value, ExprType type)
+  /**
+   * Convert a boolean back into native expression type
+   */
+  public static ExprEval ofBoolean(boolean value, ExprType type)
   {
     switch (type) {
       case DOUBLE:
@@ -431,11 +449,17 @@ public abstract class ExprEval<T>
     }
   }
 
+  /**
+   * Convert a boolean into a long expression type
+   */
   public static ExprEval ofLongBoolean(boolean value)
   {
     return ExprEval.of(Evals.asLong(value));
   }
 
+  /**
+   * Examine java type to find most appropriate expression type
+   */
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val instanceof ExprEval) {
@@ -631,6 +655,8 @@ public abstract class ExprEval<T>
 
   private static class DoubleExprEval extends NumericExprEval
   {
+    private static final DoubleExprEval OF_NULL = new DoubleExprEval(null);
+
     private DoubleExprEval(@Nullable Number value)
     {
       super(value == null ? NullHandling.defaultDoubleValue() : (Double) value.doubleValue());
@@ -691,6 +717,8 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
+    private static final LongExprEval OF_NULL = new LongExprEval(null);
+
     private LongExprEval(@Nullable Number value)
     {
       super(value == null ? NullHandling.defaultLongValue() : (Long) value.longValue());
@@ -758,6 +786,8 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
+    private static final StringExprEval OF_NULL = new StringExprEval(null);
+
     // Cached primitive values.
     private boolean intValueValid = false;
     private boolean longValueValid = false;
@@ -767,8 +797,6 @@ public abstract class ExprEval<T>
     private long longValue;
     private double doubleValue;
     private boolean booleanValue;
-
-    private static final StringExprEval OF_NULL = new StringExprEval(null);
 
     @Nullable
     private Number numericVal;
@@ -1014,6 +1042,8 @@ public abstract class ExprEval<T>
 
   private static class LongArrayExprEval extends ArrayExprEval<Long>
   {
+    private static final LongArrayExprEval OF_NULL = new LongArrayExprEval(null);
+
     private LongArrayExprEval(@Nullable Long[] value)
     {
       super(value);
@@ -1073,6 +1103,8 @@ public abstract class ExprEval<T>
 
   private static class DoubleArrayExprEval extends ArrayExprEval<Double>
   {
+    private static final DoubleArrayExprEval OF_NULL = new DoubleArrayExprEval(null);
+
     private DoubleArrayExprEval(@Nullable Double[] value)
     {
       super(value);
@@ -1132,6 +1164,8 @@ public abstract class ExprEval<T>
 
   private static class StringArrayExprEval extends ArrayExprEval<String>
   {
+    private static final StringArrayExprEval OF_NULL = new StringArrayExprEval(null);
+
     private boolean longValueValid = false;
     private boolean doubleValueValid = false;
     private Long[] longValues;
