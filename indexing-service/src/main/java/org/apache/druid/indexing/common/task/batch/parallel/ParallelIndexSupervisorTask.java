@@ -1125,7 +1125,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
     }
 
-    final boolean useLineageBasedSegmentAllocation = toolbox.getConfig().isUseLineageBasedSegmentAllocation();
+    final boolean useLineageBasedSegmentAllocation = getContextValue(
+        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
+        toolbox.getConfig().isUseLineageBasedSegmentAllocation()
+    );
 
     try {
       final SegmentIdWithShardSpec segmentIdentifier;
