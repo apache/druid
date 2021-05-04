@@ -895,7 +895,8 @@ public class CompactSegmentsTest
   }
 
   @Test
-  public void testRunWithLockedIntervals() {
+  public void testRunWithLockedIntervals()
+  {
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
