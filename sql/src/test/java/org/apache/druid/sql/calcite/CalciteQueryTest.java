@@ -12584,7 +12584,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " EARLIEST(dim1, 1024),\n"
         + " EARLIEST(l1),\n"
         + " LATEST(dim1, 1024),\n"
-        + " LATEST(l1)\n"
+        + " LATEST(l1),\n"
+        + " ARRAY_AGG(DISTINCT dim3)\n"
         + "FROM druid.numfoo WHERE dim2 = 0",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -12599,7 +12600,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new StringFirstAggregatorFactory("a2", "dim1", 1024),
                           new LongFirstAggregatorFactory("a3", "l1"),
                           new StringLastAggregatorFactory("a4", "dim1", 1024),
-                          new LongLastAggregatorFactory("a5", "l1")
+                          new LongLastAggregatorFactory("a5", "l1"),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a6",
+                              ImmutableSet.of("dim3"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"dim3\")",
+                              "array_set_add_all(\"__acc\", \"a6\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -12607,8 +12621,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"", 0L, "", 0L, "", 0L}
-            : new Object[]{null, null, null, null, null, null}
+            ? new Object[]{"", 0L, "", 0L, "", 0L, null}
+            : new Object[]{null, null, null, null, null, null, null}
         )
     );
   }
@@ -12748,7 +12762,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " EARLIEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " EARLIEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " LATEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
-        + " LATEST(l1) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + " LATEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " ARRAY_AGG(DISTINCT dim3) FILTER(WHERE dim1 = 'nonexistent')"
         + "FROM druid.numfoo WHERE dim2 = 'a' GROUP BY dim2",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -12783,6 +12798,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new LongLastAggregatorFactory("a5", "l1"),
                                     selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new ExpressionLambdaAggregatorFactory(
+                                        "a6",
+                                        ImmutableSet.of("dim3"),
+                                        "__acc",
+                                        "[]",
+                                        "[]",
+                                        "array_set_add(\"__acc\", \"dim3\")",
+                                        "array_set_add_all(\"__acc\", \"a6\")",
+                                        null,
+                                        "if(array_length(o) == 0, null, o)",
+                                        new HumanReadableBytes(1024),
+                                        TestExprMacroTable.INSTANCE
+                                    ),
+                                    selector("dim1", "nonexistent", null)
                                 )
                             )
                         )
@@ -12791,8 +12822,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"a", "", 0L, "", 0L, "", 0L}
-            : new Object[]{"a", null, null, null, null, null, null}
+            ? new Object[]{"a", "", 0L, "", 0L, "", 0L, null}
+            : new Object[]{"a", null, null, null, null, null, null, null}
         )
     );
   }
@@ -18302,7 +18333,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18354,7 +18385,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18458,7 +18489,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18513,7 +18544,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18554,7 +18585,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18604,7 +18635,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18761,7 +18792,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                         )
                                     )
-                                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                                    .context(QUERY_CONTEXT_DEFAULT)
                                     .build()
                           ),
                           "j0.",
@@ -18837,7 +18868,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                   )
                                               )
                                           )
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "j0.",
