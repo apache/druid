@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -308,7 +308,7 @@ public class ExpressionSelectors
         return supplier.get();
       };
     } else {
-      return Parser.withSuppliers(suppliers);
+      return InputBindings.withSuppliers(suppliers);
     }
   }
 

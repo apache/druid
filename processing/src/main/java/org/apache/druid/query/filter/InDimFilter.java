@@ -432,14 +432,18 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       sortedValues = sortedValuesList;
     }
 
+    // Hash all values, in sorted order, as their length followed by their content.
     final Hasher hasher = Hashing.sha256().newHasher();
     for (String v : sortedValues) {
       if (v == null) {
-        hasher.putInt(0);
+        // Encode null as length -1, no content.
+        hasher.putInt(-1);
       } else {
+        hasher.putInt(v.length());
         hasher.putString(v, StandardCharsets.UTF_8);
       }
     }
+
     return new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
         .appendString(dimension)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)

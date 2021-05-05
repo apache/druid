@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -33,6 +34,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+
 public class ValueMatchersTest extends InitializedNullHandlingTest
 {
   private DictionaryEncodedColumnSupplier supplierSingleConstant;
@@ -44,18 +47,33 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
   {
     supplierSingleConstant = new DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
+        GenericIndexed.fromIterable(
+            ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
+            GenericIndexed.BYTE_BUFFER_STRATEGY
+        ),
         () -> VSizeColumnarInts.fromArray(new int[]{0}),
         null,
         0
     );
     supplierSingle = new DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(ImmutableList.of("value", "value2"), GenericIndexed.STRING_STRATEGY),
+        GenericIndexed.fromIterable(
+            ImmutableList.of(
+                ByteBuffer.wrap(StringUtils.toUtf8("value")),
+                ByteBuffer.wrap(StringUtils.toUtf8("value2"))
+            ),
+            GenericIndexed.BYTE_BUFFER_STRATEGY
+        ),
         () -> VSizeColumnarInts.fromArray(new int[]{0, 0, 1, 0, 1}),
         null,
         0
     );
     supplierMulti = new DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
+        GenericIndexed.fromIterable(
+            ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
+            GenericIndexed.BYTE_BUFFER_STRATEGY
+        ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(
             ImmutableList.of(
