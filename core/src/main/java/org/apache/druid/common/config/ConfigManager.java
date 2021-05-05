@@ -180,16 +180,16 @@ public class ConfigManager
   {
     if (newObject == null || !started) {
       if (newObject == null) {
-        return SetResult.fail(new IllegalAccessException("input obj is null"));
+        return SetResult.fail(new IllegalAccessException("input obj is null"), false);
       } else {
-        return SetResult.fail(new IllegalStateException("configManager is not started yet"));
+        return SetResult.fail(new IllegalStateException("configManager is not started yet"), false);
       }
     }
 
     final byte[] newBytes = serde.serialize(newObject);
 
     try {
-      exec.submit(
+      return exec.submit(
           () -> {
             if (oldObject == null) {
               dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
@@ -198,21 +198,20 @@ public class ConfigManager
               MetadataCASUpdate metadataCASUpdate = createMetadataCASUpdate(key, oldBytes, newBytes);
               boolean success = dbConnector.compareAndSwap(ImmutableList.of(metadataCASUpdate));
               if (!success) {
-                throw new IllegalStateException("Config value has changed");
+                return SetResult.fail(new IllegalStateException("Config value has changed"), true);
               }
             }
             final ConfigHolder configHolder = watchedConfigs.get(key);
             if (configHolder != null) {
               configHolder.swapIfNew(newBytes);
             }
-            return true;
+            return SetResult.ok();
           }
       ).get();
-      return SetResult.ok();
     }
     catch (Exception e) {
       log.warn(e, "Failed to set[%s]", key);
-      return SetResult.fail(e);
+      return SetResult.fail(e, false);
     }
   }
 
@@ -237,24 +236,32 @@ public class ConfigManager
   {
     private final Exception exception;
 
+    private final boolean retryableException;
+
     public static SetResult ok()
     {
-      return new SetResult(null);
+      return new SetResult(null, null);
     }
 
-    public static SetResult fail(Exception e)
+    public static SetResult fail(Exception e, boolean retryableException)
     {
-      return new SetResult(e);
+      return new SetResult(e, retryableException);
     }
 
-    private SetResult(@Nullable Exception exception)
+    private SetResult(@Nullable Exception exception, @Nullable Boolean retryableException)
     {
       this.exception = exception;
+      this.retryableException = retryableException;
     }
 
     public boolean isOk()
     {
       return exception == null;
+    }
+
+    public boolean isRetryable()
+    {
+      return Boolean.TRUE.equals(retryableException);
     }
 
     public Exception getException()
