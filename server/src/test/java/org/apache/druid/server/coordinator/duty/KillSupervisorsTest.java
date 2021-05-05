@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.joda.time.Duration;
@@ -35,10 +35,10 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class KillAuditLogTest
+public class KillSupervisorsTest
 {
   @Mock
-  private AuditManager mockAuditManager;
+  private MetadataSupervisorManager mockMetadataSupervisorManager;
 
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
@@ -49,7 +49,7 @@ public class KillAuditLogTest
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  private KillAuditLog killAuditLog;
+  private KillSupervisors killSupervisors;
 
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
@@ -71,9 +71,9 @@ public class KillAuditLogTest
         10,
         null
     );
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
-    killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockAuditManager);
+    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
+    killSupervisors.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verifyZeroInteractions(mockMetadataSupervisorManager);
   }
 
   @Test
@@ -97,9 +97,9 @@ public class KillAuditLogTest
         10,
         null
     );
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
-    killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verify(mockAuditManager).removeAuditLogsOlderThan(ArgumentMatchers.anyLong());
+    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
+    killSupervisors.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verify(mockMetadataSupervisorManager).removeTerminatedSupervisorsOlderThan(ArgumentMatchers.anyLong());
     Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -124,8 +124,8 @@ public class KillAuditLogTest
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    exception.expectMessage("Coordinator supervisor kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
+    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class KillAuditLogTest
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("coordinator audit kill retainDuration must be >= 0");
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    exception.expectMessage("Coordinator supervisor kill retainDuration must be >= 0");
+    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
   }
 }

@@ -261,7 +261,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
     for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
       final SupervisorSpec spec = supervisor.getValue();
       if (spec instanceof NoopSupervisorSpec) {
-        dbi.withHandle(
+        removedCount += dbi.withHandle(
             handle -> {
               Update sql = handle.createStatement(
                   StringUtils.format(
@@ -274,7 +274,6 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         .execute();
             }
         );
-        removedCount++;
       }
     }
     return removedCount;
