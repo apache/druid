@@ -178,8 +178,6 @@ public interface IntegrationTestingConfig
     return getSchemaRegistryHost();
   }
 
-  boolean isDocker();
-
   @Nullable
   String getDruidClusterHost();
 }
