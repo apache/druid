@@ -60,7 +60,7 @@ There are currently no configuration properties specific to Moving Average.
 * movingAverage is missing support for the following timeseries properties: `descending`.
 * movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error).
 
-##Query spec:
+## Query spec
 * Most properties in the query spec derived from  [groupBy query](../../querying/groupbyquery.md) / [timeseries](../../querying/timeseriesquery.md), see documentation for these query types.
 
 |property|description|required?|

@@ -9,7 +9,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
 >
   <p>
     Edit the coordinator dynamic configuration on the fly. For more information please refer to the
-     
+
     <Memo(ExternalLink)
       href="https://druid.apache.org/docs/0.20.0/configuration/index.html#dynamic-configuration"
     >
@@ -51,11 +51,11 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": false,
           "info": <React.Fragment>
-            Send kill tasks for ALL dataSources if property 
+            Send kill tasks for ALL dataSources if property
             <Unknown>
               druid.coordinator.kill.on
             </Unknown>
-             is true. If this is set to true then 
+             is true. If this is set to true then
             <Unknown>
               killDataSourceWhitelist
             </Unknown>
@@ -68,7 +68,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "emptyValue": Array [],
           "info": <React.Fragment>
             List of dataSources for which kill tasks are sent if property
-             
+
             <Unknown>
               druid.coordinator.kill.on
             </Unknown>
@@ -81,7 +81,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "emptyValue": Array [],
           "info": <React.Fragment>
             List of dataSources for which pendingSegments are NOT cleaned up if property
-             
+
             <Unknown>
               druid.coordinator.kill.pendingSegments.on
             </Unknown>
@@ -142,7 +142,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "emptyValue": Array [],
           "info": <React.Fragment>
             List of historical services to 'decommission'. Coordinator will not assign new segments to 'decommissioning' services, and segments will be moved away from them to be placed on non-decommissioning services at the maximum rate specified by
-             
+
             <Unknown>
               decommissioningMaxPercentOfMaxSegmentsToMove
             </Unknown>
@@ -154,7 +154,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": 70,
           "info": <React.Fragment>
-            The maximum number of segments that may be moved away from 'decommissioning' services to non-decommissioning (that is, active) services during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by 
+            The maximum number of segments that may be moved away from 'decommissioning' services to non-decommissioning (that is, active) services during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by
             <Unknown>
               maxSegmentsToMove
             </Unknown>
@@ -192,9 +192,17 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "type": "boolean",
         },
         Object {
+          "defaultValue": 2147483647,
+          "info": <React.Fragment>
+            The maximum number of non-primary replicants to load in a single Coordinator cycle. Once this limit is hit, only primary replicants will be loaded for the remainder of the cycle. Tuning this value lower can help reduce the delay in loading primary segments when the cluster has a very large number of non-primary replicants to load (such as when a single historical drops out of the cluster leaving many under-replicated segments).
+          </React.Fragment>,
+          "name": "maxNonPrimaryReplicantsToLoad",
+          "type": "number",
+        },
+        Object {
           "defaultValue": 0,
           "info": <React.Fragment>
-            Only used if 
+            Only used if
             <Unknown>
               druid.coordinator.guildReplication.on=true
             </Unknown>
@@ -206,7 +214,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
         Object {
           "defaultValue": false,
           "info": <React.Fragment>
-            Only used if 
+            Only used if
             <Unknown>
               druid.coordinator.guildReplication.on=true
             </Unknown>

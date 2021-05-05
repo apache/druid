@@ -97,6 +97,13 @@ public class CoordinatorDynamicConfig
   private final boolean replicateAfterLoadTimeout;
 
   /**
+   * This is the maximum number of non-primary segment replicants to load per Coordination run. This number can
+   * be set to put a hard upper limit on the number of replicants loaded. It is a tool that can help prevent
+   * long delays in new data loads after events such as a Historical server leaving the cluster.
+   */
+  private final int maxNonPrimaryReplicantsToLoad;
+
+  /**
    * Only applies if druid.coorinator.guildReplication.on=true.
    *
    * If this is non-zero and there are segments left to be moved in the coordination cycle after decommissioning moves
@@ -147,6 +154,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
+      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
       @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove") double guildReplicationMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("emitGuildReplicationMetrics") boolean emitGuildReplicationMetrics
   )
@@ -195,6 +203,22 @@ public class CoordinatorDynamicConfig
     }
     this.pauseCoordination = pauseCoordination;
     this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+
+    if (maxNonPrimaryReplicantsToLoad == null) {
+      log.debug(
+          "maxNonPrimaryReplicantsToLoad was null! This is likely because your metastore does not "
+          + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+          + "to the Druid default of %d. It is recommended that you re-submit your dynamic config with your "
+          + "desired value for maxNonPrimaryReplicantsToLoad",
+          Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
+      );
+      maxNonPrimaryReplicantsToLoad = Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD;
+    }
+    Preconditions.checkArgument(
+        maxNonPrimaryReplicantsToLoad >= 0,
+        "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
+    );
+    this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
 
     Preconditions.checkArgument(
         guildReplicationMaxPercentOfMaxSegmentsToMove >= 0
@@ -363,6 +387,13 @@ public class CoordinatorDynamicConfig
     return replicateAfterLoadTimeout;
   }
 
+  @Min(0)
+  @JsonProperty
+  public int getMaxNonPrimaryReplicantsToLoad()
+  {
+    return maxNonPrimaryReplicantsToLoad;
+  }
+
   /**
    * The percent of {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} - the number of segments moved from
    * decommissioning servers that determines the maximum number of segments that may be moved due to being on <= 1
@@ -410,6 +441,7 @@ public class CoordinatorDynamicConfig
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
+           ", maxNonPrimaryReplicantsToLoad=" + maxNonPrimaryReplicantsToLoad +
            ", guildReplicationMaxPercentOfSegmentsToMove=" + guildReplicationMaxPercentOfMaxSegmentsToMove +
            ", emitGuildReplicationMetrics=" + emitGuildReplicationMetrics +
            '}';
@@ -476,6 +508,9 @@ public class CoordinatorDynamicConfig
     if (replicateAfterLoadTimeout != that.replicateAfterLoadTimeout) {
       return false;
     }
+    if (maxNonPrimaryReplicantsToLoad != that.maxNonPrimaryReplicantsToLoad) {
+      return false;
+    }
     if (decommissioningMaxPercentOfMaxSegmentsToMove != that.decommissioningMaxPercentOfMaxSegmentsToMove) {
       return false;
     }
@@ -505,6 +540,7 @@ public class CoordinatorDynamicConfig
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
         pauseCoordination,
+        maxNonPrimaryReplicantsToLoad,
         replicateAfterLoadTimeout,
         guildReplicationMaxPercentOfMaxSegmentsToMove,
         emitGuildReplicationMetrics
@@ -533,6 +569,7 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
     private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
+    private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
     private static final double DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT = 0;
     private static final boolean DEFAULT_EMIT_GUILD_REPLICATION_METRICS = false;
 
@@ -553,6 +590,7 @@ public class CoordinatorDynamicConfig
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
     private Boolean pauseCoordination;
     private Boolean replicateAfterLoadTimeout;
+    private Integer maxNonPrimaryReplicantsToLoad;
     private Double guildReplicationMaxPercentOfMaxSegmentsToMove;
     private Boolean emitGuildReplicationMetrics;
 
@@ -581,6 +619,7 @@ public class CoordinatorDynamicConfig
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
         @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
+        @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
         @JsonProperty("guildReplicationMaxPercentOfMaxSegmentsToMove")
         @Nullable Double guildReplicationMaxPercentOfMaxSegmentsToMove,
         @JsonProperty("emitGuildReplicationMetrics") @Nullable Boolean emitGuildReplicationMetrics
@@ -604,6 +643,7 @@ public class CoordinatorDynamicConfig
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
       this.pauseCoordination = pauseCoordination;
       this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
       this.guildReplicationMaxPercentOfMaxSegmentsToMove = guildReplicationMaxPercentOfMaxSegmentsToMove;
       this.emitGuildReplicationMetrics = emitGuildReplicationMetrics;
     }
@@ -704,6 +744,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withMaxNonPrimaryReplicantsToLoad(int maxNonPrimaryReplicantsToLoad)
+    {
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
+      return this;
+    }
+
     public Builder withGuildReplicationMaxPercentOfMaxSegmentsToMove(Double percent)
     {
       this.guildReplicationMaxPercentOfMaxSegmentsToMove = percent;
@@ -745,6 +791,7 @@ public class CoordinatorDynamicConfig
           : decommissioningMaxPercentOfMaxSegmentsToMove,
           pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination,
           replicateAfterLoadTimeout == null ? DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null ? DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD : maxNonPrimaryReplicantsToLoad,
           guildReplicationMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_GUILD_REPLICATION_MAX_SEGMENTS_TOMOVE_PERCENT : guildReplicationMaxPercentOfMaxSegmentsToMove,
           emitGuildReplicationMetrics == null ? DEFAULT_EMIT_GUILD_REPLICATION_METRICS : emitGuildReplicationMetrics
@@ -784,6 +831,7 @@ public class CoordinatorDynamicConfig
           : decommissioningMaxPercentOfMaxSegmentsToMove,
           pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination,
           replicateAfterLoadTimeout == null ? defaults.getReplicateAfterLoadTimeout() : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null ? defaults.getMaxNonPrimaryReplicantsToLoad() : maxNonPrimaryReplicantsToLoad,
           guildReplicationMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getGuildReplicationMaxPercentOfMaxSegmentsToMove() : guildReplicationMaxPercentOfMaxSegmentsToMove,
           emitGuildReplicationMetrics == null ? defaults.isEmitGuildReplicationMetrics() : emitGuildReplicationMetrics
