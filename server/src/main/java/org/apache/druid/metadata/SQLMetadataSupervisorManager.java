@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -252,26 +253,33 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   }
 
   @Override
-  public int removeRulesOlderThan(long timestamp)
+  public int removeTerminatedSupervisorsOlderThan(long timestamp)
   {
+    int removedCount = 0;
     DateTime dateTime = DateTimes.utc(timestamp);
-    synchronized (lock) {
-      return dbi.withHandle(
-          handle -> {
-            Update sql = handle.createStatement(
-                StringUtils.format(
-                    "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s) and datasource!=:default_rule and version < :date_time",
-                    getRulesTable(),
-                    getSegmentsTable()
-                )
-            );
-            return sql.bind("default_rule", config.getDefaultRule())
-                      .bind("date_time", dateTime.toString())
-                      .execute();
-          }
-      );
+    Map<String, SupervisorSpec> supervisors = getLatest();
+    for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
+      final SupervisorSpec spec = supervisor.getValue();
+      if (spec instanceof NoopSupervisorSpec) {
+        dbi.withHandle(
+            handle -> {
+              Update sql = handle.createStatement(
+                  StringUtils.format(
+                      "DELETE FROM %1$s WHERE spec_id = :spec_id AND created_date < :date_time",
+                      getSupervisorsTable()
+                  )
+              );
+              return sql.bind("spec_id", supervisor.getKey())
+                        .bind("date_time", dateTime.toString())
+                        .execute();
+            }
+        );
+        removedCount++;
+      }
     }
+    return removedCount;
   }
+
 
   private String getSupervisorsTable()
   {

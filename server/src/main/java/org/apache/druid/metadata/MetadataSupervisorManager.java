@@ -41,5 +41,5 @@ public interface MetadataSupervisorManager
    * @param timestamp timestamp in milliseconds
    * @return number of supervisor removed
    */
-  int removeRulesOlderThan(long timestamp);
+  int removeTerminatedSupervisorsOlderThan(long timestamp);
 }
