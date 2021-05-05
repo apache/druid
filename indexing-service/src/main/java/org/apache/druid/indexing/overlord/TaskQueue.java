@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,6 +83,7 @@ public class TaskQueue
 
   private final TaskLockConfig lockConfig;
   private final TaskQueueConfig config;
+  private final DefaultTaskConfig defaultTaskConfig;
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
   private final TaskActionClientFactory taskActionClientFactory;
@@ -113,6 +115,7 @@ public class TaskQueue
   public TaskQueue(
       TaskLockConfig lockConfig,
       TaskQueueConfig config,
+      DefaultTaskConfig defaultTaskConfig,
       TaskStorage taskStorage,
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
@@ -122,6 +125,7 @@ public class TaskQueue
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
     this.config = Preconditions.checkNotNull(config, "config");
+    this.defaultTaskConfig = Preconditions.checkNotNull(defaultTaskConfig, "defaultTaskContextConfig");
     this.taskStorage = Preconditions.checkNotNull(taskStorage, "taskStorage");
     this.taskRunner = Preconditions.checkNotNull(taskRunner, "taskRunner");
     this.taskActionClientFactory = Preconditions.checkNotNull(taskActionClientFactory, "taskActionClientFactory");
@@ -351,6 +355,7 @@ public class TaskQueue
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
+    defaultTaskConfig.getContext().forEach(task::addToContextIfAbsent);
 
     giant.lock();
 

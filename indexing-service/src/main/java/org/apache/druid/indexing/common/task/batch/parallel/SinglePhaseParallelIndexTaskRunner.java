@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -64,9 +65,23 @@ import java.util.stream.Collectors;
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
-class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
+public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
   public static final String CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = "useLineageBasedSegmentAllocation";
+
+  /**
+   * The new lineage-based segment allocation protocol must be used as the legacy protocol has a critical bug
+   * However, we tell subtasks to use the legacy protocol by default if it's not explicitly set in the taskContext.
+   * This is to guarantee that every subtask uses the same protocol so that they can succeed during the replacing
+   * rolling upgrade. Once the Overlord is upgraded, it will set it in the context explicitly for all tasks to use
+   * the new protocol.
+   *
+   * @see SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime)
+   * @see org.apache.druid.indexing.overlord.config.DefaultTaskConfig#DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
+   * @see org.apache.druid.indexing.overlord.TaskQueue#add(Task)
+   */
+  @Deprecated
+  static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = false;
 
   private static final String PHASE_NAME = "segment generation";
 

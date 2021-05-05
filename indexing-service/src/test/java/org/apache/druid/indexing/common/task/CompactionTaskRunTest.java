@@ -1298,7 +1298,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     return new TaskToolbox(
-        new TaskConfig(null, null, null, null, null, false, null, null, null, false, null),
+        new TaskConfig(null, null, null, null, null, false, null, null, null, false),
         null,
         createActionClient(task),
         null,

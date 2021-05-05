@@ -2782,8 +2782,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        false,
-        null
+        false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();

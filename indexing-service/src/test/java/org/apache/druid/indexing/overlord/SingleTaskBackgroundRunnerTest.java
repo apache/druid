@@ -90,8 +90,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        false,
-        null
+        false
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(

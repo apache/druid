@@ -117,8 +117,7 @@ public class HadoopTaskTest
         null,
         null,
         null,
-        false,
-        null
+        false
     )).once();
     EasyMock.replay(toolbox);
 

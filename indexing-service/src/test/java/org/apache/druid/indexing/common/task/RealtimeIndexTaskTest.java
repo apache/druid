@@ -898,8 +898,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        false,
-        null
+        false
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {

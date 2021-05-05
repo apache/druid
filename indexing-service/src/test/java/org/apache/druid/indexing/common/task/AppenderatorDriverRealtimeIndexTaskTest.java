@@ -1516,8 +1516,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         null,
         null,
-        false,
-        null
+        false
     );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(

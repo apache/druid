@@ -438,6 +438,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     authorizerMapper = toolbox.getAuthorizerMapper();
     toolbox.getChatHandlerProvider().register(getId(), this, false);
 
+    // the lineage-based segment allocation protocol must be used as the legacy protocol has a critical bug
+    // (see SinglePhaseParallelIndexTaskRunner.allocateNewSegment()). However, we tell subtasks to use
+    // the legacy protocol by default if it's not explicitly set in the taskContext here. This is to guarantee that
+    // every subtask uses the same protocol so that they can succeed during the replacing rolling upgrade.
+    // Once the Overlord is upgraded, it will set this context explicitly and new tasks will use the new protocol.
+    // See DefaultTaskConfig and TaskQueue.add().
+    addToContextIfAbsent(
+        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
+        SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
+    );
+
     try {
       initializeSubTaskCleaner();
 
@@ -1125,9 +1136,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
     }
 
-    final boolean useLineageBasedSegmentAllocation = getContextValue(
-        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-        toolbox.getConfig().isUseLineageBasedSegmentAllocation()
+    // This context is set in the constructor of ParallelIndexSupervisorTask if it's not set by others.
+    final boolean useLineageBasedSegmentAllocation = Preconditions.checkNotNull(
+        getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY),
+        "useLineageBasedSegmentAllocation in taskContext"
     );
 
     try {

@@ -112,8 +112,7 @@ public class TaskToolboxTest
             null,
             null,
             null,
-            false,
-            null
+            false
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,

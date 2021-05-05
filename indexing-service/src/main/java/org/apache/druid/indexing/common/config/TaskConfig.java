@@ -31,6 +31,12 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
+ *
+ * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
+ * to all tasks submitted to the overlord.
+ */
 public class TaskConfig
 {
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
@@ -39,8 +45,6 @@ public class TaskConfig
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
-
-  private static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = true;
 
   @JsonProperty
   private final String baseDir;
@@ -72,9 +76,6 @@ public class TaskConfig
   @JsonProperty
   private final boolean ignoreTimestampSpecForDruidInputSource;
 
-  @JsonProperty
-  private final boolean useLineageBasedSegmentAllocation;
-
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -86,8 +87,7 @@ public class TaskConfig
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
-      @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
-      @JsonProperty("useLineageBasedSegmentAllocation") @Nullable Boolean useLineageBasedSegmentAllocation
+      @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -113,9 +113,6 @@ public class TaskConfig
       this.shuffleDataLocations = shuffleDataLocations;
     }
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
-    this.useLineageBasedSegmentAllocation = useLineageBasedSegmentAllocation == null
-                                            ? DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
-                                            : useLineageBasedSegmentAllocation;
   }
 
   @JsonProperty
@@ -196,12 +193,6 @@ public class TaskConfig
   public boolean isIgnoreTimestampSpecForDruidInputSource()
   {
     return ignoreTimestampSpecForDruidInputSource;
-  }
-
-  @JsonProperty
-  public boolean isUseLineageBasedSegmentAllocation()
-  {
-    return useLineageBasedSegmentAllocation;
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
