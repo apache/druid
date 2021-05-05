@@ -25,22 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.TopicPartition;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
 {
@@ -84,45 +76,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   long getPollRetryMs()
   {
     return pollRetryMs;
-  }
-
-  @Deprecated
-  KafkaConsumer<byte[], byte[]> newConsumer()
-  {
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
-      final Properties props = new Properties();
-      KafkaRecordSupplier.addConsumerPropertiesFromConfig(
-          props,
-          configMapper,
-          ioConfig.getConsumerProperties()
-      );
-      props.putIfAbsent("isolation.level", "read_committed");
-      props.putIfAbsent("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-      props.putAll(consumerConfigs);
-
-      return new KafkaConsumer<>(props);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
-  }
-
-  @Deprecated
-  static void assignPartitions(
-      final KafkaConsumer consumer,
-      final String topic,
-      final Set<Integer> partitions
-  )
-  {
-    consumer.assign(
-        new ArrayList<>(
-            partitions.stream().map(n -> new TopicPartition(topic, n)).collect(Collectors.toList())
-        )
-    );
   }
 
   @Override
