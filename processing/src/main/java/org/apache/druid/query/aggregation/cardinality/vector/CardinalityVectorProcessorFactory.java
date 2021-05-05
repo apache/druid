@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.cardinality.vector;
 
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -70,11 +69,7 @@ public class CardinalityVectorProcessorFactory implements VectorColumnProcessorF
   @Override
   public CardinalityVectorProcessor makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
   {
-    if (capabilities.getType() == ValueType.STRING) {
-      return new StringObjectCardinalityVectorProcessor(selector);
-    } else {
-      // COMPLEX
-      return NilCardinalityVectorProcessor.INSTANCE;
-    }
+    // Handles string-as-object and complex types.
+    return new StringObjectCardinalityVectorProcessor(selector);
   }
 }

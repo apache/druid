@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.cardinality.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
@@ -54,7 +53,7 @@ public class StringObjectCardinalityVectorProcessor implements CardinalityVector
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
 
       for (int i = startRow; i < endRow; i++) {
-        addStringObjectToCollector(collector, vector[i]);
+        addObjectIfString(collector, vector[i]);
       }
     }
     finally {
@@ -81,7 +80,7 @@ public class StringObjectCardinalityVectorProcessor implements CardinalityVector
           buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
           buf.position(position);
           final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
-          addStringObjectToCollector(collector, obj);
+          addObjectIfString(collector, obj);
         }
       }
     }
@@ -92,20 +91,25 @@ public class StringObjectCardinalityVectorProcessor implements CardinalityVector
   }
 
   /**
-   * Adds a stringy Object to a HyperLogLogCollector. The object may be a {@code List<String>}, {@code String},
-   * or {@code null}.
+   * Adds an Object to a HyperLogLogCollector. If the object is a {@code List<String>} or {@code String} then
+   * the individual Strings are added to the collector.
+   *
+   * If the object is any other type (including null) then behavior depends on null-handling mode:
+   *
+   * - In SQL-compatible mode, ignore non-strings and nulls.
+   * - In replace-with-default mode, treat all non-strings and nulls as empty strings.
    */
-  private static void addStringObjectToCollector(final HyperLogLogCollector collector, @Nullable final Object obj)
+  private static void addObjectIfString(final HyperLogLogCollector collector, @Nullable final Object obj)
   {
     if (obj instanceof String) {
       StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, (String) obj);
     } else if (obj instanceof List) {
-      for (String o : (List<String>) obj) {
-        addStringObjectToCollector(collector, o);
+      //noinspection unchecked
+      for (String s : (List<String>) obj) {
+        StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
       }
-    } else if (obj != null) {
-      // Shouldn't happen in production, because this class is only used for STRING typed object selectors.
-      throw new ISE("Encountered unexpected class");
+    } else {
+      StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, null);
     }
   }
 }
