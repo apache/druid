@@ -109,7 +109,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isRound()
   {
     return round;
