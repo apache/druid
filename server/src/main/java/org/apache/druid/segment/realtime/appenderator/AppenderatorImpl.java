@@ -323,7 +323,7 @@ public class AppenderatorImpl implements Appenderator
     if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          "(estimated) bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           maxBytesTuningConfig
       ));
@@ -669,7 +669,7 @@ public class AppenderatorImpl implements Appenderator
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
 
-    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+    log.info("Persisted rows[%,d] and (estimated) bytes[%,d]", numPersistedRows, bytesPersisted);
 
     return future;
   }
