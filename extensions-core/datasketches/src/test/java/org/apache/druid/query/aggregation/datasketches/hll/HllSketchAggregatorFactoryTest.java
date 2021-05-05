@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
@@ -35,7 +33,6 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
@@ -44,7 +41,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -136,6 +132,7 @@ public class HllSketchAggregatorFactoryTest
   public void testEqualsSameObject()
   {
     Assert.assertEquals(target, target);
+    Assert.assertArrayEquals(target.getCacheKey(), target.getCacheKey());
   }
 
   @Test
@@ -162,6 +159,7 @@ public class HllSketchAggregatorFactoryTest
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -176,6 +174,7 @@ public class HllSketchAggregatorFactoryTest
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -190,6 +189,7 @@ public class HllSketchAggregatorFactoryTest
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -204,6 +204,7 @@ public class HllSketchAggregatorFactoryTest
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -218,6 +219,9 @@ public class HllSketchAggregatorFactoryTest
         !ROUND
     );
     Assert.assertNotEquals(target, other);
+
+    // Rounding does not affect per-segment results, so it does not affect cache key
+    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test
@@ -232,6 +236,7 @@ public class HllSketchAggregatorFactoryTest
         ROUND
     );
     Assert.assertEquals(target, other);
+    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test

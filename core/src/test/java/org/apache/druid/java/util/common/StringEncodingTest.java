@@ -45,7 +45,7 @@ public class StringEncodingTest
   }
 
   @Test
-  public void testGetCacheKey() throws IOException
+  public void testGetCacheKey()
   {
     Assert.assertFalse(
         Arrays.equals(
