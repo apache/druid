@@ -128,7 +128,7 @@ public class BatchAppenderator implements Appenderator
    * of any thread from {@link #drop}.
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
-  private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
+  //private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
 
@@ -156,12 +156,6 @@ public class BatchAppenderator implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
 
   private volatile Throwable persistError;
-
-  // Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
-  // in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
-  // at merge time. This is necessary since batch appenderator will not map the QueryableIndex
-  // at persist time in order to minimize its memory footprint.
-  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata = new HashMap<>();
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -400,6 +394,13 @@ public class BatchAppenderator implements Appenderator
               }
             }
         );
+        // drop everything
+        try {
+          clear(false);
+        }
+        catch (InterruptedException e) {
+          e.printStackTrace();
+        }
       } else {
         isPersistRequired = true;
       }
@@ -511,8 +512,13 @@ public class BatchAppenderator implements Appenderator
   @Override
   public void clear() throws InterruptedException
   {
-    // Drop commit metadata, then abandon all segments.
+    clear(true);
+  }
 
+  private void clear(boolean removeOnDiskData) throws InterruptedException
+  {
+    // Drop commit metadata, then abandon all segments.
+    log.info("Clearing all sinks & hydrants, removing data on disk: [%s]", removeOnDiskData);
     try {
       throwPersistErrorIfExists();
 
@@ -536,7 +542,7 @@ public class BatchAppenderator implements Appenderator
         // Drop everything.
         final List<ListenableFuture<?>> futures = new ArrayList<>();
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-          futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
+          futures.add(abandonSegment(entry.getKey(), entry.getValue(), removeOnDiskData));
         }
 
         // Await dropping.
@@ -547,7 +553,6 @@ public class BatchAppenderator implements Appenderator
       throw new RuntimeException(e);
     }
   }
-
   @Override
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
@@ -629,6 +634,9 @@ public class BatchAppenderator implements Appenderator
                   totalHydrantsPersisted.longValue()
               );
 
+              // drop all sinks & hydrants but leave their data on disk
+              //clear(false);
+
               // return null if committer is null
               return null;
             }
@@ -684,11 +692,25 @@ public class BatchAppenderator implements Appenderator
       pushedHydrantsCount.addAndGet(IterableUtils.size(sink));
     }
 
+    // aqvag: Is this the way to chain?
+    final ListenableFuture<Object> persistAllCleared = Futures.transform(
+        persistAll(committer),
+        (Function<Object,Object>) commitMetadata -> {
+          try {
+            clear(false);
+          }
+          catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          return commitMetadata;
+        }
+    );
     return Futures.transform(
         // We should always persist all segments regardless of the input because metadata should be committed for all
         // segments.
-        persistAll(committer),
+        persistAllCleared,
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
+          // clear all:
           final List<DataSegment> dataSegments = new ArrayList<>();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
@@ -700,21 +722,18 @@ public class BatchAppenderator implements Appenderator
               theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
           );
 
-          for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : theSinks.entrySet()) {
-            if (droppingSinks.contains(entry.getKey())) {
-              log.warn("Skipping push of currently-dropping sink[%s]", entry.getKey());
-              continue;
-            }
-
+          List<File> sinkDirs = getPersistedSinkFiles();
+          for (File sinkDir: sinkDirs) {
+            Pair<SegmentIdWithShardSpec,Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(sinkDir);
             final DataSegment dataSegment = mergeAndPush(
-                entry.getKey(),
-                entry.getValue(),
+                sinkAndHydrants.lhs,
+                sinkAndHydrants.rhs,
                 useUniquePath
             );
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
-              log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
+              log.warn("mergeAndPush[%s] returned null, skipping.", sinkAndHydrants.lhs);
             }
           }
 
@@ -810,32 +829,6 @@ public class BatchAppenderator implements Appenderator
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
-
-          // This is batch, swap/persist did not memory map the incremental index, we need it mapped now:
-
-          // sanity
-          Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
-          if (persistedMetadata == null) {
-            throw new ISE("Persisted metadata for batch hydrant [%s] is null!", fireHydrant);
-          }
-
-          File persistedFile = persistedMetadata.lhs;
-          SegmentId persistedSegmentId = persistedMetadata.rhs;
-
-          // sanity:
-          if (persistedFile == null) {
-            throw new ISE("Persisted file for batch hydrant [%s] is null!", fireHydrant);
-          } else if (persistedSegmentId == null) {
-            throw new ISE(
-                "Persisted segmentId for batch hydrant in file [%s] is null!",
-                persistedFile.getPath()
-            );
-          }
-          fireHydrant.swapSegment(new QueryableIndexSegment(
-              indexIO.loadIndex(persistedFile),
-              persistedSegmentId
-          ));
-
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
@@ -1244,6 +1237,87 @@ public class BatchAppenderator implements Appenderator
     return committed.getMetadata();
   }
 
+
+  private List<File> getPersistedSinkFiles()
+  {
+
+    final File baseDir = tuningConfig.getBasePersistDirectory();
+    if (!baseDir.exists()) {
+      return null;
+    }
+
+    final File[] files = baseDir.listFiles();
+    if (files == null) {
+      return null;
+    }
+
+    for (File sinkDir : files) {
+      final File identifierFile = new File(sinkDir, IDENTIFIER_FILE_NAME);
+      if (!identifierFile.isFile()) {
+        // No identifier in this sinkDir; it must not actually be a sink directory. Skip it.
+        continue;
+      }
+    }
+
+    return Arrays.asList(files);
+  }
+
+  Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File sinkDir) {
+    try {
+      final SegmentIdWithShardSpec identifier = objectMapper.readValue(
+          new File(sinkDir, "identifier.json"),
+          SegmentIdWithShardSpec.class
+      );
+
+      // To avoid reading and listing of "merged" dir and other special files
+      final File[] sinkFiles = sinkDir.listFiles(
+          (dir, fileName) -> !(Ints.tryParse(fileName) == null)
+      );
+
+      Arrays.sort(
+          sinkFiles,
+          (o1, o2) -> Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()))
+      );
+
+      List<FireHydrant> hydrants = new ArrayList<>();
+      for (File hydrantDir : sinkFiles) {
+        final int hydrantNumber = Integer.parseInt(hydrantDir.getName());
+
+        log.debug("Loading previously persisted partial segment at [%s]", hydrantDir);
+        if (hydrantNumber != hydrants.size()) {
+          throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
+        }
+
+        hydrants.add(
+            new FireHydrant(
+                new QueryableIndexSegment(indexIO.loadIndex(hydrantDir), identifier.asSegmentId()),
+                hydrantNumber
+            )
+        );
+      }
+
+      Sink currSink = new Sink(
+          identifier.getInterval(),
+          schema,
+          identifier.getShardSpec(),
+          identifier.getVersion(),
+          tuningConfig.getAppendableIndexSpec(),
+          tuningConfig.getMaxRowsInMemory(),
+          maxBytesTuningConfig,
+          null,
+          hydrants
+      );
+      //sinks.put(identifier, currSink);
+      return new Pair<>(identifier,currSink);
+    }
+    catch (IOException e) {
+      log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
+         .addData("sinkDir", sinkDir)
+         .emit();
+    }
+    return null;
+  }
+
   private ListenableFuture<?> abandonSegment(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
@@ -1267,7 +1341,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
-    droppingSinks.add(identifier);
+    //droppingSinks.add(identifier);
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -1316,7 +1390,7 @@ public class BatchAppenderator implements Appenderator
                  .emit();
             }
 
-            droppingSinks.remove(identifier);
+            //droppingSinks.remove(identifier);
             for (FireHydrant hydrant : sink) {
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
@@ -1417,9 +1491,8 @@ public class BatchAppenderator implements Appenderator
         final long startTime = System.nanoTime();
         int numRows = indexToPersist.getIndex().size();
 
-        final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);
-        persistedFile = indexMerger.persist(
+        indexMerger.persist(
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
@@ -1435,8 +1508,6 @@ public class BatchAppenderator implements Appenderator
             numRows
         );
 
-        // remember file path & segment id to rebuild the queryable index for merge:
-        persistedHydrantMetadata.put(indexToPersist, new Pair<>(persistedFile, indexToPersist.getSegmentId()));
         indexToPersist.swapSegment(null);
 
         return numRows;
