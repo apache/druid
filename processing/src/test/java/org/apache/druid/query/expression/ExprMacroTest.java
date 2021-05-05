@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -34,7 +35,7 @@ public class ExprMacroTest
 {
   private static final String IPV4_STRING = "192.168.0.1";
   private static final long IPV4_LONG = 3232235521L;
-  private static final Expr.ObjectBinding BINDINGS = Parser.withMap(
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
       ImmutableMap.<String, Object>builder()
           .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
           .put("t1", DateTimes.of("2000-02-03T00:00:00").getMillis())
