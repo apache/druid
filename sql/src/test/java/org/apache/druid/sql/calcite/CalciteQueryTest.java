@@ -7813,9 +7813,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctBuiltin() throws Exception
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dim2) FROM druid.foo",
         ImmutableList.of(
