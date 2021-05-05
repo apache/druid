@@ -8011,6 +8011,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testApproxCountDistinctOnVectorizableSingleStringExpression() throws Exception
+  {
+    testQuery(
+        "SELECT APPROX_COUNT_DISTINCT(dim1 || 'hello') FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "concat(\"dim1\",'hello')", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              dimensions(DefaultDimensionSpec.of("v0")),
+                              false,
+                              true
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L})
+    );
+  }
+
+  @Test
   public void testNestedGroupBy() throws Exception
   {
 
