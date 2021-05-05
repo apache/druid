@@ -234,7 +234,13 @@ public class HllSketchMergeAggregatorFactoryTest
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
     Assert.assertEquals(
-        "{\"type\":\"HLLSketchMerge\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":12,\"tgtHllType\":\"HLL_4\"}",
+        "{\"type\":\"HLLSketchMerge\","
+        + "\"name\":\"foo\","
+        + "\"fieldName\":\"bar\","
+        + "\"lgK\":12,"
+        + "\"tgtHllType\":\"HLL_4\","
+        + "\"round\":false"
+        + "}",
         serializedString
     );
 
