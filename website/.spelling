@@ -1787,6 +1787,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties
