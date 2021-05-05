@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.Iterables;
-import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
@@ -74,6 +73,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1149,29 +1149,24 @@ public class TaskLockboxTest
     );
 
     // Verify the locked intervals
-    final Map<String, DatasourceIntervals> lockedIntervals = lockbox.getLockedIntervals();
+    final Map<String, Integer> minTaskPriority = new HashMap<>();
+    minTaskPriority.put(task1.getDataSource(), 10);
+    minTaskPriority.put(task2.getDataSource(), 10);
+    final Map<String, List<Interval>> lockedIntervals = lockbox.getLockedIntervals(minTaskPriority);
     Assert.assertEquals(2, lockedIntervals.size());
 
-    Assert.assertEquals(
-        task1.getDataSource(),
-        lockedIntervals.get(task1.getId()).getDatasource()
-    );
     Assert.assertEquals(
         Arrays.asList(
             Intervals.of("2017-01-01/2017-02-01"),
             Intervals.of("2017-04-01/2017-05-01")
         ),
-        lockedIntervals.get(task1.getId()).getIntervals()
+        lockedIntervals.get(task1.getDataSource())
     );
 
     Assert.assertEquals(
-        task2.getDataSource(),
-        lockedIntervals.get(task2.getId()).getDatasource()
-    );
-    Assert.assertEquals(
         Collections.singletonList(
             Intervals.of("2017-03-01/2017-04-01")),
-        lockedIntervals.get(task2.getId()).getIntervals()
+        lockedIntervals.get(task2.getDataSource())
     );
   }
 
@@ -1188,12 +1183,15 @@ public class TaskLockboxTest
         Intervals.of("2017/2018")
     );
 
-    Map<String, DatasourceIntervals> lockedIntervals = lockbox.getLockedIntervals();
-    Assert.assertTrue(lockedIntervals.containsKey(lowPriorityTask.getId()));
+    final Map<String, Integer> minTaskPriority = new HashMap<>();
+    minTaskPriority.put(lowPriorityTask.getDataSource(), 1);
+
+    Map<String, List<Interval>> lockedIntervals = lockbox.getLockedIntervals(minTaskPriority);
+    Assert.assertEquals(1, lockedIntervals.size());
     Assert.assertEquals(
         Collections.singletonList(
             Intervals.of("2017/2018")),
-        lockedIntervals.get(lowPriorityTask.getId()).getIntervals()
+        lockedIntervals.get(lowPriorityTask.getDataSource())
     );
 
     // Revoke the lowPriorityTask
@@ -1206,12 +1204,13 @@ public class TaskLockboxTest
     );
 
     // Verify the locked intervals
-    lockedIntervals = lockbox.getLockedIntervals();
-    Assert.assertFalse(lockedIntervals.containsKey(lowPriorityTask.getId()));
+    minTaskPriority.put(highPriorityTask.getDataSource(), 1);
+    lockedIntervals = lockbox.getLockedIntervals(minTaskPriority);
+    Assert.assertEquals(1, lockedIntervals.size());
     Assert.assertEquals(
         Collections.singletonList(
             Intervals.of("2017-05-01/2017-06-01")),
-        lockedIntervals.get(highPriorityTask.getId()).getIntervals()
+        lockedIntervals.get(highPriorityTask.getDataSource())
     );
   }
 

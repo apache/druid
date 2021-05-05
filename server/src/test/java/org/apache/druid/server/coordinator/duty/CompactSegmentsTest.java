@@ -37,13 +37,11 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
-import org.apache.druid.client.indexing.LockedIntervalsResponse;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -904,19 +902,19 @@ public class CompactSegmentsTest
     // Lock all intervals for dataSource_1 and dataSource_2
     final String datasource1 = DATA_SOURCE_PREFIX + 1;
     leaderClient.lockedIntervals
-        .computeIfAbsent("task1", k -> new DatasourceIntervals(datasource1, new ArrayList<>()))
-        .getIntervals().add(Intervals.of("2017/2018"));
+        .computeIfAbsent(datasource1, k -> new ArrayList<>())
+        .add(Intervals.of("2017/2018"));
 
     final String datasource2 = DATA_SOURCE_PREFIX + 2;
     leaderClient.lockedIntervals
-        .computeIfAbsent("task2", k -> new DatasourceIntervals(datasource2, new ArrayList<>()))
-        .getIntervals().add(Intervals.of("2017/2018"));
+        .computeIfAbsent(datasource2, k -> new ArrayList<>())
+        .add(Intervals.of("2017/2018"));
 
     // Lock all intervals but one for dataSource_0
     final String datasource0 = DATA_SOURCE_PREFIX + 0;
     leaderClient.lockedIntervals
-        .computeIfAbsent("task0", k -> new DatasourceIntervals(datasource0, new ArrayList<>()))
-        .getIntervals().add(Intervals.of("2017-01-01T13:00:00Z/2017-02-01"));
+        .computeIfAbsent(datasource0, k -> new ArrayList<>())
+        .add(Intervals.of("2017-01-01T13:00:00Z/2017-02-01"));
 
     // Verify that only one compaction task is submitted for dataSource_0
     CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
@@ -1224,7 +1222,7 @@ public class CompactSegmentsTest
     private final ObjectMapper jsonMapper;
 
     // Map from Task Id to the intervals locked by that task
-    private final Map<String, DatasourceIntervals> lockedIntervals = new HashMap<>();
+    private final Map<String, List<Interval>> lockedIntervals = new HashMap<>();
 
     // List of submitted compaction tasks for verification in the tests
     private final List<ClientCompactionTaskQuery> submittedCompactionTasks = new ArrayList<>();
@@ -1321,8 +1319,7 @@ public class CompactSegmentsTest
 
     private StringFullResponseHolder handleLockedIntervals() throws IOException
     {
-      LockedIntervalsResponse response = new LockedIntervalsResponse(lockedIntervals);
-      return createStringFullResponseHolder(jsonMapper.writeValueAsString(response));
+      return createStringFullResponseHolder(jsonMapper.writeValueAsString(lockedIntervals));
     }
 
     private void compactSegments(

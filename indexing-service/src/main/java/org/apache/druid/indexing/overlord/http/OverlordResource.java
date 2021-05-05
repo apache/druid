@@ -227,32 +227,18 @@ public class OverlordResource
     }
   }
 
-  @GET
+  @POST
   @Path("/lockedIntervals")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getTaskLockedIntervals(@Context HttpServletRequest request)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
   {
-    // Perform authorization check
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource("lockedIntervals", ResourceType.STATE),
-        Action.READ
-    );
-    final Access authResult = AuthorizationUtils
-        .authorizeResourceAction(request, resourceAction, authorizerMapper);
-    if (!authResult.isAllowed()) {
-      throw new WebApplicationException(
-          Response.status(Response.Status.FORBIDDEN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                  .build()
-      );
+    if (minTaskPriority == null || minTaskPriority.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
     }
 
     // Build the response
-    final LockedIntervalsResponse response = new LockedIntervalsResponse(
-        taskStorageQueryAdapter.getLockedIntervals()
-    );
-    log.warn("Found Intervals: %s", response.getLockedIntervals());
-    return Response.ok(response).build();
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
   }
 
   @GET

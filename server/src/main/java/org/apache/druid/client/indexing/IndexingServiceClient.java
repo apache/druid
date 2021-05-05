@@ -19,7 +19,6 @@
 
 package org.apache.druid.client.indexing;
 
-import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -68,11 +67,16 @@ public interface IndexingServiceClient
   TaskPayloadResponse getTaskPayload(String taskId);
 
   /**
-   * Gets all intervals currently locked by active Tasks.
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
    *
-   * @return Map from Task Id to the intervals locked by that task.
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks higher than this
+   *                        priority are returned. Tasks for datasources that
+   *                        are not present in this Map are not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority strictly greater than the {@code minTaskPriority} for that datasource.
    */
-  Map<String, DatasourceIntervals> getLockedIntervals();
+  Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority);
 
   SamplerResponse sample(SamplerSpec samplerSpec);
 }

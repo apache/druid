@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -30,6 +29,7 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -62,9 +62,9 @@ public class TaskStorageQueryAdapter
    *
    * @return Map from Task Id to locked intervals.
    */
-  public Map<String, DatasourceIntervals> getLockedIntervals()
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {
-    return taskLockbox.getLockedIntervals();
+    return taskLockbox.getLockedIntervals(minTaskPriority);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)

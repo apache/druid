@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.DatasourceIntervals;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -676,61 +675,60 @@ public class TaskLockbox
   }
 
   /**
-   * Gets a Map containing intervals locked by active tasks. Intervals locked
-   * by revoked TaskLocks are not included in the returned Map.
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
    *
-   * @return Map from Task Id to locked intervals.
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks higher than this
+   *                        priority are returned. Tasks for datasources that
+   *                        are not present in this Map are not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority strictly greater than the {@code minTaskPriority} for that datasource.
    */
-  public Map<String, DatasourceIntervals> getLockedIntervals()
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {
-    final Map<String, List<Interval>> taskToIntervals = new HashMap<>();
-    final Map<String, String> taskToDatasource = new HashMap<>();
+    final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
 
     // Take a lock and populate the maps
     giant.lock();
     try {
       running.forEach(
-          (datasource, datasourceLocks) -> datasourceLocks.forEach(
-              (startTime, startTimeLocks) -> startTimeLocks.forEach(
-                  (interval, taskLockPosses) -> taskLockPosses.forEach(
-                      taskLockPosse -> taskLockPosse.taskIds.forEach(taskId -> {
-                        // Do not proceed if the lock is revoked
-                        if (taskLockPosse.getTaskLock().isRevoked()) {
-                          return;
-                        }
+          (datasource, datasourceLocks) -> {
+            // If this datasource is not requested, do not proceed
+            if (!minTaskPriority.containsKey(datasource)) {
+              return;
+            }
 
-                        String existingDatasource = taskToDatasource
-                            .computeIfAbsent(taskId, k -> datasource);
+            datasourceLocks.forEach(
+                (startTime, startTimeLocks) -> startTimeLocks.forEach(
+                    (interval, taskLockPosses) -> taskLockPosses.forEach(
+                        taskLockPosse -> {
+                          if (taskLockPosse.getTaskLock().isRevoked()) {
+                            // Do not proceed if the lock is revoked
+                            return;
+                          } else if (taskLockPosse.getTaskLock().getPriority() == null
+                                     || taskLockPosse.getTaskLock().getPriority() <= minTaskPriority.get(datasource)) {
+                            // Do not proceed if the lock has a priority less than or equal to the minimum
+                            return;
+                          }
 
-                        // This should never happen
-                        Preconditions.checkState(
-                            Objects.equal(datasource, existingDatasource),
-                            "Task Id maps to multiple sources: " + taskId
-                        );
-
-                        taskToIntervals
-                            .computeIfAbsent(taskId, k -> new ArrayList<>())
-                            .add(interval);
-                      })
-                  )
-              )
-          )
+                          datasourceToIntervals
+                              .computeIfAbsent(datasource, k -> new HashSet<>())
+                              .add(interval);
+                        })
+                )
+            );
+          }
       );
     }
     finally {
       giant.unlock();
     }
 
-    // Construct DatasourceIntervals objects
-    final Map<String, DatasourceIntervals> lockedIntervals = new HashMap<>();
-    taskToDatasource.forEach(
-        (taskId, datasource) -> lockedIntervals.put(
-            taskId,
-            new DatasourceIntervals(datasource, taskToIntervals.get(taskId))
-        )
-    );
-
-    return lockedIntervals;
+    return datasourceToIntervals.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entry -> new ArrayList<>(entry.getValue())
+                                ));
   }
 
   public void unlock(final Task task, final Interval interval)
