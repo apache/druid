@@ -197,7 +197,8 @@ public class CoordinatorCompactionConfigsResource
         attemps++;
         updateRetryDelay();
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                      .entity(ImmutableMap.of("error", e))
                      .build();
