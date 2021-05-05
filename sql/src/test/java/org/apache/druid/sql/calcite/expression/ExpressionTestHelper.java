@@ -31,6 +31,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -246,7 +247,7 @@ class ExpressionTestHelper
     Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                               .eval(Parser.withMap(bindings));
+                               .eval(InputBindings.withMap(bindings));
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }

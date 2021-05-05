@@ -263,7 +263,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.pollPeriod',
     type: 'string',
     defaultValue: '0',
-    defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
+    defined: (model: LookupSpec) =>
+      oneOf(deepGet(model, 'extractionNamespace.type'), 'uri', 'jdbc'),
     info: `Period between polling for updates`,
   },
 

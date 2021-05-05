@@ -38,6 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTest
@@ -68,6 +69,14 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     // Emulate multi-valued dimension
     final DictionaryEncodedColumnSupplier columnSupplier = new DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(ImmutableList.of("v1", "v2", "v3"), GenericIndexed.STRING_STRATEGY),
+        GenericIndexed.fromIterable(
+            ImmutableList.of(
+                ByteBuffer.wrap(StringUtils.toUtf8("v1")),
+                ByteBuffer.wrap(StringUtils.toUtf8("v2")),
+                ByteBuffer.wrap(StringUtils.toUtf8("v3"))
+            ),
+            GenericIndexed.BYTE_BUFFER_STRATEGY
+        ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
         0
@@ -83,6 +92,14 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     // Emulate multi-valued dimension
     final DictionaryEncodedColumnSupplier columnSupplier = new DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(ImmutableList.of("v1", "v2", "v3"), GenericIndexed.STRING_STRATEGY),
+        GenericIndexed.fromIterable(
+            ImmutableList.of(
+                ByteBuffer.wrap(StringUtils.toUtf8("v1")),
+                ByteBuffer.wrap(StringUtils.toUtf8("v2")),
+                ByteBuffer.wrap(StringUtils.toUtf8("v3"))
+            ),
+            GenericIndexed.BYTE_BUFFER_STRATEGY
+        ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
         0

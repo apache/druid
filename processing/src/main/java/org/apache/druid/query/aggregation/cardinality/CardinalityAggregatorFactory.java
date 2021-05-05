@@ -35,15 +35,21 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NoopAggregator;
 import org.apache.druid.query.aggregation.NoopBufferAggregator;
+import org.apache.druid.query.aggregation.NoopVectorAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import org.apache.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
+import org.apache.druid.query.aggregation.cardinality.vector.CardinalityVectorProcessorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -146,7 +152,6 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return new CardinalityAggregator(selectorPluses, byRow);
   }
 
-
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
@@ -161,6 +166,32 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       return NoopBufferAggregator.instance();
     }
     return new CardinalityBufferAggregator(selectorPluses, byRow);
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    if (fields.isEmpty()) {
+      return NoopVectorAggregator.instance();
+    }
+
+    return new CardinalityVectorAggregator(
+        fields.stream().map(
+            field ->
+                ColumnProcessors.makeVectorProcessor(
+                    field,
+                    CardinalityVectorProcessorFactory.INSTANCE,
+                    selectorFactory
+                )
+        ).collect(Collectors.toList())
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    // !byRow because there is not yet a vector implementation.
+    return !byRow && fields.stream().allMatch(DimensionSpec::canVectorize);
   }
 
   @Override

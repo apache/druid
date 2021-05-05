@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,6 +34,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.math.expr.SettableObjectBinding;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -94,6 +96,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       Suppliers.memoize(() -> new SettableObjectBinding(2));
   private final Supplier<SettableObjectBinding> finalizeBindings =
       Suppliers.memoize(() -> new SettableObjectBinding(1));
+  private final Supplier<Expr.InputBindingInspector> finalizeInspector;
 
   @JsonCreator
   public ExpressionLambdaAggregatorFactory(
@@ -148,9 +151,15 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     this.foldExpression = Parser.lazyParse(foldExpressionString, macroTable);
     this.combineExpression = Parser.lazyParse(combineExpressionString, macroTable);
     this.compareExpression = Parser.lazyParse(compareExpressionString, macroTable);
+    this.finalizeInspector = Suppliers.memoize(
+        () -> InputBindings.inspectorFromTypeMap(
+            ImmutableMap.of(FINALIZE_IDENTIFIER, this.initialCombineValue.get().type())
+        )
+    );
     this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
     this.maxSizeBytes = maxSizeBytes != null ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
     Preconditions.checkArgument(this.maxSizeBytes.getBytesInInt() >= MIN_SIZE_BYTES);
+
   }
 
   @JsonProperty
@@ -363,9 +372,11 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     Expr finalizeExpr = finalizeExpression.get();
     ExprEval<?> initialVal = initialCombineValue.get();
     if (finalizeExpr != null) {
-      return ExprType.toValueType(
-          finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, initialVal)).type()
-      );
+      ExprType type = finalizeExpr.getOutputType(finalizeInspector.get());
+      if (type == null) {
+        type = initialVal.type();
+      }
+      return ExprType.toValueType(type);
     }
     return ExprType.toValueType(initialVal.type());
   }
