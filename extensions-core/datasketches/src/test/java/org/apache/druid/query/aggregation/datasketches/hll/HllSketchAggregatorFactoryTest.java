@@ -19,8 +19,11 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -32,6 +35,7 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
@@ -40,6 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -52,6 +57,7 @@ public class HllSketchAggregatorFactoryTest
   private static final String FIELD_NAME = "fieldName";
   private static final int LG_K = HllSketchAggregatorFactory.DEFAULT_LG_K;
   private static final String TGT_HLL_TYPE = TgtHllType.HLL_4.name();
+  private static final StringEncoding STRING_ENCODING = StringEncoding.UTF16LE;
   private static final boolean ROUND = true;
   private static final double ESTIMATE = Math.PI;
 
@@ -60,13 +66,19 @@ public class HllSketchAggregatorFactoryTest
   @Before
   public void setUp()
   {
-    target = new TestHllSketchAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, ROUND);
+    target = new TestHllSketchAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, STRING_ENCODING, ROUND);
   }
 
   @Test
   public void testIsRound()
   {
     Assert.assertEquals(ROUND, target.isRound());
+  }
+
+  @Test
+  public void testStringEncoding()
+  {
+    Assert.assertEquals(STRING_ENCODING, target.getStringEncoding());
   }
 
   @Test
@@ -112,6 +124,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         !ROUND
     );
     Object actual = t.finalizeComputation(getMockSketch());
@@ -145,6 +158,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
@@ -158,6 +172,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME + "-diff",
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
@@ -171,6 +186,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K + 1,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
@@ -184,6 +200,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TgtHllType.HLL_8.name(),
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
@@ -197,6 +214,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         !ROUND
     );
     Assert.assertNotEquals(target, other);
@@ -210,6 +228,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertEquals(target, other);
@@ -244,11 +263,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchBuildAggregatorFactory(
                       "hllBuildRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -258,11 +279,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchMergeAggregatorFactory(
                       "hllMergeRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -326,10 +349,11 @@ public class HllSketchAggregatorFactoryTest
         String fieldName,
         @Nullable Integer lgK,
         @Nullable String tgtHllType,
+        @Nullable StringEncoding stringEncoding,
         boolean round
     )
     {
-      super(name, fieldName, lgK, tgtHllType, round);
+      super(name, fieldName, lgK, tgtHllType, stringEncoding, round);
     }
 
     @Override

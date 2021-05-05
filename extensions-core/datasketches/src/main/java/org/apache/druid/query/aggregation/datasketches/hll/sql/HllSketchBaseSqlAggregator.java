@@ -126,6 +126,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
           columnArg.getDirectColumn(),
           logK,
           tgtHllType,
+          HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING /* Not used when merging; doesn't matter what we set */,
           ROUND
       );
     } else {
@@ -158,6 +159,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
           dimensionSpec.getDimension(),
           logK,
           tgtHllType,
+          HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
           ROUND
       );
     }

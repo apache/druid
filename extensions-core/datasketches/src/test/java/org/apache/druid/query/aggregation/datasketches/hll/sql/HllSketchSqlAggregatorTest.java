@@ -174,6 +174,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                              "dim1",
                                                              null,
                                                              null,
+                                                             null,
                                                              ROUND
                                                          )
                                                      )
@@ -317,12 +318,14 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "dim2",
                           null,
                           null,
+                          null,
                           ROUND
                       ),
                       new FilteredAggregatorFactory(
                           new HllSketchBuildAggregatorFactory(
                               "a2",
                               "dim2",
+                              null,
                               null,
                               null,
                               ROUND
@@ -334,6 +337,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "v0",
                           null,
                           null,
+                          null,
                           ROUND
                       ),
                       new HllSketchBuildAggregatorFactory(
@@ -341,10 +345,11 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "v1",
                           null,
                           null,
+                          null,
                           ROUND
                       ),
-                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", ROUND),
-                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, ROUND)
+                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, ROUND),
+                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, ROUND)
                   )
               )
               .context(queryContext)
@@ -402,6 +407,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                        new HllSketchBuildAggregatorFactory(
                                                            "a0:a",
                                                            "cnt",
+                                                           null,
                                                            null,
                                                            null,
                                                            ROUND
@@ -576,11 +582,13 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "dim2",
                           null,
                           null,
+                          null,
                           true
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a1",
                           "m1",
+                          null,
                           null,
                           null,
                           true
@@ -590,6 +598,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "v0",
                           null,
                           null,
+                          null,
                           true
                       ),
                       new HllSketchBuildAggregatorFactory(
@@ -597,11 +606,13 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "v1",
                           null,
                           null,
+                          null,
                           true
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a4",
                           "dim2",
+                          null,
                           null,
                           null,
                           true
@@ -691,6 +702,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                       new HllSketchBuildAggregatorFactory(
                           "a0",
                           "dim2",
+                          null,
                           null,
                           null,
                           true

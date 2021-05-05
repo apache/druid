@@ -20,35 +20,52 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.datasketches.util.ToObjectVectorColumnProcessorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.vector.HllSketchBuildVectorProcessor;
+import org.apache.druid.query.aggregation.datasketches.hll.vector.HllSketchBuildVectorProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.function.Supplier;
 
 public class HllSketchBuildVectorAggregator implements VectorAggregator
 {
+  private final HllSketchBuildVectorProcessor processor;
   private final HllSketchBuildBufferAggregatorHelper helper;
-  private final Supplier<Object[]> objectSupplier;
 
-  HllSketchBuildVectorAggregator(
+  private HllSketchBuildVectorAggregator(
+      final HllSketchBuildVectorProcessor processor,
+      final HllSketchBuildBufferAggregatorHelper helper
+  )
+  {
+    this.processor = processor;
+    this.helper = helper;
+  }
+
+  public static HllSketchBuildVectorAggregator create(
       final VectorColumnSelectorFactory columnSelectorFactory,
       final String column,
       final int lgK,
       final TgtHllType tgtHllType,
+      final StringEncoding stringEncoding,
       final int size
   )
   {
-    this.helper = new HllSketchBuildBufferAggregatorHelper(lgK, tgtHllType, size);
-    this.objectSupplier =
-        ColumnProcessors.makeVectorProcessor(
-            column,
-            ToObjectVectorColumnProcessorFactory.INSTANCE,
-            columnSelectorFactory
-        );
+    final HllSketchBuildBufferAggregatorHelper helper = new HllSketchBuildBufferAggregatorHelper(
+        lgK,
+        tgtHllType,
+        size
+    );
+
+    final HllSketchBuildVectorProcessor processor = ColumnProcessors.makeVectorProcessor(
+        column,
+        new HllSketchBuildVectorProcessorFactory(helper, stringEncoding),
+        columnSelectorFactory
+    );
+
+    return new HllSketchBuildVectorAggregator(processor, helper);
   }
 
   @Override
@@ -58,36 +75,15 @@ public class HllSketchBuildVectorAggregator implements VectorAggregator
   }
 
   @Override
-  public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
+  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    final Object[] vector = objectSupplier.get();
-    for (int i = startRow; i < endRow; i++) {
-      final Object value = vector[i];
-      if (value != null) {
-        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
-      }
-    }
+    processor.aggregate(buf, position, startRow, endRow);
   }
 
   @Override
-  public void aggregate(
-      final ByteBuffer buf,
-      final int numRows,
-      final int[] positions,
-      @Nullable final int[] rows,
-      final int positionOffset
-  )
+  public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    final Object[] vector = objectSupplier.get();
-
-    for (int i = 0; i < numRows; i++) {
-      final Object o = vector[rows != null ? rows[i] : i];
-
-      if (o != null) {
-        final int position = positions[i] + positionOffset;
-        HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), o);
-      }
-    }
+    processor.aggregate(buf, numRows, positions, rows, positionOffset);
   }
 
   @Override

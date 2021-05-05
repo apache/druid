@@ -23,16 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * This aggregator factory is for building sketches from raw data.
@@ -47,10 +51,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("stringEncoding") @Nullable final StringEncoding stringEncoding,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, round);
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, round);
   }
 
   @Override
@@ -68,18 +73,34 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
-    return new HllSketchBuildAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
+    final Consumer<Supplier<HllSketch>> processor = ColumnProcessors.makeProcessor(
+        getFieldName(),
+        new HllSketchBuildColumnProcessorFactory(getStringEncoding()),
+        columnSelectorFactory
+    );
+
+    return new HllSketchBuildAggregator(
+        processor,
+        getLgK(),
+        TgtHllType.valueOf(getTgtHllType()),
+        getStringEncoding()
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    final Consumer<Supplier<HllSketch>> processor = ColumnProcessors.makeProcessor(
+        getFieldName(),
+        new HllSketchBuildColumnProcessorFactory(getStringEncoding()),
+        columnSelectorFactory
+    );
+
     return new HllSketchBuildBufferAggregator(
-        selector,
+        processor,
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
+        getStringEncoding(),
         getMaxIntermediateSize()
     );
   }
@@ -93,11 +114,12 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    return new HllSketchBuildVectorAggregator(
+    return HllSketchBuildVectorAggregator.create(
         selectorFactory,
         getFieldName(),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
+        getStringEncoding(),
         getMaxIntermediateSize()
     );
   }
