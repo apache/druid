@@ -144,14 +144,55 @@ export class DruidError extends Error {
       };
     }
 
-    // , before FROM
-    const matchComma = /Encountered "(FROM)" at/i.exec(errorMessage);
-    if (matchComma) {
-      const fromKeyword = matchComma[1];
+    // Single quotes on AS alias
+    const matchSingleQuotesAlias = /Encountered "\\'([\w-]+)\\'" at/i.exec(errorMessage);
+    if (matchSingleQuotesAlias) {
+      const alias = matchSingleQuotesAlias[1];
       return {
-        label: `Remove , before ${fromKeyword}`,
+        label: `Replace '${alias}' with "${alias}"`,
+        fn: str => {
+          const newQuery = str.replace(new RegExp(`(AS\\s*)'(${alias})'`, 'gim'), '$1"$2"');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // , before FROM
+    const matchCommaFrom = /Encountered "(FROM)" at/i.exec(errorMessage);
+    if (matchCommaFrom) {
+      const keyword = matchCommaFrom[1];
+      return {
+        label: `Remove , before ${keyword}`,
         fn: str => {
           const newQuery = str.replace(/,(\s+FROM)/gim, '$1');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // , before GROUP, ORDER, or LIMIT
+    const matchComma = /Encountered ", (GROUP|ORDER|LIMIT)" at/i.exec(errorMessage);
+    if (matchComma) {
+      const keyword = matchComma[1];
+      return {
+        label: `Remove , before ${keyword}`,
+        fn: str => {
+          const newQuery = str.replace(new RegExp(`,(\\s+${keyword})`, 'gim'), '$1');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // ; at the end
+    const matchSemicolon = /Encountered ";" at/i.exec(errorMessage);
+    if (matchSemicolon) {
+      return {
+        label: `Remove trailing ;`,
+        fn: str => {
+          const newQuery = str.replace(/;+(\s*)$/m, '$1');
           if (newQuery === str) return;
           return newQuery;
         },

@@ -111,12 +111,57 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for incorrectly quoted AS alias', () => {
+      const sql = sane`
+        SELECT
+          channel,
+          COUNT(*) AS 'Count'
+        FROM wikipedia
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `;
+      const suggestion = DruidError.getSuggestion(
+        `Encountered "\\'Count\\'" at line 3, column 15...`,
+      );
+      expect(suggestion!.label).toEqual(`Replace 'Count' with "Count"`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT
+          channel,
+          COUNT(*) AS "Count"
+        FROM wikipedia
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `);
+    });
+
     it('removes comma (,) before FROM', () => {
       const suggestion = DruidError.getSuggestion(
         `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
       expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
+        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
+      );
+    });
+
+    it('removes comma (,) before ORDER', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ", ORDER" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove , before ORDER`);
+      expect(
+        suggestion!.fn(
+          `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1, ORDER BY 1`,
+        ),
+      ).toEqual(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`);
+    });
+
+    it('removes trailing semicolon (;)', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ";" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove trailing ;`);
+      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
     });
