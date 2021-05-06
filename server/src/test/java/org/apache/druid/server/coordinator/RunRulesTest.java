@@ -159,12 +159,12 @@ public class RunRulesTest
         .addTier(
             "normal",
             new ServerHolder(
-                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             ),
             new ServerHolder(
-                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             )
@@ -174,7 +174,7 @@ public class RunRulesTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, guildReplicationEnabled)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).withMaxNonPrimaryReplicantsToLoad(10).build())
         .build();
 
@@ -217,12 +217,12 @@ public class RunRulesTest
         .addTier(
             "hot",
             new ServerHolder(
-                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             ),
             new ServerHolder(
-                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             )
@@ -230,12 +230,12 @@ public class RunRulesTest
         .addTier(
             "normal",
             new ServerHolder(
-                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             ),
             new ServerHolder(
-                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0, DruidServer.DEFAULT_GUILD)
                     .toImmutableDruidServer(),
                 mockPeon
             )
@@ -245,7 +245,7 @@ public class RunRulesTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, guildReplicationEnabled)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).withMaxNonPrimaryReplicantsToLoad(48).build())
         .build();
 
