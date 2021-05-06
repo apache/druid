@@ -195,7 +195,10 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean getBatchMemoryMappedIndex() { return batchMemoryMappedIndex; }
+  public boolean getBatchMemoryMappedIndex()
+  {
+    return batchMemoryMappedIndex;
+  }
 
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
