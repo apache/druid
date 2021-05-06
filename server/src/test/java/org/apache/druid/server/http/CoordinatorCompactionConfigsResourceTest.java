@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(MockitoJUnitRunner.class)
 public class CoordinatorCompactionConfigsResourceTest
 {
-  private static final DataSourceCompactionConfig oldConfig = new DataSourceCompactionConfig(
+  private static final DataSourceCompactionConfig OLD_CONFIG = new DataSourceCompactionConfig(
       "oldDataSource",
       null,
       500L,
@@ -58,7 +58,7 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       ImmutableMap.of("key", "val")
   );
-  private static final CoordinatorCompactionConfig ORIGINAL_CONFIG = CoordinatorCompactionConfig.from(ImmutableList.of(oldConfig));
+  private static final CoordinatorCompactionConfig ORIGINAL_CONFIG = CoordinatorCompactionConfig.from(ImmutableList.of(OLD_CONFIG));
 
   @Mock
   private JacksonConfigManager mockJacksonConfigManager;
@@ -147,7 +147,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(oldConfigCaptor.getValue(), ORIGINAL_CONFIG);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(2, newConfigCaptor.getValue().getCompactionConfigs().size());
-    Assert.assertEquals(oldConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
+    Assert.assertEquals(OLD_CONFIG, newConfigCaptor.getValue().getCompactionConfigs().get(0));
     Assert.assertEquals(newConfig, newConfigCaptor.getValue().getCompactionConfigs().get(1));
   }
 
