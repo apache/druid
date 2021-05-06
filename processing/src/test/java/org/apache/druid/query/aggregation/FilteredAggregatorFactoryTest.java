@@ -55,7 +55,7 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
         ImmutableList.of("x", "y"),
         new FilteredAggregatorFactory(
             new LongSumAggregatorFactory("x", "x"),
-            new SelectorDimFilter("y", "wat", null )
+            new SelectorDimFilter("y", "wat", null)
         ).requiredFields()
     );
   }
