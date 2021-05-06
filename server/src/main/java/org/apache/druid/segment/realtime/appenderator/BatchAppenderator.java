@@ -72,7 +72,6 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -677,10 +676,11 @@ public class BatchAppenderator implements Appenderator
       final boolean useUniquePath
   )
   {
+    // aqvagt May need to recreate all sinks here (?)
     final Map<SegmentIdWithShardSpec, Sink> theSinks = new HashMap<>();
     AtomicLong pushedHydrantsCount = new AtomicLong();
     for (final SegmentIdWithShardSpec identifier : identifiers) {
-      final Sink sink = sinks.get(identifier);
+      final Sink sink = sinks.get(identifier); // aqvagt if it was persisted before it will no longer exist (?)
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
       }
@@ -837,7 +837,7 @@ public class BatchAppenderator implements Appenderator
         }
 
         mergedFile = indexMerger.mergeQueryableIndex(
-            indexes,
+            indexes, // aqvag do we need to merge a single index?
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             schema.getDimensionsSpec(),
