@@ -236,7 +236,7 @@ public class ConfigManager
   {
     private final Exception exception;
 
-    private final boolean retryableException;
+    private final Boolean retryableException;
 
     public static SetResult ok()
     {

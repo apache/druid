@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -57,7 +58,7 @@ import java.util.stream.Collectors;
 public class CoordinatorCompactionConfigsResource
 {
   private static final long UPDATE_RETRY_DELAY = 1000;
-  private static final int UPDATE_NUM_RETRY = 5;
+  static final int UPDATE_NUM_RETRY = 5;
 
   private final JacksonConfigManager manager;
 
@@ -184,7 +185,8 @@ public class CoordinatorCompactionConfigsResource
     return updateConfigHelper(callable);
   }
 
-  private Response updateConfigHelper(Callable<SetResult> updateMethod)
+  @VisibleForTesting
+  Response updateConfigHelper(Callable<SetResult> updateMethod)
   {
     int attemps = 0;
     SetResult setResult = null;
