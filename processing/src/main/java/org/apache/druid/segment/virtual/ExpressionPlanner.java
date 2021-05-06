@@ -155,8 +155,7 @@ public class ExpressionPlanner
     final boolean shouldComputeOutput = ExpressionPlan.none(
         traits,
         ExpressionPlan.Trait.UNKNOWN_INPUTS,
-        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
-        ExpressionPlan.Trait.NEEDS_APPLIED
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS
     );
 
     if (shouldComputeOutput) {
@@ -177,7 +176,7 @@ public class ExpressionPlanner
     }
 
     // vectorized expressions do not support incomplete, multi-valued inputs or outputs, or implicit mapping
-    // they also do support unknown inputs, but they also do not currently have to deal with them, as missing
+    // they also do not support unknown inputs, but they also do not currently have to deal with them, as missing
     // capabilites is indicative of a non-existent column instead of an unknown schema. If this ever changes,
     // this check should also change
     boolean supportsVector = ExpressionPlan.none(
@@ -193,8 +192,17 @@ public class ExpressionPlanner
       // due to unknown inputs, but that's ok here since it just means it doesnt exist
       outputType = expression.getOutputType(inspector);
       traits.add(ExpressionPlan.Trait.VECTORIZABLE);
+    } else if (supportsVector && ExpressionPlan.is(traits, ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+      // single input scalar expressions are currently vectorizable even if the expression is not
+      // this is kind of gross because this is actually only vectorizable if you're using a dictionary encoded
+      // vector selector, and not a vector object selector, but hopefully things check that a dictionary exists
+      // and prefer to use it...
+      outputType = expression.getOutputType(inspector);
+      traits.add(ExpressionPlan.Trait.VECTORIZABLE);
     }
+
     return new ExpressionPlan(
+        inspector,
         expression,
         analysis,
         traits,

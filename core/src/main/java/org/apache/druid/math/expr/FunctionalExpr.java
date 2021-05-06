@@ -67,6 +67,11 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
+  public List<String> stringifyIdentifiers()
+  {
+    return args.stream().map(IdentifierExpr::stringify).collect(Collectors.toList());
+  }
+
   ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
@@ -98,7 +103,7 @@ class LambdaExpr implements Expr
   @Override
   public String stringify()
   {
-    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
+    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(stringifyIdentifiers()), expr.stringify());
   }
 
   @Override

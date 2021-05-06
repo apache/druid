@@ -219,12 +219,26 @@ public class ColumnProcessors
     } else if (dimensionSpec.getExtractionFn() != null) {
       // DimensionSpec is applying an extractionFn but *not* decorating. We have some insight into how the
       // extractionFn will behave, so let's use it.
+      final boolean dictionaryEncoded;
+      final boolean unique;
+      final boolean sorted;
+      if (columnCapabilities != null) {
+        dictionaryEncoded = columnCapabilities.isDictionaryEncoded().isTrue();
+        unique = columnCapabilities.areDictionaryValuesUnique().isTrue();
+        sorted = columnCapabilities.areDictionaryValuesSorted().isTrue();
+      } else {
+        dictionaryEncoded = false;
+        unique = false;
+        sorted = false;
+      }
 
       return new ColumnCapabilitiesImpl()
           .setType(ValueType.STRING)
-          .setDictionaryValuesSorted(dimensionSpec.getExtractionFn().preservesOrdering())
-          .setDictionaryValuesUnique(dimensionSpec.getExtractionFn().getExtractionType()
-                                     == ExtractionFn.ExtractionType.ONE_TO_ONE)
+          .setDictionaryEncoded(dictionaryEncoded)
+          .setDictionaryValuesSorted(sorted && dimensionSpec.getExtractionFn().preservesOrdering())
+          .setDictionaryValuesUnique(
+              unique && dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
+          )
           .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(columnCapabilities));
     } else {
       // No transformation. Pass through underlying types.
@@ -319,7 +333,7 @@ public class ColumnProcessors
     switch (capabilities.getType()) {
       case STRING:
         // if column is not uniquely dictionary encoded, use an object selector
-        if (capabilities.isDictionaryEncoded().isFalse() || capabilities.areDictionaryValuesUnique().isFalse()) {
+        if (capabilities.isDictionaryEncoded().isFalse()) {
           return processorFactory.makeObjectProcessor(
               capabilities,
               objectSelectorFn.apply(selectorFactory)

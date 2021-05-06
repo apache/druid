@@ -19,10 +19,14 @@
 
 package org.apache.druid.segment.virtual;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -57,7 +61,8 @@ public class ExpressionPlan
      */
     UNKNOWN_INPUTS,
     /**
-     * expression has inputs whose type was incomplete, such as unknown multi-valuedness
+     * expression has inputs whose type was incomplete, such as unknown multi-valuedness, which are not explicitly
+     * used as multi-valued/array inputs
      */
     INCOMPLETE_INPUTS,
     /**
@@ -74,6 +79,7 @@ public class ExpressionPlan
     VECTORIZABLE
   }
 
+  private final ColumnInspector baseInputInspector;
   private final Expr expression;
   private final Expr.BindingAnalysis analysis;
   private final EnumSet<Trait> traits;
@@ -86,6 +92,7 @@ public class ExpressionPlan
   private final List<String> unappliedInputs;
 
   ExpressionPlan(
+      ColumnInspector baseInputInspector,
       Expr expression,
       Expr.BindingAnalysis analysis,
       EnumSet<Trait> traits,
@@ -95,6 +102,7 @@ public class ExpressionPlan
       List<String> unappliedInputs
   )
   {
+    this.baseInputInspector = baseInputInspector;
     this.expression = expression;
     this.analysis = analysis;
     this.traits = traits;
@@ -104,16 +112,28 @@ public class ExpressionPlan
     this.unappliedInputs = unappliedInputs;
   }
 
+  /**
+   * An expression with no inputs is a constant
+   */
   public boolean isConstant()
   {
     return analysis.getRequiredBindings().isEmpty();
   }
 
+  /**
+   * Gets the original expression that was planned
+   */
   public Expr getExpression()
   {
     return expression;
   }
 
+  /**
+   * If an expression uses a multi-valued input in a scalar manner, the expression can be automatically transformed
+   * to map these values across the expression, applying the original expression to every value.
+   *
+   * @see Parser#applyUnappliedBindings(Expr, Expr.BindingAnalysis, List)
+   */
   public Expr getAppliedExpression()
   {
     if (is(Trait.NEEDS_APPLIED)) {
@@ -122,61 +142,183 @@ public class ExpressionPlan
     return expression;
   }
 
+  /**
+   * If an expression uses a multi-valued input in a scalar manner, and the expression contains an accumulator such as
+   * for use as part of an aggregator, the expression can be automatically transformed to fold the accumulator across
+   * the values of the original expression.
+   *
+   * @see Parser#foldUnappliedBindings(Expr, Expr.BindingAnalysis, List, String)
+   */
   public Expr getAppliedFoldExpression(String accumulatorId)
   {
     if (is(Trait.NEEDS_APPLIED)) {
+      Preconditions.checkState(
+          !unappliedInputs.contains(accumulatorId),
+          "Accumulator cannot be implicitly transformed, if it is an ARRAY or multi-valued type it must"
+          + " be used explicitly as such"
+      );
       return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
     }
     return expression;
   }
 
-  public Expr.BindingAnalysis getAnalysis()
-  {
-    return analysis;
-  }
-
-  public boolean is(Trait... flags)
-  {
-    return is(traits, flags);
-  }
-
-  public boolean any(Trait... flags)
-  {
-    return any(traits, flags);
-  }
-
+  /**
+   * The output type of the original expression.
+   *
+   * Note that this might not be the true for the expressions provided by {@link #getAppliedExpression()}
+   * or {@link #getAppliedFoldExpression(String)}, should the expression have any unapplied inputs
+   */
   @Nullable
   public ExprType getOutputType()
   {
     return outputType;
   }
 
+  /**
+   * If and only if the column has a single input, get the {@link ValueType} of that input
+   */
   @Nullable
   public ValueType getSingleInputType()
   {
     return singleInputType;
   }
 
+  /**
+   * If and only if the expression has a single input, get the name of that input
+   */
   public String getSingleInputName()
   {
     return Iterables.getOnlyElement(analysis.getRequiredBindings());
   }
 
+  /**
+   * Get set of inputs which were completely missing information, possibly a non-existent column or from a column
+   * selector factory with incomplete information
+   */
   public Set<String> getUnknownInputs()
   {
     return unknownInputs;
   }
 
+  /**
+   * Returns basic analysis of the inputs to an {@link Expr} and how they are used
+   *
+   * @see Expr.BindingAnalysis
+   */
+  public Expr.BindingAnalysis getAnalysis()
+  {
+    return analysis;
+  }
+
+  /**
+   * Tries to construct the most appropriate {@link ColumnCapabilities} for this plan given the {@link #outputType} and
+   * {@link #traits} inferred by the {@link ExpressionPlanner}, optionally with the help of hint {@link ValueType}.
+   *
+   * If no output type was able to be inferred during planning, returns null
+   */
+  @Nullable
+  public ColumnCapabilities inferColumnCapabilities(@Nullable ValueType hint)
+  {
+    if (outputType != null) {
+      final ValueType inferredValueType = ExprType.toValueType(outputType);
+
+      if (inferredValueType.isNumeric()) {
+        // if float was explicitly specified preserve it, because it will currently never be the computed output type
+        // since there is no float expression type
+        if (ValueType.FLOAT == hint) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+        }
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(inferredValueType);
+      }
+
+      // null constants can sometimes trip up the type inference to report STRING, so check if explicitly supplied
+      // output type is numeric and stick with that if so
+      if (hint != null && hint.isNumeric()) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(hint);
+      }
+
+      // fancy string stuffs
+      if (ValueType.STRING == inferredValueType) {
+        // constant strings are supported as dimension selectors, set them as dictionary encoded and unique for all the
+        // bells and whistles the engines have to offer
+        if (isConstant()) {
+          return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+                                       .setDictionaryEncoded(true)
+                                       .setDictionaryValuesUnique(true)
+                                       .setDictionaryValuesSorted(true)
+                                       .setHasNulls(expression.isNullLiteral());
+        }
+
+        // single input strings also have an optimization which allow defering evaluation time until dictionary encoded
+        // column lookup, so if the underlying column is a dictionary encoded string then we can report as such
+        if (any(Trait.SINGLE_INPUT_SCALAR, Trait.SINGLE_INPUT_MAPPABLE)) {
+          ColumnCapabilities underlyingCapabilities = baseInputInspector.getColumnCapabilities(getSingleInputName());
+          if (underlyingCapabilities != null) {
+            // since we don't know if the expression is 1:1 or if it retains ordering we can only piggy back only
+            // report as dictionary encoded, but it still allows us to use algorithms which work with dictionaryIds
+            // to create a dictionary encoded selector instead of an object selector to defer expression evaluation
+            // until query time
+            return ColumnCapabilitiesImpl.copyOf(underlyingCapabilities)
+                                         .setDictionaryValuesSorted(false)
+                                         .setDictionaryValuesUnique(false)
+                                         .setHasNulls(true);
+          }
+        }
+      }
+
+      // we don't have to check for unknown input here because output type is unable to be inferred if we don't know
+      // the complete set of input types
+      if (any(Trait.NON_SCALAR_OUTPUT, Trait.NEEDS_APPLIED)) {
+        // if the hint requested a string, use a string
+        if (ValueType.STRING == hint) {
+          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+        }
+        // maybe something is looking for a little fun and wants arrays? let whatever it is through
+        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ExprType.toValueType(outputType));
+      }
+
+      // if we got here, lets call it single value string output, non-dictionary encoded
+      return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
+    }
+    // we don't know what we don't know
+    return null;
+  }
+
+  /**
+   * Returns true if all of the supplied traits are true in this plan
+   */
+  public boolean is(Trait... flags)
+  {
+    return is(traits, flags);
+  }
+
+  /**
+   * Returns true if any of the supplied traits are true in this plan
+   */
+  public boolean any(Trait... flags)
+  {
+    return any(traits, flags);
+  }
+
+  /**
+   * Returns true if all of the supplied traits are true in the supplied set
+   */
   static boolean is(EnumSet<Trait> traits, Trait... args)
   {
     return Arrays.stream(args).allMatch(traits::contains);
   }
 
+  /**
+   * Returns true if any of the supplied traits are true in the supplied set
+   */
   static boolean any(EnumSet<Trait> traits, Trait... args)
   {
     return Arrays.stream(args).anyMatch(traits::contains);
   }
 
+  /**
+   * Returns true if none of the supplied traits are true in the supplied set
+   */
   static boolean none(EnumSet<Trait> traits, Trait... args)
   {
     return Arrays.stream(args).noneMatch(traits::contains);

@@ -43,6 +43,7 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -420,6 +421,16 @@ public class VirtualColumns implements Cacheable
       return baseFactory;
     } else {
       return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    }
+  }
+
+
+  public ColumnInspector wrapInspector(ColumnInspector inspector)
+  {
+    if (virtualColumns.isEmpty()) {
+      return inspector;
+    } else {
+      return new VirtualizedColumnInspector(inspector, this);
     }
   }
 
