@@ -315,7 +315,9 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
+4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch, such as `0.17.0-docs`. 
+   
+5. Make another PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ### Create staged Maven repo
 
@@ -512,19 +514,16 @@ $ git push origin/druid-0.17.0
 
 ### Publish release artifacts to SVN
 
-The final release artifacts are kept in the following repo (same as KEYS):
+The final release artifacts are kept in the `https://dist.apache.org/repos/dist/release/druid` repo (same as KEYS).
+
+Use `svn mv` to publish the release artifacts as below:
 
 ```bash
-$ svn checkout https://dist.apache.org/repos/dist/release/druid
+$ svn mv https://dist.apache.org/repos/dist/dev/druid/0.17.0-rc3 https://dist.apache.org/repos/dist/release/druid/0.17.0 -m 'add 0.17.0 artifacts'
 ```
 
-Create a new directory for the release and put the artifacts there.
-
-```bash
-$ svn add 0.17.0
-...
-$ svn commit -m 'add 0.17.0 artifacts'
-```
+Replace the versions of the release candidate and the release with the ones you are currently working on. This command will drop those artifacts from the dev repo but add them to the release repo.
+Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/0.17.0`.
 
 ### Publish the staged Maven repo
 Returning to the staged repo you created for the Druid PMC vote ( https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
@@ -559,7 +558,7 @@ druid_versions:
 
 3. From druid-website, checkout branch `asf-site`.
 
-4. From druid-website-src, checkout the branch you created to update the staged Druid website or create a new branch from `master` if you have not.
+4. From druid-website-src, checkout the branch you created to update the staged Druid website.
 
 5. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
@@ -568,7 +567,9 @@ druid_versions:
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-6. Make a PR to the src repo (https://github.com/apache/druid-website-src) and to the website repo (https://github.com/apache/druid-website). Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
+6. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the master branch.
+   
+7. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch. Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
 
 ### Draft a release on github
 

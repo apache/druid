@@ -32,11 +32,22 @@ import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.VectorColumnProcessorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -63,7 +74,8 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public DoublesSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("k") final Integer k)
+      @JsonProperty("k") final Integer k
+  )
   {
     this(name, fieldName, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID);
   }
@@ -106,7 +118,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
-      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
+      final BaseDoubleColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchBufferAggregator();
       }
@@ -117,6 +129,65 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       return new NoopDoublesSketchBufferAggregator();
     }
     return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSizeWithNulls());
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    return ColumnProcessors.makeVectorProcessor(
+        fieldName,
+        new VectorColumnProcessorFactory<VectorAggregator>()
+        {
+          @Override
+          public VectorAggregator makeSingleValueDimensionProcessor(
+              ColumnCapabilities capabilities,
+              SingleValueDimensionVectorSelector selector
+          )
+          {
+            return new NoopDoublesSketchBufferAggregator();
+          }
+
+          @Override
+          public VectorAggregator makeMultiValueDimensionProcessor(
+              ColumnCapabilities capabilities,
+              MultiValueDimensionVectorSelector selector
+          )
+          {
+            return new NoopDoublesSketchBufferAggregator();
+          }
+
+          @Override
+          public VectorAggregator makeFloatProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+          {
+            return new DoublesSketchBuildVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeDoubleProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+          {
+            return new DoublesSketchBuildVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+          {
+            return new DoublesSketchBuildVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            return new DoublesSketchMergeVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());
+          }
+        },
+        selectorFactory
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override
@@ -217,8 +288,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         new DoublesSketchAggregatorFactory(
             fieldName,
             fieldName,
-            k)
-        );
+            k
+        )
+    );
   }
 
   @Override
@@ -306,10 +378,10 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-        + "name=" + name
-        + ", fieldName=" + fieldName
-        + ", k=" + k
-        + "}";
+           + "name=" + name
+           + ", fieldName=" + fieldName
+           + ", k=" + k
+           + "}";
   }
 
 }

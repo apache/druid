@@ -1497,6 +1497,7 @@ file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
+ARRAY_AGG
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -1786,6 +1787,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties

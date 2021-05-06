@@ -59,7 +59,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("a", new String[] {"foo", "bar", "baz", "foobar"})
         .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
         .put("c", new Double[] {3.1, 4.2, 5.3});
-    bindings = Parser.withMap(builder.build());
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test

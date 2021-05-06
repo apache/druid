@@ -41,7 +41,6 @@
         "ids": [
           "development/extensions-core/kafka-ingestion",
           "development/extensions-core/kinesis-ingestion",
-          "ingestion/tranquility",
           "ingestion/standalone-realtime"
         ]
       },
