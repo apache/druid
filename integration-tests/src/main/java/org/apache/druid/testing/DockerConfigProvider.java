@@ -337,6 +337,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
         return "schema-registry:8085";
       }
 
+      @Override
       public DruidTestModule.DruidDeploymentEnvType getDruidDeploymentEnvType()
       {
         return DruidTestModule.DruidDeploymentEnvType.DOCKER;
