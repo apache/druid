@@ -158,6 +158,13 @@
     <cve>CVE-2019-17195</cve>
   </suppress>
   <suppress>
+    <notes><![CDATA[
+   file name: apacheds-i18n-2.0.0-M15.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@2.0.0\-M15$</packageUrl>
+    <cve>CVE-2020-7791</cve>
+  </suppress>
+  <suppress>
       <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
       <notes><![CDATA[
    file name: libthrift-0.6.1.jar
