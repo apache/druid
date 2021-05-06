@@ -75,25 +75,20 @@ public class BatchAppenderatorTester implements AutoCloseable
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
   public BatchAppenderatorTester(
-      final int maxRowsInMemory
-  )
-  {
-    this(maxRowsInMemory, -1, null, false);
-  }
-
-  public BatchAppenderatorTester(
       final int maxRowsInMemory,
-      final boolean enablePushFailure
+      final boolean enablePushFailure,
+      boolean batchMemoryMappedIndex
   )
   {
-    this(maxRowsInMemory, -1, null, enablePushFailure);
+    this(maxRowsInMemory, -1, null, enablePushFailure, batchMemoryMappedIndex);
   }
 
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
-      final boolean enablePushFailure
+      final boolean enablePushFailure,
+      boolean batchMemoryMappedIndex
   )
   {
     this(
@@ -102,7 +97,8 @@ public class BatchAppenderatorTester implements AutoCloseable
         basePersistDirectory,
         enablePushFailure,
         new SimpleRowIngestionMeters(),
-        false
+        false,
+        batchMemoryMappedIndex
     );
   }
 
@@ -112,7 +108,8 @@ public class BatchAppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck
+      final boolean skipBytesInMemoryOverheadCheck,
+      boolean batchMemoryMappedIndex
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -236,7 +233,8 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        batchMemoryMappedIndex
     );
   }
 

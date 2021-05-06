@@ -49,9 +49,11 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   );
 
   @Test
-  public void testSimpleIngestion() throws Exception
+  public void testSimpleIngestionWithIndexesNotMapped() throws Exception
   {
-    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2, true)) {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2,
+                                                                            false,
+                                                                            false)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -124,6 +126,83 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testSimpleIngestionWithIndexesMapped() throws Exception
+  {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2,
+                                                                            false,
+                                                                            true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      boolean thrown;
+
+      // startJob
+      Assert.assertEquals(null, appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null)
+                      .getNumRowsInSegment()
+      );
+
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
+      // getSegments
+      Assert.assertEquals(IDENTIFIERS.subList(0, 2),
+                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
+
+      // getRowCount
+      Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
+      Assert.assertEquals(1, appenderator.getRowCount(IDENTIFIERS.get(1)));
+      thrown = false;
+      try {
+        appenderator.getRowCount(IDENTIFIERS.get(2));
+      }
+      catch (IllegalStateException e) {
+        thrown = true;
+      }
+      Assert.assertTrue(thrown);
+
+      // push all
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          null,
+          false
+      ).get();
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 2),
+          Lists.transform(
+              segmentsAndCommitMetadata.getSegments(),
+              new Function<DataSegment, SegmentIdWithShardSpec>()
+              {
+                @Override
+                public SegmentIdWithShardSpec apply(DataSegment input)
+                {
+                  return SegmentIdWithShardSpec.fromDataSegment(input);
+                }
+              }
+          ).stream().sorted().collect(Collectors.toList())
+      );
+      Assert.assertEquals(tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
+                          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList()));
+
+      appenderator.clear();
+      Assert.assertTrue(appenderator.getSegments().isEmpty());
+    }
+  }
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(

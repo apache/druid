@@ -1516,6 +1516,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         null,
         null,
+        false,
         false
     );
 
