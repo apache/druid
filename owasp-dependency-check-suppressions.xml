@@ -158,10 +158,11 @@
     <cve>CVE-2019-17195</cve>
   </suppress>
   <suppress>
+    <!-- This CVE is a false positive. The CVE is not for apacheds-i18n -->
     <notes><![CDATA[
    file name: apacheds-i18n-2.0.0-M15.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@2.0.0\-M15$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@.*$</packageUrl>
     <cve>CVE-2020-7791</cve>
   </suppress>
   <suppress>
