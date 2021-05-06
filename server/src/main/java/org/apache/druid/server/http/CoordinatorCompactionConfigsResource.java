@@ -97,7 +97,8 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          current,
+          // Do database insert without swap if the current config is empty as this means the config may be null in the database
+          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -126,7 +127,8 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          current,
+          // Do database insert without swap if the current config is empty as this means the config may be null in the database
+          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -177,7 +179,8 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          current,
+          // Do database insert without swap if the current config is empty as this means the config may be null in the database
+          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
           CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
