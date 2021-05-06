@@ -86,7 +86,11 @@ public class CoordinatorCompactionConfigsResourceTest
     String author = "maytas";
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
-        compactionTaskSlotRatio, maxCompactionTaskSlots, author, comment, mockHttpServletRequest
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        author,
+        comment,
+        mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
@@ -122,7 +126,10 @@ public class CoordinatorCompactionConfigsResourceTest
     String author = "maytas";
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
-        newConfig, author, comment, mockHttpServletRequest
+        newConfig,
+        author,
+        comment,
+        mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
@@ -164,7 +171,10 @@ public class CoordinatorCompactionConfigsResourceTest
     String author = "maytas";
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
-        datasourceName, author, comment, mockHttpServletRequest
+        datasourceName,
+        author,
+        comment,
+        mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
