@@ -42,7 +42,7 @@ public class DefaultTaskConfig
    * See {@link SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime, String, String)}
    * for more details.
    */
-  private static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = true;
+  public static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = true;
 
   @JsonProperty
   private final Map<String, Object> context = ImmutableMap.of(
