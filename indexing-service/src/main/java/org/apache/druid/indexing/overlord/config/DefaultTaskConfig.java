@@ -21,8 +21,6 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
-import org.joda.time.DateTime;
 
 import java.util.Map;
 
@@ -36,8 +34,6 @@ import java.util.Map;
  */
 public class DefaultTaskConfig
 {
-
-
   @JsonProperty
   private final Map<String, Object> context = ImmutableMap.of();
 
