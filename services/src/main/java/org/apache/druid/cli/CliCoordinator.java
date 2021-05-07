@@ -74,6 +74,7 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.KillAuditLog;
 import org.apache.druid.server.coordinator.duty.KillRules;
+import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
@@ -251,6 +252,11 @@ public class CliCoordinator extends ServerRunnable
                 binder,
                 CoordinatorDuty.class,
                 CoordinatorMetadataStoreManagementDuty.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.rule.on",
+                Predicates.equalTo("true"),
+                KillSupervisors.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.audit.on",

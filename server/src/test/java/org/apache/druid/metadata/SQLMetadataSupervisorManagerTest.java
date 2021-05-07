@@ -21,12 +21,15 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -83,6 +86,83 @@ public class SQLMetadataSupervisorManagerTest
     connector.createSupervisorsTable();
 
     supervisorManager = new SQLMetadataSupervisorManager(MAPPER, connector, Suppliers.ofInstance(tablesConfig));
+  }
+
+  @Test
+  public void testRemoveTerminatedSupervisorsOlderThanSupervisorActiveShouldNotBeDeleted()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    // Test that supervisor was inserted
+    Map<String, List<VersionedSupervisorSpec>> supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(1, supervisorSpecs.size());
+    Map<String, SupervisorSpec> latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSpecs.size());
+    // Try delete. Supervisor should not be deleted as it is still active
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
+    // Test that supervisor was not deleted
+    Assert.assertEquals(0, deleteCount);
+    supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(1, supervisorSpecs.size());
+    latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSpecs.size());
+  }
+
+  @Test
+  public void testRemoveTerminatedSupervisorsOlderThanWithSupervisorTerminatedAndOlderThanTimeShouldBeDeleted()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final String datasource1 = "datasource-1";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    supervisorManager.insert(supervisor1, new NoopSupervisorSpec(supervisor1, ImmutableList.of(datasource1)));
+    // Test that supervisor was inserted
+    Map<String, List<VersionedSupervisorSpec>> supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(1, supervisorSpecs.size());
+    Assert.assertEquals(2, supervisorSpecs.get(supervisor1).size());
+    Map<String, SupervisorSpec> latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSpecs.size());
+    Assert.assertEquals(ImmutableList.of(datasource1), ((NoopSupervisorSpec) latestSpecs.get(supervisor1)).getDataSources());
+    // Do delete. Supervisor should be deleted as it is terminated
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
+    // Verify that supervisor was actually deleted
+    Assert.assertEquals(2, deleteCount);
+    supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(0, supervisorSpecs.size());
+    latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(0, latestSpecs.size());
+  }
+
+  @Test
+  public void testRemoveTerminatedSupervisorsOlderThanWithSupervisorTerminatedButNotOlderThanTimeShouldNotBeDeleted()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final String datasource1 = "datasource-1";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    supervisorManager.insert(supervisor1, new NoopSupervisorSpec(supervisor1, ImmutableList.of(datasource1)));
+    // Test that supervisor was inserted
+    Map<String, List<VersionedSupervisorSpec>> supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(1, supervisorSpecs.size());
+    Assert.assertEquals(2, supervisorSpecs.get(supervisor1).size());
+    Map<String, SupervisorSpec> latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSpecs.size());
+    Assert.assertEquals(ImmutableList.of(datasource1), ((NoopSupervisorSpec) latestSpecs.get(supervisor1)).getDataSources());
+    // Do delete. Supervisor should not be deleted. Supervisor is terminated but it was created just now so it's
+    // created timestamp will be later than the timestamp 2012-01-01T00:00:00Z
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+    // Verify that supervisor was not deleted
+    Assert.assertEquals(0, deleteCount);
+    supervisorSpecs = supervisorManager.getAll();
+    Assert.assertEquals(1, supervisorSpecs.size());
+    Assert.assertEquals(2, supervisorSpecs.get(supervisor1).size());
+    latestSpecs = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSpecs.size());
+    Assert.assertEquals(ImmutableList.of(datasource1), ((NoopSupervisorSpec) latestSpecs.get(supervisor1)).getDataSources());
   }
 
   @Test
