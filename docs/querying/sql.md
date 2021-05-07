@@ -301,17 +301,20 @@ the `COUNT(expr)` aggregator will count the number of rows where expr is neither
 columns in this mode are not nullable; any null or missing values will be treated as zeroes.
 
 In SQL compatible mode (`false`), NULLs are treated more closely to the SQL standard. The property affects both storage
-and querying, so for correct behavior, it should be set on all Druid service types to be available at both ingestion time and query time. There is some overhead
-associated with the ability to handle NULLs; see the [segment internals](../design/segments.md#sql-compatible-null-handling)
-documentation for more details.
+and querying, so for correct behavior, it should be set on all Druid service types to be available at both ingestion
+time and query time. There is some overhead associated with the ability to handle NULLs; see
+the [segment internals](../design/segments.md#sql-compatible-null-handling)documentation for more details.
 
 ## Aggregation functions
 
-Aggregation functions can appear in the SELECT clause of any query. Any aggregator can be filtered using syntax like
-`AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
+Aggregation functions can appear in the SELECT clause of any query. Any aggregator can be filtered using syntax
+like `AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
 possible for two aggregators in the same SQL query to have different filters.
 
-When no rows are selected, aggregate functions will return their initial value. This can occur when filtering results in no matches while aggregating values across an entire table without a grouping, or, when using filtered aggregations within a grouping. What this value is exactly varies per aggregator, but COUNT, and the various approximate count distinct sketch functions, will always return 0.
+When no rows are selected, aggregate functions will return their initial value. This can occur when filtering results in
+no matches while aggregating values across an entire table without a grouping, or, when using filtered aggregations
+within a grouping. What this value is exactly varies per aggregator, but COUNT, and the various approximate count
+distinct sketch functions, will always return 0.
 
 Only the COUNT and ARRAY_AGG aggregations can accept the DISTINCT keyword.
 
