@@ -1214,14 +1214,14 @@ un
 128MB
 15ms
 2.5MB
-24GB
+24GiB
 256MB
-30GB-60GB
-4G
+30GiB-60GiB
+4GiB
 5MB
 64KB
 7KB
-8G
+8GiB
 G1GC
 GroupBys
 QoS-type
@@ -1316,12 +1316,12 @@ loadForever
  - ../docs/operations/segment-optimization.md
 700MB
  - ../docs/operations/single-server.md
-128GB
-16GB
-256GB
-4GB
-512GB
-64GB
+128GiB
+16GiB
+256GiB
+4GiB
+512GiB
+64GiB
 Nano-Quickstart
 i3
 i3.16xlarge
@@ -1606,6 +1606,8 @@ outputType
 WebUpd8
 m5.2xlarge
 metadata.storage.
+256GiB
+128GiB
  - ../docs/tutorials/tutorial-batch-hadoop.md
 PATH_TO_DRUID
 namenode
@@ -1857,6 +1859,8 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+4GiB
+512GiB
  - ../docs/development/extensions-core/druid-ranger-security.md
 json
 metastore
