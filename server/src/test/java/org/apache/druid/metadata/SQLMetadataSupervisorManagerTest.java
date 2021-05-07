@@ -101,8 +101,9 @@ public class SQLMetadataSupervisorManagerTest
     Map<String, SupervisorSpec> latestSpecs = supervisorManager.getLatest();
     Assert.assertEquals(1, latestSpecs.size());
     // Try delete. Supervisor should not be deleted as it is still active
-    supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
     // Test that supervisor was not deleted
+    Assert.assertEquals(0, deleteCount);
     supervisorSpecs = supervisorManager.getAll();
     Assert.assertEquals(1, supervisorSpecs.size());
     latestSpecs = supervisorManager.getLatest();
@@ -126,8 +127,9 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertEquals(1, latestSpecs.size());
     Assert.assertEquals(ImmutableList.of(datasource1), ((NoopSupervisorSpec) latestSpecs.get(supervisor1)).getDataSources());
     // Do delete. Supervisor should be deleted as it is terminated
-    supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(System.currentTimeMillis());
     // Verify that supervisor was actually deleted
+    Assert.assertEquals(2, deleteCount);
     supervisorSpecs = supervisorManager.getAll();
     Assert.assertEquals(0, supervisorSpecs.size());
     latestSpecs = supervisorManager.getLatest();
@@ -152,8 +154,9 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertEquals(ImmutableList.of(datasource1), ((NoopSupervisorSpec) latestSpecs.get(supervisor1)).getDataSources());
     // Do delete. Supervisor should not be deleted. Supervisor is terminated but it was created just now so it's
     // created timestamp will be later than the timestamp 2012-01-01T00:00:00Z
-    supervisorManager.removeTerminatedSupervisorsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
+    int deleteCount = supervisorManager.removeTerminatedSupervisorsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
     // Verify that supervisor was not deleted
+    Assert.assertEquals(0, deleteCount);
     supervisorSpecs = supervisorManager.getAll();
     Assert.assertEquals(1, supervisorSpecs.size());
     Assert.assertEquals(2, supervisorSpecs.get(supervisor1).size());

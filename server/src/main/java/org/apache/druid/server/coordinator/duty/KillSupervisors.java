@@ -28,6 +28,9 @@ import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
+/**
+ * CoordinatorDuty for automatic deletion of terminated supervisors from the supervisor table in metadata storage.
+ */
 public class KillSupervisors implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillSupervisors.class);

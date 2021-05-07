@@ -36,11 +36,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -53,6 +56,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 @ManageLifecycle
 public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
@@ -255,30 +259,30 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   @Override
   public int removeTerminatedSupervisorsOlderThan(long timestamp)
   {
-    int removedCount = 0;
     DateTime dateTime = DateTimes.utc(timestamp);
     Map<String, SupervisorSpec> supervisors = getLatest();
-    for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
-      final SupervisorSpec spec = supervisor.getValue();
-      if (spec instanceof NoopSupervisorSpec) {
-        removedCount += dbi.withHandle(
-            handle -> {
-              Update sql = handle.createStatement(
-                  StringUtils.format(
-                      "DELETE FROM %1$s WHERE spec_id = :spec_id AND created_date < :date_time",
-                      getSupervisorsTable()
-                  )
-              );
-              return sql.bind("spec_id", supervisor.getKey())
-                        .bind("date_time", dateTime.toString())
-                        .execute();
+    return dbi.withHandle(
+        handle -> {
+          final PreparedBatch batch = handle.prepareBatch(
+              StringUtils.format(
+                  "DELETE FROM %1$s WHERE spec_id = :spec_id AND created_date < '%2$s'",
+                  getSupervisorsTable(),
+                  dateTime.toString()
+              )
+          );
+          for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
+            final SupervisorSpec spec = supervisor.getValue();
+            // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+            // (NoopSupervisorSpec is used as a tombstone marker)
+            if (spec instanceof NoopSupervisorSpec) {
+              batch.bind("spec_id", supervisor.getKey()).add();
             }
-        );
-      }
-    }
-    return removedCount;
+          }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
+        }
+    );
   }
-
 
   private String getSupervisorsTable()
   {
