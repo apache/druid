@@ -97,7 +97,7 @@ public class TDigestSketchUtils
     if (virtualInput == null) {
       inputMatches = input.isDirectColumnAccess() && input.getDirectColumn().equals(factory.getFieldName());
     } else {
-      inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression() .equals(input.getExpression());
+      inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
     }
     return inputMatches && compression == factory.getCompression();
   }
