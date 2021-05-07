@@ -123,7 +123,6 @@ public class AvgSqlAggregator implements SqlAggregator
     );
 
     return Aggregation.create(
-        virtualColumnRegistry.findVirtualColumns(count.requiredFields()),
         ImmutableList.of(sum, count),
         new ArithmeticPostAggregator(
             name,

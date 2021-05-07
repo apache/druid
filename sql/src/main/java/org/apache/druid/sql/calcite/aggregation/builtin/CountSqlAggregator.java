@@ -144,7 +144,7 @@ public class CountSqlAggregator implements SqlAggregator
             project
       );
 
-      return Aggregation.create(virtualColumnRegistry.findVirtualColumns(theCount.requiredFields()), theCount);
+      return Aggregation.create(theCount);
     }
   }
 }

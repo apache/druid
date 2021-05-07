@@ -123,9 +123,9 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
         if (factory instanceof TDigestSketchAggregatorFactory) {
           final boolean matches = TDigestSketchUtils.matchingAggregatorFactoryExists(
+              virtualColumnRegistry,
               input,
               compression,
-              existing,
               (TDigestSketchAggregatorFactory) factory
           );
 
@@ -171,7 +171,6 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new TDigestSketchToQuantilePostAggregator(
             name,

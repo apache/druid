@@ -50,7 +50,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
@@ -188,15 +187,11 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput = existing.getVirtualColumns()
-                                                     .stream()
-                                                     .filter(
-                                                         virtualColumn ->
-                                                             virtualColumn.getOutputName()
-                                                                          .equals(theFactory.getFieldName())
-                                                     )
-                                                     .findFirst()
-                                                     .orElse(null);
+          final VirtualColumn virtualInput =
+              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+                                   .stream()
+                                   .findFirst()
+                                   .orElse(null);
 
           if (virtualInput == null) {
             inputMatches = input.isDirectColumnAccess()
@@ -224,8 +219,6 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new FixedBucketsHistogramAggregatorFactory(
           histogramName,
@@ -242,7 +235,6 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           input,
           ValueType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
       aggregatorFactory = new FixedBucketsHistogramAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
@@ -255,7 +247,6 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new QuantilePostAggregator(name, histogramName, probability)
     );
