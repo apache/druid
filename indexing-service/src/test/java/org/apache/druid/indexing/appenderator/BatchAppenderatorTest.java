@@ -37,6 +37,7 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,7 +52,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(2, true)) {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -69,32 +70,26 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
 
       Assert.assertEquals(
-          2,
-          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null)
-                      .getNumRowsInSegment()
-      );
-
-      Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 2), null)
                       .getNumRowsInSegment()
       );
 
       // getSegments
-      Assert.assertEquals(IDENTIFIERS.subList(0, 2),
+      Assert.assertEquals(IDENTIFIERS.subList(0,2),
                           appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
 
-      // getRowCount
-      Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
-      Assert.assertEquals(1, appenderator.getRowCount(IDENTIFIERS.get(1)));
-      thrown = false;
-      try {
-        appenderator.getRowCount(IDENTIFIERS.get(2));
-      }
-      catch (IllegalStateException e) {
-        thrown = true;
-      }
-      Assert.assertTrue(thrown);
+      // add one more to hit max rows in memory:
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
+      // since we just added three rows and the max rows in memory is three, all the segments (sinks etc)
+      // above should be cleared now
+      Assert.assertEquals(Collections.emptyList(),
+                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
 
       // push all
       final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(

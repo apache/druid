@@ -376,8 +376,32 @@ public class BatchAppenderator implements Appenderator
           throw new RuntimeException(errorMessage);
         }
 
-        Futures.addCallback(
+
+//        Futures.addCallback(
+//            persistAll(null),
+//            new FutureCallback<Object>()
+//            {
+//              @Override
+//              public void onSuccess(@Nullable Object result)
+//              {
+//                // do nothing
+//              }
+//
+//              @Override
+//              public void onFailure(Throwable t)
+//              {
+//                persistError = t;
+//              }
+//            }
+//        );
+
+        final ListenableFuture<Object> toPersist = Futures.transform(
             persistAll(null),
+            (Function<Object,Object>) future -> future
+        );
+
+        Futures.addCallback(
+            toPersist,
             new FutureCallback<Object>()
             {
               @Override
@@ -393,13 +417,16 @@ public class BatchAppenderator implements Appenderator
               }
             }
         );
-        // drop everything
+
+        // make sure sinks are cleared before push is called
         try {
+          toPersist.get();
           clear(false);
         }
-        catch (InterruptedException e) {
-          e.printStackTrace();
+        catch (Throwable t) {
+          persistError = t;
         }
+
       } else {
         isPersistRequired = true;
       }
@@ -520,33 +547,13 @@ public class BatchAppenderator implements Appenderator
     log.info("Clearing all sinks & hydrants, removing data on disk: [%s]", removeOnDiskData);
     try {
       throwPersistErrorIfExists();
-
-      if (persistExecutor != null) {
-        final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
-            () -> {
-              try {
-                commitLock.lock();
-                objectMapper.writeValue(computeCommitFile(), Committed.nil());
-              }
-              finally {
-                commitLock.unlock();
-              }
-              return null;
-            }
-        );
-
-        // Await uncommit.
-        uncommitFuture.get();
-
-        // Drop everything.
-        final List<ListenableFuture<?>> futures = new ArrayList<>();
-        for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-          futures.add(abandonSegment(entry.getKey(), entry.getValue(), removeOnDiskData));
-        }
-
-        // Await dropping.
-        Futures.allAsList(futures).get();
+      // Drop everything.
+      final List<ListenableFuture<?>> futures = new ArrayList<>();
+      for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+        futures.add(abandonSegment(entry.getKey(), entry.getValue(), removeOnDiskData));
       }
+      // Await dropping.
+      Futures.allAsList(futures).get();
     }
     catch (ExecutionException e) {
       throw new RuntimeException(e);
@@ -633,9 +640,6 @@ public class BatchAppenderator implements Appenderator
                   totalHydrantsPersisted.longValue()
               );
 
-              // drop all sinks & hydrants but leave their data on disk
-              //clear(false);
-
               // return null if committer is null
               return null;
             }
@@ -676,7 +680,18 @@ public class BatchAppenderator implements Appenderator
       final boolean useUniquePath
   )
   {
-    // aqvagt May need to recreate all sinks here (?)
+
+    // all sinks will be cleared when we get here...
+    // sanity
+    if (sinks.size() > 0) {
+      throw new ISE("All sinks should be cleared before push for batch ingestion");
+    }
+    if (committer != null) {
+      throw new ISE("There should be no committer for batch ingestion");
+    }
+
+
+    // aqvagt May need to recreate all identifiers here (?)
     final Map<SegmentIdWithShardSpec, Sink> theSinks = new HashMap<>();
     AtomicLong pushedHydrantsCount = new AtomicLong();
     for (final SegmentIdWithShardSpec identifier : identifiers) {
@@ -692,7 +707,6 @@ public class BatchAppenderator implements Appenderator
       pushedHydrantsCount.addAndGet(IterableUtils.size(sink));
     }
 
-    // aqvag: Is this the way to chain?
     final ListenableFuture<Object> persistAllCleared = Futures.transform(
         persistAll(committer),
         (Function<Object,Object>) commitMetadata -> {
@@ -722,9 +736,9 @@ public class BatchAppenderator implements Appenderator
               theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
           );
 
-          List<File> sinkDirs = getPersistedSinkFiles();
-          for (File sinkDir: sinkDirs) {
-            Pair<SegmentIdWithShardSpec,Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(sinkDir);
+          List<File> persistedIdentifiers = getPersistedidentifierPaths();
+          for (File identifier: persistedIdentifiers) {
+            Pair<SegmentIdWithShardSpec,Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(identifier);
             final DataSegment dataSegment = mergeAndPush(
                 sinkAndHydrants.lhs,
                 sinkAndHydrants.rhs,
@@ -776,10 +790,10 @@ public class BatchAppenderator implements Appenderator
   {
     // Bail out if this sink is null or otherwise not what we expect.
     //noinspection ObjectEquality
-    if (sinks.get(identifier) != sink) {
-      log.warn("Sink for segment[%s] no longer valid, bailing out of mergeAndPush.", identifier);
-      return null;
-    }
+//    if (sinks.get(identifier) != sink) {
+//      log.warn("Sink for segment[%s] no longer valid, bailing out of mergeAndPush.", identifier);
+//      return null;
+//    }
 
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
@@ -1238,8 +1252,10 @@ public class BatchAppenderator implements Appenderator
   }
 
 
-  private List<File> getPersistedSinkFiles()
+  private List<File> getPersistedidentifierPaths()
   {
+
+    ArrayList<File> retVal = new ArrayList<>();
 
     final File baseDir = tuningConfig.getBasePersistDirectory();
     if (!baseDir.exists()) {
@@ -1257,20 +1273,22 @@ public class BatchAppenderator implements Appenderator
         // No identifier in this sinkDir; it must not actually be a sink directory. Skip it.
         continue;
       }
+      retVal.add(sinkDir);
     }
 
-    return Arrays.asList(files);
+    return retVal;
   }
 
-  Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File sinkDir) {
+  Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File identifierPath) {
+
     try {
       final SegmentIdWithShardSpec identifier = objectMapper.readValue(
-          new File(sinkDir, "identifier.json"),
+          new File(identifierPath, "identifier.json"),
           SegmentIdWithShardSpec.class
       );
 
       // To avoid reading and listing of "merged" dir and other special files
-      final File[] sinkFiles = sinkDir.listFiles(
+      final File[] sinkFiles = identifierPath.listFiles(
           (dir, fileName) -> !(Ints.tryParse(fileName) == null)
       );
 
@@ -1285,7 +1303,7 @@ public class BatchAppenderator implements Appenderator
 
         log.debug("Loading previously persisted partial segment at [%s]", hydrantDir);
         if (hydrantNumber != hydrants.size()) {
-          throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
+          throw new ISE("Missing hydrant [%,d] in identifier [%s].", hydrants.size(), identifier);
         }
 
         hydrants.add(
@@ -1307,12 +1325,13 @@ public class BatchAppenderator implements Appenderator
           null,
           hydrants
       );
+      currSink.finishWriting(); // this sink is not writable
       //sinks.put(identifier, currSink);
-      return new Pair<>(identifier,currSink);
+      return new Pair<>(identifier, currSink);
     }
     catch (IOException e) {
       log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
-         .addData("sinkDir", sinkDir)
+         .addData("identifier path", identifierPath)
          .emit();
     }
     return null;
