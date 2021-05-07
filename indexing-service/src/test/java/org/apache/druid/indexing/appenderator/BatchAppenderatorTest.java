@@ -82,7 +82,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // add one more to hit max rows in memory:
       Assert.assertEquals(
           2,
-          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null)
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "sux", 1), null)
                       .getNumRowsInSegment()
       );
 
@@ -91,6 +91,14 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(Collections.emptyList(),
                           appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
 
+      // add one more:
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
+
       // push all
       final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
           appenderator.getSegments(),
@@ -98,7 +106,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           false
       ).get();
       Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
+          IDENTIFIERS.subList(0, 3),
               Lists.transform(
                   segmentsAndCommitMetadata.getSegments(),
                   new Function<DataSegment, SegmentIdWithShardSpec>()

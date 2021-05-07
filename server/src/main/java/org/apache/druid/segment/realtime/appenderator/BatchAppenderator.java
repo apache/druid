@@ -31,12 +31,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
@@ -84,7 +82,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -395,37 +392,7 @@ public class BatchAppenderator implements Appenderator
 //            }
 //        );
 
-        final ListenableFuture<Object> toPersist = Futures.transform(
-            persistAll(null),
-            (Function<Object,Object>) future -> future
-        );
-
-        Futures.addCallback(
-            toPersist,
-            new FutureCallback<Object>()
-            {
-              @Override
-              public void onSuccess(@Nullable Object result)
-              {
-                // do nothing
-              }
-
-              @Override
-              public void onFailure(Throwable t)
-              {
-                persistError = t;
-              }
-            }
-        );
-
-        // make sure sinks are cleared before push is called
-        try {
-          toPersist.get();
-          clear(false);
-        }
-        catch (Throwable t) {
-          persistError = t;
-        }
+        persistAllAndClear();
 
       } else {
         isPersistRequired = true;
@@ -559,6 +526,7 @@ public class BatchAppenderator implements Appenderator
       throw new RuntimeException(e);
     }
   }
+
   @Override
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
@@ -568,6 +536,26 @@ public class BatchAppenderator implements Appenderator
     } else {
       return Futures.immediateFuture(null);
     }
+  }
+
+  private SegmentsAndCommitMetadata persistAllAndClear()
+  {
+    final ListenableFuture<Object> toPersist = Futures.transform(
+        persistAll(null),
+        (Function<Object, Object>) future -> future
+    );
+
+    // make sure sinks are cleared before push is called
+    final SegmentsAndCommitMetadata commitMetadata;
+    try {
+      commitMetadata = (SegmentsAndCommitMetadata) toPersist.get();
+      clear(false);
+      return commitMetadata;
+    }
+    catch (Throwable t) {
+      persistError = t;
+    }
+    return null;
   }
 
   @Override
@@ -681,82 +669,44 @@ public class BatchAppenderator implements Appenderator
   )
   {
 
-    // all sinks will be cleared when we get here...
-    // sanity
-    if (sinks.size() > 0) {
-      throw new ISE("All sinks should be cleared before push for batch ingestion");
-    }
     if (committer != null) {
       throw new ISE("There should be no committer for batch ingestion");
     }
 
+    // Any sinks not persisted so far will be persisted before push:
+    final SegmentsAndCommitMetadata commitMetadata = persistAllAndClear();
 
-    // aqvagt May need to recreate all identifiers here (?)
-    final Map<SegmentIdWithShardSpec, Sink> theSinks = new HashMap<>();
-    AtomicLong pushedHydrantsCount = new AtomicLong();
-    for (final SegmentIdWithShardSpec identifier : identifiers) {
-      final Sink sink = sinks.get(identifier); // aqvagt if it was persisted before it will no longer exist (?)
-      if (sink == null) {
-        throw new ISE("No sink for identifier: %s", identifier);
-      }
-      theSinks.put(identifier, sink);
-      if (sink.finishWriting()) {
-        totalRows.addAndGet(-sink.getNumRows());
-      }
-      // count hydrants for stats:
-      pushedHydrantsCount.addAndGet(IterableUtils.size(sink));
-    }
+    final ListenableFuture<SegmentsAndCommitMetadata> pushFuture = pushExecutor.submit(
+        new Callable<SegmentsAndCommitMetadata>()
+        {
+          @Override
+          public SegmentsAndCommitMetadata call()
+          {
+            log.info("Preparing to push...");
 
-    final ListenableFuture<Object> persistAllCleared = Futures.transform(
-        persistAll(committer),
-        (Function<Object,Object>) commitMetadata -> {
-          try {
-            clear(false);
-          }
-          catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-          return commitMetadata;
-        }
-    );
-    return Futures.transform(
-        // We should always persist all segments regardless of the input because metadata should be committed for all
-        // segments.
-        persistAllCleared,
-        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
-          // clear all:
-          final List<DataSegment> dataSegments = new ArrayList<>();
-
-          log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
-                   rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
-          );
-
-          log.debug(
-              "Building and pushing segments: %s",
-              theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
-          );
-
-          List<File> persistedIdentifiers = getPersistedidentifierPaths();
-          for (File identifier: persistedIdentifiers) {
-            Pair<SegmentIdWithShardSpec,Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(identifier);
-            final DataSegment dataSegment = mergeAndPush(
-                sinkAndHydrants.lhs,
-                sinkAndHydrants.rhs,
-                useUniquePath
-            );
-            if (dataSegment != null) {
-              dataSegments.add(dataSegment);
-            } else {
-              log.warn("mergeAndPush[%s] returned null, skipping.", sinkAndHydrants.lhs);
+            final List<DataSegment> dataSegments = new ArrayList<>();
+            List<File> persistedIdentifiers = getPersistedidentifierPaths();
+            for (File identifier : persistedIdentifiers) {
+              Pair<SegmentIdWithShardSpec, Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(identifier);
+              final DataSegment dataSegment = mergeAndPush(
+                  sinkAndHydrants.lhs,
+                  sinkAndHydrants.rhs,
+                  useUniquePath
+              );
+              if (dataSegment != null) {
+                dataSegments.add(dataSegment);
+              } else {
+                log.warn("mergeAndPush[%s] returned null, skipping.", sinkAndHydrants.lhs);
+              }
             }
+
+            log.info("Push complete...");
+
+            return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
           }
+        });
 
-          log.info("Push complete...");
-
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
-        },
-        pushExecutor
-    );
+    return pushFuture;
   }
 
   /**
@@ -788,12 +738,6 @@ public class BatchAppenderator implements Appenderator
       final boolean useUniquePath
   )
   {
-    // Bail out if this sink is null or otherwise not what we expect.
-    //noinspection ObjectEquality
-//    if (sinks.get(identifier) != sink) {
-//      log.warn("Sink for segment[%s] no longer valid, bailing out of mergeAndPush.", identifier);
-//      return null;
-//    }
 
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
@@ -851,7 +795,7 @@ public class BatchAppenderator implements Appenderator
         }
 
         mergedFile = indexMerger.mergeQueryableIndex(
-            indexes, // aqvag do we need to merge a single index?
+            indexes,
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             schema.getDimensionsSpec(),
@@ -1279,7 +1223,8 @@ public class BatchAppenderator implements Appenderator
     return retVal;
   }
 
-  Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File identifierPath) {
+  Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File identifierPath)
+  {
 
     try {
       final SegmentIdWithShardSpec identifier = objectMapper.readValue(
