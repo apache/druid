@@ -67,21 +67,36 @@ import java.util.stream.Collectors;
  */
 public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
+  /**
+   * A flag to determine what protocol to use for segment allocation. The Overlod sets this context explicitly
+   * for all tasks to use the lineage-based protocol in 0.22 or later.
+   */
   public static final String CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = "useLineageBasedSegmentAllocation";
 
   /**
-   * The new lineage-based segment allocation protocol must be used as the legacy protocol has a critical bug
-   * However, we tell subtasks to use the legacy protocol by default if it's not explicitly set in the taskContext.
-   * This is to guarantee that every subtask uses the same protocol so that they can succeed during the replacing
-   * rolling upgrade. Once the Overlord is upgraded, it will set it in the context explicitly for all tasks to use
-   * the new protocol.
+   * A legacy default for {@link #CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY} when the Overlord is running on
+   * 0.21 or earlier.
+   *
+   * The new lineage-based segment allocation protocol must be used as the legacy protocol has a critical bug.
+   * However, we tell subtasks to use the legacy protocol by default unless it is explicitly set in the taskContext.
+   * This is to guarantee that every subtask uses the same protocol during the replacing rolling upgrade so that
+   * batch tasks that are already running can continue. Once the upgrade is done, the Overlod will set this context
+   * explicitly for all tasks to use the new protocol.
    *
    * @see SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime)
-   * @see org.apache.druid.indexing.overlord.config.DefaultTaskConfig#DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
    * @see org.apache.druid.indexing.overlord.TaskQueue#add(Task)
+   * @see #DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
    */
   @Deprecated
-  static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = false;
+  static final boolean LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = false;
+
+  /**
+   * A new default for {@link #CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY} when the Overlord is running on 0.22
+   * or later. The new lineage-based segment allocation protocol must be used to ensure data correctness.
+   *
+   * @see SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime, String, String)
+   */
+  public static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION = true;
 
   private static final String PHASE_NAME = "segment generation";
 

@@ -192,12 +192,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.
    * Per {@link SubTaskSpec}, there could be at most one task failure.
+   *
+   * @see #DEFAULT_TRANSIENT_TASK_FAILURE_RATE
    */
   private final double transientTaskFailureRate;
 
   /**
    * Transient API call failure rate emulated by {@link LocalParallelIndexSupervisorTaskClient}.
    * This will be applied to every API calls in the future.
+   *
+   * @see #DEFAULT_TRANSIENT_API_FAILURE_RATE
    */
   private final double transientApiCallFailureRate;
 
@@ -428,7 +432,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
       task.addToContextIfAbsent(
           SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-          DefaultTaskConfig.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
+          SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
       );
       final ListenableFuture<TaskStatus> statusFuture = service.submit(
           () -> {

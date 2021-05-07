@@ -89,6 +89,25 @@ public class RetryUtils
     );
   }
 
+  /**
+   * Retries the given {@link Task} until it succeeds or hits the max retry limit.
+   * This method can sleep between tries.
+   *
+   * @param f                   task to execute
+   * @param shouldRetry         retry condition. The task will be retried only when the exception
+   *                            thrown by the previous try satisfies this condition.
+   * @param quietTries          max number of retries that are executed with debug logging
+   * @param maxTries            max number of tries including the initial execution
+   * @param cleanupAfterFailure a callback function that is called after each task execution failure
+   * @param messageOnRetry      log message that is printed per retry
+   * @param skipSleep           a flag to skip sleeping between retries.
+   *                            This flag is used only for testing and must be set to false in production code.
+   *
+   * @return task execution result
+   *
+   * @throws Exception thrown from the last task execution after maxTries
+   * @throws RuntimeException when the current thread is interrupted
+   */
   @VisibleForTesting
   static <T> T retry(
       final Task<T> f,

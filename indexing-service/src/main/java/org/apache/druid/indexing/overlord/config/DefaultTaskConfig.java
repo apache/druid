@@ -36,19 +36,10 @@ import java.util.Map;
  */
 public class DefaultTaskConfig
 {
-  /**
-   * Used to determine what protocol to use for segment allocation in {@link SinglePhaseParallelIndexTaskRunner}.
-   * Every new task must use the lineage-based segment allocation protocol.
-   * See {@link SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime, String, String)}
-   * for more details.
-   */
-  public static final boolean DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY = true;
+
 
   @JsonProperty
-  private final Map<String, Object> context = ImmutableMap.of(
-      SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-      DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
-  );
+  private final Map<String, Object> context = ImmutableMap.of();
 
   public Map<String, Object> getContext()
   {

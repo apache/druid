@@ -446,7 +446,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // See DefaultTaskConfig and TaskQueue.add().
     addToContextIfAbsent(
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-        SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
+        SinglePhaseParallelIndexTaskRunner.LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
 
     try {

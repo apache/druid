@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
 
 public final class SegmentPublisherHelper
 {
+  private static final Logger LOG = new Logger(SegmentPublisherHelper.class);
+
   /**
    * This method fills missing information in the shard spec if necessary when publishing segments.
    *
@@ -84,9 +87,14 @@ public final class SegmentPublisherHelper
                 .count()
         );
         if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
+          LOG.errorSegments(segmentsPerInterval, "Cannot publish segments due to incomplete time chunk");
           throw new ISE(
-              "Cannot publish segments due to incomplete time chunk. Segments are [%s]",
-              segmentsPerInterval.stream().map(DataSegment::getId).collect(Collectors.toList())
+              "Cannot publish segments due to incomplete time chunk for interval[%s]. "
+              + "Expected [%s] segments in the core partition, but only [%] segments are found. "
+              + "See task logs for more details about these segments.",
+              interval,
+              expectedCorePartitionSetSize,
+              actualCorePartitionSetSize
           );
         }
         annotateFn = annotateCorePartitionSetSizeFn(expectedCorePartitionSetSize);

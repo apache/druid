@@ -306,7 +306,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
     final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
     final boolean useLineageBasedSegmentAllocation = getContextValue(
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-        SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY
+        SinglePhaseParallelIndexTaskRunner.LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
     // subtaskSpecId is used as the sequenceName, so that retry tasks for the same spec
     // can allocate the same set of segments.
