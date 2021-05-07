@@ -20,18 +20,25 @@
 package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+
+import java.util.Map;
 
 /**
- * Global configurations for task lock. Used by the overlord.
- * This config takes precedence if it has a conflicting config with {@link DefaultTaskConfig}.
+ * Configurations for ingestion tasks. These configurations can be applied to tasks when they are scheduled
+ * in the overlord. If the task is a parallel task that has subtasks, the same configurations should apply
+ * to all its subtasks too.
+ *
+ * See {@link org.apache.druid.indexing.common.config.TaskConfig} if you want to apply different configurations
+ * per middleManager, indexer, and overlod.
  */
-public class TaskLockConfig
+public class DefaultTaskConfig
 {
   @JsonProperty
-  private boolean forceTimeChunkLock = true;
+  private final Map<String, Object> context = ImmutableMap.of();
 
-  public boolean isForceTimeChunkLock()
+  public Map<String, Object> getContext()
   {
-    return forceTimeChunkLock;
+    return context;
   }
 }

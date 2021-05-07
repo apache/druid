@@ -398,7 +398,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         } else {
           try {
             final long sleepTime = delay.getMillis();
-            log.debug(
+            log.warn(
                 "Bad response HTTP [%s] from [%s]; will try again in [%s] (body/exception: [%s])",
                 (response != null ? response.getStatus().getCode() : "no response"),
                 urlForLog,
