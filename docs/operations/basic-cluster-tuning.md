@@ -40,11 +40,11 @@ The biggest contributions to heap usage on Historicals are:
 - Partial unmerged query results from segments
 - The stored maps for [lookups](../querying/lookups.md).
 
-A general rule-of-thumb for sizing the Historical heap is `(0.5GB * number of CPU cores)`, with an upper limit of ~24GB.
+A general rule-of-thumb for sizing the Historical heap is `(0.5GiB * number of CPU cores)`, with an upper limit of ~24GiB.
 
 This rule-of-thumb scales using the number of CPU cores as a convenient proxy for hardware size and level of concurrency (note: this formula is not a hard rule for sizing Historical heaps).
 
-Having a heap that is too large can result in excessively long GC collection pauses, the ~24GB upper limit is imposed to avoid this.
+Having a heap that is too large can result in excessively long GC collection pauses, the ~24GiB upper limit is imposed to avoid this.
 
 If caching is enabled on Historicals, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
@@ -56,7 +56,7 @@ If you are using lookups, calculate the total size of the lookup maps being load
 
 Druid performs an atomic swap when updating lookup maps (both the old map and the new map will exist in heap during the swap), so the maximum potential heap usage from lookup maps will be (2 * total size of all loaded lookups).
 
-Be sure to add `(2 * total size of all loaded lookups)` to your heap size in addition to the `(0.5GB * number of CPU cores)` guideline.
+Be sure to add `(2 * total size of all loaded lookups)` to your heap size in addition to the `(0.5GiB * number of CPU cores)` guideline.
 
 #### Processing Threads and Buffers
 
@@ -110,7 +110,7 @@ We recommend using SSDs for storage on the Historicals, as they handle segment d
 
 To estimate total memory usage of the Historical under these guidelines:
 
-- Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
+- Heap: `(0.5GiB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / total size of all `druid.segmentCache.locations`) ratio so that a greater proportion of segments can be kept in memory.
@@ -130,7 +130,7 @@ The biggest contributions to heap usage on Brokers are:
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments.
 
-The heap size will vary based on data size and usage patterns, but 4G to 8G is a good starting point for a small or medium cluster (~15 servers or less). For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GB-60GB.
+The heap size will vary based on data size and usage patterns, but 4GiB to 8GiB is a good starting point for a small or medium cluster (~15 servers or less). For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GiB-60GiB.
 
 If caching is enabled on the Broker, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
@@ -204,7 +204,7 @@ The following section below describes configuration for Tasks launched by the Mi
 
 ##### Task heap sizing
 
-A 1GB heap is usually enough for Tasks.
+A 1GiB heap is usually enough for Tasks.
 
 ###### Lookups
 
@@ -248,7 +248,7 @@ Tuning the cluster so that each Task can accept 50 queries and 10 non-queries is
 
 To estimate total memory usage of a Task under these guidelines:
 
-- Heap: `1GB + (2 * total size of lookup maps)`
+- Heap: `1GiB + (2 * total size of lookup maps)`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 The total memory usage of the MiddleManager + Tasks:
