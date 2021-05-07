@@ -311,9 +311,9 @@ Aggregation functions can appear in the SELECT clause of any query. Any aggregat
 `AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
 possible for two aggregators in the same SQL query to have different filters.
 
-Only the COUNT and ARRAY_AGG aggregations can accept DISTINCT.
+When no rows are selected, aggregate functions will return their initial value. This can occur when filtering results in no matches while aggregating values across an entire table without a grouping, or, when using filtered aggregations within a grouping. What this value is exactly varies per aggregator, but COUNT, and the various approximate count distinct sketch functions, will always return 0.
 
-When no rows are selected, aggregate functions will return their initialized value for the grouping they belong to. What this value is exactly for a given aggregator is dependent on the configuration of Druid's SQL compatible null handling mode, controlled by `druid.generic.useDefaultValueForNull`. The table below defines the initial values for all aggregate functions in both modes.
+Only the COUNT and ARRAY_AGG aggregations can accept the DISTINCT keyword.
 
 > The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
 > functions can produce inconsistent results across the same query. 
@@ -328,8 +328,7 @@ When no rows are selected, aggregate functions will return their initialized val
 |`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is set to true in query contexts or broker configurations.|`0`|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
-|`MAX(expr)`|Takes the maximum of numbers.|`0` in 'default' mode, `null` in SQL compatible mode|
-|`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
+|`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
 |`AVG(expr)`|Averages numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|`0`|
 |`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`0`|
