@@ -51,12 +51,10 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
   protected Aggregation toAggregation(
       String name,
       boolean finalizeAggregations,
-      List<VirtualColumn> virtualColumns,
       AggregatorFactory aggregatorFactory
   )
   {
     return Aggregation.create(
-        virtualColumns,
         Collections.singletonList(aggregatorFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
             name,
