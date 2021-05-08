@@ -31,6 +31,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration loadTimeoutDelay;
   private final Duration coordinatorKillPeriod;
   private final Duration coordinatorKillDurationToRetain;
+  private final Duration coordinatorSupervisorKillPeriod;
+  private final Duration coordinatorSupervisorKillDurationToRetain;
   private final Duration coordinatorAuditKillPeriod;
   private final Duration coordinatorAuditKillDurationToRetain;
   private final Duration coordinatorRuleKillPeriod;
@@ -46,6 +48,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration loadTimeoutDelay,
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
+      Duration coordinatorSupervisorKillPeriod,
+      Duration coordinatorSupervisorKillDurationToRetain,
       Duration coordinatorAuditKillPeriod,
       Duration coordinatorAuditKillDurationToRetain,
       Duration coordinatorRuleKillPeriod,
@@ -61,6 +65,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.loadTimeoutDelay = loadTimeoutDelay;
     this.coordinatorKillPeriod = coordinatorKillPeriod;
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
+    this.coordinatorSupervisorKillPeriod = coordinatorSupervisorKillPeriod;
+    this.coordinatorSupervisorKillDurationToRetain = coordinatorSupervisorKillDurationToRetain;
     this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
     this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
     this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
@@ -103,6 +109,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorKillDurationToRetain()
   {
     return coordinatorKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorSupervisorKillPeriod()
+  {
+    return coordinatorSupervisorKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorSupervisorKillDurationToRetain()
+  {
+    return coordinatorSupervisorKillDurationToRetain;
   }
 
   @Override

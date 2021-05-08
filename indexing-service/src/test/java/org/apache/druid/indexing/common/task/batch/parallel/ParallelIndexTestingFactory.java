@@ -67,6 +67,7 @@ class ParallelIndexTestingFactory
   static final String GROUP_ID = "group-id";
   static final TaskResource TASK_RESOURCE = null;
   static final String SUPERVISOR_TASK_ID = "supervisor-task-id";
+  static final String SUBTASK_SPEC_ID = "subtask-spec-id";
   static final int NUM_ATTEMPTS = 1;
   static final Map<String, Object> CONTEXT = Collections.emptyMap();
   static final IndexingServiceClient INDEXING_SERVICE_CLIENT = TestUtils.INDEXING_SERVICE_CLIENT;
