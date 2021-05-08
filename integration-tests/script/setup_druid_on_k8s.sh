@@ -44,6 +44,9 @@ sudo rm -rf tmp
 mkdir tmp
 chmod 777 tmp
 
+# Technically postgres isn't needed in all tests i.e. where derby is used, but ok.
+$KUBECTL apply -f integration-tests/k8s/postgres.yaml
+
 # spec name needs to come from argument for high availability test
 $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
 sed -i "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
