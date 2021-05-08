@@ -173,7 +173,7 @@ public class AppenderatorImpl implements Appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
    * at merge time. This is necessary since batch appenderator will not map the QueryableIndex
    * at persist time in order to minimize its memory footprint. This has to be synchronized since the
-   * map bay be accessed from multiple threads.
+   * map may be accessed from multiple threads.
    * Use {@link IdentityHashMap} to better reflect the fact that the key needs to be interpreted
    * with reference semantics.
    */
@@ -740,7 +740,7 @@ public class AppenderatorImpl implements Appenderator
         totalRows.addAndGet(-sink.getNumRows());
       }
       // count hydrants for stats:
-      pushedHydrantsCount.addAndGet(IterableUtils.size(sink));
+      pushedHydrantsCount.addAndGet(Iterables.size(sink));
     }
 
     return Futures.transform(
