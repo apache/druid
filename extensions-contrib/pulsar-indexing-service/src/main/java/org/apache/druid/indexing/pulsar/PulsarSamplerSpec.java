@@ -23,13 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorIOConfig;
-import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
+import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorIOConfig;
+import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,10 +59,6 @@ public class PulsarSamplerSpec extends SeekableStreamSamplerSpec
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
       final Map<String, Object> props = new HashMap<>(((PulsarSupervisorIOConfig) ioConfig).getConsumerProperties());
-
-      props.put("enable.auto.commit", "false");
-      props.put("auto.offset.reset", "none");
-      props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
 
       return new PulsarRecordSupplier(props, objectMapper);
     }

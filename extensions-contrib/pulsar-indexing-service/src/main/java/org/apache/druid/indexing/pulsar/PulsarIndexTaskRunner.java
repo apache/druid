@@ -40,6 +40,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -98,7 +99,7 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<String,
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
         SeekableStreamEndSequenceNumbers.class,
         SeekableStreamEndSequenceNumbers.class,
-        Integer.class,
+        String.class,
         String.class
     ));
   }

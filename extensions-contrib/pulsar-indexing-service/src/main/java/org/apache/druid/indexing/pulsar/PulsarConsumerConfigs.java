@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Common place to keep all pulsar consumer configs
+ * Common place to keep all kafka consumer configs
  */
 public class PulsarConsumerConfigs
 {
@@ -34,7 +34,7 @@ public class PulsarConsumerConfigs
   public static Map<String, Object> getConsumerProperties()
   {
     final Map<String, Object> props = new HashMap<>();
-    props.put("group.id", StringUtils.format("pulsar-supervisor-%s", IdUtils.getRandomId()));
+    props.put("subscription.name", StringUtils.format("pulsar-supervisor-%s", IdUtils.getRandomId()));
     return props;
   }
 

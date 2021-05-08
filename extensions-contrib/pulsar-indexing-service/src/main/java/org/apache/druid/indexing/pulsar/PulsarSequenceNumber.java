@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.pulsar;
 
+import com.google.common.collect.ComparisonChain;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
@@ -42,7 +43,13 @@ public class PulsarSequenceNumber extends OrderedSequenceNumber<String>
       @NotNull OrderedSequenceNumber<String> o
   )
   {
-    return this.get().compareTo(o.get());
+    String[] ss1 = this.get().split(":");
+    String[] ss2 = o.get().split(":");
+    return ComparisonChain.start()
+        .compare(Long.parseLong(ss1[0]), Long.parseLong(ss2[0]))
+        .compare(Long.parseLong(ss1[1]), Long.parseLong(ss2[1]))
+        .compare(Integer.parseInt(ss1[2]), Integer.parseInt(ss2[2]))
+        .result();
   }
 
 }

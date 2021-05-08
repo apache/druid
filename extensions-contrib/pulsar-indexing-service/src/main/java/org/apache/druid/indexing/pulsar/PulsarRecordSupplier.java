@@ -23,22 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.pulsar.PulsarRecordEntity;
-import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.DynamicConfigProvider;
-import org.apache.druid.metadata.PasswordProvider;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.impl.ConsumerImpl;
+import org.apache.pulsar.client.api.SubscriptionInitialPosition;
+import org.apache.pulsar.client.api.SubscriptionType;
 import org.apache.pulsar.client.impl.MessageIdImpl;
-import org.apache.pulsar.client.impl.MultiTopicsConsumerImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,24 +44,24 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class PulsarRecordSupplier implements RecordSupplier<String, String, PulsarRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
-  private MultiTopicsConsumerImpl consumers;
   private boolean closed;
   private final PulsarClient client;
+  private final ConcurrentHashMap<String, Consumer> consumerHashMap = new ConcurrentHashMap<>();
 
   public PulsarRecordSupplier(
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper
   )
   {
-    this.client = getPulsarClient(sortingMapper, consumerProperties);
+    this.client = getPulsarClient(consumerProperties);
   }
 
   @VisibleForTesting
@@ -79,15 +75,22 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   @Override
   public void assign(Set<StreamPartition<String>> streamPartitions)
   {
-    List<String> topicPartions = new ArrayList<>();
-    for (StreamPartition<String> integerStreamPartition : streamPartitions) {
-      topicPartions.add(integerStreamPartition.getPartitionId());
-    }
-    try {
-      consumers = (MultiTopicsConsumerImpl) client.newConsumer().topics(topicPartions).subscribe();
-    }
-    catch (PulsarClientException e) {
-      log.error(e.getMessage());
+    final Map<String, Object> consumerConfigs = PulsarConsumerConfigs.getConsumerProperties();
+    for (StreamPartition<String> streamPartition : streamPartitions) {
+      try {
+        String topicPartition = streamPartition.getPartitionId();
+        Consumer consumer = client.newConsumer()
+            .topic(topicPartition)
+            .subscriptionName((String) consumerConfigs.get("subscription.name"))
+            .subscriptionType(SubscriptionType.Exclusive)
+            .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+            .negativeAckRedeliveryDelay(60, TimeUnit.SECONDS)
+            .subscribe();
+        consumerHashMap.put(topicPartition, consumer);
+      }
+      catch (PulsarClientException e) {
+        log.error("Could not assign partitions." + e.getMessage());
+      }
     }
   }
 
@@ -95,36 +98,40 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   public void seek(StreamPartition<String> partition, String sequenceNumber)
   {
     String[] sequenceNumbers = sequenceNumber.split(":");
-    List<ConsumerImpl> consumersList = consumers.getConsumers();
-    for (Consumer consumer : consumersList) {
-      try {
-        consumer.seek(new MessageIdImpl(Integer.getInteger(sequenceNumbers[0]), Integer.getInteger(sequenceNumbers[1]), Integer.getInteger(sequenceNumbers[2])));
-      }
-      catch (PulsarClientException e) {
-        log.error(e.getMessage());
-      }
+    try {
+      Consumer consumer = consumerHashMap.get(partition.getPartitionId());
+      consumer.getLastMessageId();
+      MessageIdImpl messageId = new MessageIdImpl(Long.parseLong(sequenceNumbers[0]), Long.parseLong(sequenceNumbers[1]), Integer.parseInt(sequenceNumbers[2]));
+      consumer.seek(messageId);
+    }
+    catch (PulsarClientException e) {
+      log.error("Could not seek pulsar offset." + e.getMessage());
     }
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
-    try {
-      consumers.seek(MessageId.earliest);
-    }
-    catch (PulsarClientException e) {
-      log.error(e.getMessage());
+    for (StreamPartition<String> partition : partitions) {
+      try {
+        consumerHashMap.get(partition.getPartitionId()).seek(MessageId.earliest);
+      }
+      catch (PulsarClientException e) {
+        log.error("Could not seek earliest offset." + e.getMessage());
+      }
     }
   }
 
   @Override
   public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
-    try {
-      consumers.seek(MessageId.latest);
-    }
-    catch (PulsarClientException e) {
-      log.error(e.getMessage());
+    for (StreamPartition<String> partition : partitions) {
+      try {
+        consumerHashMap.get(partition.getPartitionId()).seek(MessageId.latest);
+      }
+      catch (PulsarClientException e) {
+        log.error("Could not seek to latest offset." + e.getMessage());
+      }
     }
   }
 
@@ -132,10 +139,8 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   public Set<StreamPartition<String>> getAssignment()
   {
     Set<StreamPartition<String>> streamPartitions = new HashSet<>();
-    List<String> topicPartitions = consumers.getTopics();
-    for (String topicPartition : topicPartitions) {
-      //TODO: split regex
-      String topic = topicPartition.split("partition-")[0];
+    for (String topicPartition : consumerHashMap.keySet()) {
+      String topic = topicPartition.split("-partition-")[0];
       streamPartitions.add(new StreamPartition<>(topic, topicPartition));
     }
     return streamPartitions;
@@ -146,21 +151,24 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   public List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> poll(long timeout)
   {
     List<OrderedPartitionableRecord<String, String, PulsarRecordEntity>> polledRecords = new ArrayList<>();
-    Iterator messageIterator = null;
-    try {
-      messageIterator = consumers.batchReceive().iterator();
-    }
-    catch (PulsarClientException e) {
-      log.error(e.getMessage());
-    }
-    while (messageIterator.hasNext()) {
-      Message message = (Message) messageIterator.next();
-      polledRecords.add(new OrderedPartitionableRecord<>(
-          message.getTopicName().split("partition-")[0],
-          message.getTopicName(),
-          message.getMessageId().toString(),
-          message.getValue() == null ? null : ImmutableList.of(new PulsarRecordEntity(message))
-      ));
+    for (String topicPartition : consumerHashMap.keySet()) {
+      Consumer consumer = consumerHashMap.get(topicPartition);
+      Iterator messageIterator = null;
+      try {
+        messageIterator = consumer.batchReceive().iterator();
+      }
+      catch (PulsarClientException e) {
+        log.error("Could not poll mssafes." + e.getMessage());
+      }
+      while (messageIterator.hasNext()) {
+        Message message = (Message) messageIterator.next();
+        polledRecords.add(new OrderedPartitionableRecord<>(
+            message.getTopicName().split("partition-")[0],
+            message.getTopicName(),
+            message.getMessageId().toString(),
+            message.getValue() == null ? null : ImmutableList.of(new PulsarRecordEntity(message))
+        ));
+      }
     }
     return polledRecords;
   }
@@ -169,17 +177,11 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   public String getLatestSequenceNumber(StreamPartition<String> partition)
   {
     String pos = null;
-    List<ConsumerImpl> consumersList = consumers.getConsumers();
-    for (Consumer consumer : consumersList) {
-      if (consumer.getTopic().equals(partition.getStream() + "partition-" + partition.getPartitionId())) {
-        try {
-          pos = consumer.getLastMessageId().toString();
-          break;
-        }
-        catch (PulsarClientException e) {
-          log.error(e.getMessage());
-        }
-      }
+    try {
+      pos = consumerHashMap.get(partition.getPartitionId()).getLastMessageId().toString();
+    }
+    catch (PulsarClientException e) {
+      log.error("Could not get latest message ID. " + e.getMessage());
     }
     return pos;
   }
@@ -200,16 +202,15 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
   @Override
   public Set<String> getPartitionIds(String stream)
   {
-    Set<Integer> partitions = new HashSet<>();
     List<String> topicPartitions = null;
     try {
       topicPartitions = client.getPartitionsForTopic(stream).get();
     }
     catch (InterruptedException e) {
-      log.error(e.getMessage());
+      log.error("Could not get partitions. " + e.getMessage());
     }
     catch (ExecutionException e) {
-      log.error(e.getMessage());
+      log.error("Could not get partitions. " + e.getMessage());
     }
     return new HashSet<String>(topicPartitions);
   }
@@ -221,58 +222,18 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
       return;
     }
     closed = true;
-    try {
-      consumers.close();
-    }
-    catch (PulsarClientException e) {
-      log.error(e.getMessage());
-    }
-  }
-
-  public static void addConsumerPropertiesFromConfig(
-      Properties properties,
-      ObjectMapper configMapper,
-      Map<String, Object> consumerProperties
-  )
-  {
-    // Extract passwords before SSL connection to Pulsar
-    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
-      String propertyKey = entry.getKey();
-
-      if (!PulsarSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(propertyKey)) {
-        if (propertyKey.equals(PulsarSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-            || propertyKey.equals(PulsarSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-            || propertyKey.equals(PulsarSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-          PasswordProvider configPasswordProvider = configMapper.convertValue(
-              entry.getValue(),
-              PasswordProvider.class
-          );
-          properties.setProperty(propertyKey, configPasswordProvider.getPassword());
-        } else {
-          properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
-        }
+    for (String topicPartition : consumerHashMap.keySet()) {
+      try {
+        consumerHashMap.get(topicPartition).close();
       }
-    }
-
-    // Additional DynamicConfigProvider based extensible support for all consumer properties
-    Object dynamicConfigProviderJson = consumerProperties.get(PulsarSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
-    if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
-      Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
-
-      for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
-        properties.setProperty(e.getKey(), e.getValue());
+      catch (PulsarClientException e) {
+        log.error("Could not get close consumer. " + e.getMessage());
       }
     }
   }
 
-  private static PulsarClient getPulsarClient(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
+  private static PulsarClient getPulsarClient(Map<String, Object> consumerProperties)
   {
-    final Map<String, Object> consumerConfigs = PulsarConsumerConfigs.getConsumerProperties();
-    final Properties props = new Properties();
-    addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
-    props.putAll(consumerConfigs);
-
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     PulsarClient client = null;
     try {
@@ -283,7 +244,7 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
             .build();
       }
       catch (PulsarClientException e) {
-        log.error(e.getMessage());
+        log.error("Could not create pulsar client. " + e.getMessage());
       }
       return client;
     }
@@ -292,21 +253,4 @@ public class PulsarRecordSupplier implements RecordSupplier<String, String, Puls
     }
   }
 
-  private static <T> T wrapExceptions(Callable<T> callable)
-  {
-    try {
-      return callable.call();
-    }
-    catch (Exception e) {
-      throw new StreamException(e);
-    }
-  }
-
-  private static void wrapExceptions(Runnable runnable)
-  {
-    wrapExceptions(() -> {
-      runnable.run();
-      return null;
-    });
-  }
 }

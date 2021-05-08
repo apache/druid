@@ -35,11 +35,7 @@ import java.util.Map;
 
 public class PulsarSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
-  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   public static final String PULSAR_URL = "pulsar.url";
-  public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
-  public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
-  public static final String KEY_PASSWORD_KEY = "ssl.key.password";
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
   private final Map<String, Object> consumerProperties;
