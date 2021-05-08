@@ -651,7 +651,7 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
-      env: CONFIG_FILE='integration-tests/k8s/druid-sanity-it-config.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true DRUID_K8S_CLUSTER_SPEC='integration-tests/k8s/druid-sanity-it-cluster.yaml'
+      env: CONFIG_FILE='druid-k8s-sanity-it-config.json' IT_TEST='-Dit.test=ITNestedQueryPushDownTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true DRUID_K8S_CLUSTER_SPEC='integration-tests/k8s/druid-sanity-it-cluster.yaml'
       script: &run_integration_test_k8s
         - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLSUTER}
       after_failure: &integration_test_diags_k8s
@@ -665,7 +665,7 @@ jobs:
       jdk: openjdk8
       services: &integration_test_services_k8s
         - docker
-      env: CONFIG_FILE='integration-tests/k8s/druid-high-availability-it-config.json' IT_TEST='-Dit.test=ITHighAvailabilityTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true DRUID_K8S_CLUSTER_SPEC='integration-tests/k8s/druid-high-availability-it-cluster.yaml'
+      env: CONFIG_FILE='druid-k8s-high-availability-it-config.json' IT_TEST='-Dit.test=ITHighAvailabilityTest' POD_NAME=int-test POD_NAMESPACE=default BUILD_DRUID_CLSUTER=true DRUID_K8S_CLUSTER_SPEC='integration-tests/k8s/druid-high-availability-it-cluster.yaml'
       script: &run_integration_test_k8s
         - ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLSUTER}
       after_failure: &integration_test_diags_k8s
