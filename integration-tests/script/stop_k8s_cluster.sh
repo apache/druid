@@ -21,7 +21,7 @@ if ($BUILD_DRUID_CLSUTER); then
   DRUID_HOME=$(dirname `pwd`)
   echo "SET DRUID_HOME: $DRUID_HOME"
 
-  /usr/local/bin/minikube delete
+  sudo /usr/local/bin/minikube delete
   sudo rm -rf $DRUID_HOME/tmp
   sudo rm -rf $DRUID_HOME/druid-operator
   docker ps
