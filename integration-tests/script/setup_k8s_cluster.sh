@@ -27,8 +27,8 @@ sudo apt install -y conntrack
 
 # Lacunch K8S cluster
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod 755 kubectl && sudo mv kubectl /usr/local/bin/
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.8.1/minikube-linux-amd64 && chmod 755 minikube && sudo mv minikube /usr/local/bin/
-sudo /usr/local/bin/minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.18.1
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.20.0/minikube-linux-amd64 && chmod 755 minikube && sudo mv minikube /usr/local/bin/
+sudo /usr/local/bin/minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.19.0
 /usr/local/bin/minikube update-context
 
 echo "Setup K8S Cluster Done!"
