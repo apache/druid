@@ -52,7 +52,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -94,7 +93,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final List<VirtualColumn> myvirtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
@@ -120,7 +118,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         VirtualColumn virtualColumn =
             virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-        myvirtualColumns.add(virtualColumn);
       }
 
       aggregatorFactory = new CardinalityAggregatorFactory(
@@ -133,7 +130,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        myvirtualColumns,
         Collections.singletonList(aggregatorFactory),
         finalizeAggregations ? new HyperUniqueFinalizingPostAggregator(name, aggregatorFactory.getName()) : null
     );

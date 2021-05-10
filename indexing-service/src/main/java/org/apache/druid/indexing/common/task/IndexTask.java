@@ -153,6 +153,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  private final String baseSequenceName;
+
   private final IndexIngestionSpec ingestionSchema;
 
   private IngestionState ingestionState;
@@ -175,7 +177,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nullable
   private String errorMsg;
 
-
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
@@ -189,6 +190,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         makeGroupId(ingestionSchema),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
+        null,
         ingestionSchema,
         context
     );
@@ -199,6 +201,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       String groupId,
       TaskResource resource,
       String dataSource,
+      @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context
   )
@@ -210,6 +213,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         dataSource,
         context
     );
+    this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
   }
@@ -831,7 +835,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final SegmentAllocatorForBatch localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
-            getId(),
+            baseSequenceName,
             dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
@@ -842,12 +846,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       case LINEAR:
         segmentAllocator = SegmentAllocators.forLinearPartitioning(
             toolbox,
-            getId(),
+            baseSequenceName,
             null,
             dataSchema,
             getTaskLockHelper(),
             ingestionSchema.getIOConfig().isAppendToExisting(),
-            partitionAnalysis.getPartitionsSpec()
+            partitionAnalysis.getPartitionsSpec(),
+            null
         );
         sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
         break;

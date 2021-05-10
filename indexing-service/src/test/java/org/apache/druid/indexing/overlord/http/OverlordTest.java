@@ -54,6 +54,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
@@ -173,6 +174,7 @@ public class OverlordTest
     taskMaster = new TaskMaster(
         new TaskLockConfig(),
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),
+        new DefaultTaskConfig(),
         taskLockbox,
         taskStorage,
         taskActionClientFactory,

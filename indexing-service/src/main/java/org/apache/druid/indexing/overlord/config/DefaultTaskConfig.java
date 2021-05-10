@@ -17,30 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.vector;
+package org.apache.druid.indexing.overlord.config;
 
-import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
-public class NilCardinalityVectorProcessor implements CardinalityVectorProcessor
+import java.util.Map;
+
+/**
+ * Configurations for ingestion tasks. These configurations can be applied to tasks when they are scheduled
+ * in the overlord. If the task is a parallel task that has subtasks, the same configurations should apply
+ * to all its subtasks too.
+ *
+ * See {@link org.apache.druid.indexing.common.config.TaskConfig} if you want to apply different configurations
+ * per middleManager, indexer, and overlod.
+ */
+public class DefaultTaskConfig
 {
-  public static final NilCardinalityVectorProcessor INSTANCE = new NilCardinalityVectorProcessor();
+  @JsonProperty
+  private final Map<String, Object> context = ImmutableMap.of();
 
-  @Override
-  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+  public Map<String, Object> getContext()
   {
-    // Do nothing.
-  }
-
-  @Override
-  public void aggregate(
-      ByteBuffer buf,
-      int numRows,
-      int[] positions,
-      @Nullable int[] rows,
-      int positionOffset
-  )
-  {
-    // Do nothing.
+    return context;
   }
 }

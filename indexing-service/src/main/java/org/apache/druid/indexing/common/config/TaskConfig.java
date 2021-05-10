@@ -31,6 +31,12 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
+ *
+ * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
+ * to all tasks submitted to the overlord.
+ */
 public class TaskConfig
 {
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(

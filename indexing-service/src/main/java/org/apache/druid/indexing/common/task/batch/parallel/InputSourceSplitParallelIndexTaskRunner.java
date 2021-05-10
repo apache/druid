@@ -45,6 +45,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context
   )
@@ -53,6 +54,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         toolbox,
         taskId,
         groupId,
+        baseSubtaskSpecName,
         ingestionSchema.getTuningConfig(),
         context
     );
@@ -104,7 +106,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
     );
 
     return createSubTaskSpec(
-        getTaskId() + "_" + getAndIncrementNextSpecId(),
+        getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
         getContext(),

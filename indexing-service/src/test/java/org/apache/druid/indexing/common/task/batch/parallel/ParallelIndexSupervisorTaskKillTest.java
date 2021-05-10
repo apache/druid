@@ -61,6 +61,12 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  public ParallelIndexSupervisorTaskKillTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @After
   public void teardown()
   {
@@ -355,6 +361,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           getGroupId(),
           null,
           getSupervisorTaskId(),
+          getId(),
           numAttempts,
           getIngestionSpec(),
           getContext()
@@ -369,6 +376,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         String groupId,
         TaskResource taskResource,
         String supervisorTaskId,
+        String subtaskSpecId,
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
@@ -379,6 +387,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           groupId,
           taskResource,
           supervisorTaskId,
+          subtaskSpecId,
           numAttempts,
           ingestionSchema,
           context

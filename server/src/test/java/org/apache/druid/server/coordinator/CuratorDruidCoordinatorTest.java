@@ -194,6 +194,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
+        null,
+        null,
         10,
         new Duration("PT0s"),
         guildReplicationEnabled
