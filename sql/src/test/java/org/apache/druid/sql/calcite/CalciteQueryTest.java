@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -112,6 +113,8 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
@@ -18924,6 +18927,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         ),
         expectedResults
+    );
+  }
+
+  @Test
+  public void testCountAndAverageByConstantVirtualColumn() throws Exception
+  {
+    List<VirtualColumn> virtualColumns;
+    List<AggregatorFactory> aggs;
+    if (useDefault) {
+      aggs = ImmutableList.of(
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a0"),
+              not(selector("v0", null, null))
+          ),
+          new LongSumAggregatorFactory("a1:sum", null, "325323", TestExprMacroTable.INSTANCE),
+          new CountAggregatorFactory("a1:count")
+      );
+      virtualColumns = ImmutableList.of(
+          expressionVirtualColumn("v0", "'10.1'", ValueType.STRING)
+      );
+    } else {
+      aggs = ImmutableList.of(
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a0"),
+              not(selector("v0", null, null))
+          ),
+          new LongSumAggregatorFactory("a1:sum", "v1"),
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a1:count"),
+              not(selector("v1", null, null))
+          )
+      );
+      virtualColumns = ImmutableList.of(
+          expressionVirtualColumn("v0", "'10.1'", ValueType.STRING),
+          expressionVirtualColumn("v1", "325323", ValueType.LONG)
+      );
+
+    }
+    testQuery(
+        "SELECT dim5, COUNT(dim1), AVG(l1) FROM druid.numfoo WHERE dim1 = '10.1' AND l1 = 325323 GROUP BY dim5",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(
+                            and(
+                                selector("dim1", "10.1", null),
+                                selector("l1", "325323", null)
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(VirtualColumns.create(virtualColumns))
+                        .setDimensions(new DefaultDimensionSpec("dim5", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(aggs)
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "a1",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "a1:sum"),
+                                        new FieldAccessPostAggregator(null, "a1:count")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ab", 1L, 325323L}
+        )
     );
   }
 }

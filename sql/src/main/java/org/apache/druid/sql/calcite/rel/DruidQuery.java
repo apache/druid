@@ -636,7 +636,7 @@ public class DruidQuery
       }
 
       for (Aggregation aggregation : grouping.getAggregations()) {
-        virtualColumns.addAll(aggregation.getVirtualColumns());
+        virtualColumns.addAll(virtualColumnRegistry.findVirtualColumns(aggregation.getRequiredColumns()));
       }
     }
 
