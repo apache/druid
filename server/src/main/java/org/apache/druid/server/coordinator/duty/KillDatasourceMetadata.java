@@ -81,16 +81,20 @@ public class KillDatasourceMetadata implements CoordinatorDuty
     if ((lastKillTime + period) < System.currentTimeMillis()) {
       lastKillTime = System.currentTimeMillis();
       long timestamp = System.currentTimeMillis() - retainDuration;
-      // Get all datasources with active supervisor
+      // Datasource metadata only exists for datasource with supervisor
+      // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
+      // is still active or not
       Map<String, SupervisorSpec> allSupervisor = metadataSupervisorManager.getLatest();
       Set<String> allDatasourceWithActiveSupervisor = allSupervisor.values()
                                                                    .stream()
+                                                                   // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+                                                                   // (NoopSupervisorSpec is used as a tombstone marker)
                                                                    .filter(supervisorSpec -> !(supervisorSpec instanceof NoopSupervisorSpec))
                                                                    .map(supervisorSpec -> supervisorSpec.getDataSources())
                                                                    .flatMap(Collection::stream)
                                                                    .filter(datasource -> !Strings.isNullOrEmpty(datasource))
                                                                    .collect(Collectors.toSet());
-
+      // We exclude removing datasource metadata with active supervisor
       int datasourceMetadataRemovedCount = indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(timestamp, allDatasourceWithActiveSupervisor);
       ServiceEmitter emitter = params.getEmitter();
       emitter.emit(
