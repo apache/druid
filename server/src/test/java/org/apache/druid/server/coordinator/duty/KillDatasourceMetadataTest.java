@@ -179,44 +179,6 @@ public class KillDatasourceMetadataTest
   }
 
   @Test
-  public void testRunWithFilterExcludedDatasource()
-  {
-    String terminatedDatasource = "datasource-1";
-    String activeDatasource = "datasource-2";
-    Mockito.when(mockKinesisSupervisorSpec.getDataSources()).thenReturn(ImmutableList.of(activeDatasource));
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
-        "id1", new NoopSupervisorSpec(null, ImmutableList.of(terminatedDatasource)),
-        "id2", mockKinesisSupervisorSpec
-    );
-    Mockito.when(mockMetadataSupervisorManager.getLatest()).thenReturn(existingSpecs);
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
-
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        new Duration("PT1S"),
-        10,
-        null
-    );
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
-    killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.eq(ImmutableSet.of(activeDatasource)));
-    Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-  }
-
-  @Test
   public void testRunWithEmptyFilterExcludedDatasource()
   {
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of();
