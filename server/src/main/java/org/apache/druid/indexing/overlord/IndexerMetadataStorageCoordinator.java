@@ -26,6 +26,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -274,7 +275,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param excludeDatasources set of datasource names to exclude from removal
    * @return number of datasource metadata removed
    */
-  int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources);
+  int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
    * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling

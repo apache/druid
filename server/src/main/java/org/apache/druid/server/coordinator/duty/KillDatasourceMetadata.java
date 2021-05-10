@@ -78,32 +78,45 @@ public class KillDatasourceMetadata implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if ((lastKillTime + period) < System.currentTimeMillis()) {
-      lastKillTime = System.currentTimeMillis();
-      long timestamp = System.currentTimeMillis() - retainDuration;
-      // Datasource metadata only exists for datasource with supervisor
-      // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
-      // is still active or not
-      Map<String, SupervisorSpec> allSupervisor = metadataSupervisorManager.getLatest();
-      Set<String> allDatasourceWithActiveSupervisor = allSupervisor.values()
-                                                                   .stream()
-                                                                   // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
-                                                                   // (NoopSupervisorSpec is used as a tombstone marker)
-                                                                   .filter(supervisorSpec -> !(supervisorSpec instanceof NoopSupervisorSpec))
-                                                                   .map(supervisorSpec -> supervisorSpec.getDataSources())
-                                                                   .flatMap(Collection::stream)
-                                                                   .filter(datasource -> !Strings.isNullOrEmpty(datasource))
-                                                                   .collect(Collectors.toSet());
-      // We exclude removing datasource metadata with active supervisor
-      int datasourceMetadataRemovedCount = indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(timestamp, allDatasourceWithActiveSupervisor);
-      ServiceEmitter emitter = params.getEmitter();
-      emitter.emit(
-          new ServiceMetricEvent.Builder().build(
-              "metadata/kill/datasource/count",
-              datasourceMetadataRemovedCount
-          )
-      );
-      log.info("Finished running KillDatasourceMetadata duty. Removed %,d datasource metadata", datasourceMetadataRemovedCount);
+    long currentTimeMillis = System.currentTimeMillis();
+    if ((lastKillTime + period) < currentTimeMillis) {
+      lastKillTime = currentTimeMillis;
+      long timestamp = currentTimeMillis - retainDuration;
+      try {
+        // Datasource metadata only exists for datasource with supervisor
+        // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
+        // is still active or not
+        Map<String, SupervisorSpec> allSupervisor = metadataSupervisorManager.getLatest();
+        Set<String> allDatasourceWithActiveSupervisor = allSupervisor.values()
+                                                                     .stream()
+                                                                     // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+                                                                     // (NoopSupervisorSpec is used as a tombstone marker)
+                                                                     .filter(supervisorSpec -> !(supervisorSpec instanceof NoopSupervisorSpec))
+                                                                     .map(supervisorSpec -> supervisorSpec.getDataSources())
+                                                                     .flatMap(Collection::stream)
+                                                                     .filter(datasource -> !Strings.isNullOrEmpty(
+                                                                         datasource))
+                                                                     .collect(Collectors.toSet());
+        // We exclude removing datasource metadata with active supervisor
+        int datasourceMetadataRemovedCount = indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(
+            timestamp,
+            allDatasourceWithActiveSupervisor
+        );
+        ServiceEmitter emitter = params.getEmitter();
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                "metadata/kill/datasource/count",
+                datasourceMetadataRemovedCount
+            )
+        );
+        log.info(
+            "Finished running KillDatasourceMetadata duty. Removed %,d datasource metadata",
+            datasourceMetadataRemovedCount
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to kill datasource metadata");
+      }
     }
     return params;
   }

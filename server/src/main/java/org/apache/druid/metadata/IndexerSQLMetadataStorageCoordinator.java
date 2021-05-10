@@ -74,6 +74,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -1426,7 +1427,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources)
+  public int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources)
   {
     DateTime dateTime = DateTimes.utc(timestamp);
     List<String> datasources = connector.getDBI().withHandle(
@@ -1441,6 +1442,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .mapTo(String.class)
             .list()
     );
+    Set<String> datasourcesToDelete =
     return connector.getDBI().withHandle(
         handle -> {
           final PreparedBatch batch = handle.prepareBatch(
