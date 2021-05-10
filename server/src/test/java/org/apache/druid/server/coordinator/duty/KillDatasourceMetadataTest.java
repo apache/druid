@@ -19,9 +19,17 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.joda.time.Duration;
@@ -34,9 +42,14 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.Map;
+
 @RunWith(MockitoJUnitRunner.class)
-public class KillSupervisorsTest
+public class KillDatasourceMetadataTest
 {
+  @Mock
+  private IndexerMetadataStorageCoordinator mockIndexerMetadataStorageCoordinator;
+
   @Mock
   private MetadataSupervisorManager mockMetadataSupervisorManager;
 
@@ -44,12 +57,15 @@ public class KillSupervisorsTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   @Mock
+  private TestSupervisorSpec mockKinesisSupervisorSpec;
+
+  @Mock
   private ServiceEmitter mockServiceEmitter;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  private KillSupervisors killSupervisors;
+  private KillDatasourceMetadata killDatasourceMetadata;
 
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
@@ -62,19 +78,20 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         new Duration(Long.MAX_VALUE),
         new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         10,
         null
     );
-    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
-    killSupervisors.run(mockDruidCoordinatorRuntimeParams);
+    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verifyZeroInteractions(mockIndexerMetadataStorageCoordinator);
     Mockito.verifyZeroInteractions(mockMetadataSupervisorManager);
   }
 
@@ -82,6 +99,7 @@ public class KillSupervisorsTest
   public void testRunNotSkipIfLastRunMoreThanPeriod()
   {
     Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
+
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
         null,
         null,
@@ -90,20 +108,20 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         new Duration("PT6S"),
         new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         10,
         null
     );
-    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
-    killSupervisors.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verify(mockMetadataSupervisorManager).removeTerminatedSupervisorsOlderThan(ArgumentMatchers.anyLong());
+    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.anySet());
     Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -118,20 +136,20 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         new Duration("PT3S"),
         new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         10,
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Coordinator supervisor kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
-    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
+    exception.expectMessage("Coordinator datasource metadata kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
+    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
   }
 
   @Test
@@ -145,19 +163,57 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         new Duration("PT6S"),
         new Duration("PT-1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         10,
         null
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Coordinator supervisor kill retainDuration must be >= 0");
-    killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
+    exception.expectMessage("Coordinator datasource metadata kill retainDuration must be >= 0");
+    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+  }
+
+  @Test
+  public void testRunWithFilterExcludedDatasource()
+  {
+    String terminatedDatasource = "datasource-1";
+    String activeDatasource = "datasource-2";
+    Mockito.when(mockKinesisSupervisorSpec.getDataSources()).thenReturn(ImmutableList.of(activeDatasource));
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new NoopSupervisorSpec(null, ImmutableList.of(terminatedDatasource)),
+        "id2", mockKinesisSupervisorSpec
+    );
+    Mockito.when(mockMetadataSupervisorManager.getLatest()).thenReturn(existingSpecs);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
+
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
+        null,
+        null,
+        null,
+        new Duration("PT5S"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new Duration("PT6S"),
+        new Duration("PT1S"),
+        10,
+        null
+    );
+    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.eq(ImmutableSet.of(activeDatasource)));
+    Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 }

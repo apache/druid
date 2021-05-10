@@ -37,6 +37,8 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -57,6 +59,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Batch;
@@ -1421,6 +1424,42 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("commit_metadata_sha1", BaseEncoding.base16().encode(
                 Hashing.sha1().hashBytes(jsonMapper.writeValueAsBytes(metadata)).asBytes()))
             .execute()
+    );
+  }
+
+  @Override
+  public int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    List<String> datasources = connector.getDBI().withHandle(
+        handle -> handle
+            .createQuery(
+                StringUtils.format(
+                    "SELECT dataSource FROM %1$s WHERE created_date < '%2$s'",
+                    dbTables.getDataSourceTable(),
+                    dateTime.toString()
+                )
+            )
+            .mapTo(String.class)
+            .list()
+    );
+    return connector.getDBI().withHandle(
+        handle -> {
+          final PreparedBatch batch = handle.prepareBatch(
+              StringUtils.format(
+                  "DELETE FROM %1$s WHERE dataSource = :dataSource AND created_date < '%2$s'",
+                  dbTables.getDataSourceTable(),
+                  dateTime.toString()
+              )
+          );
+          for (String datasourceMetadataInDb : datasources) {
+            if (!excludeDatasources.contains(datasourceMetadataInDb)) {
+              batch.bind("dataSource", datasourceMetadataInDb).add();
+            }
+          }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
+        }
     );
   }
 }

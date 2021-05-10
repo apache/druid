@@ -268,6 +268,15 @@ public interface IndexerMetadataStorageCoordinator
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
 
   /**
+   * Remove datasource metadata created before the given timestamp and not in given excludeDatasources set.
+   *
+   * @param timestamp timestamp in milliseconds
+   * @param excludeDatasources set of datasource names to exclude from removal
+   * @return number of datasource metadata removed
+   */
+  int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources);
+
+  /**
    * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.

@@ -73,6 +73,7 @@ import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.KillAuditLog;
+import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
@@ -267,6 +268,11 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.kill.rule.on",
                 Predicates.equalTo("true"),
                 KillRules.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.datasource.on",
+                Predicates.equalTo("true"),
+                KillDatasourceMetadata.class
             );
 
             bindNodeRoleAndAnnouncer(

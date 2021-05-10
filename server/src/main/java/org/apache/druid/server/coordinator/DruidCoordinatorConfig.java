@@ -79,6 +79,14 @@ public abstract class DruidCoordinatorConfig
   @Default("PT-1s")
   public abstract Duration getCoordinatorRuleKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.datasource.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorDatasourceKillPeriod();
+
+  @Config("druid.coordinator.kill.datasource.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorDatasourceKillDurationToRetain();
+
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()
   {
