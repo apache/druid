@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 /**
  * CoordinatorDuty for automatic deletion of datasource metadata from the datasource table in metadata storage.
  * (Note: datasource metadata only exists for datasource created from supervisor).
+ * Note that this class relies on the supervisorSpec.getDataSources names to match with the
+ * 'datasource' column of the datasource metadata table.
  */
 public class KillDatasourceMetadata implements CoordinatorDuty
 {
