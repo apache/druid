@@ -28,14 +28,26 @@ describe('AutoForm', () => {
     const autoForm = shallow(
       <AutoForm
         fields={[
-          { name: 'testOne', type: 'number' },
-          { name: 'testTwo', type: 'size-bytes' },
-          { name: 'testThree', type: 'string' },
-          { name: 'testFour', type: 'boolean' },
-          { name: 'testFourWithDefault', type: 'boolean', defaultValue: false },
-          { name: 'testFive', type: 'string-array' },
-          { name: 'testSix', type: 'json' },
-          { name: 'testSeven', type: 'json' },
+          { name: 'testNumber', type: 'number' },
+          { name: 'testSizeBytes', type: 'size-bytes' },
+          { name: 'testString', type: 'string' },
+          { name: 'testStringWithDefault', type: 'string', defaultValue: 'Hello World' },
+          { name: 'testBoolean', type: 'boolean' },
+          { name: 'testBooleanWithDefault', type: 'boolean', defaultValue: false },
+          { name: 'testStringArray', type: 'string-array' },
+          {
+            name: 'testStringArrayWithDefault',
+            type: 'string-array',
+            defaultValue: ['Hello', 'World'],
+          },
+          { name: 'testJson', type: 'json' },
+
+          {
+            name: 'testStringRequiredAndDefaultValue',
+            type: 'string',
+            defaultValue: 'hello',
+            required: () => true,
+          },
 
           { name: 'testNotDefined', type: 'string', defined: false },
           { name: 'testAdvanced', type: 'string', hideInMore: true },
