@@ -218,6 +218,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-rocketmq-indexing-service</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-orc-extensions</argument>
