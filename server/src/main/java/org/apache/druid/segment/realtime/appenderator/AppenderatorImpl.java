@@ -842,6 +842,10 @@ public class AppenderatorImpl implements Appenderator
         closer.close();
       }
 
+      final DataSegment segmentToPush = sink.getSegment().withDimensions(
+          IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
+      );
+
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
           // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
@@ -849,7 +853,7 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())),
+              segmentToPush,
               useUniquePath
           ),
           exception -> exception instanceof Exception,

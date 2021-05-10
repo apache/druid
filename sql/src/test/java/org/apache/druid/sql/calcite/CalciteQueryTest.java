@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -112,6 +113,8 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
@@ -308,7 +311,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                   .granularity(Granularities.HOUR)
                                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                   .build()
                         )
                         .setInterval(querySegmentSpec(Intervals.ETERNITY))
@@ -614,7 +617,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .aggregators(aggregators(
                                               new FloatMinAggregatorFactory("a0", "m1")
                                           ))
-                                          .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                                          .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                           .build()),
                                 "j0.",
                                 "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
@@ -704,11 +707,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectCountStart() throws Exception
+  public void testSelectCountStar() throws Exception
   {
+    // timeseries with all granularity have a single group, so should return default results for given aggregators
+    // which for count is 0 and sum is null in sql compatible mode or 0.0 in default mode.
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -723,7 +728,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
@@ -732,7 +737,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  __time >= TIMESTAMP '2999-01-01 00:00:00'",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -748,13 +753,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
     );
 
+    // this behavior was not always correct, so make sure legacy behavior can be retained by skipping empty buckets
+    // explicitly in the context which causes these timeseries queries to return no results
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        TIMESERIES_CONTEXT_BY_GRAN,
+        "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .filters(selector("dim1", "nonexistent", null))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .context(TIMESERIES_CONTEXT_BY_GRAN)
+                               .build()),
+        ImmutableList.of()
+    );
+
+    // timeseries with a granularity is grouping by the time expression, so matching nothing returns no results
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -765,7 +791,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0")
                                ))
-                               .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                               .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                .build()),
         ImmutableList.of()
     );
@@ -810,7 +836,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p9", "' foo'"),
                       expressionPostAgg("p10", "'xfoo'")
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -846,7 +872,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p4", "'fo'"),
                       expressionPostAgg("p5", "'foo  '")
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -1318,7 +1344,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2136,7 +2162,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new StringFirstAggregatorFactory("a5", "v2", 10)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2176,7 +2202,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new StringLastAggregatorFactory("a5", "v2", 10)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2218,7 +2244,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new StringAnyAggregatorFactory("a6", "v2", 10)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
@@ -2244,7 +2270,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatAnyAggregatorFactory("a2", "f1")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2579,7 +2605,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatFirstAggregatorFactory("a2", "f1")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2608,7 +2634,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatLastAggregatorFactory("a2", "f1")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2652,7 +2678,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatLastAggregatorFactory("a3", "f1")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -2697,7 +2723,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatAnyAggregatorFactory("a3", "f2")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         // first row has null for l2, d2, f2 and dim1 as empty string (which is null in default mode)
@@ -2739,7 +2765,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FloatAnyAggregatorFactory("a3", "f2")
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -3265,7 +3291,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -3372,7 +3398,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .filters(selector("m1", "1.0", null))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -3393,7 +3419,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .filters(selector("m2", "1.0", null))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -3855,21 +3881,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{6L}, new Object[]{6L}, new Object[]{6L})
@@ -3889,14 +3915,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{6L}, new Object[]{6L})
@@ -4381,7 +4407,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
                   .withOverriddenContext(queryContext),
             Druids.newTimeseriesQueryBuilder()
@@ -4389,7 +4415,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
                   .withOverriddenContext(queryContext)
         ),
@@ -4415,7 +4441,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
                   .withOverriddenContext(queryContext),
             Druids.newTimeseriesQueryBuilder()
@@ -4430,7 +4456,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
                   .withOverriddenContext(queryContext)
         ),
@@ -4463,7 +4489,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
@@ -4477,7 +4503,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{6L}, new Object[]{1L})
@@ -4503,7 +4529,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{21.0})
@@ -4530,7 +4556,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
                   .postAggregators(ImmutableList.of(expressionPostAgg("p0", "(\"a0\" / 10)")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2.1})
@@ -4678,7 +4704,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -4720,7 +4746,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(selector("l1", null, null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -4758,7 +4784,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(selector("d1", null, null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -4797,7 +4823,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(selector("f1", null, null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -4940,7 +4966,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("l1", "3", null, true, false, null, StringComparators.NUMERIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2L})
@@ -4961,7 +4987,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("d1", "0", null, true, false, null, StringComparators.NUMERIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2L})
@@ -4982,7 +5008,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("f1", "0", null, true, false, null, StringComparators.NUMERIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2L})
@@ -5004,7 +5030,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     .granularity(Granularities.ALL)
                     .filters(in("dim2", ImmutableList.of("", "a"), null))
                     .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                    .context(QUERY_CONTEXT_DEFAULT)
                     .build()
           ),
           ImmutableList.of(
@@ -5024,7 +5050,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     .granularity(Granularities.ALL)
                     .filters(selector("dim2", "", null))
                     .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                    .context(QUERY_CONTEXT_DEFAULT)
                     .build()
           ),
           ImmutableList.of(
@@ -5038,8 +5064,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullStringEquality() throws Exception
   {
-    // In Calcite 1.21, this query is optimized to return 0 without generating a native Druid query, since
-    // null is not equal to null or any other value.
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -5121,7 +5145,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(selector("dim2", null, null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5171,7 +5195,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5232,10 +5256,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(new Object[]{0L})
     );
   }
 
@@ -5408,10 +5432,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec())
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
   }
 
@@ -5464,9 +5490,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithFilterMatchingNothing() throws Exception
   {
-    // This query should actually return [0, null] rather than an empty result set, but it doesn't.
-    // This test just "documents" the current behavior.
-
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar'",
         ImmutableList.of(
@@ -5479,10 +5502,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new CountAggregatorFactory("a0"),
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L, NullHandling.sqlCompatible() ? null : Long.MIN_VALUE}
+        )
     );
   }
 
@@ -5501,7 +5526,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new LongSumAggregatorFactory("a1", "cnt"),
                       new LongMinAggregatorFactory("a2", "cnt")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{6L, 6L, 1L})
@@ -5523,10 +5548,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new CountAggregatorFactory("a0"),
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L, NullHandling.sqlCompatible() ? null : Long.MIN_VALUE}
+        )
     );
   }
 
@@ -5550,7 +5577,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5575,7 +5602,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           not(selector("dim2", null, null))
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -5604,7 +5631,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           in("dim2", ImmutableList.of("abc", "def"), null)
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5624,7 +5651,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5649,7 +5676,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5673,7 +5700,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5697,7 +5724,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5748,7 +5775,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1))))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(withLeftDirectAccessEnabled(TIMESERIES_CONTEXT_DEFAULT))
+                  .context(withLeftDirectAccessEnabled(QUERY_CONTEXT_DEFAULT))
                   .build()
         ),
         ImmutableList.of(
@@ -5775,7 +5802,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
         + "\"postAggregations\":[],"
         + "\"limit\":2147483647,"
-        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}]"
+        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}]"
         + ", signature=[{a0:LONG}])\n";
 
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
@@ -5806,7 +5833,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5832,7 +5859,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5855,10 +5882,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       bound("cnt", "1.1", "100000001.0", true, true, null, StringComparators.NUMERIC)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
 
     testQuery(
@@ -5872,7 +5901,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       selector("cnt", "1.0", null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5891,10 +5920,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       selector("cnt", "100000001.0", null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
 
     testQuery(
@@ -5908,7 +5939,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       in("cnt", ImmutableList.of("1.0", "100000001.0"), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5929,7 +5960,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(in("cnt", ImmutableList.of("1", "2"), null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -5991,7 +6022,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new LongMinAggregatorFactory("a1", "cnt"),
                                 new LongMaxAggregatorFactory("a2", "l1")
                             ))
-                .context(TIMESERIES_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
@@ -6014,7 +6045,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new DoubleMinAggregatorFactory("a0", "d1"),
                       new DoubleMaxAggregatorFactory("a1", "d1")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6037,7 +6068,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new FloatMinAggregatorFactory("a0", "m1"),
                       new FloatMaxAggregatorFactory("a1", "m1")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6133,7 +6164,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           useDefault ? "((\"a3\" + \"a4\") + \"a5\")" : "((\"a4\" + \"a5\") + \"a6\")"
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -6354,7 +6385,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           and(selector("dim2", "a", null), selector("dim1", "b", null))
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -6427,7 +6458,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -6472,7 +6503,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p0", "log((\"a1\" + \"a2\"))"),
                       expressionPostAgg("p1", "(\"a1\" % 4)")
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6712,7 +6743,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       selector("dim2", "a", null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6740,10 +6771,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
   }
 
@@ -6759,7 +6792,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("m1", "2.5", "3.5", true, true, null, StringComparators.NUMERIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6780,7 +6813,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("dim1", "a", "b", false, true, null, StringComparators.LEXICOGRAPHIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6801,7 +6834,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(selector("dim1", "abc", null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6822,7 +6855,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(numericSelector("dim1", "2", null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6843,7 +6876,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6871,7 +6904,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000/2001"), Intervals.of("2010/2011")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6898,7 +6931,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6929,7 +6962,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6972,7 +7005,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01/2000-01-01T00:00:00.001")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -6998,7 +7031,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7038,7 +7071,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7079,7 +7112,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7109,7 +7142,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(not(selector("dim1", "xxx", null)))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7132,7 +7165,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(not(selector("dim2", "a", null)))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7168,7 +7201,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7201,7 +7234,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7234,7 +7267,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7267,7 +7300,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7294,7 +7327,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           CalciteTests.createExprMacroTable()
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7324,7 +7357,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           CalciteTests.createExprMacroTable()
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7677,7 +7710,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new HyperUniquesAggregatorFactory("a2", "unique_dim1", false, true)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7728,7 +7761,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7801,7 +7834,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7997,7 +8030,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new HyperUniquesAggregatorFactory("a5", "unique_dim1", false, true)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -8007,6 +8040,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{6L, 3L, 2L, 1L, 1L, 6L}
         )
+    );
+  }
+
+  @Test
+  public void testApproxCountDistinctOnVectorizableSingleStringExpression() throws Exception
+  {
+    testQuery(
+        "SELECT APPROX_COUNT_DISTINCT(dim1 || 'hello') FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "concat(\"dim1\",'hello')", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              dimensions(DefaultDimensionSpec.of("v0")),
+                              false,
+                              true
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L})
     );
   }
 
@@ -8301,7 +8365,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                       .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
                                       .intervals(querySegmentSpec(Filtration.eternity()))
                                       .aggregators(new CountAggregatorFactory("a0"))
-                                      .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                                      .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                       .build()
                             )
                         )
@@ -8386,7 +8450,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                               new HyperUniqueFinalizingPostAggregator("a0", "a0:a")
                                           )
                                       )
-                                      .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                                      .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                       .build()
                             )
                         )
@@ -8723,7 +8787,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     final String explanation =
-        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}], signature=[{a0:LONG}])\n"
+        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}], signature=[{a0:LONG}])\n"
         + "  DruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n"
         + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
         + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n";
@@ -9057,7 +9121,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p2", "((\"a0\" / \"a1\") + 3)"),
                       expressionPostAgg("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)")
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9097,7 +9161,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9134,7 +9198,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9252,7 +9316,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9283,7 +9347,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9442,7 +9506,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000/P2M")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9469,7 +9533,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01T00-08:00/2000-03-01T00-08:00")))
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -9498,7 +9562,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01T01:02/2002")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9566,7 +9630,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .context(QUERY_CONTEXT_LOS_ANGELES)
                   .build()
         ),
         ImmutableList.of(
@@ -9586,7 +9650,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02/2002")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9612,7 +9676,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .context(QUERY_CONTEXT_LOS_ANGELES)
                   .build()
         ),
         ImmutableList.of(
@@ -9637,7 +9701,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9659,7 +9723,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(new Interval(DateTimes.MIN, DateTimes.of("2000-02-01"))))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9681,7 +9745,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(new Interval(DateTimes.MIN, DateTimes.of("2000-03-01"))))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9716,7 +9780,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           selector("v1", "1", null)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9759,7 +9823,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           in("v1", ImmutableList.of("2", "3", "5"), null)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9784,7 +9848,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "AND EXTRACT(DECADE FROM __time) = 200\n"
         + "AND EXTRACT(CENTURY FROM __time) = 20\n"
         + "AND EXTRACT(MILLENNIUM FROM __time) = 2\n",
-        TIMESERIES_CONTEXT_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE4)
@@ -9821,7 +9885,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           selector("v7", "2", null)
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -9842,10 +9906,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec())
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(new Object[]{0L})
     );
   }
 
@@ -10963,7 +11027,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -11019,7 +11083,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -11315,10 +11379,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
                       expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
   }
 
@@ -11380,10 +11446,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{0L}
+        )
     );
   }
 
@@ -11824,7 +11892,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           true
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -11866,7 +11934,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           true
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -11946,7 +12014,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12014,7 +12082,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   ))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -12076,7 +12144,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("1999-12-01T00-08:00/2002-01-01T00-08:00")))
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12104,7 +12172,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12235,7 +12303,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12263,7 +12331,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12375,7 +12443,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12405,7 +12473,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(new PeriodGranularity(Period.months(3), null, DateTimeZone.UTC))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12435,12 +12503,361 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                   .descending(true)
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
             new Object[]{timestamp("2001-01-01"), 3L},
             new Object[]{timestamp("2000-01-01"), 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesEmptyResultsAggregatorDefaultValues() throws Exception
+  {
+    // timeseries with all granularity have a single group, so should return default results for given aggregators
+    testQuery(
+        "SELECT\n"
+        + " count(*),\n"
+        + " COUNT(DISTINCT dim1),\n"
+        + " APPROX_COUNT_DISTINCT(distinct dim1),\n"
+        + " sum(d1),\n"
+        + " max(d1),\n"
+        + " min(d1),\n"
+        + " sum(l1),\n"
+        + " max(l1),\n"
+        + " min(l1),\n"
+        + " avg(l1),\n"
+        + " avg(d1)\n"
+        + "FROM druid.numfoo WHERE dim2 = 0",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new CountAggregatorFactory("a0"),
+
+                          new CardinalityAggregatorFactory(
+                              "a1",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new CardinalityAggregatorFactory(
+                              "a2",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new DoubleSumAggregatorFactory("a3", "d1"),
+                          new DoubleMaxAggregatorFactory("a4", "d1"),
+                          new DoubleMinAggregatorFactory("a5", "d1"),
+                          new LongSumAggregatorFactory("a6", "l1"),
+                          new LongMaxAggregatorFactory("a7", "l1"),
+                          new LongMinAggregatorFactory("a8", "l1"),
+                          new LongSumAggregatorFactory("a9:sum", "l1"),
+                          useDefault
+                          ? new CountAggregatorFactory("a9:count")
+                          : new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a9:count"),
+                              not(selector("l1", null, null))
+                          ),
+                          new DoubleSumAggregatorFactory("a10:sum", "d1"),
+                          useDefault
+                          ? new CountAggregatorFactory("a10:count")
+                          : new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a10:count"),
+                              not(selector("d1", null, null))
+                          )
+                      )
+                  )
+                  .postAggregators(
+                      new ArithmeticPostAggregator(
+                          "a9",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a9:sum"),
+                              new FieldAccessPostAggregator(null, "a9:count")
+                          )
+                      ),
+                      new ArithmeticPostAggregator(
+                          "a10",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a10:sum"),
+                              new FieldAccessPostAggregator(null, "a10:count")
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{0L, 0L, 0L, 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0L, Long.MIN_VALUE, Long.MAX_VALUE, 0L, Double.NaN}
+            : new Object[]{0L, 0L, 0L, null, null, null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized() throws Exception
+  {
+    cannotVectorize();
+    // timeseries with all granularity have a single group, so should return default results for given aggregators
+    testQuery(
+        "SELECT\n"
+        + " ANY_VALUE(dim1, 1024),\n"
+        + " ANY_VALUE(l1),\n"
+        + " EARLIEST(dim1, 1024),\n"
+        + " EARLIEST(l1),\n"
+        + " LATEST(dim1, 1024),\n"
+        + " LATEST(l1),\n"
+        + " ARRAY_AGG(DISTINCT dim3)\n"
+        + "FROM druid.numfoo WHERE dim2 = 0",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                          new LongAnyAggregatorFactory("a1", "l1"),
+                          new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                          new LongFirstAggregatorFactory("a3", "l1"),
+                          new StringLastAggregatorFactory("a4", "dim1", 1024),
+                          new LongLastAggregatorFactory("a5", "l1"),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a6",
+                              ImmutableSet.of("dim3"),
+                              "__acc",
+                              "[]",
+                              "[]",
+                              "array_set_add(\"__acc\", \"dim3\")",
+                              "array_set_add_all(\"__acc\", \"a6\")",
+                              null,
+                              "if(array_length(o) == 0, null, o)",
+                              new HumanReadableBytes(1024),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"", 0L, "", 0L, "", 0L, null}
+            : new Object[]{null, null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + " dim2,\n"
+        + " count(*) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " COUNT(DISTINCT dim1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " APPROX_COUNT_DISTINCT(distinct dim1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " sum(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " max(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " min(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " sum(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " max(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " min(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " avg(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " avg(d1) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM druid.numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new CardinalityAggregatorFactory("a1", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new CardinalityAggregatorFactory("a2", null, ImmutableList.of(DefaultDimensionSpec.of("dim1")), false, true),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleSumAggregatorFactory("a3", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleMaxAggregatorFactory("a4", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleMinAggregatorFactory("a5", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongSumAggregatorFactory("a6", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongMaxAggregatorFactory("a7", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongMinAggregatorFactory("a8", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongSumAggregatorFactory("a9:sum", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                useDefault
+                                ? new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a9:count"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a9:count"),
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new DoubleSumAggregatorFactory("a10:sum", "d1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                useDefault
+                                ? new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a10:count"),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a10:count"),
+                                    and(not(selector("d1", null, null)), selector("dim1", "nonexistent", null))
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "a9",
+                                    "quotient",
+                                    ImmutableList.of(new FieldAccessPostAggregator(
+                                        null,
+                                        "a9:sum"
+                                    ), new FieldAccessPostAggregator(null, "a9:count"))
+                                ),
+                                new ArithmeticPostAggregator(
+                                    "a10",
+                                    "quotient",
+                                    ImmutableList.of(new FieldAccessPostAggregator(
+                                        null,
+                                        "a10:sum"
+                                    ), new FieldAccessPostAggregator(null, "a10:count"))
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"a", 0L, 0L, 0L, 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0L, Long.MIN_VALUE, Long.MAX_VALUE, 0L, Double.NaN}
+            : new Object[]{"a", 0L, 0L, 0L, null, null, null, null, null, null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValuesNonVectorized() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT\n"
+        + " dim2,\n"
+        + " ANY_VALUE(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " ANY_VALUE(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " EARLIEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " EARLIEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " LATEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " LATEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " ARRAY_AGG(DISTINCT dim3) FILTER(WHERE dim1 = 'nonexistent')"
+        + "FROM druid.numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongAnyAggregatorFactory("a1", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongFirstAggregatorFactory("a3", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new StringLastAggregatorFactory("a4", "dim1", 1024),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new LongLastAggregatorFactory("a5", "l1"),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new ExpressionLambdaAggregatorFactory(
+                                        "a6",
+                                        ImmutableSet.of("dim3"),
+                                        "__acc",
+                                        "[]",
+                                        "[]",
+                                        "array_set_add(\"__acc\", \"dim3\")",
+                                        "array_set_add_all(\"__acc\", \"a6\")",
+                                        null,
+                                        "if(array_length(o) == 0, null, o)",
+                                        new HumanReadableBytes(1024),
+                                        TestExprMacroTable.INSTANCE
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"a", "", 0L, "", 0L, "", 0L, null}
+            : new Object[]{"a", null, null, null, null, null, null, null}
         )
     );
   }
@@ -12638,7 +13055,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                   .limit(1)
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12665,7 +13082,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                   .limit(1)
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -12730,7 +13147,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                   .limit(1)
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -13606,7 +14023,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                               .filters(new LikeDimFilter("dim1", "%bc", null, null))
                                               .granularity(Granularities.ALL)
                                               .aggregators(new CountAggregatorFactory("a0"))
-                                              .context(TIMESERIES_CONTEXT_DEFAULT)
+                                              .context(QUERY_CONTEXT_DEFAULT)
                                               .build()
                                     ),
                                     "j0.",
@@ -14021,7 +14438,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                               .granularity(Granularities.ALL)
                                               .filters(selector("cnt", "1", null))
                                               .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                              .context(TIMESERIES_CONTEXT_DEFAULT)
+                                              .context(QUERY_CONTEXT_DEFAULT)
                                               .build()
                                     ),
                                     "j0.",
@@ -14035,7 +14452,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .granularity(Granularities.ALL)
                                           .filters(not(selector("cnt", "2", null)))
                                           .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "_j0.",
@@ -14081,7 +14498,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                                   .granularity(Granularities.ALL)
                                                   .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                                                  .context(QUERY_CONTEXT_DEFAULT)
                                                   .build()
                                         ),
                                         "j0.",
@@ -14099,7 +14516,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                                   .aggregators(
                                                                       new LongMinAggregatorFactory("a0", "__time")
                                                                   )
-                                                                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                                                                  .context(QUERY_CONTEXT_DEFAULT)
                                                                   .build()
                                                         )
                                                     )
@@ -14128,7 +14545,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMinAggregatorFactory("a0", "__time"))
                                           .postAggregators(expressionPostAgg("p0", "1"))
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "__j0.",
@@ -14182,7 +14599,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                               .intervals(querySegmentSpec(Filtration.eternity()))
                                               .granularity(Granularities.ALL)
                                               .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                              .context(TIMESERIES_CONTEXT_DEFAULT)
+                                              .context(QUERY_CONTEXT_DEFAULT)
                                               .build()
                                     ),
                                     "j0.",
@@ -14195,7 +14612,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMinAggregatorFactory("a0", "__time"))
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "_j0.",
@@ -14321,7 +14738,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                           .withOverriddenContext(queryContext)
                                 ),
@@ -14371,7 +14788,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                       .intervals(querySegmentSpec(Filtration.eternity()))
                                                       .granularity(Granularities.ALL)
                                                       .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                                      .context(TIMESERIES_CONTEXT_DEFAULT)
+                                                      .context(QUERY_CONTEXT_DEFAULT)
                                                       .build()
                                             )
                                             .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -14399,7 +14816,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
                                           .postAggregators(expressionPostAgg("p0", "1"))
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "_j0.",
@@ -14601,7 +15018,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -14886,7 +15303,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p0", "(\"a0\" + \"a1\")")
                   )
                   .descending(true)
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -15155,7 +15572,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01/2002-01-01")))
                   .granularity(Granularities.MONTH)
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                   .build()
         ),
         ImmutableList.of(
@@ -15268,7 +15685,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -15405,7 +15822,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
         "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) " +
         "FROM druid.foo WHERE  dim2 = 0",
@@ -15431,7 +15848,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    expressionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
                                    expressionPostAgg("p8", "atan2(exp(\"a0\"),1)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{
@@ -17950,7 +18367,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18002,7 +18419,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18106,7 +18523,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18161,7 +18578,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18202,7 +18619,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18252,7 +18669,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -18409,7 +18826,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                         )
                                     )
-                                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                                    .context(QUERY_CONTEXT_DEFAULT)
                                     .build()
                           ),
                           "j0.",
@@ -18485,7 +18902,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                   )
                                               )
                                           )
-                                          .context(TIMESERIES_CONTEXT_DEFAULT)
+                                          .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
                                 "j0.",
@@ -18510,6 +18927,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         ),
         expectedResults
+    );
+  }
+
+  @Test
+  public void testCountAndAverageByConstantVirtualColumn() throws Exception
+  {
+    List<VirtualColumn> virtualColumns;
+    List<AggregatorFactory> aggs;
+    if (useDefault) {
+      aggs = ImmutableList.of(
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a0"),
+              not(selector("v0", null, null))
+          ),
+          new LongSumAggregatorFactory("a1:sum", null, "325323", TestExprMacroTable.INSTANCE),
+          new CountAggregatorFactory("a1:count")
+      );
+      virtualColumns = ImmutableList.of(
+          expressionVirtualColumn("v0", "'10.1'", ValueType.STRING)
+      );
+    } else {
+      aggs = ImmutableList.of(
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a0"),
+              not(selector("v0", null, null))
+          ),
+          new LongSumAggregatorFactory("a1:sum", "v1"),
+          new FilteredAggregatorFactory(
+              new CountAggregatorFactory("a1:count"),
+              not(selector("v1", null, null))
+          )
+      );
+      virtualColumns = ImmutableList.of(
+          expressionVirtualColumn("v0", "'10.1'", ValueType.STRING),
+          expressionVirtualColumn("v1", "325323", ValueType.LONG)
+      );
+
+    }
+    testQuery(
+        "SELECT dim5, COUNT(dim1), AVG(l1) FROM druid.numfoo WHERE dim1 = '10.1' AND l1 = 325323 GROUP BY dim5",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(
+                            and(
+                                selector("dim1", "10.1", null),
+                                selector("l1", "325323", null)
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(VirtualColumns.create(virtualColumns))
+                        .setDimensions(new DefaultDimensionSpec("dim5", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(aggs)
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "a1",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "a1:sum"),
+                                        new FieldAccessPostAggregator(null, "a1:count")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ab", 1L, 325323L}
+        )
     );
   }
 }

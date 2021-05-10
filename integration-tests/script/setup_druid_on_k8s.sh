@@ -32,7 +32,8 @@ mvn -B -ff -q dependency:go-offline \
       -Pskip-static-checks,skip-tests \
       -Dmaven.javadoc.skip=true
 
-docker build -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
+docker build --build-arg BUILD_FROM_SOURCE=0 -t druid/base:v1 -f distribution/docker/Dockerfile .
+docker build --build-arg BASE_IMAGE=druid/base:v1 -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
 
 # This tmp dir is used for MiddleManager pod and Historical Pod to cache segments.
 sudo rm -rf tmp
@@ -50,4 +51,3 @@ sleep 60
 
 $KUBECTL get pod
 $KUBECTL get svc
-

@@ -65,6 +65,7 @@ public class PartialHashSegmentGenerateTaskTest
         ParallelIndexTestingFactory.GROUP_ID,
         ParallelIndexTestingFactory.TASK_RESOURCE,
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
         ParallelIndexTestingFactory.CONTEXT,
@@ -156,6 +157,7 @@ public class PartialHashSegmentGenerateTaskTest
         ParallelIndexTestingFactory.GROUP_ID,
         ParallelIndexTestingFactory.TASK_RESOURCE,
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         ParallelIndexTestingFactory.createIngestionSpec(
             new LocalInputSource(new File("baseDir"), "filer"),

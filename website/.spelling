@@ -22,6 +22,7 @@
 500MiB
 64-bit
 ACL
+ACLs
 APIs
 AvroStorage
 AWS
@@ -1881,3 +1882,4 @@ TiB
 PiB
 protobuf
 Golang
+multiValueHandling

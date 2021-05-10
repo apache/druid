@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.Intervals;
@@ -70,6 +71,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, null, null, null),
+        new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,

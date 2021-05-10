@@ -69,6 +69,7 @@ public class CardinalityVectorProcessorFactory implements VectorColumnProcessorF
   @Override
   public CardinalityVectorProcessor makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
   {
-    return NilCardinalityVectorProcessor.INSTANCE;
+    // Handles string-as-object and complex types.
+    return new StringObjectCardinalityVectorProcessor(selector);
   }
 }

@@ -47,7 +47,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DoublesSketchObjectSqlAggregator implements SqlAggregator
@@ -110,8 +109,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
@@ -124,7 +121,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           input,
           ValueType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
@@ -133,7 +129,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         null
     );

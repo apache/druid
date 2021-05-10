@@ -87,8 +87,14 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   private final LockGranularity lockGranularity;
   private final boolean useInputFormatApi;
 
-  AbstractMultiPhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
+  AbstractMultiPhaseParallelIndexingTest(
+      LockGranularity lockGranularity,
+      boolean useInputFormatApi,
+      double transientTaskFailureRate,
+      double transientApiCallFailureRate
+  )
   {
+    super(transientTaskFailureRate, transientApiCallFailureRate);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
     getObjectMapper().registerSubtypes(ParallelIndexTuningConfig.class, DruidInputSource.class);
