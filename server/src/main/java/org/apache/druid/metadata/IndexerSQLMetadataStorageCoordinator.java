@@ -1430,7 +1430,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources)
   {
     DateTime dateTime = DateTimes.utc(timestamp);
-    List<String> datasources = connector.getDBI().withHandle(
+    List<String> datasourcesToDelete = connector.getDBI().withHandle(
         handle -> handle
             .createQuery(
                 StringUtils.format(
@@ -1442,7 +1442,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .mapTo(String.class)
             .list()
     );
-    Set<String> datasourcesToDelete =
+    datasourcesToDelete.removeAll(excludeDatasources);
     return connector.getDBI().withHandle(
         handle -> {
           final PreparedBatch batch = handle.prepareBatch(
@@ -1452,10 +1452,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   dateTime.toString()
               )
           );
-          for (String datasourceMetadataInDb : datasources) {
-            if (!excludeDatasources.contains(datasourceMetadataInDb)) {
-              batch.bind("dataSource", datasourceMetadataInDb).add();
-            }
+          for (String datasource : datasourcesToDelete) {
+            batch.bind("dataSource", datasource).add();
           }
           int[] result = batch.execute();
           return IntStream.of(result).sum();

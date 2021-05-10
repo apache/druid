@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -68,6 +67,7 @@ public class KillDatasourceMetadata implements CoordinatorDuty
     );
     this.retainDuration = config.getCoordinatorDatasourceKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "Coordinator datasource metadata kill retainDuration must be >= 0");
+    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator datasource metadata kill retainDuration cannot be greater than current time in ms");
     log.debug(
         "Datasource Metadata Kill Task scheduling enabled with period [%s], retainDuration [%s]",
         this.period,
@@ -86,17 +86,13 @@ public class KillDatasourceMetadata implements CoordinatorDuty
         // Datasource metadata only exists for datasource with supervisor
         // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
         // is still active or not
-        Map<String, SupervisorSpec> allSupervisor = metadataSupervisorManager.getLatest();
-        Set<String> allDatasourceWithActiveSupervisor = allSupervisor.values()
-                                                                     .stream()
-                                                                     // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
-                                                                     // (NoopSupervisorSpec is used as a tombstone marker)
-                                                                     .filter(supervisorSpec -> !(supervisorSpec instanceof NoopSupervisorSpec))
-                                                                     .map(supervisorSpec -> supervisorSpec.getDataSources())
-                                                                     .flatMap(Collection::stream)
-                                                                     .filter(datasource -> !Strings.isNullOrEmpty(
-                                                                         datasource))
-                                                                     .collect(Collectors.toSet());
+        Map<String, SupervisorSpec> allActiveSupervisor = metadataSupervisorManager.getLatestActiveOnly();
+        Set<String> allDatasourceWithActiveSupervisor = allActiveSupervisor.values()
+                                                                           .stream()
+                                                                           .map(supervisorSpec -> supervisorSpec.getDataSources())
+                                                                           .flatMap(Collection::stream)
+                                                                           .filter(datasource -> !Strings.isNullOrEmpty(datasource))
+                                                                           .collect(Collectors.toSet());
         // We exclude removing datasource metadata with active supervisor
         int datasourceMetadataRemovedCount = indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(
             timestamp,
