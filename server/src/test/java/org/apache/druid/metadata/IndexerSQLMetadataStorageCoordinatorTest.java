@@ -1520,7 +1520,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertNull(
         coordinator.retrieveDataSourceMetadata("fooDataSource")
     );
-    Assert.assertEquals(0, deletedCount);
+    Assert.assertEquals(1, deletedCount);
   }
 
   @Test
