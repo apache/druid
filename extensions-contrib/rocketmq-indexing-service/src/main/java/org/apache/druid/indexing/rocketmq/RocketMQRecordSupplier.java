@@ -28,34 +28,32 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.rocketmq.clients.consumer.ConsumerRecord;
-import org.apache.rocketmq.clients.consumer.RocketMQConsumer;
-import org.apache.rocketmq.common.PartitionInfo;
-import org.apache.rocketmq.common.TopicPartition;
-import org.apache.rocketmq.common.serialization.ByteArrayDeserializer;
-import org.apache.rocketmq.common.serialization.Deserializer;
+import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
+import org.apache.rocketmq.client.consumer.store.ReadOffsetType;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
+
 
 import javax.annotation.Nonnull;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.time.Duration;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
-public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, RocketMQRecordEntity>
+public class RocketMQRecordSupplier implements RecordSupplier<String, Long, RocketMQRecordEntity>
 {
-  private final RocketMQConsumer<byte[], byte[]> consumer;
+  private final DefaultLitePullConsumer consumer;
   private boolean closed;
+  private Set<StreamPartition<String>> streamPartitions;
 
   public RocketMQRecordSupplier(
       Map<String, Object> consumerProperties,
@@ -67,76 +65,106 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
 
   @VisibleForTesting
   public RocketMQRecordSupplier(
-      RocketMQConsumer<byte[], byte[]> consumer
+      DefaultLitePullConsumer consumer
   )
   {
     this.consumer = consumer;
   }
 
   @Override
-  public void assign(Set<StreamPartition<Integer>> streamPartitions)
+  public void assign(Set<StreamPartition<String>> streamPartitions)
   {
-    wrapExceptions(() -> consumer.assign(streamPartitions
-                                             .stream()
-                                             .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
-                                             .collect(Collectors.toSet())));
+    this.streamPartitions = streamPartitions;
+    Set<MessageQueue> messageQueues = new HashSet<>();
+    for (StreamPartition<String> streamPartition : streamPartitions) {
+      MessageQueue mq = new MessageQueue();
+      String[] brokerAndQueueID = streamPartition.getPartitionId().split("-queueid-");
+      mq.setTopic(streamPartition.getStream());
+      mq.setBrokerName(brokerAndQueueID[0]);
+      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      messageQueues.add(mq);
+    }
+    consumer.assign(messageQueues);
   }
 
   @Override
-  public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
+  public void seek(StreamPartition<String> partition, Long sequenceNumber)
   {
-    wrapExceptions(() -> consumer.seek(
-        new TopicPartition(partition.getStream(), partition.getPartitionId()),
-        sequenceNumber
-    ));
+    MessageQueue mq = new MessageQueue();
+    String[] brokerAndQueueID = partition.getPartitionId().split("-queueid-");
+    mq.setTopic(partition.getStream());
+    mq.setBrokerName(brokerAndQueueID[0]);
+    mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+    try {
+      consumer.seek(mq, sequenceNumber);
+    }
+    catch (MQClientException e) {
+      e.printStackTrace();
+    }
   }
 
   @Override
-  public void seekToEarliest(Set<StreamPartition<Integer>> partitions)
+  public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
-    wrapExceptions(() -> consumer.seekToBeginning(partitions
-                                                      .stream()
-                                                      .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                                                      .collect(Collectors.toList())));
+    for (StreamPartition<String> partition : partitions) {
+      MessageQueue mq = new MessageQueue();
+      String[] brokerAndQueueID = partition.getPartitionId().split("-queueid-");
+      mq.setTopic(partition.getStream());
+      mq.setBrokerName(brokerAndQueueID[0]);
+      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      try {
+        consumer.seekToBegin(mq);
+      }
+      catch (MQClientException e) {
+        e.printStackTrace();
+      }
+    }
   }
 
   @Override
-  public void seekToLatest(Set<StreamPartition<Integer>> partitions)
+  public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
-    wrapExceptions(() -> consumer.seekToEnd(partitions
-                                                .stream()
-                                                .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                                                .collect(Collectors.toList())));
+    for (StreamPartition<String> partition : partitions) {
+      MessageQueue mq = new MessageQueue();
+      String[] brokerAndQueueID = partition.getPartitionId().split("-queueid-");
+      mq.setTopic(partition.getStream());
+      mq.setBrokerName(brokerAndQueueID[0]);
+      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      try {
+        consumer.seekToEnd(mq);
+      }
+      catch (MQClientException e) {
+        e.printStackTrace();
+      }
+    }
   }
 
   @Override
-  public Set<StreamPartition<Integer>> getAssignment()
+  public Set<StreamPartition<String>> getAssignment()
   {
-    return wrapExceptions(() -> consumer.assignment()
-                                        .stream()
-                                        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
-                                        .collect(Collectors.toSet()));
+    return this.streamPartitions;
   }
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<Integer, Long, RocketMQRecordEntity>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> poll(long timeout)
   {
-    List<OrderedPartitionableRecord<Integer, Long, RocketMQRecordEntity>> polledRecords = new ArrayList<>();
-    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
+    List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> polledRecords = new ArrayList<>();
+    for (MessageExt messageExt : consumer.poll(timeout)) {
 
       polledRecords.add(new OrderedPartitionableRecord<>(
-          record.topic(),
-          record.partition(),
-          record.offset(),
-          record.value() == null ? null : ImmutableList.of(new RocketMQRecordEntity(record))
+          messageExt.getTopic(),
+          messageExt
+              .getBrokerName() + "-queueid-" + messageExt.getQueueId(),
+          messageExt.getQueueOffset(),
+          messageExt.getBody() == null ? null : ImmutableList.of(new RocketMQRecordEntity(messageExt.getBody()))
       ));
     }
     return polledRecords;
   }
 
   @Override
-  public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
+  public Long getLatestSequenceNumber(StreamPartition<String> partition)
   {
     Long currPos = getPosition(partition);
     seekToLatest(Collections.singleton(partition));
@@ -146,7 +174,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
   }
 
   @Override
-  public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
+  public Long getEarliestSequenceNumber(StreamPartition<String> partition)
   {
     Long currPos = getPosition(partition);
     seekToEarliest(Collections.singleton(partition));
@@ -156,24 +184,31 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
   }
 
   @Override
-  public Long getPosition(StreamPartition<Integer> partition)
+  public Long getPosition(StreamPartition<String> partition)
   {
-    return wrapExceptions(() -> consumer.position(new TopicPartition(
-        partition.getStream(),
-        partition.getPartitionId()
-    )));
+    MessageQueue mq = new MessageQueue();
+    String[] brokerAndQueueID = partition.getPartitionId().split("-queueid-");
+    mq.setTopic(partition.getStream());
+    mq.setBrokerName(brokerAndQueueID[0]);
+    mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+    return consumer.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
   }
 
   @Override
-  public Set<Integer> getPartitionIds(String stream)
+  public Set<String> getPartitionIds(String stream)
   {
-    return wrapExceptions(() -> {
-      List<PartitionInfo> partitions = consumer.partitionsFor(stream);
-      if (partitions == null) {
-        throw new ISE("Topic [%s] is not found in RocketMQConsumer's list of topics", stream);
-      }
-      return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
-    });
+    HashSet<String> partitionIds = new HashSet<>();
+    Collection<MessageQueue> messageQueues=null;
+    try {
+      messageQueues = consumer.fetchMessageQueues(stream);
+    }
+    catch (MQClientException e) {
+      e.printStackTrace();
+    }
+    for (MessageQueue messageQueue : messageQueues) {
+      partitionIds.add(messageQueue.getBrokerName() + "-queueid-" + messageQueue.getQueueId());
+    }
+    return partitionIds;
   }
 
   @Override
@@ -183,7 +218,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
       return;
     }
     closed = true;
-    consumer.close();
+    consumer.shutdown();
   }
 
   public static void addConsumerPropertiesFromConfig(
@@ -223,33 +258,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
     }
   }
 
-  private static Deserializer getRocketMQDeserializer(Properties properties, String rocketmqConfigKey)
-  {
-    Deserializer deserializerObject;
-    try {
-      Class deserializerClass = Class.forName(properties.getProperty(
-          rocketmqConfigKey,
-          ByteArrayDeserializer.class.getTypeName()
-      ));
-      Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
-
-      Type deserializerReturnType = deserializerMethod.getGenericReturnType();
-
-      if (deserializerReturnType == byte[].class) {
-        deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
-      } else {
-        throw new IllegalArgumentException("RocketMQ deserializers must return a byte array (byte[]), " +
-                                           deserializerClass.getName() + " returns " +
-                                           deserializerReturnType.getTypeName());
-      }
-    }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-      throw new StreamException(e);
-    }
-    return deserializerObject;
-  }
-
-  private static RocketMQConsumer<byte[], byte[]> getRocketMQConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
+  private static DefaultLitePullConsumer getRocketMQConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
     final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
@@ -257,34 +266,6 @@ public class RocketMQRecordSupplier implements RecordSupplier<Integer, Long, Roc
     props.putIfAbsent("isolation.level", "read_committed");
     props.putAll(consumerConfigs);
 
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(RocketMQRecordSupplier.class.getClassLoader());
-      Deserializer keyDeserializerObject = getRocketMQDeserializer(props, "key.deserializer");
-      Deserializer valueDeserializerObject = getRocketMQDeserializer(props, "value.deserializer");
-
-      return new RocketMQConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
-  }
-
-  private static <T> T wrapExceptions(Callable<T> callable)
-  {
-    try {
-      return callable.call();
-    }
-    catch (Exception e) {
-      throw new StreamException(e);
-    }
-  }
-
-  private static void wrapExceptions(Runnable runnable)
-  {
-    wrapExceptions(() -> {
-      runnable.run();
-      return null;
-    });
+    return new DefaultLitePullConsumer("hhh1ConsumerGroup");
   }
 }
