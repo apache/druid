@@ -36,7 +36,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
@@ -344,7 +343,7 @@ public class AppenderatorImpl implements Appenderator
     if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          "(estimated) bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           maxBytesTuningConfig
       ));
@@ -369,8 +368,7 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck
-            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -716,7 +714,7 @@ public class AppenderatorImpl implements Appenderator
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
 
-    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+    log.info("Persisted rows[%,d] and (estimated) bytes[%,d]", numPersistedRows, bytesPersisted);
 
     return future;
   }
@@ -793,8 +791,7 @@ public class AppenderatorImpl implements Appenderator
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(
-        (Runnable) () -> pushExecutor.submit(() -> {
-        })
+        (Runnable) () -> pushExecutor.submit(() -> {})
     );
   }
 
@@ -927,6 +924,10 @@ public class AppenderatorImpl implements Appenderator
         closer.close();
       }
 
+      final DataSegment segmentToPush = sink.getSegment().withDimensions(
+          IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
+      );
+
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
           // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
@@ -934,11 +935,7 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment()
-                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(
-                      indexes,
-                      schema.getDimensionsSpec()
-                  )),
+              segmentToPush,
               useUniquePath
           ),
           exception -> exception instanceof Exception,

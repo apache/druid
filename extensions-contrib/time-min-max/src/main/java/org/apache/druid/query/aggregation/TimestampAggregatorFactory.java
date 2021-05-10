@@ -22,24 +22,25 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class TimestampAggregatorFactory extends AggregatorFactory
+public abstract class TimestampAggregatorFactory extends AggregatorFactory
 {
   final String name;
+  @Nullable
   final String fieldName;
+  @Nullable
   final String timeFormat;
   private final Comparator<Long> comparator;
   private final Long initValue;
@@ -48,8 +49,8 @@ public class TimestampAggregatorFactory extends AggregatorFactory
 
   TimestampAggregatorFactory(
       String name,
-      String fieldName,
-      String timeFormat,
+      @Nullable String fieldName,
+      @Nullable String timeFormat,
       Comparator<Long> comparator,
       Long initValue
   )
@@ -66,13 +67,23 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new TimestampAggregator(name, metricFactory.makeColumnValueSelector(fieldName), timestampSpec, comparator, initValue);
+    return new TimestampAggregator(
+        metricFactory.makeColumnValueSelector(timestampSpec.getTimestampColumn()),
+        timestampSpec,
+        comparator,
+        initValue
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new TimestampBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), timestampSpec, comparator, initValue);
+    return new TimestampBufferAggregator(
+        metricFactory.makeColumnValueSelector(timestampSpec.getTimestampColumn()),
+        timestampSpec,
+        comparator,
+        initValue
+    );
   }
 
   @Override
@@ -130,12 +141,6 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getCombiningFactory()
-  {
-    return new TimestampAggregatorFactory(name, name, timeFormat, comparator, initValue);
-  }
-
-  @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
     if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
@@ -143,14 +148,6 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
     }
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new TimestampAggregatorFactory(fieldName, fieldName, timeFormat, comparator, initValue)
-    );
   }
 
   @Override
@@ -173,12 +170,14 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     return name;
   }
 
+  @Nullable
   @JsonProperty
   public String getFieldName()
   {
     return fieldName;
   }
 
+  @Nullable
   @JsonProperty
   public String getTimeFormat()
   {
@@ -188,16 +187,15 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Collections.singletonList(fieldName);
+    return Collections.singletonList(timestampSpec.getTimestampColumn());
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.TIMESTAMP_CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return new CacheKeyBuilder(AggregatorUtil.TIMESTAMP_CACHE_TYPE_ID).appendString(timestampSpec.getTimestampColumn())
+                                                                      .appendString(timestampSpec.getTimestampFormat())
+                                                                      .build();
   }
 
   @Override
@@ -221,43 +219,6 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     return Long.BYTES;
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    TimestampAggregatorFactory that = (TimestampAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-    if (!Objects.equals(comparator, that.comparator)) {
-      return false;
-    }
-    if (!Objects.equals(initValue, that.initValue)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    result = 31 * result + (comparator != null ? comparator.hashCode() : 0);
-    result = 31 * result + (initValue != null ? initValue.hashCode() : 0);
-    return result;
-  }
 
   @Nullable
   static Long convertLong(TimestampSpec timestampSpec, Object input)
@@ -273,5 +234,27 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     }
 
     return null;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TimestampAggregatorFactory that = (TimestampAggregatorFactory) o;
+    return name.equals(that.name) && Objects.equals(fieldName, that.fieldName) && Objects.equals(
+        timeFormat,
+        that.timeFormat
+    ) && comparator.equals(that.comparator) && initValue.equals(that.initValue);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, fieldName, timeFormat, comparator, initValue);
   }
 }

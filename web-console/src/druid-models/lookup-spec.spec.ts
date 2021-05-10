@@ -416,6 +416,7 @@ describe('lookup-spec', () => {
               table: 'some_lookup_table',
               keyColumn: 'the_old_dim_value',
               valueColumn: 'the_new_dim_value',
+              pollPeriod: 600000,
             },
           }),
         ).toBe(false);

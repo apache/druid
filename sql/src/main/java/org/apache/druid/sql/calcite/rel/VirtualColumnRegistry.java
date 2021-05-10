@@ -29,7 +29,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Provides facilities to create and re-use {@link VirtualColumn} definitions for dimensions, filters, and filtered
@@ -128,6 +130,12 @@ public class VirtualColumnRegistry
     return virtualColumnsByName.get(virtualColumnName);
   }
 
+  @Nullable
+  public VirtualColumn getVirtualColumnByExpression(String expression)
+  {
+    return virtualColumnsByExpression.get(expression);
+  }
+
   /**
    * Get a signature representing the base signature plus all registered virtual columns.
    */
@@ -144,5 +152,16 @@ public class VirtualColumnRegistry
     }
 
     return builder.build();
+  }
+
+  /**
+   * Given a list of column names, find any corresponding {@link VirtualColumn} with the same name
+   */
+  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
+  {
+    return allColumns.stream()
+                     .filter(this::isVirtualColumnDefined)
+                     .map(this::getVirtualColumn)
+                     .collect(Collectors.toList());
   }
 }

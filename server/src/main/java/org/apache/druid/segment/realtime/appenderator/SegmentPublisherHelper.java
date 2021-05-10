@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
 
 public final class SegmentPublisherHelper
 {
+  private static final Logger LOG = new Logger(SegmentPublisherHelper.class);
+
   /**
    * This method fills missing information in the shard spec if necessary when publishing segments.
    *
@@ -72,7 +75,29 @@ public final class SegmentPublisherHelper
       if (firstShardSpec instanceof OverwriteShardSpec) {
         annotateFn = annotateAtomicUpdateGroupFn(segmentsPerInterval.size());
       } else if (firstShardSpec instanceof BuildingShardSpec) {
-        annotateFn = annotateCorePartitionSetSizeFn(segmentsPerInterval.size());
+        // sanity check
+        // BuildingShardSpec is used in non-appending mode. In this mode,
+        // the segments in each interval should have contiguous partitionIds,
+        // so that they can be queryable (see PartitionHolder.isComplete()).
+        int expectedCorePartitionSetSize = segmentsPerInterval.size();
+        int actualCorePartitionSetSize = Math.toIntExact(
+            segmentsPerInterval
+                .stream()
+                .filter(segment -> segment.getShardSpec().getPartitionNum() < expectedCorePartitionSetSize)
+                .count()
+        );
+        if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
+          LOG.errorSegments(segmentsPerInterval, "Cannot publish segments due to incomplete time chunk");
+          throw new ISE(
+              "Cannot publish segments due to incomplete time chunk for interval[%s]. "
+              + "Expected [%s] segments in the core partition, but only [%] segments are found. "
+              + "See task logs for more details about these segments.",
+              interval,
+              expectedCorePartitionSetSize,
+              actualCorePartitionSetSize
+          );
+        }
+        annotateFn = annotateCorePartitionSetSizeFn(expectedCorePartitionSetSize);
       } else if (firstShardSpec instanceof BucketNumberedShardSpec) {
         throw new ISE("Cannot publish segments with shardSpec[%s]", firstShardSpec);
       } else {

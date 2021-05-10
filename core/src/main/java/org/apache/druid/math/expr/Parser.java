@@ -601,23 +601,4 @@ public class Parser
     }
   }
 
-  /**
-   * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
-   */
-  public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
-  {
-    return bindings::get;
-  }
-
-  /**
-   * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
-   * {@link Expr}
-   */
-  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
-  {
-    return (String name) -> {
-      Supplier<Object> supplier = bindings.get(name);
-      return supplier == null ? null : supplier.get();
-    };
-  }
 }

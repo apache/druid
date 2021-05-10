@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
@@ -133,6 +134,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new SumSqlAggregator())
           .add(new SumZeroSqlAggregator())
           .add(new GroupingSqlAggregator())
+          .add(new ArraySqlAggregator())
           .build();
 
 

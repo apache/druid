@@ -89,6 +89,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
+    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
   }
@@ -140,6 +141,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           spec.getGroupId(),
           null,
           spec.getSupervisorTaskId(),
+          spec.getId(),
           0,
           spec.getIngestionSpec(),
           spec.getContext()

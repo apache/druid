@@ -106,6 +106,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
   public CompactionTaskParallelRunTest(LockGranularity lockGranularity)
   {
+    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.lockGranularity = lockGranularity;
   }
 

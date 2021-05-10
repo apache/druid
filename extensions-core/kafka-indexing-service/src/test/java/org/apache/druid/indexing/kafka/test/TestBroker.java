@@ -31,7 +31,6 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
 import scala.Some;
-import scala.collection.immutable.List$;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -89,7 +88,7 @@ public class TestBroker implements Closeable
         config,
         Time.SYSTEM,
         Some.apply(StringUtils.format("TestingBroker[%d]-", id)),
-        List$.MODULE$.empty()
+        false
     );
     server.startup();
   }

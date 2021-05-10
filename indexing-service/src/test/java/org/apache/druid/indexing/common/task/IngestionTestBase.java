@@ -48,6 +48,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -103,6 +104,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();

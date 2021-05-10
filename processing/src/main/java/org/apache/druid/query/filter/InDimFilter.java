@@ -31,7 +31,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
@@ -48,6 +47,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
@@ -91,6 +92,16 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   @JsonIgnore
   private final Supplier<byte[]> cacheKeySupplier;
 
+  /**
+   * Creates a new filter.
+   *
+   * @param dimension    column to search
+   * @param values       set of values to match. This collection may be reused to avoid copying a big collection.
+   *                     Therefore, callers should <b>not</b> modify the collection after it is passed to this
+   *                     constructor.
+   * @param extractionFn extraction function to apply to the column before checking against "values"
+   * @param filterTuning optional tuning
+   */
   @JsonCreator
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
@@ -111,10 +122,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   /**
+   * Creates a new filter without an extraction function or any special filter tuning.
    *
-   * @param dimension
-   * @param values This collection instance can be reused if possible to avoid copying a big collection.
-   *               Callers should <b>not</b> modify the collection after it is passed to this constructor.
+   * @param dimension column to search
+   * @param values    set of values to match. This collection may be reused to avoid copying a big collection.
+   *                  Therefore, callers should <b>not</b> modify the collection after it is passed to this
+   *                  constructor.
    */
   public InDimFilter(
       String dimension,
@@ -408,16 +421,29 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
   private byte[] computeCacheKey()
   {
-    final List<String> sortedValues = new ArrayList<>(values);
-    sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
+    final Collection<String> sortedValues;
+
+    if (values instanceof SortedSet && isNaturalOrder(((SortedSet<String>) values).comparator())) {
+      // Avoid copying "values" when it is already in the order we need for cache key computation.
+      sortedValues = values;
+    } else {
+      final List<String> sortedValuesList = new ArrayList<>(values);
+      sortedValuesList.sort(Comparators.naturalNullsFirst());
+      sortedValues = sortedValuesList;
+    }
+
+    // Hash all values, in sorted order, as their length followed by their content.
     final Hasher hasher = Hashing.sha256().newHasher();
     for (String v : sortedValues) {
       if (v == null) {
-        hasher.putInt(0);
+        // Encode null as length -1, no content.
+        hasher.putInt(-1);
       } else {
+        hasher.putInt(v.length());
         hasher.putString(v, StandardCharsets.UTF_8);
       }
     }
+
     return new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
         .appendString(dimension)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
@@ -464,6 +490,17 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return this;
   }
 
+  /**
+   * Returns true if the comparator is null or the singleton {@link Comparators#naturalNullsFirst()}. Useful for
+   * detecting if a sorted set is in natural order or not.
+   *
+   * May return false negatives (i.e. there are naturally-ordered comparators that will return false here).
+   */
+  private static <T> boolean isNaturalOrder(@Nullable final Comparator<T> comparator)
+  {
+    return comparator == null || Comparators.naturalNullsFirst().equals(comparator);
+  }
+
   private static Iterable<ImmutableBitmap> getBitmapIterable(final Set<String> values, final BitmapIndex bitmapIndex)
   {
     return Filters.bitmapsFromIndexes(getBitmapIndexIterable(values, bitmapIndex), bitmapIndex);
@@ -489,6 +526,32 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     };
   }
 
+  private static Predicate<String> createStringPredicate(final Set<String> values)
+  {
+    Preconditions.checkNotNull(values, "values");
+
+    try {
+      // Check to see if values.contains(null) will throw a NullPointerException. Jackson JSON deserialization won't
+      // lead to this (it will create a HashSet, which can accept nulls). But when InDimFilters are created
+      // programmatically as a result of optimizations like rewriting inner joins as filters, the passed-in Set may
+      // not be able to accept nulls. We don't want to copy the Sets (since they may be large) so instead we'll wrap
+      // it in a null-checking lambda if needed.
+
+      //noinspection ResultOfMethodCallIgnored
+      values.contains(null);
+
+      // Safe to do values.contains(null).
+      return values::contains;
+    }
+    catch (NullPointerException ignored) {
+      // Fall through
+    }
+
+    // Not safe to do values.contains(null); must return a wrapper.
+    // Return false for null, since an exception means the set cannot accept null (and therefore does not include it).
+    return value -> value != null && values.contains(value);
+  }
+
   private static DruidLongPredicate createLongPredicate(final Set<String> values)
   {
     LongArrayList longs = new LongArrayList(values.size());
@@ -498,7 +561,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         longs.add((long) longValue);
       }
     }
-
 
     final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
     return longHashSet::contains;
@@ -537,6 +599,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     private final ExtractionFn extractionFn;
     private final Set<String> values;
+    private final Supplier<Predicate<String>> stringPredicateSupplier;
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
@@ -553,6 +616,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
       // compute the long hashset/array once per query. This supplier must be thread-safe, since this DimFilter will be
       // accessed in the query runners.
+      this.stringPredicateSupplier = Suppliers.memoize(() -> createStringPredicate(values));
       this.longPredicateSupplier = Suppliers.memoize(() -> createLongPredicate(values));
       this.floatPredicateSupplier = Suppliers.memoize(() -> createFloatPredicate(values));
       this.doublePredicateSupplier = Suppliers.memoize(() -> createDoublePredicate(values));
@@ -562,9 +626,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public Predicate<String> makeStringPredicate()
     {
       if (extractionFn != null) {
-        return input -> values.contains(extractionFn.apply(input));
+        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
-        return values::contains;
+        return stringPredicateSupplier.get();
       }
     }
 
@@ -572,7 +637,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       if (extractionFn != null) {
-        return input -> values.contains(extractionFn.apply(input));
+        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return longPredicateSupplier.get();
       }
@@ -582,7 +648,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidFloatPredicate makeFloatPredicate()
     {
       if (extractionFn != null) {
-        return input -> values.contains(extractionFn.apply(input));
+        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return floatPredicateSupplier.get();
       }
@@ -592,9 +659,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidDoublePredicate makeDoublePredicate()
     {
       if (extractionFn != null) {
-        return input -> values.contains(extractionFn.apply(input));
+        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        return input -> stringPredicate.apply(extractionFn.apply(input));
+      } else {
+        return doublePredicateSupplier.get();
       }
-      return input -> doublePredicateSupplier.get().applyDouble(input);
     }
 
     @Override

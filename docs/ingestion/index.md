@@ -22,19 +22,18 @@ title: "Ingestion"
   ~ under the License.
   -->
 
-## Overview
-
-All data in Druid is organized into _segments_, which are data files that generally have up to a few million rows each.
-Loading data in Druid is called _ingestion_ or _indexing_ and consists of reading data from a source system and creating
+All data in Druid is organized into _segments_, which are data files each of which may have up to a few million rows.
+Loading data in Druid is called _ingestion_ or _indexing_, and consists of reading data from a source system and creating
 segments based on that data.
 
-In most ingestion methods, the work of loading data is done by Druid [MiddleManager](../design/middlemanager.md) processes
-(or the [Indexer](../design/indexer.md) processes). One exception is
+In most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes
+(or the [Indexer](../design/indexer.md) processes) load your source data. One exception is
 Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce job on YARN (although MiddleManager or Indexer
-processes are still involved in starting and monitoring the Hadoop jobs). Once segments have been generated and stored
-in [deep storage](../dependencies/deep-storage.md), they will be loaded by Historical processes. For more details on
-how this works under the hood, see the [Storage design](../design/architecture.md#storage-design) section of Druid's design
-documentation.
+processes are still involved in starting and monitoring the Hadoop jobs). 
+
+Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.md), they are loaded by Historical processes. 
+For more details on how this works, see the [Storage design](../design/architecture.md#storage-design) section 
+of Druid's design documentation.
 
 ## How to use this documentation
 
@@ -57,17 +56,17 @@ page.
 ### Streaming
 
 The most recommended, and most popular, method of streaming ingestion is the
-[Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. The Kinesis
-indexing service also works well if you prefer Kinesis.
+[Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. Alternatively, the Kinesis
+indexing service works with Amazon Kinesis Data Streams.
 
-This table compares the major available options:
+This table compares the options:
 
-| **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) | [Tranquility](tranquility.md) |
-|---|-----|--------------|------------|
-| **Supervisor type** | `kafka` | `kinesis` | N/A |
-| **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis. | Tranquility, a library that ships separately from Druid, is used to push data into Druid. |
-| **Can ingest late data?** | Yes | Yes | No (late data is dropped based on the `windowPeriod` config) |
-| **Exactly-once guarantees?** | Yes | Yes | No |
+| **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) |
+|---|-----|--------------|
+| **Supervisor type** | `kafka` | `kinesis`|
+| **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis.|
+| **Can ingest late data?** | Yes | Yes |
+| **Exactly-once guarantees?** | Yes | Yes |
 
 ### Batch
 
@@ -480,6 +479,7 @@ Dimension objects can have the following components:
 | type | Either `string`, `long`, `float`, or `double`. | `string` |
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br><br>Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
+| multiValueHandling | Specify the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `sorted_array`, `sorted_set`, and `array`. `sorted_array` and `sorted_set` order the array upon ingestion. `sorted_set` removes duplicates. `array` ingests data as-is | `sorted_array` |
 
 #### Inclusions and exclusions
 
@@ -489,12 +489,13 @@ Normal interpretation occurs when either `dimensions` or `spatialDimensions` is 
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 
-1. First, start from the set of all input fields from the [`inputFormat`](./data-formats.md) (or the [`flattenSpec`](./data-formats.md#flattenspec), if one is being used).
-2. Any field listed in `dimensionExclusions` is excluded.
-3. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
-4. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
-5. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
-6. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
+1. First, start from the set of all root-level fields from the input record, as determined by the [`inputFormat`](./data-formats.md). "Root-level" includes all fields at the top level of a data structure, but does not included fields nested within maps or lists. To extract these, you must use a [`flattenSpec`](./data-formats.md#flattenspec). All fields of non-nested data formats, such as CSV and delimited text, are considered root-level.
+2. If a [`flattenSpec`](./data-formats.md#flattenspec) is being used, the set of root-level fields includes any fields generated by the flattenSpec. The useFieldDiscovery parameter determines whether the original root-level fields will be retained or discarded.
+3. Any field listed in `dimensionExclusions` is excluded.
+4. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
+5. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
+6. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
+7. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
 
 > Note: Fields generated by a [`transformSpec`](#transformspec) are not currently considered candidates for
 > schemaless dimension interpretation.

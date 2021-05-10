@@ -41,8 +41,12 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 public interface VectorColumnProcessorFactory<T>
 {
   /**
-   * Called when {@link ColumnCapabilities#getType()} is STRING and the underlying column always has a single value
+   * Called only if {@link ColumnCapabilities#getType()} is STRING and the underlying column always has a single value
    * per row.
+   *
+   * Note that for STRING-typed columns where the dictionary does not exist or is not expected to be useful,
+   * {@link #makeObjectProcessor} may be called instead. To handle all string inputs properly, processors must implement
+   * all three methods (single-value, multi-value, object).
    */
   T makeSingleValueDimensionProcessor(
       ColumnCapabilities capabilities,
@@ -50,8 +54,12 @@ public interface VectorColumnProcessorFactory<T>
   );
 
   /**
-   * Called when {@link ColumnCapabilities#getType()} is STRING and the underlying column may have multiple values
+   * Called only if {@link ColumnCapabilities#getType()} is STRING and the underlying column may have multiple values
    * per row.
+   *
+   * Note that for STRING-typed columns where the dictionary does not exist or is not expected to be useful,
+   * {@link #makeObjectProcessor} may be called instead. To handle all string inputs properly, processors must implement
+   * all three methods (single-value, multi-value, object).
    */
   T makeMultiValueDimensionProcessor(
       ColumnCapabilities capabilities,
@@ -74,7 +82,8 @@ public interface VectorColumnProcessorFactory<T>
   T makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 
   /**
-   * Called when {@link ColumnCapabilities#getType()} is COMPLEX.
+   * Called when {@link ColumnCapabilities#getType()} is COMPLEX. May also be called for STRING typed columns in
+   * cases where the dictionary does not exist or is not expected to be useful.
    */
   T makeObjectProcessor(@SuppressWarnings("unused") ColumnCapabilities capabilities, VectorObjectSelector selector);
 }
