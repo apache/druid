@@ -81,6 +81,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Date;
@@ -337,7 +338,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
                                    DUMMY_SQL_QUERY_ID
                 ),
                 "RESOURCES",
@@ -1316,6 +1317,33 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testArrayStuffs() throws Exception
+  {
+    PreparedStatement statement = client.prepareStatement(
+        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(d1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo"
+    );
+    final ResultSet resultSet = statement.executeQuery();
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(1, rows.size());
+    Assert.assertTrue(rows.get(0).containsKey("arr1"));
+    Assert.assertTrue(rows.get(0).containsKey("arr2"));
+    Assert.assertTrue(rows.get(0).containsKey("arr3"));
+    Assert.assertTrue(rows.get(0).containsKey("arr4"));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, null, null, null}, (Object[]) rows.get(0).get("arr4"));
+    } else {
+      Assert.assertArrayEquals(new Object[]{"a", null, null, "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, 0L, 0L, 0L}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.0f}, (Object[]) rows.get(0).get("arr4"));
+    }
+  }
+
   protected abstract String getJdbcConnectionString(int port);
 
   protected abstract AbstractAvaticaHandler getAvaticaHandler(DruidMeta druidMeta);
@@ -1335,7 +1363,12 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         final Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < metaData.getColumnCount(); i++) {
           if (returnKeys == null || returnKeys.contains(metaData.getColumnLabel(i + 1))) {
-            row.put(metaData.getColumnLabel(i + 1), resultSet.getObject(i + 1));
+            Object result = resultSet.getObject(i + 1);
+            if (result instanceof Array) {
+              row.put(metaData.getColumnLabel(i + 1), ((Array) result).getArray());
+            } else {
+              row.put(metaData.getColumnLabel(i + 1), result);
+            }
           }
         }
         rows.add(row);

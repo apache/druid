@@ -53,6 +53,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.sql.Array;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -211,9 +213,11 @@ public class QueryMaker
     } else if (sqlType == SqlTypeName.DATE) {
       return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.INTEGER) {
-      return ColumnMetaData.Rep.of(Integer.class);
+      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      return ColumnMetaData.Rep.of(Number.class);
     } else if (sqlType == SqlTypeName.BIGINT) {
-      return ColumnMetaData.Rep.of(Long.class);
+      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      return ColumnMetaData.Rep.of(Number.class);
     } else if (sqlType == SqlTypeName.FLOAT) {
       return ColumnMetaData.Rep.of(Float.class);
     } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
@@ -222,6 +226,8 @@ public class QueryMaker
       return ColumnMetaData.Rep.of(Boolean.class);
     } else if (sqlType == SqlTypeName.OTHER) {
       return ColumnMetaData.Rep.of(Object.class);
+    } else if (sqlType == SqlTypeName.ARRAY) {
+      return ColumnMetaData.Rep.of(Array.class);
     } else {
       throw new ISE("No rep for SQL type[%s]", sqlType);
     }
@@ -309,16 +315,33 @@ public class QueryMaker
         coercedValue = value.getClass().getName();
       }
     } else if (sqlType == SqlTypeName.ARRAY) {
-      if (value instanceof String) {
-        coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
-      } else if (value instanceof NlsString) {
-        coercedValue = ((NlsString) value).getValue();
-      } else {
-        try {
-          coercedValue = jsonMapper.writeValueAsString(value);
+      if (plannerContext.isStringifyArrays()) {
+        if (value instanceof String) {
+          coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
+        } else if (value instanceof NlsString) {
+          coercedValue = ((NlsString) value).getValue();
+        } else {
+          try {
+            coercedValue = jsonMapper.writeValueAsString(value);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         }
-        catch (IOException e) {
-          throw new RuntimeException(e);
+      } else {
+        // the protobuf jdbc handler prefers lists (it actually can't handle java arrays as sql arrays, only java lists)
+        // the json handler could handle this just fine, but it handles lists as sql arrays as well so just convert
+        // here if needed
+        if (value instanceof List) {
+          coercedValue = value;
+        } else if (value instanceof String[]) {
+          coercedValue = Arrays.asList((String[]) value);
+        } else if (value instanceof Long[]) {
+          coercedValue = Arrays.asList((Long[]) value);
+        } else if (value instanceof Double[]) {
+          coercedValue = Arrays.asList((Double[]) value);
+        } else {
+          throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }
       }
     } else {

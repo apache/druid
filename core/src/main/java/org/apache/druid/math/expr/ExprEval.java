@@ -1241,6 +1241,9 @@ public abstract class ExprEval<T>
         return null;
       }
       return Arrays.stream(value).map(value -> {
+        if (value == null) {
+          return null;
+        }
         Long lv = GuavaUtils.tryParseLong(value);
         if (lv == null) {
           Double d = Doubles.tryParse(value);
@@ -1258,7 +1261,12 @@ public abstract class ExprEval<T>
       if (value == null) {
         return null;
       }
-      return Arrays.stream(value).map(Doubles::tryParse).toArray(Double[]::new);
+      return Arrays.stream(value).map(val -> {
+        if (val == null) {
+          return null;
+        }
+        return Doubles.tryParse(val);
+      }).toArray(Double[]::new);
     }
   }
 }

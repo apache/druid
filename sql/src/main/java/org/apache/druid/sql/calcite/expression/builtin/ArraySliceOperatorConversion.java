@@ -24,30 +24,41 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public class MultiValueStringAppendOperatorConversion implements SqlOperatorConversion
+public class ArraySliceOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("MV_APPEND")
+      .operatorBuilder("ARRAY_SLICE")
       .operandTypeChecker(
-          OperandTypes.sequence(
-              "(array,expr)",
-              OperandTypes.family(SqlTypeFamily.STRING),
-              OperandTypes.or(
-                OperandTypes.family(SqlTypeFamily.STRING),
+          OperandTypes.or(
+            OperandTypes.sequence(
+                "(expr,start)",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
                 OperandTypes.family(SqlTypeFamily.NUMERIC)
-              )
+            ),
+            OperandTypes.sequence(
+                "(expr,start,end)",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.family(SqlTypeFamily.NUMERIC),
+                OperandTypes.family(SqlTypeFamily.NUMERIC)
+            )
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeInference(ReturnTypes.ARG0_NULLABLE)
       .build();
 
   @Override
@@ -69,7 +80,7 @@ public class MultiValueStringAppendOperatorConversion implements SqlOperatorConv
         rexNode,
         druidExpressions -> DruidExpression.of(
             null,
-            DruidExpression.functionCall("array_append", druidExpressions)
+            DruidExpression.functionCall("array_slice", druidExpressions)
         )
     );
   }
