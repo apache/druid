@@ -254,10 +254,40 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   }
 
   @Override
+  public Map<String, SupervisorSpec> getLatestActiveOnly()
+  {
+    Map<String, SupervisorSpec> supervisors = getLatest();
+    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
+      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // (NoopSupervisorSpec is used as a tombstone marker)
+      if (!(entry.getValue() instanceof NoopSupervisorSpec)) {
+        activeSupervisors.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return ImmutableMap.copyOf(activeSupervisors);
+  }
+
+  @Override
+  public Map<String, SupervisorSpec> getLatestTerminatedOnly()
+  {
+    Map<String, SupervisorSpec> supervisors = getLatest();
+    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
+      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // (NoopSupervisorSpec is used as a tombstone marker)
+      if (entry.getValue() instanceof NoopSupervisorSpec) {
+        activeSupervisors.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return ImmutableMap.copyOf(activeSupervisors);
+  }
+
+  @Override
   public int removeTerminatedSupervisorsOlderThan(long timestamp)
   {
     DateTime dateTime = DateTimes.utc(timestamp);
-    Map<String, SupervisorSpec> supervisors = getLatest();
+    Map<String, SupervisorSpec> terminatedSupervisors = getLatestTerminatedOnly();
     return dbi.withHandle(
         handle -> {
           final PreparedBatch batch = handle.prepareBatch(
@@ -267,13 +297,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                   dateTime.toString()
               )
           );
-          for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
-            final SupervisorSpec spec = supervisor.getValue();
-            // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
-            // (NoopSupervisorSpec is used as a tombstone marker)
-            if (spec instanceof NoopSupervisorSpec) {
-              batch.bind("spec_id", supervisor.getKey()).add();
-            }
+          for (Map.Entry<String, SupervisorSpec> supervisor : terminatedSupervisors.entrySet()) {
+            batch.bind("spec_id", supervisor.getKey()).add();
           }
           int[] result = batch.execute();
           return IntStream.of(result).sum();

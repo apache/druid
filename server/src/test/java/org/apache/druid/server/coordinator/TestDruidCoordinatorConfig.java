@@ -37,6 +37,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorAuditKillDurationToRetain;
   private final Duration coordinatorRuleKillPeriod;
   private final Duration coordinatorRuleKillDurationToRetain;
+  private final Duration coordinatorDatasourceKillPeriod;
+  private final Duration coordinatorDatasourceKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
   private final boolean coordinatorGuildReplicationEnabled;
@@ -55,6 +57,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorAuditKillDurationToRetain,
       Duration coordinatorRuleKillPeriod,
       Duration coordinatorRuleKillDurationToRetain,
+      Duration coordinatorDatasourceKillPeriod,
+      Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay,
       boolean coordinatorGuildReplicationEnabled
@@ -73,6 +77,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
     this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
     this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
+    this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
+    this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
     this.coordinatorGuildReplicationEnabled = coordinatorGuildReplicationEnabled;
@@ -148,6 +154,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorRuleKillDurationToRetain()
   {
     return coordinatorRuleKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorDatasourceKillPeriod()
+  {
+    return coordinatorDatasourceKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorDatasourceKillDurationToRetain()
+  {
+    return coordinatorDatasourceKillDurationToRetain;
   }
 
   @Override

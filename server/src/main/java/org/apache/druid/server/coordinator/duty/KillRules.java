@@ -47,6 +47,7 @@ public class KillRules implements CoordinatorDuty
     );
     this.retainDuration = config.getCoordinatorRuleKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator rule kill retainDuration must be >= 0");
+    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator rule kill retainDuration cannot be greater than current time in ms");
     log.debug(
         "Rule Kill Task scheduling enabled with period [%s], retainDuration [%s]",
         this.period,
@@ -57,19 +58,24 @@ public class KillRules implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if ((lastKillTime + period) < System.currentTimeMillis()) {
-      lastKillTime = System.currentTimeMillis();
-
-      long timestamp = System.currentTimeMillis() - retainDuration;
-      int ruleRemoved = params.getDatabaseRuleManager().removeRulesForEmptyDatasourcesOlderThan(timestamp);
-      ServiceEmitter emitter = params.getEmitter();
-      emitter.emit(
-          new ServiceMetricEvent.Builder().build(
-              "metadata/kill/rule/count",
-              ruleRemoved
-          )
-      );
-      log.info("Finished running KillRules duty. Removed %,d rule", ruleRemoved);
+    long currentTimeMillis = System.currentTimeMillis();
+    if ((lastKillTime + period) < currentTimeMillis) {
+      lastKillTime = currentTimeMillis;
+      long timestamp = currentTimeMillis - retainDuration;
+      try {
+        int ruleRemoved = params.getDatabaseRuleManager().removeRulesForEmptyDatasourcesOlderThan(timestamp);
+        ServiceEmitter emitter = params.getEmitter();
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                "metadata/kill/rule/count",
+                ruleRemoved
+            )
+        );
+        log.info("Finished running KillRules duty. Removed %,d rule", ruleRemoved);
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to kill rules metadata");
+      }
     }
     return params;
   }
