@@ -19,6 +19,16 @@
 
 package org.apache.druid.java.util;
 
+import com.google.common.base.Predicate;
+import org.apache.druid.java.util.common.RetryUtils;
+
+/**
+ * This Exception class can be use with {@link RetryUtils}.
+ * The method {@link RetryUtils#retry(RetryUtils.Task, Predicate, int)} retry condition (Predicate argument)
+ * requires an exception to be thrown and applying the predicate to the thrown exception.
+ * For cases where the task method does not throw an exception but still needs retrying,
+ * the method can throw this RetryableException so that the RetryUtils can then retry the task
+ */
 public class RetryableException extends Exception
 {
   public RetryableException(Throwable t)

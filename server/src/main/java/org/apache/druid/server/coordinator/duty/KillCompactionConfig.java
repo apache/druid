@@ -41,6 +41,11 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * CoordinatorDuty for automatic deletion of compaction configurations from the config table in metadata storage.
+ * Note that this will delete compaction configuration for inactive datasources
+ * (datasource with no used and unused segments) immediately.
+ */
 public class KillCompactionConfig implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillCompactionConfig.class);
