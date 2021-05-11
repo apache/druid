@@ -129,7 +129,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
       selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
+          new CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
       aggOffsetInBuffer[i] = aggsCurOffsetInBuffer;

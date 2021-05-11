@@ -49,7 +49,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -371,7 +370,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
 
       this.selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
+          new CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
     }
 
@@ -581,8 +580,20 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
    */
   public static class Builder extends AppendableIndexBuilder
   {
-    public static final long DEFAULT_OAK_MAX_MEMORY_CAPACITY = 32L * (1L << 30); // 32 GB
-    public static final int DEFAULT_OAK_BLOCK_SIZE = 8 * (1 << 20); // 8 MB
+    // OakMap stores its data in off-heap memory blocks. Larger blocks consolidates allocations
+    // and reduce its overhead, but has the potential to waste more memory if the block is not fully utilized.
+    // The default is 8 MiB as it has a good balance between performance and memory usage in tested
+    // batch ingestion scenario.
+    public static final int DEFAULT_OAK_BLOCK_SIZE = 8 * (1 << 20);
+
+    // OakMap has a predefined maximal capacity, that allows it to minimize the internal data-structure
+    // for maintaining off-heap memory blocks.
+    // The default is arbirtrary large number (32 GiB) that won't limit the users.
+    public static final long DEFAULT_OAK_MAX_MEMORY_CAPACITY = 32L * (1L << 30);
+
+    // OakMap internal data-structure maintains its entries in small chunks. Larger chunks reduces the number of
+    // on-heap objects, but might incure more overhead when balancing the entries between the chunks.
+    // The default is 256 as it showed best performance in tested batch ingestion scenario.
     public static final int DEFAULT_OAK_CHUNK_MAX_ITEMS = 256;
 
     public long oakMaxMemoryCapacity = DEFAULT_OAK_MAX_MEMORY_CAPACITY;

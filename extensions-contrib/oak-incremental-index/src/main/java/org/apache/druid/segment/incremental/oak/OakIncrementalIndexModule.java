@@ -24,15 +24,12 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Collections;
 import java.util.List;
 
 public class OakIncrementalIndexModule implements DruidModule
 {
-  private static final Logger log = new Logger(OakIncrementalIndexModule.class);
-
   public static final Module JACKSON_MODULE = new SimpleModule("OakIncrementalIndexModule")
       .registerSubtypes(
           new NamedType(OakIncrementalIndexSpec.class, OakIncrementalIndexSpec.TYPE),
@@ -42,7 +39,6 @@ public class OakIncrementalIndexModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    log.info("Test");
   }
 
   @Override
