@@ -51,6 +51,7 @@ public class KillAuditLog implements CoordinatorDuty
     );
     this.retainDuration = config.getCoordinatorAuditKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator audit kill retainDuration must be >= 0");
+    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator audit kill retainDuration cannot be greater than current time in ms");
     log.debug(
         "Audit Kill Task scheduling enabled with period [%s], retainDuration [%s]",
         this.period,
@@ -62,19 +63,24 @@ public class KillAuditLog implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if ((lastKillTime + period) < System.currentTimeMillis()) {
-      lastKillTime = System.currentTimeMillis();
-
-      long timestamp = System.currentTimeMillis() - retainDuration;
-      int auditRemoved = auditManager.removeAuditLogsOlderThan(timestamp);
-      ServiceEmitter emitter = params.getEmitter();
-      emitter.emit(
-          new ServiceMetricEvent.Builder().build(
-              "metadata/kill/audit/count",
-              auditRemoved
-          )
-      );
-      log.info("Finished running KillAuditLog duty. Removed %,d audit logs", auditRemoved);
+    long currentTimeMillis = System.currentTimeMillis();
+    if ((lastKillTime + period) < currentTimeMillis) {
+      lastKillTime = currentTimeMillis;
+      long timestamp = currentTimeMillis - retainDuration;
+      try {
+        int auditRemoved = auditManager.removeAuditLogsOlderThan(timestamp);
+        ServiceEmitter emitter = params.getEmitter();
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                "metadata/kill/audit/count",
+                auditRemoved
+            )
+        );
+        log.info("Finished running KillAuditLog duty. Removed %,d audit logs", auditRemoved);
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to kill audit log");
+      }
     }
     return params;
   }
