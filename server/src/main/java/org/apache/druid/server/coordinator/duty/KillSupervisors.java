@@ -55,6 +55,7 @@ public class KillSupervisors implements CoordinatorDuty
     );
     this.retainDuration = config.getCoordinatorSupervisorKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "Coordinator supervisor kill retainDuration must be >= 0");
+    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator supervisor kill retainDuration cannot be greater than current time in ms");
     log.debug(
         "Supervisor Kill Task scheduling enabled with period [%s], retainDuration [%s]",
         this.period,
@@ -65,19 +66,24 @@ public class KillSupervisors implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if ((lastKillTime + period) < System.currentTimeMillis()) {
-      lastKillTime = System.currentTimeMillis();
-
-      long timestamp = System.currentTimeMillis() - retainDuration;
-      int supervisorRemoved = metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(timestamp);
-      ServiceEmitter emitter = params.getEmitter();
-      emitter.emit(
-          new ServiceMetricEvent.Builder().build(
-              "metadata/kill/supervisor/count",
-              supervisorRemoved
-          )
-      );
-      log.info("Finished running KillSupervisors duty. Removed %,d supervisor", supervisorRemoved);
+    long currentTimeMillis = System.currentTimeMillis();
+    if ((lastKillTime + period) < currentTimeMillis) {
+      lastKillTime = currentTimeMillis;
+      long timestamp = currentTimeMillis - retainDuration;
+      try {
+        int supervisorRemoved = metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(timestamp);
+        ServiceEmitter emitter = params.getEmitter();
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                "metadata/kill/supervisor/count",
+                supervisorRemoved
+            )
+        );
+        log.info("Finished running KillSupervisors duty. Removed %,d supervisor", supervisorRemoved);
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to kill terminated supervisor metadata");
+      }
     }
     return params;
   }
