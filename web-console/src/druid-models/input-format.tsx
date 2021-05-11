@@ -21,7 +21,7 @@ import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { oneOf, typeIs } from '../utils';
+import { deepGet, oneOf, typeIs } from '../utils';
 
 import { FlattenSpec } from './flatten-spec';
 
@@ -36,6 +36,8 @@ export interface InputFormat {
   readonly function?: string;
   readonly flattenSpec?: FlattenSpec;
   readonly keepNullColumns?: boolean;
+  readonly binaryAsString?: boolean;
+  readonly avroBytesDecoder?: any;
 }
 
 export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
@@ -135,6 +137,80 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
       <>
         Specifies if the binary column which is not logically marked as a string should be treated
         as a UTF-8 encoded string.
+      </>
+    ),
+  },
+  {
+    name: 'avroBytesDecoder.{type}',
+    label: 'Avro Decoder',
+    type: 'string',
+    required: true,
+    suggestions: ['schema_inline', 'multiple_schemas_inline', 'schema_repo', 'schema_registry'],
+    defined: typeIs('avro_stream'),
+    info: (
+      <>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats#avro-bytes-decoder`}>
+          avroBytesDecoder
+        </ExternalLink>
+        <p>Avro decoder to use to parse each record</p>
+      </>
+    ),
+  },
+  {
+    name: 'avroBytesDecoder.{schema}',
+    label: 'Schema',
+    type: 'json',
+    required: true,
+    defined: p => deepGet(p, 'avroBytesDecoder.type') === 'schema_inline',
+    info: <>Avro schema in JSON format</>,
+  },
+  {
+    name: 'avroBytesDecoder.{schemas}',
+    label: 'Schemas',
+    type: 'json',
+    required: true,
+    defined: p => deepGet(p, 'avroBytesDecoder.type') === 'multiple_schemas_inline',
+    info: <>JSON object mapping schema IDs to Avro schemas in JSON format</>,
+  },
+  {
+    name: 'avroBytesDecoder.schemaRepository.{url}',
+    label: 'Schema Repository URL',
+    type: 'string',
+    required: true,
+    defined: p => deepGet(p, 'avroBytesDecoder.type') === 'schema_repo',
+    placeholder: 'http(s)://hostname:port',
+    info: <>Endpoint url of your Avro-1124 schema repository</>,
+  },
+  {
+    name: 'avroBytesDecoder.subjectAndIdConverter.{topic}',
+    label: 'Topic',
+    type: 'string',
+    required: true,
+    defined: p => deepGet(p, 'avroBytesDecoder.type') === 'schema_repo',
+    placeholder: 'topic',
+    info: <>Specifies the topic of your Kafka stream</>,
+  },
+  {
+    name: 'avroBytesDecoder.{url}',
+    label: 'Schema Registry URL',
+    type: 'string',
+    required: true,
+    defined: p => deepGet(p, 'avroBytesDecoder.type') === 'schema_registry',
+    placeholder: 'http(s)://hostname:port',
+    info: <>Schema Registry URL</>,
+  },
+  {
+    name: 'avroBytesDecoder',
+    label: 'Avro Decoder Configuration',
+    type: 'json',
+    defined: typeIs('avro_stream'),
+    required: true,
+    info: (
+      <>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats#avro-bytes-decoder`}>
+          avroBytesDecoder
+        </ExternalLink>
+        <p>JSON object containing avroBytesDecoder configuration</p>
       </>
     ),
   },
