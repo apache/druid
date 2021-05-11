@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-org.apache.druid.indexing.kafka.KafkaIndexTaskModule
+org.apache.druid.indexing.rocketmq.RocketMQIndexTaskModule

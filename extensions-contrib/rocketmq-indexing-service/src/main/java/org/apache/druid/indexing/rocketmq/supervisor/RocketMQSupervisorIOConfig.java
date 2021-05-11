@@ -30,15 +30,12 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class RocketMQSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
-  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
-  public static final String BOOTSTRAP_SERVERS_KEY = "bootstrap.servers";
-  public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
-  public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
-  public static final String KEY_PASSWORD_KEY = "ssl.key.password";
+  public static final String NAMESERVER_URL = "nameserver.url";
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
   private final Map<String, Object> consumerProperties;
@@ -82,8 +79,8 @@ public class RocketMQSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
-        consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+        consumerProperties.get(NAMESERVER_URL),
+        StringUtils.format("consumerProperties must contain entry for [%s]", NAMESERVER_URL)
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
   }

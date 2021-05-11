@@ -26,12 +26,12 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
-public class RocketMQDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
+public class RocketMQDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, Long>
 {
 
   @JsonCreator
   public RocketMQDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> rocketmqPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, Long> rocketmqPartitions
   )
   {
     super(rocketmqPartitions);
@@ -40,10 +40,10 @@ public class RocketMQDataSourceMetadata extends SeekableStreamDataSourceMetadata
   @Override
   public DataSourceMetadata asStartMetadata()
   {
-    final SeekableStreamSequenceNumbers<Integer, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<String, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
     if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
       return createConcreteDataSourceMetaData(
-          ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
+          ((SeekableStreamEndSequenceNumbers<String, Long>) sequenceNumbers).asStartPartitions(true)
       );
     } else {
       return this;
@@ -51,8 +51,8 @@ public class RocketMQDataSourceMetadata extends SeekableStreamDataSourceMetadata
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
-      SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
+  protected SeekableStreamDataSourceMetadata<String, Long> createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<String, Long> seekableStreamSequenceNumbers
   )
   {
     return new RocketMQDataSourceMetadata(seekableStreamSequenceNumbers);

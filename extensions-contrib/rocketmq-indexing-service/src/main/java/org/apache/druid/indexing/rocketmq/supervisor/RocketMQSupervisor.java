@@ -77,10 +77,10 @@ import java.util.stream.Collectors;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * RocketMQ offsets.
  */
-public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, RocketMQRecordEntity>
+public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, RocketMQRecordEntity>
 {
-  public static final TypeReference<TreeMap<Integer, Map<Integer, Long>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+  public static final TypeReference<TreeMap<Integer, Map<String, Long>>> CHECKPOINTS_TYPE_REF =
+      new TypeReference<TreeMap<Integer, Map<String, Long>>>()
       {
       };
 
@@ -90,7 +90,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
 
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
-  private volatile Map<Integer, Long> latestSequenceFromStream;
+  private volatile Map<String, Long> latestSequenceFromStream;
 
 
   private final RocketMQSupervisorSpec spec;
@@ -124,15 +124,24 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
 
 
   @Override
-  protected RecordSupplier<Integer, Long, RocketMQRecordEntity> setupRecordSupplier()
+  protected RecordSupplier<String, Long, RocketMQRecordEntity> setupRecordSupplier()
   {
     return new RocketMQRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
   }
 
   @Override
-  protected int getTaskGroupIdForPartition(Integer partitionId)
+  protected int getTaskGroupIdForPartition(String partitionId)
   {
-    return partitionId % spec.getIoConfig().getTaskCount();
+    return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
+  }
+
+  private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
+  {
+    int index = availablePartitions.indexOf(partitionId);
+    if (index < 0) {
+      return index;
+    }
+    return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
   }
 
   @Override
@@ -148,13 +157,13 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   }
 
   @Override
-  protected SeekableStreamSupervisorReportPayload<Integer, Long> createReportPayload(
+  protected SeekableStreamSupervisorReportPayload<String, Long> createReportPayload(
       int numPartitions,
       boolean includeOffsets
   )
   {
     RocketMQSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<Integer, Long> partitionLag = getRecordLagPerPartition(getHighestCurrentOffsets());
+    Map<String, Long> partitionLag = getRecordLagPerPartition(getHighestCurrentOffsets());
     return new RocketMQSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getTopic(),
@@ -177,12 +186,12 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   @Override
   protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
       int groupId,
-      Map<Integer, Long> startPartitions,
-      Map<Integer, Long> endPartitions,
+      Map<String, Long> startPartitions,
+      Map<String, Long> endPartitions,
       String baseSequenceName,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime,
-      Set<Integer> exclusiveStartSequenceNumberPartitions,
+      Set<String> exclusiveStartSequenceNumberPartitions,
       SeekableStreamSupervisorIOConfig ioConfig
   )
   {
@@ -202,11 +211,11 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   }
 
   @Override
-  protected List<SeekableStreamIndexTask<Integer, Long, RocketMQRecordEntity>> createIndexTasks(
+  protected List<SeekableStreamIndexTask<String, Long, RocketMQRecordEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
       ObjectMapper sortingMapper,
-      TreeMap<Integer, Map<Integer, Long>> sequenceOffsets,
+      TreeMap<Integer, Map<String, Long>> sequenceOffsets,
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
@@ -220,7 +229,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
     // RocketMQ index task will pick up LegacyRocketMQIndexTaskRunner without the below configuration.
     context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
-    List<SeekableStreamIndexTask<Integer, Long, RocketMQRecordEntity>> taskList = new ArrayList<>();
+    List<SeekableStreamIndexTask<String, Long, RocketMQRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new RocketMQIndexTask(
@@ -237,9 +246,9 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   }
 
   @Override
-  protected Map<Integer, Long> getPartitionRecordLag()
+  protected Map<String, Long> getPartitionRecordLag()
   {
-    Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+    Map<String, Long> highestCurrentOffsets = getHighestCurrentOffsets();
 
     if (latestSequenceFromStream == null) {
       return null;
@@ -258,7 +267,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
 
   @Nullable
   @Override
-  protected Map<Integer, Long> getPartitionTimeLag()
+  protected Map<String, Long> getPartitionTimeLag()
   {
     // time lag not currently support with rocketmq
     return null;
@@ -267,7 +276,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   @Override
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
-  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
+  protected Map<String, Long> getRecordLagPerPartition(Map<String, Long> currentOffsets)
   {
     return currentOffsets
         .entrySet()
@@ -285,13 +294,13 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   }
 
   @Override
-  protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, Long> currentOffsets)
+  protected Map<String, Long> getTimeLagPerPartition(Map<String, Long> currentOffsets)
   {
     return null;
   }
 
   @Override
-  protected RocketMQDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<Integer, Long> map)
+  protected RocketMQDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<String, Long> map)
   {
     return new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
@@ -335,7 +344,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   @Override
   public LagStats computeLagStats()
   {
-    Map<Integer, Long> partitionRecordLag = getPartitionRecordLag();
+    Map<String, Long> partitionRecordLag = getPartitionRecordLag();
     if (partitionRecordLag == null) {
       return new LagStats(0, 0, 0);
     }
@@ -348,7 +357,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
   {
     getRecordSupplierLock().lock();
     try {
-      Set<Integer> partitionIds;
+      Set<String> partitionIds;
       try {
         partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
       }
@@ -357,7 +366,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<Integer, Long, 
         throw new StreamException(e);
       }
 
-      Set<StreamPartition<Integer>> partitions = partitionIds
+      Set<StreamPartition<String>> partitions = partitionIds
           .stream()
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());

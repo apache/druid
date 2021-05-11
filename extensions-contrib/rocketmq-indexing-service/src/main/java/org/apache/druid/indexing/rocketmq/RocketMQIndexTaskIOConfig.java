@@ -32,7 +32,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
+public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, Long>
 {
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
@@ -43,14 +43,14 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<I
       @JsonProperty("baseSequenceName") String baseSequenceName,
       // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
       @JsonProperty("startPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<String, Long> startPartitions,
       @JsonProperty("endPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<String, Long> endPartitions,
       // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers")
-      @Nullable SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
+      @Nullable SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers,
       @JsonProperty("endSequenceNumbers")
-      @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+      @Nullable SeekableStreamEndSequenceNumbers<String, Long> endSequenceNumbers,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
@@ -75,8 +75,8 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<I
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
 
-    final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
-    for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
+    final SeekableStreamEndSequenceNumbers<String, Long> myEndSequenceNumbers = getEndSequenceNumbers();
+    for (String partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
           myEndSequenceNumbers.getPartitionSequenceNumberMap()
                        .get(partition)
@@ -90,8 +90,8 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<I
   public RocketMQIndexTaskIOConfig(
       int taskGroupId,
       String baseSequenceName,
-      SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
-      SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+      SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<String, Long> endSequenceNumbers,
       Map<String, Object> consumerProperties,
       Long pollTimeout,
       Boolean useTransaction,
@@ -123,10 +123,10 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<I
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
+  public SeekableStreamEndSequenceNumbers<String, Long> getStartPartitions()
   {
     // Converting to start sequence numbers. This is allowed for RocketMQ because the start offset is always inclusive.
-    final SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers = getStartSequenceNumbers();
+    final SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers = getStartSequenceNumbers();
     return new SeekableStreamEndSequenceNumbers<>(
         startSequenceNumbers.getStream(),
         startSequenceNumbers.getPartitionSequenceNumberMap()
@@ -139,7 +139,7 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<I
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
+  public SeekableStreamEndSequenceNumbers<String, Long> getEndPartitions()
   {
     return getEndSequenceNumbers();
   }

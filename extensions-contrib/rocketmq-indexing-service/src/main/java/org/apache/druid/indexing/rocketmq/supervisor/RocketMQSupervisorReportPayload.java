@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public class RocketMQSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
+public class RocketMQSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, Long>
 {
   public RocketMQSupervisorReportPayload(
       String dataSource,
@@ -35,8 +35,8 @@ public class RocketMQSupervisorReportPayload extends SeekableStreamSupervisorRep
       int partitions,
       int replicas,
       long durationSeconds,
-      @Nullable Map<Integer, Long> latestOffsets,
-      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Map<String, Long> latestOffsets,
+      @Nullable Map<String, Long> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,

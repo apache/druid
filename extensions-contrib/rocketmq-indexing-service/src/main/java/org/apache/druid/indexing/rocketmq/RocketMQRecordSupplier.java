@@ -23,13 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
-import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.metadata.DynamicConfigProvider;
-import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
 import org.apache.rocketmq.client.consumer.store.ReadOffsetType;
 import org.apache.rocketmq.client.exception.MQClientException;
@@ -45,12 +42,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 public class RocketMQRecordSupplier implements RecordSupplier<String, Long, RocketMQRecordEntity>
 {
+  private static final EmittingLogger log = new EmittingLogger(RocketMQRecordSupplier.class);
   private final DefaultLitePullConsumer consumer;
   private boolean closed;
   private Set<StreamPartition<String>> streamPartitions;
@@ -99,7 +95,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
       consumer.seek(mq, sequenceNumber);
     }
     catch (MQClientException e) {
-      e.printStackTrace();
+      log.error(e.getErrorMessage());
     }
   }
 
@@ -116,7 +112,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
         consumer.seekToBegin(mq);
       }
       catch (MQClientException e) {
-        e.printStackTrace();
+        log.error(e.getErrorMessage());
       }
     }
   }
@@ -134,7 +130,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
         consumer.seekToEnd(mq);
       }
       catch (MQClientException e) {
-        e.printStackTrace();
+        log.error(e.getErrorMessage());
       }
     }
   }
@@ -198,12 +194,12 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public Set<String> getPartitionIds(String stream)
   {
     HashSet<String> partitionIds = new HashSet<>();
-    Collection<MessageQueue> messageQueues=null;
+    Collection<MessageQueue> messageQueues = null;
     try {
       messageQueues = consumer.fetchMessageQueues(stream);
     }
     catch (MQClientException e) {
-      e.printStackTrace();
+      log.error(e.getErrorMessage());
     }
     for (MessageQueue messageQueue : messageQueues) {
       partitionIds.add(messageQueue.getBrokerName() + "-queueid-" + messageQueue.getQueueId());
@@ -221,51 +217,11 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     consumer.shutdown();
   }
 
-  public static void addConsumerPropertiesFromConfig(
-      Properties properties,
-      ObjectMapper configMapper,
-      Map<String, Object> consumerProperties
-  )
-  {
-    // Extract passwords before SSL connection to RocketMQ
-    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
-      String propertyKey = entry.getKey();
-
-      if (!RocketMQSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(propertyKey)) {
-        if (propertyKey.equals(RocketMQSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-            || propertyKey.equals(RocketMQSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-            || propertyKey.equals(RocketMQSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-          PasswordProvider configPasswordProvider = configMapper.convertValue(
-              entry.getValue(),
-              PasswordProvider.class
-          );
-          properties.setProperty(propertyKey, configPasswordProvider.getPassword());
-        } else {
-          properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
-        }
-      }
-    }
-
-    // Additional DynamicConfigProvider based extensible support for all consumer properties
-    Object dynamicConfigProviderJson = consumerProperties.get(RocketMQSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
-    if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
-      Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
-
-      for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
-        properties.setProperty(e.getKey(), e.getValue());
-      }
-    }
-  }
-
   private static DefaultLitePullConsumer getRocketMQConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
     final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
-    final Properties props = new Properties();
-    addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
-    props.putIfAbsent("isolation.level", "read_committed");
-    props.putAll(consumerConfigs);
-
-    return new DefaultLitePullConsumer("hhh1ConsumerGroup");
+    DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
+    consumer.setNamesrvAddr(consumerProperties.get("nameserver.url").toString());
+    return consumer;
   }
 }

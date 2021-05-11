@@ -34,12 +34,8 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.utils.CollectionUtils;
-import org.apache.rocketmq.clients.consumer.OffsetOutOfRangeException;
-import org.apache.rocketmq.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,22 +43,20 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * RocketMQ indexing task runner supporting incremental segments publishing
  */
-public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, RocketMQRecordEntity>
+public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, Long, RocketMQRecordEntity>
 {
-  private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingRocketMQIndexTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(RocketMQIndexTaskRunner.class);
   private final RocketMQIndexTask task;
 
-  IncrementalPublishingRocketMQIndexTaskRunner(
+  RocketMQIndexTaskRunner(
       RocketMQIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
@@ -86,28 +80,21 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integ
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<Integer, Long, RocketMQRecordEntity>> getRecords(
-      RecordSupplier<Integer, Long, RocketMQRecordEntity> recordSupplier,
+  protected List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> getRecords(
+      RecordSupplier<String, Long, RocketMQRecordEntity> recordSupplier,
       TaskToolbox toolbox
   ) throws Exception
   {
     // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
     // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
     // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
-    List<OrderedPartitionableRecord<Integer, Long, RocketMQRecordEntity>> records = new ArrayList<>();
-    try {
-      records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
-    }
-    catch (OffsetOutOfRangeException e) {
-      log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
-      possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), recordSupplier, toolbox);
-    }
-
+    List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> records = new ArrayList<>();
+    records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     return records;
   }
 
   @Override
-  protected SeekableStreamEndSequenceNumbers<Integer, Long> deserializePartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<String, Long> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -120,65 +107,9 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integ
     ));
   }
 
-  private void possiblyResetOffsetsOrWait(
-      Map<TopicPartition, Long> outOfRangePartitions,
-      RecordSupplier<Integer, Long, RocketMQRecordEntity> recordSupplier,
-      TaskToolbox taskToolbox
-  ) throws InterruptedException, IOException
-  {
-    final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
-    boolean doReset = false;
-    if (task.getTuningConfig().isResetOffsetAutomatically()) {
-      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
-        final TopicPartition topicPartition = outOfRangePartition.getKey();
-        final long nextOffset = outOfRangePartition.getValue();
-        // seek to the beginning to get the least available offset
-        StreamPartition<Integer> streamPartition = StreamPartition.of(
-            topicPartition.topic(),
-            topicPartition.partition()
-        );
-        final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (leastAvailableOffset == null) {
-          throw new ISE(
-              "got null sequence number for partition[%s] when fetching from rocketmq!",
-              topicPartition.partition()
-          );
-        }
-        // reset the seek
-        recordSupplier.seek(streamPartition, nextOffset);
-        // Reset consumer offset if resetOffsetAutomatically is set to true
-        // and the current message offset in the rocketmq partition is more than the
-        // next message offset that we are trying to fetch
-        if (leastAvailableOffset > nextOffset) {
-          doReset = true;
-          resetPartitions.put(topicPartition, nextOffset);
-        }
-      }
-    }
-
-    if (doReset) {
-      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
-          streamPartition.topic(),
-          streamPartition.partition()
-      )), taskToolbox);
-    } else {
-      log.warn("Retrying in %dms", task.getPollRetryMs());
-      pollRetryLock.lockInterruptibly();
-      try {
-        long nanos = TimeUnit.MILLISECONDS.toNanos(task.getPollRetryMs());
-        while (nanos > 0L && !pauseRequested && !stopRequested.get()) {
-          nanos = isAwaitingRetry.awaitNanos(nanos);
-        }
-      }
-      finally {
-        pollRetryLock.unlock();
-      }
-    }
-  }
-
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
-      SeekableStreamSequenceNumbers<Integer, Long> partitions
+  protected SeekableStreamDataSourceMetadata<String, Long> createDataSourceMetadata(
+      SeekableStreamSequenceNumbers<String, Long> partitions
   )
   {
     return new RocketMQDataSourceMetadata(partitions);
@@ -193,8 +124,8 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integ
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<Integer, Long, RocketMQRecordEntity> recordSupplier,
-      Set<StreamPartition<Integer>> assignment
+      RecordSupplier<String, Long, RocketMQRecordEntity> recordSupplier,
+      Set<StreamPartition<String>> assignment
   )
   {
     // do nothing
@@ -213,16 +144,16 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integ
   }
 
   @Override
-  public TypeReference<List<SequenceMetadata<Integer, Long>>> getSequenceMetadataTypeReference()
+  public TypeReference<List<SequenceMetadata<String, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<Integer, Long>>>()
+    return new TypeReference<List<SequenceMetadata<String, Long>>>()
     {
     };
   }
 
   @Nullable
   @Override
-  protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
+  protected TreeMap<Integer, Map<String, Long>> getCheckPointsFromContext(
       TaskToolbox toolbox,
       String checkpointsString
   ) throws IOException
@@ -231,7 +162,7 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integ
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          new TypeReference<TreeMap<Integer, Map<String, Long>>>()
           {
           }
       );

@@ -34,10 +34,7 @@ public class RocketMQConsumerConfigs
   public static Map<String, Object> getConsumerProperties()
   {
     final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("rocketmq-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
+    props.put("consumer.group", StringUtils.format("rocketmq-supervisor-%s", IdUtils.getRandomId()));
     return props;
   }
 

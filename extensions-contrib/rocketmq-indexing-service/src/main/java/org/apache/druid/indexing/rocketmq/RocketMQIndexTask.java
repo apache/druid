@@ -30,17 +30,11 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.rocketmq.clients.consumer.RocketMQConsumer;
-import org.apache.rocketmq.common.TopicPartition;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-public class RocketMQIndexTask extends SeekableStreamIndexTask<Integer, Long, RocketMQRecordEntity>
+public class RocketMQIndexTask extends SeekableStreamIndexTask<String, Long, RocketMQRecordEntity>
 {
   private static final String TYPE = "index_rocketmq";
 
@@ -84,49 +78,11 @@ public class RocketMQIndexTask extends SeekableStreamIndexTask<Integer, Long, Ro
     return pollRetryMs;
   }
 
-  @Deprecated
-  RocketMQConsumer<byte[], byte[]> newConsumer()
-  {
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-      final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
-      final Properties props = new Properties();
-      RocketMQRecordSupplier.addConsumerPropertiesFromConfig(
-          props,
-          configMapper,
-          ioConfig.getConsumerProperties()
-      );
-      props.putIfAbsent("isolation.level", "read_committed");
-      props.putAll(consumerConfigs);
-
-      return new RocketMQConsumer<>(props);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
-  }
-
-  @Deprecated
-  static void assignPartitions(
-      final RocketMQConsumer consumer,
-      final String topic,
-      final Set<Integer> partitions
-  )
-  {
-    consumer.assign(
-        new ArrayList<>(
-            partitions.stream().map(n -> new TopicPartition(topic, n)).collect(Collectors.toList())
-        )
-    );
-  }
-
   @Override
-  protected SeekableStreamIndexTaskRunner<Integer, Long, RocketMQRecordEntity> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<String, Long, RocketMQRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new IncrementalPublishingRocketMQIndexTaskRunner(
+    return new RocketMQIndexTaskRunner(
         this,
         dataSchema.getParser(),
         authorizerMapper,

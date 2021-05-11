@@ -25,7 +25,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class RocketMQIndexTaskClient extends SeekableStreamIndexTaskClient<Integer, Long>
+public class RocketMQIndexTaskClient extends SeekableStreamIndexTaskClient<String, Long>
 {
   RocketMQIndexTaskClient(
       HttpClient httpClient,
@@ -49,9 +49,9 @@ public class RocketMQIndexTaskClient extends SeekableStreamIndexTaskClient<Integ
   }
 
   @Override
-  protected Class<Integer> getPartitionType()
+  protected Class<String> getPartitionType()
   {
-    return Integer.class;
+    return String.class;
   }
 
   @Override

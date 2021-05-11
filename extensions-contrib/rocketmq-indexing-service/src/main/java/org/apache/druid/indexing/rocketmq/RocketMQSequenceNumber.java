@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.indexing.rocketmq;
 
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
