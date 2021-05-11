@@ -1610,7 +1610,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 ##### Prioritization strategies
 
 ###### Manual prioritization strategy
-With this configuration, queries are never assigned a priority automatically, but will preserve a priority manually set on the [query context](../querying/query-context.md) with the `priority` key. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `none`.
+With this configuration, queries are never assigned a priority automatically, but will preserve a priority manually set on the [query context](../querying/query-context.md) with the `priority` key. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `manual`.
 
 ###### Threshold prioritization strategy
 
