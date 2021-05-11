@@ -94,7 +94,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setVirtualColumns(expressionVirtualColumn("v0", "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)",
+                            ValueType.STRING
+                        ))
                         .setDimensions(new DefaultDimensionSpec("v0", "_d0"))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
@@ -271,7 +275,31 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1,2))", ValueType.STRING),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ValueType.STRING)
                 )
-                .columns("d1", "d2", "dim1", "dim2", "dim3", "l1", "l2", "v0", "v1", "v10", "v11", "v12", "v13", "v14", "v15", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9")
+                .columns(
+                    "d1",
+                    "d2",
+                    "dim1",
+                    "dim2",
+                    "dim3",
+                    "l1",
+                    "l2",
+                    "v0",
+                    "v1",
+                    "v10",
+                    "v11",
+                    "v12",
+                    "v13",
+                    "v14",
+                    "v15",
+                    "v2",
+                    "v3",
+                    "v4",
+                    "v5",
+                    "v6",
+                    "v7",
+                    "v8",
+                    "v9"
+                )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -298,7 +326,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"b\"]",
               Arrays.asList("a", "b", "c"),
               Arrays.asList(1L, 2L, 3L),
-              Arrays.asList(1L ,2L ,4L),
+              Arrays.asList(1L, 2L, 4L),
               "[\"a\",\"b\",\"foo\"]",
               Arrays.asList("foo", "a"),
               Arrays.asList(1L, 2L, 7L),
@@ -307,7 +335,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               Arrays.asList(0L, 1L, 2L),
               "[\"a\",\"a\",\"b\"]",
               Arrays.asList(7L, 0L),
-              Arrays.asList(1.0,0.0)
+              Arrays.asList(1.0, 0.0)
           }
       );
     } else {
@@ -318,7 +346,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"b\"]",
               Arrays.asList("a", "b", "c"),
               Arrays.asList(1L, 2L, 3L),
-              Arrays.asList(1L ,2L ,4L),
+              Arrays.asList(1L, 2L, 4L),
               "[\"a\",\"b\",\"foo\"]",
               Arrays.asList("foo", "a"),
               Arrays.asList(1L, 2L, 7L),
@@ -370,7 +398,23 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1,2))", ValueType.STRING),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ValueType.STRING)
                 )
-                .columns("dim1", "dim2", "dim3", "v0", "v1", "v10", "v11", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9")
+                .columns(
+                    "dim1",
+                    "dim2",
+                    "dim3",
+                    "v0",
+                    "v1",
+                    "v10",
+                    "v11",
+                    "v2",
+                    "v3",
+                    "v4",
+                    "v5",
+                    "v6",
+                    "v7",
+                    "v8",
+                    "v9"
+                )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
                 .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1156,7 +1200,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             useDefault
             ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
-            : new Object[]{"[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
+            : new Object[]{
+                "[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]",
+                "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]",
+                null
+            }
         )
     );
   }
