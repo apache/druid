@@ -33,7 +33,26 @@ public interface MetadataSupervisorManager
 
   Map<String, List<VersionedSupervisorSpec>> getAll();
 
+  /**
+   * Return latest supervisors (both active and terminated)
+   *
+   * @return latest terminated supervisors
+   */
   Map<String, SupervisorSpec> getLatest();
+
+  /**
+   * Only return the latest active supervisors
+   *
+   * @return latest active supervisors
+   */
+  Map<String, SupervisorSpec> getLatestActiveOnly();
+
+  /**
+   * Only return the latest terminated supervisors
+   *
+   * @return latest terminated supervisors
+   */
+  Map<String, SupervisorSpec> getLatestTerminatedOnly();
 
   /**
    * Remove terminated supervisors created before the given timestamp.

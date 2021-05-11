@@ -38,6 +38,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorCompactionKillPeriod;
   private final Duration coordinatorRuleKillPeriod;
   private final Duration coordinatorRuleKillDurationToRetain;
+  private final Duration coordinatorDatasourceKillPeriod;
+  private final Duration coordinatorDatasourceKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
 
@@ -56,6 +58,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorCompactionKillPeriod,
       Duration coordinatorRuleKillPeriod,
       Duration coordinatorRuleKillDurationToRetain,
+      Duration coordinatorDatasourceKillPeriod,
+      Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay
   )
@@ -74,6 +78,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorCompactionKillPeriod = coordinatorCompactionKillPeriod;
     this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
     this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
+    this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
+    this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
   }
@@ -154,6 +160,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorRuleKillDurationToRetain()
   {
     return coordinatorRuleKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorDatasourceKillPeriod()
+  {
+    return coordinatorDatasourceKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorDatasourceKillDurationToRetain()
+  {
+    return coordinatorDatasourceKillDurationToRetain;
   }
 
   @Override
