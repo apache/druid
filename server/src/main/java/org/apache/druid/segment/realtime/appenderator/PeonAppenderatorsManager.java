@@ -122,7 +122,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean batchMemoryMappedIndex
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -139,7 +140,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexIO,
           indexMerger,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          batchMemoryMappedIndex
       );
       return batchAppenderator;
     }
