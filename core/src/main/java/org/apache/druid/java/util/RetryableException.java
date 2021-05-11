@@ -19,8 +19,6 @@
 
 package org.apache.druid.java.util;
 
-import org.apache.druid.java.util.common.StringUtils;
-
 public class RetryableException extends Exception
 {
   public RetryableException(Throwable t)
