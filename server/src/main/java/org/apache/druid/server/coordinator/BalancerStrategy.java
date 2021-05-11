@@ -71,12 +71,59 @@ public interface BalancerStrategy
    * @return {@link BalancerSegmentHolder} containing segment to move and server it currently resides on, or null if
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
+  @Deprecated
   @Nullable
   BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       double percentOfSegmentsToConsider
   );
+
+  /**
+   * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy.
+   * @param serverHolders set of historicals to consider for moving segments
+   * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
+   *                             Balancing strategies should avoid rebalancing segments for such datasources, since
+   *                             they should be loaded on all servers anyway.
+   *                             NOTE: this should really be handled on a per-segment basis, to properly support
+   *                                   the interval or period-based broadcast rules. For simplicity of the initial
+   *                                   implementation, only forever broadcast rules are supported.
+   * @param numberOfSegments number of segments to be picked from servers
+   * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
+   * reside on, or empty if there are no segments to pick from (i. e. all provided serverHolders are empty).
+   */
+  default Iterator<BalancerSegmentHolder> pickSegmentsToMove(List<ServerHolder> serverHolders,
+                                                             Set<String> broadcastDatasources,
+                                                             int numberOfSegments)
+  {
+    return new Iterator<BalancerSegmentHolder>()
+    {
+      private Iterator<BalancerSegmentHolder> it = ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+          serverHolders,
+          broadcastDatasources,
+          numberOfSegments
+      ).iterator();
+      @Override
+      public boolean hasNext()
+      {
+        if (it.hasNext()) {
+          return true;
+        }
+        it = ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+            serverHolders,
+            broadcastDatasources,
+            numberOfSegments
+        ).iterator();
+        return it.hasNext();
+      }
+
+      @Override
+      public BalancerSegmentHolder next()
+      {
+        return it.next();
+      }
+    };
+  }
 
   /**
    * Returns an iterator for a set of servers to drop from, ordered by preference of which server to drop from first
