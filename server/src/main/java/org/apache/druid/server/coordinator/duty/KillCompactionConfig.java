@@ -123,9 +123,11 @@ public class KillCompactionConfig implements CoordinatorDuty
                 );
                 emitMetric(params.getEmitter(), compactionConfigRemoved);
               } else if (result.isRetryable()) {
+                // Failed but is retryable
                 log.debug("Retrying KillCompactionConfig duty");
                 throw new RetryableException(result.getException());
               } else {
+                // Failed and not retryable
                 log.error(result.getException(), "Failed to kill compaction configurations");
                 emitMetric(params.getEmitter(), 0);
               }
