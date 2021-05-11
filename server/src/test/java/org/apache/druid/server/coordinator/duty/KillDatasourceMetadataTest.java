@@ -179,8 +179,6 @@ public class KillDatasourceMetadataTest
   @Test
   public void testRunWithEmptyFilterExcludedDatasource()
   {
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of();
-    Mockito.when(mockMetadataSupervisorManager.getLatest()).thenReturn(existingSpecs);
     Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
 
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
