@@ -26,6 +26,8 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -43,6 +45,8 @@ public class KillCompactionConfig implements CoordinatorDuty
   private static final Logger log = new Logger(KillCompactionConfig.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
   private static final int UPDATE_NUM_RETRY = 5;
+
+  static final String COUNT_METRIC = "metadata/kill/compaction/count";
 
   private final long period;
   private long lastKillTime = 0;
@@ -80,6 +84,7 @@ public class KillCompactionConfig implements CoordinatorDuty
       CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(jacksonConfigManager);
       if (CoordinatorCompactionConfig.empty().equals(current)) {
         log.info("Finished running KillCompactionConfig duty. Nothing to do as compaction config is already empty.");
+        emitMetric(params.getEmitter(), 0);
         return params;
       }
       int attemps = 0;
@@ -100,7 +105,7 @@ public class KillCompactionConfig implements CoordinatorDuty
 
           // Calculate number of compaction configs to remove for logging
           compactionConfigRemoved = current.getCompactionConfigs().size() - updated.size();
-          
+
           setResult = jacksonConfigManager.set(
               CoordinatorCompactionConfig.CONFIG_KEY,
               // Do database insert without swap if the current config is empty as this means the config may be null in the database
@@ -120,13 +125,16 @@ public class KillCompactionConfig implements CoordinatorDuty
       }
       catch (Exception e) {
         log.error(e, "Failed to kill compaction configurations");
+        emitMetric(params.getEmitter(), 0);
         return params;
       }
 
       if (setResult.isOk()) {
         log.info("Finished running KillCompactionConfig duty. Removed %,d compaction configs", compactionConfigRemoved);
+        emitMetric(params.getEmitter(), compactionConfigRemoved);
       } else {
         log.error(setResult.getException(), "Failed to kill compaction configurations");
+        emitMetric(params.getEmitter(), 0);
       }
     }
     return params;
@@ -140,5 +148,15 @@ public class KillCompactionConfig implements CoordinatorDuty
     catch (InterruptedException ie) {
       throw new RuntimeException(ie);
     }
+  }
+
+  private void emitMetric(ServiceEmitter emitter, int compactionConfigRemoved)
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            COUNT_METRIC,
+            compactionConfigRemoved
+        )
+    );
   }
 }
