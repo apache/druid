@@ -305,7 +305,8 @@ public class KillCompactionConfigTest
     ).thenAnswer(new Answer() {
       private int count = 0;
       @Override
-      public Object answer(InvocationOnMock invocation) {
+      public Object answer(InvocationOnMock invocation)
+      {
         if (count++ < 3) {
           // Return fail result with RetryableException the first three call to updated set
           return ConfigManager.SetResult.fail(new Exception(), true);
