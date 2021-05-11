@@ -71,6 +71,8 @@ public class KillUnusedSegmentsTest
             null,
             null,
             null,
+            null,
+            null,
             1000,
             Duration.ZERO,
             false
@@ -103,6 +105,8 @@ public class KillUnusedSegmentsTest
             null,
             null,
             null,
+            null,
+            null,
             1000,
             Duration.ZERO,
             false
@@ -121,6 +125,8 @@ public class KillUnusedSegmentsTest
             new Duration(1),
             Duration.parse("PT86400S"),
             Duration.parse("PT-86400S"),
+            null,
+            null,
             null,
             null,
             null,
@@ -160,6 +166,8 @@ public class KillUnusedSegmentsTest
             null,
             null,
             null,
+            null,
+            null,
             1000,
             Duration.ZERO,
             true
@@ -187,6 +195,8 @@ public class KillUnusedSegmentsTest
             null,
             null,
             null,
+            null,
+            null,
             1000,
             Duration.ZERO,
             false
@@ -207,6 +217,8 @@ public class KillUnusedSegmentsTest
             new Duration(1),
             Duration.parse("PT86400S"),
             Duration.parse("PT86400S"),
+            null,
+            null,
             null,
             null,
             null,
