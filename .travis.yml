@@ -88,7 +88,7 @@ jobs:
       install: skip
       before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
-        - ./check-test-suite.py && travis_terminate 0
+        - ./check-test-suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
         - pip3 install pyyaml
       script:
@@ -106,7 +106,7 @@ jobs:
       install: skip
       # Strict compilation requires more than 2 GB
       script: >
-        ./check-test-suite.py && travis_terminate 0  || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
+        ./check-test-suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
     - name: "analyze dependencies"
@@ -133,7 +133,7 @@ jobs:
 
     - name: "intellij inspections"
       script: >
-        ./check-test-suite.py && travis_terminate 0  || docker run --rm
+        ./check-test-suite.py && travis_terminate 0 || docker run --rm
         -v $(pwd):/project
         -v ~/.m2:/home/inspect/.m2
         ccaominh/intellij-inspect:1.0.0
@@ -309,14 +309,14 @@ jobs:
       before_install: *setup_generate_license
       install: web-console/script/druid build
       before_script:
-        - ./check-test-suite.py && travis_terminate 0
+        - ./check-test-suite.py && travis_terminate 0 || echo 'Starting nvm install...'
         - nvm install 10.24.0
         - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
       after_script: web-console/script/druid stop
 
     - name: "docs"
-      install: ./check-test-suite.py && travis_terminate 0  || (cd website && npm install)
+      install: ./check-test-suite.py && travis_terminate 0 || (cd website && npm install)
       script: |-
         (cd website && npm run lint && npm run spellcheck) || { echo "
 
