@@ -112,6 +112,7 @@ public class TaskToolboxTest
             null,
             null,
             null,
+            false,
             false
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),

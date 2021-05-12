@@ -92,6 +92,7 @@ public class IntermediaryDataManagerAutoCleanupTest
         null,
         null,
         ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
+        false,
         false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()

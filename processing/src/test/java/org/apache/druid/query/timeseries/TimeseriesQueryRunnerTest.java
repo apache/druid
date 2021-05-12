@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -3036,6 +3037,43 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithExpressionAggregatorTooBig()
+  {
+    // expression agg cannot vectorize
+    cannotVectorize();
+    if (!vectorize) {
+      // size bytes when it overshoots varies slightly between algorithms
+      expectedException.expectMessage("Unable to serialize [STRING_ARRAY]");
+    }
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.DAY)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(
+                                      Collections.singletonList(
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "array_agg_distinct",
+                                              ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+                                              "acc",
+                                              "[]",
+                                              null,
+                                              "array_set_add(acc, market)",
+                                              "array_set_add_all(acc, array_agg_distinct)",
+                                              null,
+                                              null,
+                                              HumanReadableBytes.valueOf(10),
+                                              TestExprMacroTable.INSTANCE
+                                          )
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .context(makeContext())
+                                  .build();
+
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @Test

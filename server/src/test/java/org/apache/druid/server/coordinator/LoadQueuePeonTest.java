@@ -104,6 +104,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             null,
+            null,
             10,
             Duration.millis(0),
             false
@@ -309,6 +310,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             null,
+            null,
             10,
             new Duration("PT1s"),
             false
@@ -361,6 +363,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             new Duration(1),
+            null,
             null,
             null,
             null,

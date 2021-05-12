@@ -84,7 +84,8 @@ public class UnifiedIndexerAppenderatorsManagerTest
       TestHelper.getTestIndexIO(),
       TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
       new NoopRowIngestionMeters(),
-      new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0)
+      new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
+      false
   );
 
   @Test
