@@ -19,15 +19,26 @@ import os
 import subprocess
 import sys
 
-# ignore completely - .idea, anything in distribution except pom,
-# java - ignore docs, website, web-console only changes, otherwise run
-# docs - diff in docs/ or website/
-# web-console - diff in web-console/
+# do some primitive examination of git diff to determine if a test suite needs to be run or not
 
-ignore_prefixes = ['.idea', 'distribution/bin', 'distribution/docker', 'distribution/asf-release-process-guide.md']
+always_run_jobs = ['license check']
+
+# ignore changes to these files completely since they don't impact CI, if the changes are only to these files then all
+# of CI can be skipped
+ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
+                   '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
+                   'distribution/asf-release-process-guide.md']
+# these files are docs changes
+# if changes are limited to this set then we can skip web-console and java
+# if no changes in this set we can skip docs
 docs_prefixes = ['docs/', 'website/']
-web_console_prefixes = ['web-console/']
+# travis docs job name
 docs_jobs = ['docs']
+# these files are web-console changes
+# if changes are limited to this set then we can skip docs and java
+# if no changes in this set we can skip web-console
+web_console_prefixes = ['web-console/']
+# travis web-console job name
 web_console_jobs = ['web console', 'web console end-to-end test']
 
 
@@ -50,6 +61,10 @@ def check_console(file):
     return is_console
 
 def check_should_run_suite(suite, diff_files):
+    if suite in always_run_jobs:
+        # you gotta do what you gotta do
+        return True
+
     all_ignore = True
     any_docs = False
     all_docs = True
@@ -78,25 +93,31 @@ def check_should_run_suite(suite, diff_files):
 
     return True
 
+def failWithUsage():
+    sys.stderr.write("usage: check-test-suite.py <test-suite-name>\n")
+    sys.stderr.write("  e.g., check-test-suite.py docs")
+    sys.exit(1)
+
 suite_name = ""
 
-if len(sys.argv) != 2:
+if len(sys.argv) == 1:
     if 'TRAVIS_JOB_NAME' in os.environ:
         suite_name = os.environ['TRAVIS_JOB_NAME']
     else:
-        sys.stderr.write("usage: check-test-suite.py <test-suite-name>\n")
-        sys.stderr.write("  e.g., check-test-suite.py docs")
-        sys.exit(1)
-else:
+        failWithUsage()
+elif len(sys.argv) == 2:
     suite_name = sys.argv[1]
+else:
+    failWithUsage()
 
 
-all_changed_files_string = subprocess.check_output("git diff --name-only HEAD~1", shell=True).decode('UTF-8')
-all_changed_files = all_changed_files_string.splitlines()
+needs_run = True
+if 'TRAVIS_BRANCH' not in os.environ or os.environ['TRAVIS_BRANCH'] != 'false':
+    all_changed_files_string = subprocess.check_output("git diff --name-only HEAD~1", shell=True).decode('UTF-8')
+    all_changed_files = all_changed_files_string.splitlines()
+    print("Checking if suite '{}' needs to run test on diff:\n{}".format(suite_name, all_changed_files_string))
+    needs_run = check_should_run_suite(suite_name, all_changed_files)
 
-print("Checking if suite '{}' needs to run test on diff:\n{}".format(suite_name, all_changed_files_string))
-
-needs_run = check_should_run_suite(suite_name, all_changed_files)
 if needs_run:
     print("Changes detected, need to run test suite '{}'".format(suite_name))
     sys.exit(1)
