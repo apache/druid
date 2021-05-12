@@ -80,7 +80,19 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
       mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
       messageQueues.add(mq);
     }
-    consumer.assign(messageQueues);
+
+    if (!messageQueues.isEmpty()) {
+      consumer.assign(messageQueues);
+    }
+
+    try {
+      if (!consumer.isRunning()) {
+        consumer.start();
+      }
+    }
+    catch (MQClientException e) {
+      log.error(e.getErrorMessage());
+    }
   }
 
   @Override
@@ -138,6 +150,9 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public Set<StreamPartition<String>> getAssignment()
   {
+    if (this.streamPartitions == null) {
+      return new HashSet<StreamPartition<String>>();
+    }
     return this.streamPartitions;
   }
 
@@ -196,6 +211,9 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     HashSet<String> partitionIds = new HashSet<>();
     Collection<MessageQueue> messageQueues = null;
     try {
+      if (!consumer.isRunning()) {
+        consumer.start();
+      }
       messageQueues = consumer.fetchMessageQueues(stream);
     }
     catch (MQClientException e) {

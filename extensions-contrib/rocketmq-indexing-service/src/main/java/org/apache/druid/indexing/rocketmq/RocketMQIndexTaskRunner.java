@@ -102,7 +102,7 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Strin
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
         SeekableStreamEndSequenceNumbers.class,
         SeekableStreamEndSequenceNumbers.class,
-        Integer.class,
+        String.class,
         Long.class
     ));
   }
