@@ -41,6 +41,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggr
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
@@ -123,19 +124,20 @@ public class DruidOperatorTable implements SqlOperatorTable
 {
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
-          .add(new ApproxCountDistinctSqlAggregator())
-          .add(new AvgSqlAggregator())
-          .add(new CountSqlAggregator())
-          .add(EarliestLatestAnySqlAggregator.EARLIEST)
-          .add(EarliestLatestAnySqlAggregator.LATEST)
-          .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
-          .add(new MinSqlAggregator())
-          .add(new MaxSqlAggregator())
-          .add(new SumSqlAggregator())
-          .add(new SumZeroSqlAggregator())
-          .add(new GroupingSqlAggregator())
-          .add(new ArraySqlAggregator())
-          .build();
+                   .add(new ApproxCountDistinctSqlAggregator())
+                   .add(new AvgSqlAggregator())
+                   .add(new CountSqlAggregator())
+                   .add(EarliestLatestAnySqlAggregator.EARLIEST)
+                   .add(EarliestLatestAnySqlAggregator.LATEST)
+                   .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
+                   .add(new MinSqlAggregator())
+                   .add(new MaxSqlAggregator())
+                   .add(new SumSqlAggregator())
+                   .add(new SumZeroSqlAggregator())
+                   .add(new GroupingSqlAggregator())
+                   .add(new ArraySqlAggregator())
+                   .add(new StringSqlAggregator())
+                   .build();
 
 
   // STRLEN has so many aliases.
