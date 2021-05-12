@@ -702,7 +702,7 @@ END AS "partitioning"`,
           return resp.data;
         }}
         confirmButtonText="Drop Segment"
-        successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+        successText="Segment drop request acknowledged, next time the coordinator runs the segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
         onClose={() => {
