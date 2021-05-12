@@ -27,7 +27,7 @@ always_run_jobs = ['license check']
 # of CI can be skipped
 ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
                    '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
-                   'distribution/asf-release-process-guide.md']
+                   'distribution/asf-release-process-guide.md', '.travis.yml', 'check-test-suite.py']
 # these files are docs changes
 # if changes are limited to this set then we can skip web-console and java
 # if no changes in this set we can skip docs
@@ -111,12 +111,10 @@ else:
     failWithUsage()
 
 
-needs_run = True
-if 'TRAVIS_BRANCH' not in os.environ or os.environ['TRAVIS_BRANCH'] != 'false':
-    all_changed_files_string = subprocess.check_output("git diff --name-only HEAD~1", shell=True).decode('UTF-8')
-    all_changed_files = all_changed_files_string.splitlines()
-    print("Checking if suite '{}' needs to run test on diff:\n{}".format(suite_name, all_changed_files_string))
-    needs_run = check_should_run_suite(suite_name, all_changed_files)
+all_changed_files_string = subprocess.check_output("git diff --name-only HEAD~1", shell=True).decode('UTF-8')
+all_changed_files = all_changed_files_string.splitlines()
+print("Checking if suite '{}' needs to run test on diff:\n{}".format(suite_name, all_changed_files_string))
+needs_run = check_should_run_suite(suite_name, all_changed_files)
 
 if needs_run:
     print("Changes detected, need to run test suite '{}'".format(suite_name))
