@@ -21,7 +21,7 @@ import sys
 
 # do some primitive examination of git diff to determine if a test suite needs to be run or not
 
-always_run_jobs = ['license check']
+always_run_jobs = ['license check', '(openjdk8) packaging check', '(openjdk11) packaging check']
 
 # ignore changes to these files completely since they don't impact CI, if the changes are only to these files then all
 # of CI can be skipped
