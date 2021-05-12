@@ -971,10 +971,11 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      if (value != null && value.length == 1) {
-        return value[0] == null;
+      if (isScalar()) {
+        return getScalarValue() == null;
       }
-      return false;
+
+      return true;
     }
 
     @Override
@@ -1019,6 +1020,18 @@ public abstract class ExprEval<T>
     {
       return value == null ? null : value[index];
     }
+
+    protected boolean isScalar()
+    {
+      return value != null && value.length == 1;
+    }
+
+    @Nullable
+    protected T getScalarValue()
+    {
+      assert value != null && value.length == 1;
+      return value[0];
+    }
   }
 
   private static class LongArrayExprEval extends ArrayExprEval<Long>
@@ -1037,11 +1050,13 @@ public abstract class ExprEval<T>
     @Override
     public int asInt()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
           return 0;
         }
-        return value[0].intValue();
+        return scalar.intValue();
       }
       return super.asInt();
     }
@@ -1049,11 +1064,13 @@ public abstract class ExprEval<T>
     @Override
     public long asLong()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
-          return 0L;
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
         }
-        return value[0];
+        return scalar.longValue();
       }
       return super.asLong();
     }
@@ -1061,11 +1078,13 @@ public abstract class ExprEval<T>
     @Override
     public double asDouble()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
-          return 0.0;
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
         }
-        return value[0].doubleValue();
+        return scalar.doubleValue();
       }
       return super.asDouble();
     }
@@ -1073,11 +1092,13 @@ public abstract class ExprEval<T>
     @Override
     public boolean asBoolean()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
           return false;
         }
-        return Evals.asBoolean(value[0]);
+        return Evals.asBoolean(scalarValue.longValue());
       }
       return super.asBoolean();
     }
@@ -1159,11 +1180,13 @@ public abstract class ExprEval<T>
     @Override
     public int asInt()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
           return 0;
         }
-        return value[0].intValue();
+        return scalar.intValue();
       }
       return super.asInt();
     }
@@ -1171,11 +1194,13 @@ public abstract class ExprEval<T>
     @Override
     public long asLong()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
-          return 0L;
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
         }
-        return value[0].longValue();
+        return scalar.longValue();
       }
       return super.asLong();
     }
@@ -1183,11 +1208,13 @@ public abstract class ExprEval<T>
     @Override
     public double asDouble()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
-          return 0.0;
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
         }
-        return value[0];
+        return scalar.doubleValue();
       }
       return super.asDouble();
     }
@@ -1195,11 +1222,13 @@ public abstract class ExprEval<T>
     @Override
     public boolean asBoolean()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
           return false;
         }
-        return Evals.asBoolean(value[0]);
+        return Evals.asBoolean(scalarValue.longValue());
       }
       return super.asBoolean();
     }
@@ -1269,8 +1298,13 @@ public abstract class ExprEval<T>
   {
     private boolean longValueValid = false;
     private boolean doubleValueValid = false;
+    @Nullable
     private Long[] longValues;
+    @Nullable
     private Double[] doubleValues;
+    @Nullable
+    private Number computedNumericScalar;
+    private boolean isScalarNumberValid;
 
     private StringArrayExprEval(@Nullable String[] value)
     {
@@ -1286,21 +1320,23 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      if (value != null && value.length == 1) {
-        return computeNumber(value[0]) == null;
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        return computedNumericScalar == null;
       }
-      return false;
+      return true;
     }
 
     @Override
     public int asInt()
     {
-      if (value != null && value.length == 1) {
-        Number number = computeNumber(value[0]);
-        if (number == null) {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
           return 0;
         }
-        return number.intValue();
+        return computedNumericScalar.intValue();
       }
       return super.asInt();
     }
@@ -1308,12 +1344,13 @@ public abstract class ExprEval<T>
     @Override
     public long asLong()
     {
-      if (value != null && value.length == 1) {
-        Number number = computeNumber(value[0]);
-        if (number == null) {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
           return 0L;
         }
-        return number.longValue();
+        return computedNumericScalar.longValue();
       }
       return super.asLong();
     }
@@ -1321,12 +1358,13 @@ public abstract class ExprEval<T>
     @Override
     public double asDouble()
     {
-      if (value != null && value.length == 1) {
-        Number number = computeNumber(value[0]);
-        if (number == null) {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
           return 0.0;
         }
-        return number.doubleValue();
+        return computedNumericScalar.doubleValue();
       }
       return super.asDouble();
     }
@@ -1334,11 +1372,8 @@ public abstract class ExprEval<T>
     @Override
     public boolean asBoolean()
     {
-      if (value != null && value.length == 1) {
-        if (value[0] == null) {
-          return false;
-        }
-        return Evals.asBoolean(value[0]);
+      if (isScalar()) {
+        return Evals.asBoolean(getScalarValue());
       }
       return super.asBoolean();
     }
@@ -1435,6 +1470,18 @@ public abstract class ExprEval<T>
         return null;
       }
       return Arrays.stream(value).map(Doubles::tryParse).toArray(Double[]::new);
+    }
+
+
+    /**
+     * must not be called unless array has a single element
+      */
+    private void computeScalarNumericIfNeeded()
+    {
+      if (!isScalarNumberValid) {
+        computedNumericScalar = computeNumber(getScalarValue());
+        isScalarNumberValid = true;
+      }
     }
   }
 }

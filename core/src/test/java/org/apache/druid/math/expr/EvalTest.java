@@ -159,11 +159,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(true, ExprEval.ofLongArray(new Long[]{1L}).asBoolean());
     Assert.assertEquals("1", ExprEval.ofLongArray(new Long[]{1L}).asString());
 
-    Assert.assertEquals(0L, ExprEval.ofLongArray(new Long[]{null}).asLong());
-    Assert.assertEquals(0.0, ExprEval.ofLongArray(new Long[]{null}).asDouble(), 0.0);
+
     Assert.assertEquals(null, ExprEval.ofLongArray(new Long[]{null}).asString());
-    Assert.assertEquals(0, ExprEval.ofLongArray(new Long[]{null}).asInt());
-    Assert.assertEquals(false, ExprEval.ofLongArray(new Long[]{null}).asBoolean());
 
     Assert.assertEquals(0L, ExprEval.ofLongArray(new Long[]{1L, 2L}).asLong());
     Assert.assertEquals(0.0, ExprEval.ofLongArray(new Long[]{1L, 2L}).asDouble(), 0.0);
@@ -177,11 +174,7 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, ExprEval.ofDoubleArray(new Double[]{1.1}).asInt());
     Assert.assertEquals(true, ExprEval.ofDoubleArray(new Double[]{1.1}).asBoolean());
 
-    Assert.assertEquals(0.0, ExprEval.ofDoubleArray(new Double[]{null}).asDouble(), 0.0);
-    Assert.assertEquals(0L, ExprEval.ofDoubleArray(new Double[]{null}).asLong());
     Assert.assertEquals(null, ExprEval.ofDoubleArray(new Double[]{null}).asString());
-    Assert.assertEquals(0, ExprEval.ofDoubleArray(new Double[]{null}).asInt());
-    Assert.assertEquals(false, ExprEval.ofDoubleArray(new Double[]{null}).asBoolean());
 
     Assert.assertEquals(0.0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asDouble(), 0.0);
     Assert.assertEquals(0L, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asLong());
@@ -190,10 +183,6 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(false, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).asBoolean());
 
     Assert.assertEquals("foo", ExprEval.ofStringArray(new String[]{"foo"}).asString());
-    Assert.assertEquals(0L, ExprEval.ofStringArray(new String[]{"foo"}).asLong());
-    Assert.assertEquals(0.0, ExprEval.ofStringArray(new String[]{"foo"}).asDouble(), 0.0);
-    Assert.assertEquals(0, ExprEval.ofStringArray(new String[]{"foo"}).asInt());
-    Assert.assertEquals(false, ExprEval.ofStringArray(new String[]{"foo"}).asBoolean());
 
     Assert.assertEquals("1", ExprEval.ofStringArray(new String[]{"1"}).asString());
     Assert.assertEquals(1L, ExprEval.ofStringArray(new String[]{"1"}).asLong());
@@ -314,15 +303,15 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertFalse(ExprEval.of("1").isNumericNull());
 
       Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
       Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
 
       Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
       Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
 
       Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
       Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
       Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
     } else {
@@ -339,15 +328,15 @@ public class EvalTest extends InitializedNullHandlingTest
 
       // arrays can still have nulls
       Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
       Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
 
       Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
       Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
 
       Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
-      Assert.assertFalse(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
+      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
       Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
       Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
     }
