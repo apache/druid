@@ -114,7 +114,7 @@ public class DefaultK8sApiClient implements K8sApiClient
           Watch.createWatch(
               realK8sClient,
               coreV1Api.listNamespacedPodCall(namespace, null, true, null, null,
-                                              labelSelector, null, lastKnownResourceVersion, "Exact", 0, true, null
+                                              labelSelector, null, lastKnownResourceVersion, null, 0, true, null
               ),
               new TypeReference<Watch.Response<V1Pod>>()
               {
