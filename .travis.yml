@@ -301,7 +301,7 @@ jobs:
       install: skip
       stage: Tests - phase 1
       script:
-        - ${MVN} test -pl 'web-console'
+        - ./check-test-suite.py && travis_terminate 0 || ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
