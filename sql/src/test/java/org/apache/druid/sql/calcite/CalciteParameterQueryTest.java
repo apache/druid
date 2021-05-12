@@ -651,7 +651,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   {
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
     // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
-    cannotVectorize();
 
     // this will optimize out the 3rd argument because 2nd argument will be constant and not null
     testQuery(
@@ -703,7 +702,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                 ValueType.STRING
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()

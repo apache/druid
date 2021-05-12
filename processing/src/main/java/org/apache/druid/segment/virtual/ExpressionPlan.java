@@ -44,16 +44,18 @@ public class ExpressionPlan
       */
     CONSTANT,
     /**
-     * expression has a single, single valued input, and is dictionary encoded if the value is a string
+     * expression has a single, single valued input, and is dictionary encoded if the value is a string, and does
+     * not produce non-scalar output
      */
     SINGLE_INPUT_SCALAR,
     /**
      * expression has a single input, which may produce single or multi-valued output, but if so, it must be implicitly
-     * mappable  (i.e. the expression is not treating its input as an array and not wanting to output an array)
+     * mappable  (i.e. the expression is not treating its input as an array and does not produce non-scalar output)
      */
     SINGLE_INPUT_MAPPABLE,
     /**
-     * expression must be implicitly mapped across the multiple values per row of known multi-value inputs
+     * expression must be implicitly mapped across the multiple values per row of known multi-value inputs, the final
+     * output will be multi-valued
      */
     NEEDS_APPLIED,
     /**
@@ -62,15 +64,15 @@ public class ExpressionPlan
     UNKNOWN_INPUTS,
     /**
      * expression has inputs whose type was incomplete, such as unknown multi-valuedness, which are not explicitly
-     * used as multi-valued/array inputs
+     * used as possibly multi-valued/array inputs
      */
     INCOMPLETE_INPUTS,
     /**
-     * expression explicitly using multi-valued inputs as array inputs
+     * expression explicitly using multi-valued inputs as array inputs or has array inputs
      */
     NON_SCALAR_INPUTS,
     /**
-     * expression produces explict multi-valued output, or implicit multi-valued output via mapping
+     * expression produces explict multi-valued output
      */
     NON_SCALAR_OUTPUT,
     /**
@@ -259,6 +261,7 @@ public class ExpressionPlan
             // to create a dictionary encoded selector instead of an object selector to defer expression evaluation
             // until query time
             return ColumnCapabilitiesImpl.copyOf(underlyingCapabilities)
+                                         .setType(ValueType.STRING)
                                          .setDictionaryValuesSorted(false)
                                          .setDictionaryValuesUnique(false)
                                          .setHasNulls(true);

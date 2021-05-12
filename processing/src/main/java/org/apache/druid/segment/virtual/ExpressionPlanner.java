@@ -167,12 +167,8 @@ public class ExpressionPlanner
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
 
       // single input mappable may not produce array output explicitly, only through implicit mapping
+      traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR);
       traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE);
-    }
-
-    // if implicit mapping is in play, output will be multi-valued but may still use SINGLE_INPUT_MAPPABLE optimization
-    if (ExpressionPlan.is(traits, ExpressionPlan.Trait.NEEDS_APPLIED)) {
-      traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
     }
 
     // vectorized expressions do not support incomplete, multi-valued inputs or outputs, or implicit mapping
@@ -197,8 +193,18 @@ public class ExpressionPlanner
       // this is kind of gross because this is actually only vectorizable if you're using a dictionary encoded
       // vector selector, and not a vector object selector, but hopefully things check that a dictionary exists
       // and prefer to use it...
-      outputType = expression.getOutputType(inspector);
-      traits.add(ExpressionPlan.Trait.VECTORIZABLE);
+      // but the least we can do is check that the column is in fact dictionary encoded to try to sway the hands of fate
+      ColumnCapabilities columnCapabilities =
+          inspector.getColumnCapabilities(Iterables.getOnlyElement(analysis.getRequiredBindings()));
+      if (columnCapabilities != null
+          && columnCapabilities.isDictionaryEncoded().isTrue()
+          && columnCapabilities.hasMultipleValues().isFalse()) {
+        outputType = expression.getOutputType(inspector);
+        // must be a string
+        if (outputType == ExprType.STRING) {
+          traits.add(ExpressionPlan.Trait.VECTORIZABLE);
+        }
+      }
     }
 
     return new ExpressionPlan(
