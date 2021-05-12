@@ -39,11 +39,10 @@ addons:
       - maven
       - python3
 
-before_script: ./check-test-suite.py && travis_terminate 0
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check-test-suite.py && travis_terminate 0  || echo 'Running maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -134,7 +133,7 @@ jobs:
 
     - name: "intellij inspections"
       script: >
-        docker run --rm
+        ./check-test-suite.py && travis_terminate 0  || docker run --rm
         -v $(pwd):/project
         -v ~/.m2:/home/inspect/.m2
         ccaominh/intellij-inspect:1.0.0
@@ -162,7 +161,6 @@ jobs:
       env:
       - MAVEN_PROJECTS='processing'
       before_script:
-        - ./check-test-suite.py && travis_terminate 0
         - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=true
       script:
         - unset _JAVA_OPTIONS
@@ -229,7 +227,6 @@ jobs:
       stage: Tests - phase 1
       before_script: &setup_sqlcompat
         - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=false
-        - ./check-test-suite.py && travis_terminate 0
 
     - <<: *test_processing_module_sqlcompat
       name: "(openjdk11) processing module test (SQL Compatibility)"
@@ -240,7 +237,7 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) indexing modules test"
       env:
-      - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+        - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
     - <<: *test_indexing_module
       name: "(openjdk11) indexing modules test"
@@ -304,7 +301,7 @@ jobs:
       install: skip
       stage: Tests - phase 1
       script:
-        - ./check-test-suite.py && travis_terminate 0  || ${MVN} test -pl 'web-console'
+        - ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
