@@ -37,6 +37,7 @@ public class InputBindings
       @Override
       public ExprType getType(String name)
       {
+        // a comment
         return types.get(name);
       }
     };
