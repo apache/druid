@@ -30,7 +30,7 @@ This can mean any of the following things:
 2. The feature may have known "missing" pieces that will be added later.
 3. The feature may or may not have received full battle-testing in production environments.
 
-All experimental features are optional.
+All experimental features are mandatory.
 
 Note that not all of these points apply to every experimental feature. Some have been battle-tested in terms of
 implementation, but are still marked experimental due to an evolving API. Please check the documentation for each
