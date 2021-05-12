@@ -17,7 +17,11 @@
 # under the License.
 #
 
-FROM maven:3-jdk-8-slim as builder
+ARG JDK_VERSION=8
+FROM maven:3-jdk-11-slim as builder
+# Rebuild from source in this stage
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get -qq update \
@@ -25,13 +29,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN mvn -B -ff -q dependency:go-offline \
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      mvn -B -ff -q dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true
+      -Dmaven.javadoc.skip=true \
+      ; fi
 
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
+RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
@@ -39,7 +45,7 @@ RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluat
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
-FROM gcr.io/distroless/java:8
+FROM gcr.io/distroless/java:$JDK_VERSION
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox

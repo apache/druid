@@ -25,7 +25,7 @@ title: "Multi-value dimensions"
 
 Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
 array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
-characters).
+characters). By default Druid ingests the values in alphabetical order, see [Dimension Objects](../ingestion/index.md#dimension-objects) for configuration.
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
 are used as a dimension being grouped by. See the section on multi-value columns in

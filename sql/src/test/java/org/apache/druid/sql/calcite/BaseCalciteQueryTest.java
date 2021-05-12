@@ -178,7 +178,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", false,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
+      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+  );
+
+  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
+      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -200,10 +208,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_DEFAULT = ImmutableMap.of(
+  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", true,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -242,7 +250,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put("skipEmptyBuckets", true);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
 
@@ -455,6 +463,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         conglomerate,
         temporaryFolder.newFolder()
     );
+  }
+
+  public DruidOperatorTable createOperatorTable()
+  {
+    return CalciteTests.createOperatorTable();
+  }
+
+  public ExprMacroTable createMacroTable()
+  {
+    return CalciteTests.createExprMacroTable();
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -681,8 +699,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         parameters,
         sql,
         authenticationResult,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
@@ -762,8 +780,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );

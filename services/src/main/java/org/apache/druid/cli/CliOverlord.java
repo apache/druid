@@ -81,6 +81,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
@@ -176,6 +177,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.tasklock", TaskLockConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);

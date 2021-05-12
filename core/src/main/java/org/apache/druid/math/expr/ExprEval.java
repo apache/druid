@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -279,11 +280,70 @@ public abstract class ExprEval<T>
     }
   }
 
-  private static void checkMaxBytes(ExprType type, int sizeBytes, int maxSizeBytes)
+  public static void checkMaxBytes(ExprType type, int sizeBytes, int maxSizeBytes)
   {
     if (sizeBytes > maxSizeBytes) {
       throw new ISE("Unable to serialize [%s], size [%s] is larger than max [%s]", type, sizeBytes, maxSizeBytes);
     }
+  }
+
+  /**
+   * Used to estimate the size in bytes to {@link #serialize} the {@link ExprEval} value, checking against a maximum
+   * size and failing with an {@link ISE} if the estimate is over the maximum.
+   */
+  public static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
+  {
+    final int estimated;
+    switch (eval.type()) {
+      case STRING:
+        String stringValue = eval.asString();
+        estimated = 1 + Integer.BYTES + (stringValue == null ? 0 : StringUtils.estimatedBinaryLengthAsUTF8(stringValue));
+        break;
+      case LONG:
+      case DOUBLE:
+        estimated = 1 + (NullHandling.sqlCompatible() ? 1 + Long.BYTES : Long.BYTES);
+        break;
+      case STRING_ARRAY:
+        String[] stringArray = eval.asStringArray();
+        if (stringArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(stringArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(StringUtils::estimatedBinaryLengthAsUTF8)
+                                         .sum();
+          // since each value is variably sized, there is an integer per element
+          estimated = 1 + Integer.BYTES + (Integer.BYTES * stringArray.length) + elementsSize;
+        }
+        break;
+      case LONG_ARRAY:
+        Long[] longArray = eval.asLongArray();
+        if (longArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(longArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(x -> Long.BYTES)
+                                         .sum();
+          estimated = 1 + Integer.BYTES + (NullHandling.sqlCompatible() ? longArray.length : 0) + elementsSize;
+        }
+        break;
+      case DOUBLE_ARRAY:
+        Double[] doubleArray = eval.asDoubleArray();
+        if (doubleArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(doubleArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(x -> Long.BYTES)
+                                         .sum();
+          estimated = 1 + Integer.BYTES + (NullHandling.sqlCompatible() ? doubleArray.length : 0) + elementsSize;
+        }
+        break;
+      default:
+        throw new IllegalStateException("impossible");
+    }
+    checkMaxBytes(eval.type(), estimated, maxSizeBytes);
   }
 
   /**
@@ -1120,7 +1180,9 @@ public abstract class ExprEval<T>
     @Override
     public String[] asStringArray()
     {
-      return value == null ? null : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
+      return value == null
+             ? null
+             : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
 
     @Nullable

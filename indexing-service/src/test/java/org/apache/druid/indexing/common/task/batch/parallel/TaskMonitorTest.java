@@ -56,7 +56,11 @@ public class TaskMonitorTest
 
   private final ExecutorService taskRunner = Execs.multiThreaded(5, "task-monitor-test-%d");
   private final ConcurrentMap<String, TaskState> tasks = new ConcurrentHashMap<>();
-  private final TaskMonitor<TestTask> monitor = new TaskMonitor<>(new TestIndexingServiceClient(), 3, SPLIT_NUM);
+  private final TaskMonitor<TestTask, SimpleSubTaskReport> monitor = new TaskMonitor<>(
+      new TestIndexingServiceClient(),
+      3,
+      SPLIT_NUM
+  );
 
   @Before
   public void setup()
@@ -180,7 +184,7 @@ public class TaskMonitorTest
     }
   }
 
-  private static class TestTaskSpec extends SubTaskSpec<TestTask>
+  private class TestTaskSpec extends SubTaskSpec<TestTask>
   {
     private final long runTime;
     private final int numMaxFails;
@@ -218,7 +222,7 @@ public class TaskMonitorTest
     }
   }
 
-  private static class TestTask extends NoopTask
+  private class TestTask extends NoopTask
   {
     private final boolean shouldFail;
     private final boolean throwUnknownTypeIdError;
@@ -233,6 +237,7 @@ public class TaskMonitorTest
     @Override
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
+      monitor.collectReport(new SimpleSubTaskReport(getId()));
       if (shouldFail) {
         Thread.sleep(getRunTime());
         return TaskStatus.failure(getId());
@@ -283,6 +288,22 @@ public class TaskMonitorTest
     IntegerInputSplit(int split)
     {
       super(split);
+    }
+  }
+
+  private static class SimpleSubTaskReport implements SubTaskReport
+  {
+    private final String taskId;
+
+    private SimpleSubTaskReport(String taskId)
+    {
+      this.taskId = taskId;
+    }
+
+    @Override
+    public String getTaskId()
+    {
+      return taskId;
     }
   }
 }

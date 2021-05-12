@@ -109,7 +109,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 10),
             new SqlParameter(SqlType.INTEGER, 0)
@@ -128,7 +128,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
@@ -175,7 +175,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       expressionPostAgg("p9", "' foo'"),
                       expressionPostAgg("p10", "'xfoo'")
                   )
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -352,7 +352,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
                   .postAggregators(ImmutableList.of(expressionPostAgg("p0", "(\"a0\" / 10)")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2.1}),
@@ -374,7 +374,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     // with millis
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 10),
             new SqlParameter(
@@ -396,7 +396,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
@@ -411,7 +411,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     // with timestampstring
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 10),
             new SqlParameter(
@@ -433,7 +433,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
@@ -448,7 +448,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 10),
             new SqlParameter(
@@ -470,7 +470,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)")
                                )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
@@ -492,10 +492,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       bound("cnt", "1.1", "100000001", true, true, null, StringComparators.NUMERIC)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(),
+        ImmutableList.of(new Object[]{0L}),
         ImmutableList.of(
             new SqlParameter(SqlType.DOUBLE, 1.1),
             new SqlParameter(SqlType.FLOAT, 100000001.0)
@@ -514,7 +514,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       in("cnt", ImmutableList.of("1.0", "100000001"), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -541,7 +541,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       selector("cnt", "1.0", null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{6L}),
@@ -563,7 +563,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(bound("l1", "3", null, true, false, null, StringComparators.NUMERIC))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(new Object[]{2L}),
@@ -625,7 +625,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         )
         : ImmutableList.of(
@@ -638,10 +638,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(),
+        ImmutableList.of(new Object[]{0L}),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
   }

@@ -1471,4 +1471,82 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
     }
   }
+
+  @Test
+  public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted() throws Exception
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+    );
+
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+
+    // Try delete. Datasource should not be deleted as it is in excluded set
+    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(System.currentTimeMillis(), ImmutableSet.of("fooDataSource"));
+
+    // Datasource should not be deleted
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+    Assert.assertEquals(0, deletedCount);
+  }
+
+  @Test
+  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveAndOlderThanTimeShouldBeDeleted() throws Exception
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+    );
+
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+
+    // Try delete. Datasource should be deleted as it is not in excluded set and created time older than given time
+    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(System.currentTimeMillis(), ImmutableSet.of());
+
+    // Datasource should be deleted
+    Assert.assertNull(
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+    Assert.assertEquals(1, deletedCount);
+  }
+
+  @Test
+  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted() throws Exception
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        ImmutableSet.of(),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+    );
+
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+
+    // Do delete. Datasource metadata should not be deleted. Datasource is not active but it was created just now so it's
+    // created timestamp will be later than the timestamp 2012-01-01T00:00:00Z
+    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis(), ImmutableSet.of());
+
+    // Datasource should not be deleted
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
+    );
+    Assert.assertEquals(0, deletedCount);
+  }
 }
