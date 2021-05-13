@@ -62,7 +62,7 @@ interface HandleColumnClickOptions {
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
-function handleColumnClick(options: HandleColumnClickOptions): void {
+function handleColumnShow(options: HandleColumnClickOptions): void {
   const { columnSchema, columnTable, columnName, columnType, parsedQuery, onQueryChange } = options;
 
   let query: SqlQuery;
@@ -93,8 +93,10 @@ function handleColumnClick(options: HandleColumnClickOptions): void {
   }
 
   let newSelectExpressions = query.selectExpressions;
-  for (const aggregate of aggregates) {
-    newSelectExpressions = newSelectExpressions.append(aggregate);
+  if (newSelectExpressions) {
+    for (const aggregate of aggregates) {
+      newSelectExpressions = newSelectExpressions.append(aggregate);
+    }
   }
 
   onQueryChange(
@@ -284,7 +286,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   icon={IconNames.FUNCTION}
                                   text="Aggregate COUNT(*)"
                                   onClick={() =>
-                                    onQueryChange(parsedQuery.addSelectExpression(COUNT_STAR), true)
+                                    onQueryChange(parsedQuery.addSelect(COUNT_STAR), true)
                                   }
                                 />
                               )}
@@ -328,7 +330,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     icon={IconNames.FULLSCREEN}
                                     text={`Show: ${columnData.COLUMN_NAME}`}
                                     onClick={() => {
-                                      handleColumnClick({
+                                      handleColumnShow({
                                         columnSchema: schemaName,
                                         columnTable: tableName,
                                         columnName: columnData.COLUMN_NAME,
