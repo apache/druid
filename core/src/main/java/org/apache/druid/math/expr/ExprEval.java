@@ -543,7 +543,18 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * returns true if numeric primitive value for this ExprEval is null, otherwise false.
+   * The method returns true if numeric primitive value for this {@link ExprEval} is null, otherwise false.
+   *
+   * If this method returns false, then the values returned by {@link #asLong()}, {@link #asDouble()},
+   * and {@link #asInt()} are "valid", since this method is primarily used during {@link Expr} evaluation to decide
+   * if primitive numbers can be fetched to use.
+   *
+   * If a type cannot sanely convert into a primitive numeric value, then this method should always return true so that
+   * these primitive numeric getters are not called, since returning false is assumed to mean these values are valid.
+   *
+   * Note that all types must still return values for {@link #asInt()}, {@link #asLong()}}, and {@link #asDouble()},
+   * since this can still happen if {@link NullHandling#sqlCompatible()} is false, but it should be assumed that this
+   * can only happen in that mode and 0s are typical and expected for values that would otherwise be null.
    */
   public abstract boolean isNumericNull();
 
@@ -552,10 +563,25 @@ public abstract class ExprEval<T>
     return false;
   }
 
+  /**
+   * Get the primtive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return placeholder a value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract int asInt();
 
+  /**
+   * Get the primtive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract long asLong();
 
+  /**
+   * Get the primtive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract double asDouble();
 
   public abstract boolean asBoolean();
