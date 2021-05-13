@@ -139,7 +139,7 @@ public class ExpressionSelectors
       ExpressionPlan plan
   )
   {
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && !plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT)) {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
       final ValueType inputType = plan.getSingleInputType();
       if (inputType == ValueType.LONG) {
@@ -184,8 +184,7 @@ public class ExpressionSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)
-        && !plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT)) {
+    if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
       if (plan.getSingleInputType() == ValueType.STRING) {
         return new SingleStringInputDimensionSelector(
