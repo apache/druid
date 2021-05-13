@@ -67,7 +67,7 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
+    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(10000000));
   }
 
   @Inject

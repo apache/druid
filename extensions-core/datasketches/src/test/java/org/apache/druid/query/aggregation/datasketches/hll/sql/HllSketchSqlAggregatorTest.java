@@ -139,9 +139,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctHllSketch() throws Exception
   {
-    // Can't vectorize due to SUBSTRING expression.
-    cannotVectorize();
-
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
