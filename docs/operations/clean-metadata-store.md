@@ -42,7 +42,7 @@ There are several cases when you should consider automated cleanup of the metada
 - If you have issues with the hard disk for your metadata database filling up.
 - If you run into performance issues with the metadata database. For example API calls are very slow or fail to execute.
 
-Do not use the metadata store automated cleanup features if you have requirements to retain metadata records. For example, you have compliance requirements to keep audit records. In these cases, you should come up with an alternate method to preserve the audit metadata while freeing up your active metadata store.
+If you have compliance requirements to keep audit records, use alternative methods to preserve audit metadata if you enable automated cleanup for audit records. For example, periodically export audit metadata records to external storage.
 
 ## Configure automated metadata cleanup
 
