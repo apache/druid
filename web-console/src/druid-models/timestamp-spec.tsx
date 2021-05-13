@@ -100,7 +100,6 @@ export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [
     name: 'column',
     type: 'string',
     defaultValue: 'timestamp',
-    required: true,
   },
   {
     name: 'format',
