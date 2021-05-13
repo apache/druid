@@ -137,6 +137,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctThetaSketch() throws Exception
   {
+    // Cannot vectorize due to SUBSTRING.
+    cannotVectorize();
+
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {

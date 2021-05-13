@@ -117,4 +117,16 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
     }
     return NilGroupByVectorColumnSelector.INSTANCE;
   }
+
+  /**
+   * The group by engine vector processor has a more relaxed approach to choosing to use a dictionary encoded string
+   * selector
+   */
+  @Override
+  public boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
+  {
+    Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
+    Preconditions.checkArgument(capabilities.getType() == ValueType.STRING, "Must only be called on a STRING column");
+    return capabilities.isDictionaryEncoded().isTrue();
+  }
 }

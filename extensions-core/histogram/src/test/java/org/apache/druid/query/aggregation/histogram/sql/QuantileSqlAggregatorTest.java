@@ -121,6 +121,8 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnFloatAndLongs() throws Exception
   {
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE(m1, 0.01),\n"

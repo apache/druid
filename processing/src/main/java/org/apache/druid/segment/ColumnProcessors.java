@@ -332,8 +332,8 @@ public class ColumnProcessors
 
     switch (capabilities.getType()) {
       case STRING:
-        // if column is not uniquely dictionary encoded, use an object selector
-        if (capabilities.isDictionaryEncoded().isFalse()) {
+        // let the processor factory decide if it prefers to use an object selector or dictionary encoded selector
+        if (!processorFactory.useDictionaryEncodedSelector(capabilities)) {
           return processorFactory.makeObjectProcessor(
               capabilities,
               objectSelectorFn.apply(selectorFactory)

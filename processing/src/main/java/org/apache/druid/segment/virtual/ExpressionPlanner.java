@@ -188,23 +188,6 @@ public class ExpressionPlanner
       // due to unknown inputs, but that's ok here since it just means it doesnt exist
       outputType = expression.getOutputType(inspector);
       traits.add(ExpressionPlan.Trait.VECTORIZABLE);
-    } else if (supportsVector && ExpressionPlan.is(traits, ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
-      // single input scalar expressions are currently vectorizable even if the expression is not
-      // this is kind of gross because this is actually only vectorizable if you're using a dictionary encoded
-      // vector selector, and not a vector object selector, but hopefully things check that a dictionary exists
-      // and prefer to use it...
-      // but the least we can do is check that the column is in fact dictionary encoded to try to sway the hands of fate
-      ColumnCapabilities columnCapabilities =
-          inspector.getColumnCapabilities(Iterables.getOnlyElement(analysis.getRequiredBindings()));
-      if (columnCapabilities != null
-          && columnCapabilities.isDictionaryEncoded().isTrue()
-          && columnCapabilities.hasMultipleValues().isFalse()) {
-        outputType = expression.getOutputType(inspector);
-        // must be a string
-        if (outputType == ExprType.STRING) {
-          traits.add(ExpressionPlan.Trait.VECTORIZABLE);
-        }
-      }
     }
 
     return new ExpressionPlan(

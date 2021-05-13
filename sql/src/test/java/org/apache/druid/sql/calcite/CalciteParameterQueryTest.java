@@ -649,6 +649,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullParameter() throws Exception
   {
+    cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
     // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
 
