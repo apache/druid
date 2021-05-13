@@ -70,7 +70,6 @@ public class ITRetryUtil
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
         lastException = e;
-        continue;
       }
     }
 
