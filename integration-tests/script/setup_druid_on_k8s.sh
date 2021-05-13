@@ -30,11 +30,11 @@ cp -r client_tls docker/client_tls
 cd ..
 
 # Build Docker images for pods
-#mvn -B -ff -q dependency:go-offline \
-#      install \
-#      -Pdist,bundle-contrib-exts \
-#      -Pskip-static-checks,skip-tests \
-#      -Dmaven.javadoc.skip=true
+mvn -B -ff -q dependency:go-offline \
+      install \
+      -Pdist,bundle-contrib-exts \
+      -Pskip-static-checks,skip-tests \
+      -Dmaven.javadoc.skip=true
 
 docker build --build-arg BUILD_FROM_SOURCE=0 -t druid/base:v1 -f distribution/docker/Dockerfile .
 docker build --build-arg BASE_IMAGE=druid/base:v1 -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
