@@ -53,7 +53,7 @@ sed -i.bak "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
 $KUBECTL apply -f ${DRUID_CLUSTER_SPEC_YAML}
 
 # Wait a bit
-#sleep 60
+sleep 60
 
 ## Debug And FastFail
 
