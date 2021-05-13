@@ -12882,8 +12882,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(
-                                        selector("dim1", "nonexistent", null),
-                                        not(selector("dim3", null, null))
+                                        not(selector("dim3", null, null)),
+                                        selector("dim1", "nonexistent", null)
                                     )
                                 )
                             )

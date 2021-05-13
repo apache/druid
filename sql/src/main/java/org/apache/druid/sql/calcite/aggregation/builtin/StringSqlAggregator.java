@@ -60,6 +60,7 @@ public class StringSqlAggregator implements SqlAggregator
 {
   private static final String NAME = "STRING_AGG";
   private static final SqlAggFunction FUNCTION = new StringAggFunction();
+
   @Override
   public SqlAggFunction calciteFunction()
   {
