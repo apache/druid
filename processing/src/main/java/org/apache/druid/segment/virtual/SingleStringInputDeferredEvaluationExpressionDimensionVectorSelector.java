@@ -19,33 +19,34 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 
 /**
- * A DimensionSelector decorator that computes an expression on top of it. See {@link ExpressionSelectors} for details
- * on how expression selectors are constructed.
+ * A {@link SingleValueDimensionVectorSelector} decorator that directly exposes the underlying dictionary ids in
+ * {@link #getRowVector}, saving expression computation until {@link #lookupName} is called. This allows for
+ * performing operations like grouping on the native dictionary ids, and deferring expression evaluation until
+ * after, which can dramatically reduce the total number of evaluations.
+ *
+ * @see ExpressionVectorSelectors for details on how expression vector selectors are constructed.
+ *
+ * @see SingleStringInputDeferredEvaluationExpressionDimensionSelector for the non-vectorized version of this selector.
  */
-public class SingleStringInputDimensionSelector implements DimensionSelector
+public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector
+    implements SingleValueDimensionVectorSelector
 {
-  private final DimensionSelector selector;
+  private final SingleValueDimensionVectorSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
 
-  public SingleStringInputDimensionSelector(
-      final DimensionSelector selector,
-      final Expr expression
+  public SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
+      SingleValueDimensionVectorSelector selector,
+      Expr expression
   )
   {
     // Verify selector has a working dictionary.
@@ -53,47 +54,19 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
         || !selector.nameLookupPossibleInAdvance()) {
       throw new ISE("Selector of class[%s] does not have a dictionary, cannot use it.", selector.getClass().getName());
     }
-
-    this.selector = Preconditions.checkNotNull(selector, "selector");
-    this.expression = Preconditions.checkNotNull(expression, "expression");
-  }
-
-  @Override
-  public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
-  {
-    inspector.visit("selector", selector);
-    inspector.visit("expression", expression);
-  }
-
-  /**
-   * Get the underlying selector {@link IndexedInts} row
-   */
-  @Override
-  public IndexedInts getRow()
-  {
-    return selector.getRow();
-  }
-
-  @Override
-  public ValueMatcher makeValueMatcher(@Nullable final String value)
-  {
-    return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
-  }
-
-  @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
-  {
-    return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+    this.selector = selector;
+    this.expression = expression;
   }
 
   @Override
   public int getValueCardinality()
   {
-    return selector.getValueCardinality();
+    return CARDINALITY_UNKNOWN;
   }
 
+  @Nullable
   @Override
-  public String lookupName(final int id)
+  public String lookupName(int id)
   {
     final String value;
 
@@ -106,7 +79,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return true;
+    return selector.nameLookupPossibleInAdvance();
   }
 
   @Nullable
@@ -116,16 +89,21 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
     return null;
   }
 
-  @Nullable
   @Override
-  public Object getObject()
+  public int[] getRowVector()
   {
-    return defaultGetObject();
+    return selector.getRowVector();
   }
 
   @Override
-  public Class classOfObject()
+  public int getMaxVectorSize()
   {
-    return Object.class;
+    return selector.getMaxVectorSize();
+  }
+
+  @Override
+  public int getCurrentVectorSize()
+  {
+    return selector.getCurrentVectorSize();
   }
 }

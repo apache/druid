@@ -187,7 +187,7 @@ public class ExpressionSelectors
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
       if (plan.getSingleInputType() == ValueType.STRING) {
-        return new SingleStringInputDimensionSelector(
+        return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );

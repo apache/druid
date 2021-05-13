@@ -56,7 +56,7 @@ public class ExpressionVectorSelectors
       return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorInspector(), constant);
     }
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && ExprType.STRING == plan.getOutputType()) {
-      return new SingleStringDeferredEvaluationExpressionDimensionVectorSelector(
+      return new SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
           factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(plan.getSingleInputName())),
           plan.getExpression()
       );
