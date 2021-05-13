@@ -61,8 +61,8 @@ public class ITRetryUtil
           break;
         }
         LOG.info(
-            "Attempt[%d]: Task %s still not complete. Next retry in %d ms",
-            currentTry, taskMessage, delayInMillis
+            "Attempt[%d/%d]: Task %s still not complete. Next retry in %d ms",
+            currentTry, retryCount, taskMessage, delayInMillis
         );
         Thread.sleep(delayInMillis);
         currentTry++;
