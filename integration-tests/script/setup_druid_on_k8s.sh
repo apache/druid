@@ -30,11 +30,11 @@ cp -r client_tls docker/client_tls
 cd ..
 
 # Build Docker images for pods
-mvn -B -ff -q dependency:go-offline \
-      install \
-      -Pdist,bundle-contrib-exts \
-      -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true
+#mvn -B -ff -q dependency:go-offline \
+#      install \
+#      -Pdist,bundle-contrib-exts \
+#      -Pskip-static-checks,skip-tests \
+#      -Dmaven.javadoc.skip=true
 
 docker build --build-arg BUILD_FROM_SOURCE=0 -t druid/base:v1 -f distribution/docker/Dockerfile .
 docker build --build-arg BASE_IMAGE=druid/base:v1 -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .
@@ -49,13 +49,17 @@ $KUBECTL apply -f integration-tests/k8s/postgres.yaml
 
 # spec name needs to come from argument for high availability test
 $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
-sed -i "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
+sed -i.bak "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
 $KUBECTL apply -f ${DRUID_CLUSTER_SPEC_YAML}
 
 # Wait a bit
-sleep 60
+#sleep 60
 
 ## Debug And FastFail
 
 $KUBECTL get pod
 $KUBECTL get svc
+
+for v in druid-tiny-cluster-coordinator1-0 druid-tiny-cluster-coordinator2-0 druid-tiny-cluster-overlord1-0 druid-tiny-cluster-overlord2-0 ; do
+  $KUBECTL logs --tail 1000 $v
+done
