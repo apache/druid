@@ -22,6 +22,7 @@ package org.apache.druid.query.topn;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -52,6 +53,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
@@ -5957,6 +5959,110 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     makeRowWithNulls("dim", 50.0f, "count", 279L),
                     makeRowWithNulls("dim", 70.0f, "count", 279L),
                     makeRowWithNulls("dim", 80.0f, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testExpressionAggregator()
+  {
+    // sorted by array length of array_agg_distinct
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric("array_agg_distinct")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(
+            Lists.newArrayList(
+                Arrays.asList(
+                    new ExpressionLambdaAggregatorFactory(
+                        "diy_count",
+                        Collections.emptySet(),
+                        null,
+                        "0",
+                        null,
+                        "__acc + 1",
+                        "__acc + diy_count",
+                        null,
+                        null,
+                        null,
+                        TestExprMacroTable.INSTANCE
+                    ),
+                    new ExpressionLambdaAggregatorFactory(
+                        "diy_sum",
+                        ImmutableSet.of("index"),
+                        null,
+                        "0.0",
+                        null,
+                        "__acc + index",
+                        null,
+                        null,
+                        null,
+                        null,
+                        TestExprMacroTable.INSTANCE
+                    ),
+                    new ExpressionLambdaAggregatorFactory(
+                        "diy_decomposed_sum",
+                        ImmutableSet.of("index"),
+                        null,
+                        "0.0",
+                        "<DOUBLE>[]",
+                        "__acc + index",
+                        "array_concat(__acc, diy_decomposed_sum)",
+                        null,
+                        "fold((x, acc) -> x + acc, o, 0.0)",
+                        null,
+                        TestExprMacroTable.INSTANCE
+                    ),
+                    new ExpressionLambdaAggregatorFactory(
+                        "array_agg_distinct",
+                        ImmutableSet.of(QueryRunnerTestHelper.QUALITY_DIMENSION),
+                        "acc",
+                        "[]",
+                        null,
+                        "array_set_add(acc, quality)",
+                        "array_set_add_all(acc, array_agg_distinct)",
+                        "if(array_length(o1) > array_length(o2), 1, if (array_length(o1) == array_length(o2), 0, -1))",
+                        null,
+                        null,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
+                        .put("diy_count", 837L)
+                        .put("diy_sum", 95606.57232284546D)
+                        .put("diy_decomposed_sum", 95606.57232284546D)
+                        .put("array_agg_distinct", new String[]{"mezzanine", "news", "premium", "business", "entertainment", "health", "technology", "automotive", "travel"})
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
+                        .put("diy_count", 186L)
+                        .put("diy_sum", 215679.82879638672D)
+                        .put("diy_decomposed_sum", 215679.82879638672D)
+                        .put("array_agg_distinct", new String[]{"mezzanine", "premium"})
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
+                        .put("diy_count", 186L)
+                        .put("diy_sum", 192046.1060180664D)
+                        .put("diy_decomposed_sum", 192046.1060180664D)
+                        .put("array_agg_distinct", new String[]{"mezzanine", "premium"})
+                        .build()
                 )
             )
         )

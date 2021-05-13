@@ -34,13 +34,13 @@
       "ingestion/data-formats",
       "ingestion/schema-design",
       "ingestion/data-management",
+      "ingestion/compaction",
       {
         "type": "subcategory",
         "label": "Stream ingestion",
         "ids": [
           "development/extensions-core/kafka-ingestion",
           "development/extensions-core/kinesis-ingestion",
-          "ingestion/tranquility",
           "ingestion/standalone-realtime"
         ]
       },
@@ -69,6 +69,7 @@
           "querying/multi-value-dimensions",
           "querying/multitenancy",
           "querying/caching",
+          "querying/using-caching",
           "querying/query-context"
         ]
       },

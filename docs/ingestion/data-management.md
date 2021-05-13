@@ -21,175 +21,11 @@ title: "Data management"
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+Within the context of this topic data management refers to Apache Druid's data maintenance capabilities for existing datasources. There are several options to help you keep your data relevant and to help your Druid cluster remain performant. For example updating, reingesting, adding lookups, reindexing, or deleting data.
 
+In addition to the tasks covered on this page, you can also use segment compaction to improve the layout of your existing data. Refer to [Segment optimization](../operations/segment-optimization.md) to see if compaction will help in your environment. For an overview and steps to configure manual compaction tasks, see [Compaction](./compaction.md). 
 
-
-
-## Schema changes
-
-Schemas for datasources can change at any time and Apache Druid supports different schemas among segments.
-
-### Replacing segments
-
-Druid uniquely
-identifies segments using the datasource, interval, version, and partition number. The partition number is only visible in the segment id if
-there are multiple segments created for some granularity of time. For example, if you have hourly segments, but you
-have more data in an hour than a single segment can hold, you can create multiple segments for the same hour. These segments will share
-the same datasource, interval, and version, but have linearly increasing partition numbers.
-
-```
-foo_2015-01-01/2015-01-02_v1_0
-foo_2015-01-01/2015-01-02_v1_1
-foo_2015-01-01/2015-01-02_v1_2
-```
-
-In the example segments above, the dataSource = foo, interval = 2015-01-01/2015-01-02, version = v1, partitionNum = 0.
-If at some later point in time, you reindex the data with a new schema, the newly created segments will have a higher version id.
-
-```
-foo_2015-01-01/2015-01-02_v2_0
-foo_2015-01-01/2015-01-02_v2_1
-foo_2015-01-01/2015-01-02_v2_2
-```
-
-Druid batch indexing (either Hadoop-based or IndexTask-based) guarantees atomic updates on an interval-by-interval basis.
-In our example, until all `v2` segments for `2015-01-01/2015-01-02` are loaded in a Druid cluster, queries exclusively use `v1` segments.
-Once all `v2` segments are loaded and queryable, all queries ignore `v1` segments and switch to the `v2` segments.
-Shortly afterwards, the `v1` segments are unloaded from the cluster.
-
-Note that updates that span multiple segment intervals are only atomic within each interval. They are not atomic across the entire update.
-For example, you have segments such as the following:
-
-```
-foo_2015-01-01/2015-01-02_v1_0
-foo_2015-01-02/2015-01-03_v1_1
-foo_2015-01-03/2015-01-04_v1_2
-```
-
-`v2` segments will be loaded into the cluster as soon as they are built and replace `v1` segments for the period of time the
-segments overlap. Before v2 segments are completely loaded, your cluster may have a mixture of `v1` and `v2` segments.
-
-```
-foo_2015-01-01/2015-01-02_v1_0
-foo_2015-01-02/2015-01-03_v2_1
-foo_2015-01-03/2015-01-04_v1_2
-```
-
-In this case, queries may hit a mixture of `v1` and `v2` segments.
-
-### Different schemas among segments
-
-Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not
-another, queries that involve both segments still work. Queries for the segment missing the dimension will behave as if the dimension has only null values.
-Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment missing the
-metric will generally "do the right thing". Aggregations over this missing metric behave as if the metric were missing.
-
-<a name="compact"></a>
-
-## Compaction and reindexing
-
-Compaction is a type of overwrite operation, which reads an existing set of segments, combines them into a new set with larger but fewer segments, and overwrites the original set with the new compacted set, without changing the data that is stored.
-
-For performance reasons, it is sometimes beneficial to compact a set of segments into a set of larger but fewer segments, as there is some per-segment processing and memory overhead in both the ingestion and querying paths.
-
-Compaction tasks merge all segments of the given interval. The syntax is:
-
-```json
-{
-    "type": "compact",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "ioConfig": <IO config>,
-    "dimensionsSpec" <custom dimensionsSpec>,
-    "metricsSpec" <custom metricsSpec>,
-    "segmentGranularity": <segment granularity after compaction>,
-    "tuningConfig" <parallel indexing task tuningConfig>,
-    "context": <task context>
-}
-```
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `compact`|Yes|
-|`id`|Task id|No|
-|`dataSource`|DataSource name to be compacted|Yes|
-|`ioConfig`|ioConfig for compaction task. See [Compaction IOConfig](#compaction-ioconfig) for details.|Yes|
-|`dimensionsSpec`|Custom dimensionsSpec. Compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
-|`metricsSpec`|Custom metricsSpec. Compaction task will use this metricsSpec if specified rather than generating one.|No|
-|`segmentGranularity`|If this is set, compactionTask will change the segment granularity for the given interval. See `segmentGranularity` of [`granularitySpec`](index.md#granularityspec) for more details. See the below table for the behavior.|No|
-|`tuningConfig`|[Parallel indexing task tuningConfig](../ingestion/native-batch.md#tuningconfig)|No|
-|`context`|[Task context](../ingestion/tasks.md#context)|No|
-
-
-An example of compaction task is
-
-```json
-{
-  "type" : "compact",
-  "dataSource" : "wikipedia",
-  "ioConfig" : {
-    "type": "compact",
-    "inputSpec": {
-      "type": "interval",
-      "interval": "2017-01-01/2018-01-01"
-    }
-  }
-}
-```
-
-This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
-Since `segmentGranularity` is null, the original segment granularity will be remained and not changed after compaction.
-To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.md#compaction-dynamic-configuration) or [numShards](../ingestion/native-batch.md#tuningconfig).
-Please note that you can run multiple compactionTasks at the same time. For example, you can run 12 compactionTasks per month instead of running a single task for the entire year.
-
-A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
-For example, its `inputSource` is always the [DruidInputSource](native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec`
-include all dimensions and metrics of the input segments by default.
-
-Compaction tasks will exit with a failure status code, without doing anything, if the interval you specify has no
-data segments loaded in it (or if the interval you specify is empty).
-
-The output segment can have different metadata from the input segments unless all input segments have the same metadata.
-
-- Dimensions: since Apache Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
-If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
-However, even if the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be
-changed from `string` to primitive types, or the order of dimensions can be changed for better locality.
-In this case, the dimensions of recent segments precede that of old segments in terms of data types and the ordering.
-This is because more recent segments are more likely to have the new desired order and data types. If you want to use
-your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
-- Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
-See [Roll-up](../ingestion/index.md#rollup) for more details.
-You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
-
-
-### Compaction IOConfig
-
-The compaction IOConfig requires specifying `inputSpec` as seen below.
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `compact`|Yes|
-|`inputSpec`|Input specification|Yes|
-
-There are two supported `inputSpec`s for now.
-
-The interval `inputSpec` is:
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `interval`|Yes|
-|`interval`|Interval to compact|Yes|
-
-The segments `inputSpec` is:
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `segments`|Yes|
-|`segments`|A list of segment IDs|Yes|
-
-
-## Adding new data
+## Adding new data to existing datasources
 
 Druid can insert new data to an existing datasource by appending new segments to existing segment sets. It can also add new data by merging an existing set of segments with new data and overwriting the original set.
 
@@ -280,3 +116,8 @@ Druid also supports separating Historical processes into tiers, and the retentio
 These features are useful for performance/cost management; a common use case is separating Historical processes into a "hot" tier and a "cold" tier.
 
 For more information, please see [Load rules](../operations/rule-configuration.md).
+
+## Learn more
+See the following topics for more information:
+- [Compaction](./compaction.md) for an overview and steps to configure manual compaction tasks.
+- [Segments](../design/segments.md) for information on how Druid handles segment versioning.

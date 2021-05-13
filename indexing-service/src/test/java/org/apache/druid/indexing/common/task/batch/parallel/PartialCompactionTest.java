@@ -75,7 +75,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   public PartialCompactionTest()
   {
-    super(LockGranularity.SEGMENT, true);
+    super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
   @Before

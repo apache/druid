@@ -16,14 +16,5 @@
  * limitations under the License.
  */
 
-export interface SyntaxDescription {
-  name: string;
-  description: string;
-}
-
-export interface FunctionSyntaxDescription extends SyntaxDescription {
-  arguments: string;
-}
-
-export const SQL_DATA_TYPES: SyntaxDescription[];
-export const SQL_FUNCTIONS: FunctionSyntaxDescription[];
+export const SQL_DATA_TYPES: [name: string, runtime: string, description: string][];
+export const SQL_FUNCTIONS: [name: string, args: string, description: string][];

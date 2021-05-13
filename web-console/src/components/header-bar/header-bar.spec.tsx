@@ -25,7 +25,7 @@ import { HeaderBar } from './header-bar';
 
 describe('header bar', () => {
   it('matches snapshot', () => {
-    const headerBar = shallow(<HeaderBar active={'load-data'} capabilities={Capabilities.FULL} />);
+    const headerBar = shallow(<HeaderBar active="load-data" capabilities={Capabilities.FULL} />);
     expect(headerBar).toMatchSnapshot();
   });
 });

@@ -50,6 +50,7 @@ public class JoinDataSourceTest
       "j.",
       "x == \"j.x\"",
       JoinType.LEFT,
+      null,
       ExprMacroTable.nil()
   );
 
@@ -59,6 +60,7 @@ public class JoinDataSourceTest
       "j.",
       "x == \"j.x\"",
       JoinType.LEFT,
+      null,
       ExprMacroTable.nil()
   );
 

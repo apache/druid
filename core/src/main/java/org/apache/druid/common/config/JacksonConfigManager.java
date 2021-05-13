@@ -22,13 +22,16 @@ package org.apache.druid.common.config;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,18 +41,21 @@ public class JacksonConfigManager
 {
   private final ConfigManager configManager;
   private final ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapperSkipNull;
   private final AuditManager auditManager;
 
   @Inject
   public JacksonConfigManager(
       ConfigManager configManager,
-      ObjectMapper jsonMapper,
+      @Json ObjectMapper jsonMapper,
+      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValue,
       AuditManager auditManager
   )
   {
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
     this.auditManager = auditManager;
+    this.jsonMapperSkipNull = jsonMapperOnlyNonNullValue;
   }
 
   public <T> AtomicReference<T> watch(String key, Class<? extends T> clazz)
@@ -67,23 +73,44 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
+  /**
+   * Set the config and add audit entry
+   *
+   * @param key of the config to set
+   * @param val new config value to insert
+   * @param auditInfo metadata regarding the change to config, for audit purposes
+   */
   public <T> SetResult set(String key, T val, AuditInfo auditInfo)
   {
-    ConfigSerde configSerde = create(val.getClass(), null);
-    // Audit and actual config change are done in separate transactions
-    // there can be phantom audits and reOrdering in audit changes as well.
-    auditManager.doAudit(
-        AuditEntry.builder()
-                  .key(key)
-                  .type(key)
-                  .auditInfo(auditInfo)
-                  .payload(configSerde.serializeToString(val))
-                  .build()
-    );
-    return configManager.set(key, configSerde, val);
+    return set(key, null, val, auditInfo);
   }
 
-  private <T> ConfigSerde<T> create(final Class<? extends T> clazz, final T defaultVal)
+  /**
+   * Set the config and add audit entry
+   *
+   * @param key of the config to set
+   * @param oldValue old config value. If not null, then the update will only succeed if the insert
+   *                 happens when current database entry is the same as this value. If null, then the insert
+   *                 will not consider the current database entry.
+   * @param newValue new config value to insert
+   * @param auditInfo metadata regarding the change to config, for audit purposes
+   */
+  public <T> SetResult set(
+      String key,
+      @Nullable T oldValue,
+      T newValue,
+      AuditInfo auditInfo
+  )
+  {
+    ConfigSerde configSerde = create(newValue.getClass(), null);
+    // Audit and actual config change are done in separate transactions
+    // there can be phantom audits and reOrdering in audit changes as well.
+    auditManager.doAudit(key, key, auditInfo, newValue, configSerde);
+    return configManager.set(key, configSerde, oldValue, newValue);
+  }
+
+  @VisibleForTesting
+  <T> ConfigSerde<T> create(final Class<? extends T> clazz, final T defaultVal)
   {
     return new ConfigSerde<T>()
     {
@@ -99,10 +126,10 @@ public class JacksonConfigManager
       }
 
       @Override
-      public String serializeToString(T obj)
+      public String serializeToString(T obj, boolean skipNull)
       {
         try {
-          return jsonMapper.writeValueAsString(obj);
+          return skipNull ? jsonMapperSkipNull.writeValueAsString(obj) : jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -121,7 +148,8 @@ public class JacksonConfigManager
     };
   }
 
-  private <T> ConfigSerde<T> create(final TypeReference<? extends T> clazz, final T defaultVal)
+  @VisibleForTesting
+  <T> ConfigSerde<T> create(final TypeReference<? extends T> clazz, final T defaultVal)
   {
     return new ConfigSerde<T>()
     {
@@ -137,10 +165,10 @@ public class JacksonConfigManager
       }
 
       @Override
-      public String serializeToString(T obj)
+      public String serializeToString(T obj, boolean skipNull)
       {
         try {
-          return jsonMapper.writeValueAsString(obj);
+          return skipNull ? jsonMapperSkipNull.writeValueAsString(obj) : jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);

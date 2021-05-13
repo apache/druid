@@ -20,7 +20,7 @@
 package org.apache.druid.query.planning;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
@@ -126,8 +126,8 @@ public class DataSourceAnalysis
     }
 
     if (current instanceof JoinDataSource) {
-      final Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
-      return new DataSourceAnalysis(dataSource, flattened.lhs.lhs, baseQuery, flattened.lhs.rhs, flattened.rhs);
+      final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
+      return new DataSourceAnalysis(dataSource, flattened.first, baseQuery, flattened.second, flattened.third);
     } else {
       return new DataSourceAnalysis(dataSource, current, baseQuery, null, Collections.emptyList());
     }
@@ -139,7 +139,7 @@ public class DataSourceAnalysis
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Pair<Pair<DataSource, DimFilter>, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
     DimFilter currentDimFilter = null;
@@ -166,7 +166,7 @@ public class DataSourceAnalysis
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return Pair.of(Pair.of(current, currentDimFilter), preJoinableClauses);
+    return Triple.of(current, currentDimFilter, preJoinableClauses);
   }
 
   /**

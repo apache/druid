@@ -73,6 +73,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -344,6 +345,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   /**
    * If this query has a single universal timestamp, return it. Otherwise return null.
+   *
+   * If {@link #getIntervals()} is empty, there are no results (or timestamps) so this method returns null.
    *
    * This method will return a nonnull timestamp in the following two cases:
    *
@@ -715,7 +718,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     if (!timestampStringFromContext.isEmpty()) {
       return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(granularity)) {
-      final DateTime timeStart = getIntervals().get(0).getStart();
+      final List<Interval> intervals = getIntervals();
+      if (intervals.isEmpty()) {
+        // null, the "universal timestamp" of nothing
+        return null;
+      }
+      final DateTime timeStart = intervals.get(0).getStart();
       return granularity.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
@@ -769,6 +777,19 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public Sequence<ResultRow> postProcess(Sequence<ResultRow> results)
   {
     return postProcessingFn.apply(results);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        dimensions,
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

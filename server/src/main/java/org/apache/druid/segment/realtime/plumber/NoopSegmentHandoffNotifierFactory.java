@@ -21,6 +21,8 @@ package org.apache.druid.segment.realtime.plumber;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 
 import java.util.concurrent.Executor;
 

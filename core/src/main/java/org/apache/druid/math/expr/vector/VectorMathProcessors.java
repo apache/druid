@@ -21,6 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Exprs;
@@ -130,13 +131,13 @@ public class VectorMathProcessors
     if (leftType == ExprType.LONG) {
       if (rightType == null || rightType == ExprType.LONG) {
         processor = longOutLongsInProcessor.get();
-      } else if (rightType == ExprType.DOUBLE) {
+      } else if (rightType == ExprType.STRING || rightType == ExprType.DOUBLE) {
         processor = doubleOutLongDoubleInProcessor.get();
       }
     } else if (leftType == ExprType.DOUBLE) {
       if (rightType == ExprType.LONG) {
         processor = doubleOutDoubleLongInProcessor.get();
-      } else if (rightType == null || rightType == ExprType.DOUBLE) {
+      } else if (rightType == null || rightType == ExprType.STRING || rightType == ExprType.DOUBLE) {
         processor = doubleOutDoublesInProcessor.get();
       }
     } else if (leftType == null) {
@@ -144,10 +145,18 @@ public class VectorMathProcessors
         processor = longOutLongsInProcessor.get();
       } else if (rightType == ExprType.DOUBLE) {
         processor = doubleOutLongDoubleInProcessor.get();
+      } else if (rightType == null) {
+        processor = longOutLongsInProcessor.get();
+      }
+    } else if (leftType == ExprType.STRING) {
+      if (rightType == ExprType.LONG) {
+        processor = longOutLongsInProcessor.get();
+      } else if (rightType == ExprType.DOUBLE) {
+        processor = doubleOutLongDoubleInProcessor.get();
       }
     }
     if (processor == null) {
-      throw Exprs.cannotVectorize();
+      throw Exprs.cannotVectorize(StringUtils.format("%s %s", leftType, rightType));
     }
     return (ExprVectorProcessor<T>) processor;
   }
@@ -677,9 +686,9 @@ public class VectorMathProcessors
       Expr right
   )
   {
+    final ExprType leftType = left.getOutputType(inspector);
+    final ExprType rightType = right.getOutputType(inspector);
     BivariateFunctionVectorProcessor<?, ?, ?> processor = null;
-    ExprType leftType = left.getOutputType(inspector);
-    ExprType rightType = right.getOutputType(inspector);
     if ((leftType == ExprType.LONG && (rightType == null || rightType == ExprType.LONG)) ||
         (leftType == null && rightType == ExprType.LONG)) {
       processor = new DoubleOutLongsInFunctionVectorProcessor(

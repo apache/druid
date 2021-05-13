@@ -22,6 +22,7 @@
 500MiB
 64-bit
 ACL
+ACLs
 APIs
 AvroStorage
 AWS
@@ -38,10 +39,11 @@ Base64-encoded
 ByteBuffer
 CIDR
 CORS
+CNF
 CPUs
 CSVs
 Ceph
-CNF
+CloudWatch
 ColumnDescriptor
 Corretto
 DDL
@@ -124,6 +126,7 @@ JsonProperty
 KMS
 Kerberized
 Kerberos
+KeyStores
 Kinesis
 Kubernetes
 LRU
@@ -218,6 +221,7 @@ codec
 colocated
 colocation
 compactable
+compactionTask
 config
 configs
 consumerProperties
@@ -258,6 +262,7 @@ firehoses
 fromPigAvroStorage
 frontends
 granularities
+granularitySpec
 gzip
 gzipped
 hadoop
@@ -280,6 +285,7 @@ javadoc
 joinable
 kerberos
 keystore
+keytool
 keytab
 kubernetes
 laning
@@ -300,6 +306,7 @@ mergeable
 metadata
 millis
 misconfiguration
+misconfigured
 mostAvailableSize
 multitenancy
 multitenant
@@ -312,6 +319,7 @@ netflow
 non-nullable
 noop
 numerics
+numShards
 parameterized
 parseable
 partitioner
@@ -365,6 +373,7 @@ reingest
 reingesting
 reingestion
 repo
+requireSSL
 rollup
 rollups
 rsync
@@ -380,6 +389,8 @@ sharding
 skipHeaderRows
 smooshed
 splittable
+ssl
+sslmode
 stdout
 storages
 stringified
@@ -415,6 +426,7 @@ unparsed
 unsetting
 untrusted
 useFilterCNF
+useSSL
 uptime
 uris
 urls
@@ -583,6 +595,11 @@ com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
  - ../docs/development/extensions-contrib/statsd.md
 convertRange
+- ../docs/development/extensions-contrib/prometheus.md
+HTTPServer
+conversionFactor
+prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -625,6 +642,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+protoBytesDecoder
 flattenSpec
 jq
 org.apache.druid.extensions
@@ -965,6 +983,7 @@ InputSplit
 JobHistory
 a.example.com
 assumeGrouped
+awaitSegmentAvailabilityTimeoutMillis
 cleanupOnFailure
 combineText
 connectURI
@@ -1029,7 +1048,9 @@ baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
+countryName
 dataSchema's
+dropExisting
 foldCase
 forceGuaranteedRollup
 httpAuthenticationPassword
@@ -1054,6 +1075,7 @@ timeChunk
 totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
+awaitSegmentAvailabilityTimeoutMillis
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1079,6 +1101,8 @@ arr1
 arr2
 array_append
 array_concat
+array_set_add
+array_set_add_all
 array_contains
 array_length
 array_offset
@@ -1426,6 +1450,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary
@@ -1477,6 +1502,7 @@ file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
+ARRAY_AGG
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -1527,6 +1553,7 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
+druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
 error_msg
 exprs
@@ -1559,6 +1586,7 @@ timestamp_expr
 tls_port
 total_size
 useApproximateCountDistinct
+useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
 IEC
@@ -1639,6 +1667,7 @@ HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost
+IOConfig
 JRE8u60
 KeyManager
 L1
@@ -1663,6 +1692,7 @@ PT1S
 PT24H
 PT300S
 PT30S
+PT3600S
 PT5M
 PT5S
 PT60S
@@ -1763,6 +1793,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties
@@ -1777,6 +1808,7 @@ successfulSending
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
+timestampSpec
 tmp
 tmpfs
 truststore
@@ -1852,3 +1884,6 @@ MiB
 GiB
 TiB
 PiB
+protobuf
+Golang
+multiValueHandling

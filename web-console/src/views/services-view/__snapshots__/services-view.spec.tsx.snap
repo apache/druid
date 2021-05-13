@@ -196,6 +196,7 @@ exports[`services view action services view 1`] = `
           "width": 400,
         },
         Object {
+          "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Actions",
           "accessor": [Function],

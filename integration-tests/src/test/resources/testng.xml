@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
 
 
 <suite name="IntegrationTestSuite" data-provider-thread-count="2">

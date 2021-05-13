@@ -32,9 +32,13 @@ import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import javax.script.ScriptEngineManager;
 
 public class JavaScriptWorkerSelectStrategyTest
 {
@@ -70,6 +74,13 @@ public class JavaScriptWorkerSelectStrategyTest
       + "}",
       JavaScriptConfig.getEnabledInstance()
   );
+
+  @Before
+  public void checkJdkCompatibility()
+  {
+    // skip tests for newer JDKs without javascript support
+    Assume.assumeNotNull(new ScriptEngineManager().getEngineByName("javascript"));
+  }
 
   @Test
   public void testSerde() throws Exception

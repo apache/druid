@@ -20,15 +20,18 @@
 package org.apache.druid.common.config;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.Duration;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Map;
@@ -168,62 +171,97 @@ public class ConfigManager
     return holder.getReference();
   }
 
-
   public <T> SetResult set(final String key, final ConfigSerde<T> serde, final T obj)
   {
-    if (obj == null || !started) {
-      if (obj == null) {
-        return SetResult.fail(new IllegalAccessException("input obj is null"));
+    return set(key, serde, null, obj);
+  }
+
+  public <T> SetResult set(final String key, final ConfigSerde<T> serde, @Nullable final T oldObject, final T newObject)
+  {
+    if (newObject == null || !started) {
+      if (newObject == null) {
+        return SetResult.fail(new IllegalAccessException("input obj is null"), false);
       } else {
-        return SetResult.fail(new IllegalStateException("configManager is not started yet"));
+        return SetResult.fail(new IllegalStateException("configManager is not started yet"), false);
       }
     }
 
-    final byte[] newBytes = serde.serialize(obj);
+    final byte[] newBytes = serde.serialize(newObject);
 
     try {
-      exec.submit(
+      return exec.submit(
           () -> {
-            dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
-
+            if (oldObject == null) {
+              dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
+            } else {
+              final byte[] oldBytes = serde.serialize(oldObject);
+              MetadataCASUpdate metadataCASUpdate = createMetadataCASUpdate(key, oldBytes, newBytes);
+              boolean success = dbConnector.compareAndSwap(ImmutableList.of(metadataCASUpdate));
+              if (!success) {
+                return SetResult.fail(new IllegalStateException("Config value has changed"), true);
+              }
+            }
             final ConfigHolder configHolder = watchedConfigs.get(key);
             if (configHolder != null) {
               configHolder.swapIfNew(newBytes);
             }
-
-            return true;
+            return SetResult.ok();
           }
       ).get();
-      return SetResult.ok();
     }
     catch (Exception e) {
       log.warn(e, "Failed to set[%s]", key);
-      return SetResult.fail(e);
+      return SetResult.fail(e, false);
     }
+  }
+
+  @Nonnull
+  private MetadataCASUpdate createMetadataCASUpdate(
+      String keyValue,
+      byte[] oldValue,
+      byte[] newValue
+  )
+  {
+    return new MetadataCASUpdate(
+        configTable,
+        MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+        MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+        keyValue,
+        oldValue,
+        newValue
+    );
   }
 
   public static class SetResult
   {
     private final Exception exception;
 
+    private final Boolean retryableException;
+
     public static SetResult ok()
     {
-      return new SetResult(null);
+      return new SetResult(null, null);
     }
 
-    public static SetResult fail(Exception e)
+    public static SetResult fail(Exception e, boolean retryableException)
     {
-      return new SetResult(e);
+      return new SetResult(e, retryableException);
     }
 
-    private SetResult(@Nullable Exception exception)
+    private SetResult(@Nullable Exception exception, @Nullable Boolean retryableException)
     {
       this.exception = exception;
+      this.retryableException = retryableException;
     }
 
     public boolean isOk()
     {
       return exception == null;
+    }
+
+    public boolean isRetryable()
+    {
+      return Boolean.TRUE.equals(retryableException);
     }
 
     public Exception getException()

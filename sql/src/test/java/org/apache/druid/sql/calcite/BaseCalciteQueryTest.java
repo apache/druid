@@ -178,7 +178,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", false,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
+      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+  );
+
+  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
+      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -200,10 +208,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_DEFAULT = ImmutableMap.of(
+  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", true,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -242,7 +250,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put("skipEmptyBuckets", true);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
 
@@ -439,10 +447,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(
-        conglomerate,
-        temporaryFolder.newFolder()
-    );
+    walker = createQuerySegmentWalker();
   }
 
   @After
@@ -450,6 +455,24 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  {
+    return CalciteTests.createMockWalker(
+        conglomerate,
+        temporaryFolder.newFolder()
+    );
+  }
+
+  public DruidOperatorTable createOperatorTable()
+  {
+    return CalciteTests.createOperatorTable();
+  }
+
+  public ExprMacroTable createMacroTable()
+  {
+    return CalciteTests.createExprMacroTable();
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -676,8 +699,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         parameters,
         sql,
         authenticationResult,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
@@ -718,13 +741,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-    for (int i = 0; i < results.size(); i++) {
-      Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
-          expectedResults.get(i),
-          results.get(i)
-      );
-    }
+    assertResultsEquals(sql, expectedResults, results);
 
     if (expectedQueries != null) {
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
@@ -744,6 +761,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+  {
+    for (int i = 0; i < results.size(); i++) {
+      Assert.assertArrayEquals(
+          StringUtils.format("result #%d: %s", i + 1, sql),
+          expectedResults.get(i),
+          results.get(i)
+      );
+    }
+  }
+
   public Set<Resource> analyzeResources(
       PlannerConfig plannerConfig,
       String sql,
@@ -752,8 +780,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
@@ -830,6 +858,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         "restrictedView",
         "SELECT __time, dim1, dim2, m1 FROM druid.forbiddenDatasource WHERE dim2 = 'a'"
     );
+
+    viewManager.createView(
+        plannerFactory,
+        "invalidView",
+        "SELECT __time, dim1, dim2, m1 FROM druid.invalidDatasource WHERE dim2 = 'a'"
+    );
     return sqlLifecycleFactory;
   }
 
@@ -841,6 +875,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
+  {
+    return (boolean) queryContext.getOrDefault(
+        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
+        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
+    );
   }
 
   /**
@@ -856,25 +898,70 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return new Object[]{
           // default behavior
           QUERY_CONTEXT_DEFAULT,
-          // filter value re-writes enabled
+          // all rewrites enabled
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
               .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
               .build(),
-          // rewrite values enabled but filter re-writes disabled.
-          // This should be drive the same behavior as the previous config
+          // filter-on-value-column rewrites disabled, everything else enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+              .build(),
+          // filter rewrites fully disabled, join-to-filter enabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+              .build(),
+          // filter rewrites disabled, but value column filters still set to true (it should be ignored and this should
+          // behave the same as the previous context)
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
               .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
               .build(),
-          // filter re-writes disabled
+          // filter rewrites fully enabled, join-to-filter disabled
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+              .build(),
+          // all rewrites disabled
+          new ImmutableMap.Builder<String, Object>()
+              .putAll(QUERY_CONTEXT_DEFAULT)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
               .build(),
           };
     }
+  }
+
+  protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
+  {
+    // since context is usually immutable in tests, make a copy
+    HashMap<String, Object> newContext = new HashMap<>(context);
+    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    return newContext;
+  }
+
+  /**
+   * Reset the walker and conglomerate with required number of merge buffers. Default value is 2.
+   */
+  protected void requireMergeBuffers(int numMergeBuffers) throws IOException
+  {
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
+        resourceCloser,
+        QueryStackTests.getProcessingConfig(true, numMergeBuffers)
+    );
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
   }
 }

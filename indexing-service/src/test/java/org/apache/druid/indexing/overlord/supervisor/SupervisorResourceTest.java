@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
@@ -1153,6 +1154,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     public Supervisor createSupervisor()
     {
       return supervisor;
+    }
+
+    @Override
+    public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
+    {
+      return null;
     }
 
     @Override

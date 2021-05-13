@@ -20,12 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.QueryDataSource;
@@ -42,64 +38,28 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Before;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 {
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
-      .withMetrics(
-          new CountAggregatorFactory("cnt")
-      )
-      .withRollup(false)
-      .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
-      .build();
-  private static final List<String> DIMENSIONS = ImmutableList.of("user", "country", "city");
-
-  @Before
-  public void setup() throws Exception
-  {
-    final QueryableIndex index1 = IndexBuilder
-        .create()
-        .tmpDir(new File(temporaryFolder.newFolder(), "1"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(INDEX_SCHEMA)
-        .rows(getRawRows())
-        .buildMMappedIndex();
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource("visits")
-                                           .interval(index1.getDataInterval())
-                                           .version("1")
-                                           .shardSpec(new LinearShardSpec(0))
-                                           .size(0)
-                                           .build();
-    walker.add(segment, index1);
-
-  }
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testCorrelatedSubquery(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -114,12 +74,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
@@ -205,6 +165,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -220,12 +181,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
@@ -284,9 +245,95 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext) throws Exception
+  {
+    cannotVectorize();
+
+    testQuery(
+        "select country, ANY_VALUE(\n"
+        + "        select max(\"users\") from (\n"
+        + "            select floor(__time to day), count(*) \"users\" from visits f where f.country = visits.country group by 1\n"
+        + "        )\n"
+        + "     ) as \"dailyVisits\"\n"
+        + "from visits \n"
+        + " where city = 'B' and __time between '2021-01-01 01:00:00' AND '2021-01-02 23:59:59'"
+        + " group by 1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new QueryDataSource(newScanQueryBuilder().dataSource(CalciteTests.USERVISITDATASOURCE)
+                                                                         .intervals(querySegmentSpec(Intervals.of(
+                                                                             "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z")))
+                                                                         .filters(selector("city", "B", null))
+                                                                         .columns("__time", "city", "country")
+                                                                         .build()),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(
+                                                    GroupByQuery.builder()
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
+                                                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                                .setVirtualColumns(new ExpressionVirtualColumn(
+                                                                    "v0",
+                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    ValueType.LONG,
+                                                                    TestExprMacroTable.INSTANCE
+                                                                ))
+                                                                .setDimFilter(not(selector("country", null, null)))
+                                                                .setDimensions(
+                                                                    new DefaultDimensionSpec(
+                                                                        "v0",
+                                                                        "d0",
+                                                                        ValueType.LONG
+                                                                    ),
+                                                                    new DefaultDimensionSpec(
+                                                                        "country",
+                                                                        "d1"
+                                                                    )
+                                                                )
+                                                                .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                                                .setContext(queryContext)
+                                                                .setGranularity(new AllGranularity())
+                                                                .build()
+                                                )
+                                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
+                                                .setAggregatorSpecs(
+                                                    new LongMaxAggregatorFactory("_a0", "a0")
+                                                )
+                                                .setGranularity(new AllGranularity())
+                                                .setContext(queryContext)
+                                                .build()
+                                ),
+                                "j0.",
+                                equalsCondition(
+                                    DruidExpression.fromColumn("country"),
+                                    DruidExpression.fromColumn("j0._d0")
+                                ),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                        .setDimensions(new DefaultDimensionSpec("country", "d0"))
+                        .setAggregatorSpecs(new LongAnyAggregatorFactory("a0", "j0._a0"))
+                        .setGranularity(new AllGranularity())
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"canada", 4L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
+    queryContext = withLeftDirectAccessEnabled(queryContext);
 
     testQuery(
         "select country, ANY_VALUE(\n"
@@ -302,12 +349,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
@@ -374,7 +421,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext) throws Exception
   {
     cannotVectorize();
-
+    queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "select country, ANY_VALUE(\n"
         + "        select max(\"users\") from (\n"
@@ -389,12 +436,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
@@ -456,26 +503,4 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  private List<InputRow> getRawRows()
-  {
-    return ImmutableList.of(
-        toRow("2021-01-01T01:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "A")),
-        toRow("2021-01-01T02:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "B")),
-        toRow("2021-01-01T03:00:00Z", ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
-        toRow("2021-01-01T04:00:00Z", ImmutableMap.of("user", "alice", "country", "India", "city", "Y")),
-        toRow("2021-01-02T01:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "A")),
-        toRow("2021-01-02T02:00:00Z", ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
-        toRow("2021-01-02T03:00:00Z", ImmutableMap.of("user", "foo", "country", "canada", "city", "B")),
-        toRow("2021-01-02T04:00:00Z", ImmutableMap.of("user", "bar", "country", "canada", "city", "B")),
-        toRow("2021-01-02T05:00:00Z", ImmutableMap.of("user", "alice", "country", "India", "city", "X")),
-        toRow("2021-01-02T06:00:00Z", ImmutableMap.of("user", "bob", "country", "India", "city", "X")),
-        toRow("2021-01-02T07:00:00Z", ImmutableMap.of("user", "foo", "country", "India", "city", "X")),
-        toRow("2021-01-03T01:00:00Z", ImmutableMap.of("user", "foo", "country", "USA", "city", "M"))
-    );
-  }
-
-  private MapBasedInputRow toRow(String time, Map<String, Object> event)
-  {
-    return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), DIMENSIONS, event);
-  }
 }

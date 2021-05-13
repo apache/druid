@@ -325,11 +325,17 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
-        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, mustBeNullOrEmptyDropSegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
-              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptySegments)
+              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
+          );
+        }
+        if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
+          throw new ISE(
+              "Stream ingestion task unexpectedly attempted to drop segments: %s",
+              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
           );
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
@@ -575,6 +581,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
+  /**
+   * Return a map of reports for the task.
+   *
+   * A successfull task should always have a null errorMsg. A falied task should always have a non-null
+   * errorMsg.
+   *
+   * @return Map of reports for the task.
+   */
   private Map<String, TaskReport> getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
@@ -584,7 +598,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                errorMsg == null
             )
         )
     );

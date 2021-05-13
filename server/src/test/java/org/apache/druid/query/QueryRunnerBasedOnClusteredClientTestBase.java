@@ -139,7 +139,10 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), 0),
         new CacheConfig(),
         new DruidHttpClientConfig(),
-        QueryStackTests.getProcessingConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
+        QueryStackTests.getProcessingConfig(
+            USE_PARALLEL_MERGE_POOL_CONFIGURED,
+            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+        ),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())

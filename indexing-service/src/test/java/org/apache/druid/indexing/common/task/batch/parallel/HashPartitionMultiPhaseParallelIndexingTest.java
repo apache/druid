@@ -123,7 +123,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       @Nullable Integer numShards
   )
   {
-    super(lockGranularity, useInputFormatApi);
+    super(lockGranularity, useInputFormatApi, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
     this.intervalToIndex = intervalToIndex;
     this.numShards = numShards;

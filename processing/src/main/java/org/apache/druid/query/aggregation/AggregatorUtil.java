@@ -137,6 +137,9 @@ public class AggregatorUtil
   // GROUPING aggregator
   public static final byte GROUPING_CACHE_TYPE_ID = 0x46;
 
+  // expression lambda aggregator
+  public static final byte EXPRESSION_LAMBDA_CACHE_TYPE_ID = 0x47;
+
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg

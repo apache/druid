@@ -66,32 +66,42 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATA_TYPES.map(v => ({ name: v.name, value: v.name, score: 0, meta: 'type' })),
+      SQL_DATA_TYPES.map(([name, runtime, description]) => ({
+        name,
+        value: name,
+        score: 0,
+        meta: 'type',
+        syntax: `Druid runtime type: ${runtime}`,
+        description,
+      })),
     );
-
-    const keywordCompleter = {
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        return callback(null, keywordList);
-      },
-    };
 
     langTools.setCompleters([
       langTools.snippetCompleter,
       langTools.textCompleter,
-      keywordCompleter,
+      {
+        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+          return callback(null, keywordList);
+        },
+        getDocTooltip: (item: any) => {
+          if (item.meta === 'type') {
+            item.docHTML = QueryInput.makeDocHtml(item);
+          }
+        },
+      },
     ]);
   }
 
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = SQL_FUNCTIONS.map(entry => {
+    const functionList: any[] = SQL_FUNCTIONS.map(([name, args, description]) => {
       return {
-        value: entry.name,
+        value: name,
         score: 80,
         meta: 'function',
-        syntax: entry.name + entry.arguments,
-        description: entry.description,
+        syntax: `${name}(${args})`,
+        description,
         completer: {
           insertMatch: (editor: any, data: any) => {
             editor.completer.insertMatch({ value: data.caption });
@@ -106,29 +116,17 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       },
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
-          item.docHTML = QueryInput.completerToHtml(item);
+          item.docHTML = QueryInput.makeDocHtml(item);
         }
       },
     });
   }
 
-  static completerToHtml(item: any) {
+  static makeDocHtml(item: any) {
     return `
-<div class="function-doc">
-  <div class="function-doc-name">
-    <b>${escape(item.caption)}</b>
-  </div>
-  <hr />
-  <div>
-    <b>Syntax:</b>
-  </div>
-  <div>${escape(item.syntax)}</div>
-  <br />
-  <div>
-    <b>Description:</b>
-  </div>
-  <div>${escape(item.description)}</div>
-</div>`;
+<div class="doc-name">${escape(item.caption)}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-description">${escape(item.description)}</div>`;
   }
 
   static getDerivedStateFromProps(props: QueryInputProps, state: QueryInputState) {
@@ -200,12 +198,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     }
   }
 
-  private handleAceContainerResize = (entries: IResizeEntry[]) => {
+  private readonly handleAceContainerResize = (entries: IResizeEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
-  private handleChange = (value: string) => {
+  private readonly handleChange = (value: string) => {
     // This gets the event as a second arg
     const { onQueryStringChange } = this.props;
     onQueryStringChange(value);

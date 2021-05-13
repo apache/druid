@@ -66,9 +66,9 @@ public class HashJoinSegment implements SegmentReference
     this.clauses = clauses;
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
 
-    // Verify 'clauses' is nonempty (otherwise it's a waste to create this object, and the caller should know)
-    if (clauses.isEmpty()) {
-      throw new IAE("'clauses' is empty, no need to create HashJoinSegment");
+    // Verify this virtual segment is doing something useful (otherwise it's a waste to create this object)
+    if (clauses.isEmpty() && baseFilter == null) {
+      throw new IAE("'clauses' and 'baseFilter' are both empty, no need to create HashJoinSegment");
     }
   }
 

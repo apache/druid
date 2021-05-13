@@ -41,12 +41,14 @@ public interface TransactionalSegmentPublisher
    */
   SegmentPublishResult publishAnnotatedSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToDrop,
       Set<DataSegment> segmentsToPublish,
       @Nullable Object commitMetadata
   ) throws IOException;
 
   default SegmentPublishResult publishSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToDrop,
       Set<DataSegment> segmentsToPublish,
       Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
       @Nullable Object commitMetadata
@@ -56,6 +58,7 @@ public interface TransactionalSegmentPublisher
         .andThen(SegmentPublisherHelper::annotateShardSpec);
     return publishAnnotatedSegments(
         segmentsToBeOverwritten,
+        segmentsToDrop,
         annotateFunction.apply(segmentsToPublish),
         commitMetadata
     );

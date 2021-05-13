@@ -68,7 +68,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -251,16 +250,12 @@ public class ServerManager implements QuerySegmentWalker
       Optional<byte[]> cacheKeyPrefix
   )
   {
-    final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+    final PartitionChunk<ReferenceCountingSegment> chunk = timeline.findChunk(
         descriptor.getInterval(),
-        descriptor.getVersion()
+        descriptor.getVersion(),
+        descriptor.getPartitionNumber()
     );
 
-    if (entry == null) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-    }
-
-    final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
     if (chunk == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
     }

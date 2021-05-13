@@ -22,6 +22,8 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 
+import java.util.Arrays;
+
 public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<String[]>
 {
   public CastToStringVectorProcessor(ExprVectorProcessor<?> delegate)
@@ -33,7 +35,9 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
   public ExprEvalVector<String[]> evalVector(Expr.VectorInputBinding bindings)
   {
     ExprEvalVector<?> result = delegate.evalVector(bindings);
-    return new ExprEvalStringVector(result.asObjectVector(ExprType.STRING));
+    return new ExprEvalStringVector(
+        Arrays.stream(result.getObjectVector()).map(x -> x != null ? x.toString() : null).toArray(String[]::new)
+    );
   }
 
   @Override

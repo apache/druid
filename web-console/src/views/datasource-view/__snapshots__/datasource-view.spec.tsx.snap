@@ -26,7 +26,7 @@ exports[`data source view matches snapshot 1`] = `
       }
     >
       <Blueprint3.MenuItem
-        disabled={false}
+        disabled={true}
         icon="application"
         multiline={false}
         onClick={[Function]}
@@ -61,7 +61,7 @@ exports[`data source view matches snapshot 1`] = `
         Array [
           "Datasource name",
           "Availability",
-          "Segment load/drop queues",
+          "Availability detail",
           "Total data size",
           "Segment size",
           "Segment granularity",
@@ -76,6 +76,7 @@ exports[`data source view matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={Array []}
     />
   </Memo(ViewControlBar)>
@@ -150,9 +151,8 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": "Availability",
-          "accessor": [Function],
+          "accessor": "num_segments",
           "filterable": false,
-          "id": "availability",
           "minWidth": 200,
           "show": true,
           "sortMethod": [Function],
@@ -160,13 +160,12 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment load/drop
+            Availability
             <br />
-            queues
+            detail
           </React.Fragment>,
           "accessor": "num_segments_to_load",
           "filterable": false,
-          "id": "load-drop",
           "minWidth": 100,
           "show": true,
         },

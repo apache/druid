@@ -33,7 +33,7 @@ export interface ArrayInputProps {
 
 export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps) {
   const { className, placeholder, large, disabled, intent } = props;
-  const [stringValue, setStringValue] = useState();
+  const [stringValue, setStringValue] = useState<string>();
 
   const handleChange = (e: any) => {
     const { onChange } = props;
@@ -54,7 +54,7 @@ export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps)
   return (
     <TextArea
       className={className}
-      value={stringValue || (props.values || []).join(', ')}
+      value={stringValue ?? props.values?.join(', ') ?? ''}
       onChange={handleChange}
       placeholder={placeholder}
       large={large}

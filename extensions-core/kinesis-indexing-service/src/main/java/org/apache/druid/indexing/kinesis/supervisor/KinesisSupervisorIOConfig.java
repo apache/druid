@@ -26,8 +26,11 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+
+import javax.annotation.Nullable;
 
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -70,6 +73,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
@@ -85,8 +89,16 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        autoScalerConfig,
         lateMessageRejectionStartDateTime
     );
+
+    // for now dynamic Allocation Tasks is not supported here
+    // throw UnsupportedOperationException in case someone sets this on a kinesis supervisor spec.
+    if (autoScalerConfig != null) {
+      throw new UnsupportedOperationException("Tasks auto scaler for kinesis is not supported yet. Please remove autoScalerConfig or set it to null!");
+    }
+
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());

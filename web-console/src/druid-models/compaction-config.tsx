@@ -100,9 +100,9 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           compaction to run, set this field.
         </p>
         <p>
-          Directly specify the number of shards to create. If this is specified and 'intervals' is
-          specified in the granularitySpec, the index task can skip the determine
-          intervals/partitions pass through the data.
+          Directly specify the number of shards to create. If this is specified and
+          &apos;intervals&apos; is specified in the granularitySpec, the index task can skip the
+          determine intervals/partitions pass through the data.
         </p>
       </>
     ),

@@ -116,6 +116,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.schemarepo</groupId>
       <artifactId>schema-repo-api</artifactId>
       <version>${schemarepo.version}</version>

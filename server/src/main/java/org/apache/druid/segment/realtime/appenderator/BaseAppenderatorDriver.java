@@ -348,14 +348,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
           for (SegmentIdWithShardSpec identifier : appenderator.getSegments()) {
             if (identifier.equals(newSegment)) {
               throw new ISE(
-                  "Allocated segment[%s] which conflicts with existing segment[%s].",
+                  "Allocated segment[%s] which conflicts with existing segment[%s]. row: %s, seq: %s",
                   newSegment,
-                  identifier
+                  identifier,
+                  row,
+                  sequenceName
               );
             }
           }
 
-          log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
           addSegment(sequenceName, newSegment);
         } else {
           // Well, we tried.
@@ -558,6 +559,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToBeDropped,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
@@ -593,6 +595,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
+                segmentsToBeDropped,
                 ourSegments,
                 outputSegmentsAnnotateFunction,
                 callerMetadata

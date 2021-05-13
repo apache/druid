@@ -28,7 +28,7 @@ describe('CompactionDialog', () => {
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test1'}
+        datasource="test1"
         compactionConfig={undefined}
       />,
     );
@@ -41,7 +41,7 @@ describe('CompactionDialog', () => {
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test1'}
+        datasource="test1"
         compactionConfig={{
           dataSource: 'test1',
           tuningConfig: { partitionsSpec: { type: 'dynamic' } },
@@ -57,7 +57,7 @@ describe('CompactionDialog', () => {
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test1'}
+        datasource="test1"
         compactionConfig={{
           dataSource: 'test1',
           tuningConfig: { partitionsSpec: { type: 'hashed' } },
@@ -73,7 +73,7 @@ describe('CompactionDialog', () => {
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
-        datasource={'test1'}
+        datasource="test1"
         compactionConfig={{
           dataSource: 'test1',
           tuningConfig: { partitionsSpec: { type: 'single_dim' } },
