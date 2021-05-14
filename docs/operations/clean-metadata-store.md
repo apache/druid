@@ -61,7 +61,7 @@ Segment records and segments in deep storage become eligible for deletion:
 
 Kill tasks use the following configuration:
 - `druid.coordinator.kill.on`: When `True`, enables the Coordinator to submit kill task for unused segments which deletes them completely from metadata store and from deep storage. Only applies dataSources according to allowed datasources or all datasources.
-- `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Must be greater than `druid.coordinator.period.indexingPeriod`. 
+- `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
 >The kill task is the only configuration in this topic that affects actual data in deep storage and not simply metadata or logs.
@@ -71,7 +71,7 @@ All audit records become eligible for deletion when the `durationToRetain` time 
 
 Audit cleanup uses the following configuration:
  - `druid.coordinator.kill.audit.on`: When `True`, enables cleanup for audit records.
- - `druid.coordinator.kill.audit.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible audit records.
+ - `druid.coordinator.kill.audit.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible audit records. Defaults to `P1D`.
  - `druid.coordinator.kill.audit.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that audit records become eligible for deletion.
 
 ### Supervisor records
@@ -79,7 +79,7 @@ Supervisor records become eligible for deletion when the supervisor is terminate
 
 Supervisor cleanup uses the following configuration:
  - `druid.coordinator.kill.supervisor.on`: When `True`, enables cleanup for supervisor records.
- - `druid.coordinator.kill.supervisor.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible supervisor records.
+ - `druid.coordinator.kill.supervisor.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible supervisor records. Defaults to `P1D`.
  - `druid.coordinator.kill.supervisor.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that supervisor records become eligible for deletion.
 
 ### Rules records
@@ -87,7 +87,7 @@ Rule records become eligible for deletion when all segments for the datasource h
 
 Rule cleanup uses the following configuration:
  - `druid.coordinator.kill.rule.on`: When `True`, enables cleanup for rules records.
- - `druid.coordinator.kill.rule.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible rules records.
+ - `druid.coordinator.kill.rule.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible rules records. Defaults to `P1D`.
  - `druid.coordinator.kill.rule.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that rules records become eligible for deletion.
 
  ### Compaction configuration records
@@ -95,7 +95,7 @@ Compaction configuration records in the records in the `druid_config` table beco
 
 Compaction configuration cleanup uses the following configuration:
  - `druid.coordinator.kill.compaction.on`: When `True`, enables cleanup for compaction  configuration records.
- - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records.
+ - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records. Defaults to `P1D`.
 
 >If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
 
@@ -104,7 +104,7 @@ Datasource records created by supervisors become eligible for deletion when the 
 
 Datasource cleanup uses the following configuration:
  - `druid.coordinator.kill.datasource.on`: When `True`, enables cleanup datasources created by supervisors.
- - `druid.coordinator.kill.datasource.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible datasource records.
+ - `druid.coordinator.kill.datasource.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible datasource records. Defaults to `P1D`.
  - `druid.coordinator.kill.datasource.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that datasource records become eligible for deletion.
 
 ### Indexer task logs
