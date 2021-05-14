@@ -60,6 +60,8 @@ sleep 60
 $KUBECTL get pod
 $KUBECTL get svc
 
-for v in druid-tiny-cluster-coordinator1-0 druid-tiny-cluster-coordinator2-0 druid-tiny-cluster-overlord1-0 druid-tiny-cluster-overlord2-0 ; do
+for v in postgres-0 druid-tiny-cluster-coordinator1-0 druid-tiny-cluster-coordinator2-0 druid-tiny-cluster-overlord1-0 druid-tiny-cluster-overlord2-0 ; do
+  echo "\n\n####### Printing Logs for $v #########"
   $KUBECTL logs --tail 1000 $v
+  echo "####### Printed Logs for $v #########\n\n"
 done
