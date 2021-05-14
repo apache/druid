@@ -70,7 +70,7 @@ Kill tasks use the following configuration:
 All audit records become eligible for deletion when the `durationToRetain` time has passed since their creation.
 
 Audit cleanup uses the following configuration:
- - `druid.coordinator.kill.audit.on`: When `True`, enables cleanup for audit records.
+ - `druid.coordinator.kill.audit.on`: When `true`, enables cleanup for audit records.
  - `druid.coordinator.kill.audit.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible audit records. Defaults to `P1D`.
  - `druid.coordinator.kill.audit.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that audit records become eligible for deletion.
 
@@ -78,7 +78,7 @@ Audit cleanup uses the following configuration:
 Supervisor records become eligible for deletion when the supervisor is terminated and the `durationToRetain` time has passed since their creation.
 
 Supervisor cleanup uses the following configuration:
- - `druid.coordinator.kill.supervisor.on`: When `True`, enables cleanup for supervisor records.
+ - `druid.coordinator.kill.supervisor.on`: When `true`, enables cleanup for supervisor records.
  - `druid.coordinator.kill.supervisor.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible supervisor records. Defaults to `P1D`.
  - `druid.coordinator.kill.supervisor.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that supervisor records become eligible for deletion.
 
@@ -86,7 +86,7 @@ Supervisor cleanup uses the following configuration:
 Rule records become eligible for deletion when all segments for the datasource have been killed by the kill task and the `durationToRetain` time has passed since their creation. Automated cleanup for rules requires a [kill task](#kill-task).
 
 Rule cleanup uses the following configuration:
- - `druid.coordinator.kill.rule.on`: When `True`, enables cleanup for rules records.
+ - `druid.coordinator.kill.rule.on`: When `true`, enables cleanup for rules records.
  - `druid.coordinator.kill.rule.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible rules records. Defaults to `P1D`.
  - `druid.coordinator.kill.rule.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that rules records become eligible for deletion.
 
@@ -94,7 +94,7 @@ Rule cleanup uses the following configuration:
 Compaction configuration records in the records in the `druid_config` table become eligible for deletion all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
 Compaction configuration cleanup uses the following configuration:
- - `druid.coordinator.kill.compaction.on`: When `True`, enables cleanup for compaction  configuration records.
+ - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction  configuration records.
  - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records. Defaults to `P1D`.
 
 >If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
@@ -103,7 +103,7 @@ Compaction configuration cleanup uses the following configuration:
 Datasource records created by supervisors become eligible for deletion when the supervisor is terminated or does not exist in the `druid_supervisors` table and the `durationToRetain` time has passed since their creation.
 
 Datasource cleanup uses the following configuration:
- - `druid.coordinator.kill.datasource.on`: When `True`, enables cleanup datasources created by supervisors.
+ - `druid.coordinator.kill.datasource.on`: When `true`, enables cleanup datasources created by supervisors.
  - `druid.coordinator.kill.datasource.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible datasource records. Defaults to `P1D`.
  - `druid.coordinator.kill.datasource.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that datasource records become eligible for deletion.
 
@@ -111,7 +111,7 @@ Datasource cleanup uses the following configuration:
 The Druid Overlord handles task log metadata management.
 
 Indexer task log cleanup on the Overlord uses the following configuration:
-- `druid.indexer.logs.kill.enabled`: When `True`, enables cleanup of task logs.
+- `druid.indexer.logs.kill.enabled`: When `true`, enables cleanup of task logs.
 - `druid.indexer.logs.kill.durationToRetain`: Defines the length of time in milliseconds to retain task logs.
 - `druid.indexer.logs.kill.initialDelay`: Defines the length of time in milliseconds after the Overlord starts before it executes its first job to kill task logs.
 - `druid.indexer.logs.kill.delay`: The length of time in milliseconds between jobs to kill task logs.
@@ -131,32 +131,32 @@ druid.coordinator.period.metadataStoreManagementPeriod=P1H
 # Required also for automated cleanup of rules
 # and compaction configuration.
 
-druid.coordinator.kill.on=True
+druid.coordinator.kill.on=true
 druid.coordinator.kill.period=P1D 
 druid.coordinator.kill.durationToRetain=P4D
 druid.coordinator.kill.maxSegments=1000
 
 # Poll every day to delete audit records > 30 days old
-druid.coordinator.kill.audit.on=True
+druid.coordinator.kill.audit.on=true
 druid.coordinator.kill.audit.period=P1D
 druid.coordinator.kill.audit.durationToRetain=P30D
 
 # Poll every day to delete supervisor records > 4 days old
-druid.coordinator.kill.supervisor.on=True
+druid.coordinator.kill.supervisor.on=true
 druid.coordinator.kill.supervisor.period=P1D
 druid.coordinator.kill.supervisor.durationToRetain=P4D
 
 # Poll every day to delete rules records > 4 days old
-druid.coordinator.kill.rule.on=True
+druid.coordinator.kill.rule.on=true
 druid.coordinator.kill.rule.period=P1D
 druid.coordinator.kill.rule.durationToRetain=P4D
 
 # Poll every day to delete compaction configuration records > 4 days old
-druid.coordinator.kill.compaction.on=True
+druid.coordinator.kill.compaction.on=true
 druid.coordinator.kill.compaction.period=P1D
 
 # Poll every day to delete datasource records created by supervisors > 4 days old
-druid.coordinator.kill.datasource.on=True
+druid.coordinator.kill.datasource.on=true
 druid.coordinator.kill.datasource.period=P1D
 druid.coordinator.kill.datasource.durationToRetain=P4D
 ...
