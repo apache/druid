@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Descriptors;
+import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.druid.java.util.common.Pair;
@@ -67,7 +68,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
     try {
       RetryUtils.retry(
           () -> {
-            schemaId = client.register(topic, new ProtobufSchema(ProtobufEventSerializer.MSG_BUILDER.getDescriptorForType()));
+            schemaId = client.register(topic, new ProtobufSchema(ProtobufEventSerializer.SCHEMA.newMessageBuilder("Wikipedia").getDescriptorForType()));
             return 0;
           },
           (e) -> true,
@@ -82,11 +83,12 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   @Override
   public byte[] serialize(List<Pair<String, Object>> event)
   {
-    Descriptors.Descriptor msgDesc = MSG_BUILDER.getDescriptorForType();
+    DynamicMessage.Builder builder = SCHEMA.newMessageBuilder("Wikipedia");
+    Descriptors.Descriptor msgDesc = builder.getDescriptorForType();
     for (Pair<String, Object> pair : event) {
-      MSG_BUILDER.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
+      builder.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
     }
-    byte[] bytes = MSG_BUILDER.build().toByteArray();
+    byte[] bytes = builder.build().toByteArray();
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(schemaId).put((byte) 0).put(bytes);
     bb.rewind();
     return bb.array();

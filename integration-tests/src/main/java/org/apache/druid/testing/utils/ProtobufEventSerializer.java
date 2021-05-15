@@ -34,7 +34,7 @@ public class ProtobufEventSerializer implements EventSerializer
 
   private static final Logger LOGGER = new Logger(ProtobufEventSerializer.class);
 
-  public static final DynamicMessage.Builder MSG_BUILDER;
+  public static DynamicSchema SCHEMA;
 
   static {
     DynamicSchema.Builder schemaBuilder = DynamicSchema.newBuilder();
@@ -57,24 +57,23 @@ public class ProtobufEventSerializer implements EventSerializer
         .addField("optional", "int32", "delta", 16)
         .build();
     schemaBuilder.addMessageDefinition(wikiDef);
-    DynamicSchema schema = null;
     try {
-      schema = schemaBuilder.build();
+      SCHEMA = schemaBuilder.build();
     }
     catch (Descriptors.DescriptorValidationException e) {
-      LOGGER.error("Could not init protobuf builder.");
+      LOGGER.error("Could not init protobuf schema.");
     }
-    MSG_BUILDER = schema.newMessageBuilder("Wikipedia");
   }
 
   @Override
   public byte[] serialize(List<Pair<String, Object>> event)
   {
-    Descriptors.Descriptor msgDesc = MSG_BUILDER.getDescriptorForType();
+    DynamicMessage.Builder builder = SCHEMA.newMessageBuilder("Wikipedia");
+    Descriptors.Descriptor msgDesc = builder.getDescriptorForType();
     for (Pair<String, Object> pair : event) {
-      MSG_BUILDER.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
+      builder.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
     }
-    return MSG_BUILDER.build().toByteArray();
+    return builder.build().toByteArray();
   }
 
   @Override
