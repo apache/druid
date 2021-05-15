@@ -803,11 +803,6 @@ public class DruidQuery
           Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
       );
       if (sorting != null) {
-        if (sorting.getOffsetLimit().hasOffset()) {
-          // Timeseries cannot handle offsets.
-          return null;
-        }
-
         if (sorting.getOffsetLimit().hasLimit()) {
           final long limit = sorting.getOffsetLimit().getLimit();
 
@@ -837,6 +832,11 @@ public class DruidQuery
       }
     } else {
       // More than one dimension, timeseries cannot handle.
+      return null;
+    }
+
+    if (sorting != null && sorting.getOffsetLimit().hasOffset()) {
+      // Timeseries cannot handle offsets.
       return null;
     }
 
