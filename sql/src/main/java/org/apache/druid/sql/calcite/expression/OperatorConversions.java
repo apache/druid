@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -256,7 +257,7 @@ public class OperatorConversions
     /**
      * Sets the return type of the operator to "typeName", marked as non-nullable.
      *
-     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeNullableArray}, or
      * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
      * cannot be mixed; you must call exactly one.
      */
@@ -273,7 +274,7 @@ public class OperatorConversions
     /**
      * Sets the return type of the operator to "typeName", marked as nullable.
      *
-     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeNullableArray}, or
      * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
      * cannot be mixed; you must call exactly one.
      */
@@ -286,11 +287,28 @@ public class OperatorConversions
       );
       return this;
     }
+    /**
+     * Sets the return type of the operator to an array type with elements of "typeName", marked as nullable.
+     *
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeNullableArray}, or
+     * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
+     * cannot be mixed; you must call exactly one.
+     */
+    public OperatorBuilder returnTypeNullableArray(final SqlTypeName elementTypeName)
+    {
+      Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
+
+      this.returnTypeInference = ReturnTypes.explicit(
+          factory -> Calcites.createSqlArrayTypeWithNullability(factory, elementTypeName, true)
+      );
+      return this;
+    }
+
 
     /**
      * Provides customized return type inference logic.
      *
-     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeNullableArray}, or
      * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
      * cannot be mixed; you must call exactly one.
      */
@@ -500,13 +518,15 @@ public class OperatorConversions
    * Operand type checker that is used in 'simple' situations: there are a particular number of operands, with
    * particular types, some of which may be optional or nullable, and some of which may be required to be literals.
    */
-  private static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
+  @VisibleForTesting
+  static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   {
     private final List<SqlTypeFamily> operandTypes;
     private final int requiredOperands;
     private final IntSet nullableOperands;
     private final IntSet literalOperands;
 
+    @VisibleForTesting
     DefaultOperandTypeChecker(
         final List<SqlTypeFamily> operandTypes,
         final int requiredOperands,

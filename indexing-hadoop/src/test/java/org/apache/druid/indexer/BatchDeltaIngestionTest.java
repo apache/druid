@@ -372,7 +372,15 @@ public class BatchDeltaIngestionTest
   ) throws Exception
   {
     IndexGeneratorJob job = new IndexGeneratorJob(config);
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job)));
+
+    List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths =
+        IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    JobHelper.renameIndexFilesForSegments(config.getSchema(), dataSegmentAndIndexZipFilePaths);
+
+    JobHelper.maybeDeleteIntermediatePath(true, config.getSchema());
+    File workingPath = new File(config.makeIntermediatePath().toUri().getPath());
+    Assert.assertFalse(workingPath.exists());
 
     File segmentFolder = new File(
         StringUtils.format(

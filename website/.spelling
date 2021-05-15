@@ -22,6 +22,7 @@
 500MiB
 64-bit
 ACL
+ACLs
 APIs
 AvroStorage
 AWS
@@ -125,6 +126,7 @@ JsonProperty
 KMS
 Kerberized
 Kerberos
+KeyStores
 Kinesis
 Kubernetes
 LRU
@@ -283,7 +285,7 @@ javadoc
 joinable
 kerberos
 keystore
-KeyStores
+keytool
 keytab
 kubernetes
 laning
@@ -1099,6 +1101,8 @@ arr1
 arr2
 array_append
 array_concat
+array_set_add
+array_set_add_all
 array_contains
 array_length
 array_offset
@@ -1494,6 +1498,7 @@ file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
+ARRAY_AGG
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -1682,6 +1687,7 @@ PT1S
 PT24H
 PT300S
 PT30S
+PT3600S
 PT5M
 PT5S
 PT60S
@@ -1782,6 +1788,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties
@@ -1874,3 +1881,4 @@ TiB
 PiB
 protobuf
 Golang
+multiValueHandling

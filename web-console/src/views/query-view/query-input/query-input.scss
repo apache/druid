@@ -68,11 +68,14 @@
     background: $dark-gray2;
   }
 
-  hr {
-    margin: 10px 0;
+  .doc-name {
+    font-size: 18px;
+    border-bottom: 2px solid gray;
+    padding-bottom: 4px;
   }
 
-  .function-doc-name {
-    font-size: 18px;
+  .doc-syntax {
+    padding-top: 8px;
+    padding-bottom: 10px;
   }
 }

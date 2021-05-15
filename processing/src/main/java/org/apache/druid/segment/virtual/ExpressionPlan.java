@@ -122,6 +122,14 @@ public class ExpressionPlan
     return expression;
   }
 
+  public Expr getAppliedFoldExpression(String accumulatorId)
+  {
+    if (is(Trait.NEEDS_APPLIED)) {
+      return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+    }
+    return expression;
+  }
+
   public Expr.BindingAnalysis getAnalysis()
   {
     return analysis;

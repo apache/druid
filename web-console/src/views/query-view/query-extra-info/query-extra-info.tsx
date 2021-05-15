@@ -29,7 +29,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import { QueryResult } from 'druid-query-toolkit';
-import React from 'react';
+import React, { MouseEvent } from 'react';
 
 import { AppToaster } from '../../../singletons';
 import { pluralIfNeeded } from '../../../utils';
@@ -39,20 +39,29 @@ import './query-extra-info.scss';
 export interface QueryExtraInfoProps {
   queryResult: QueryResult;
   onDownload: (filename: string, format: string) => void;
+  onLoadMore: () => void;
 }
 
 export const QueryExtraInfo = React.memo(function QueryExtraInfo(props: QueryExtraInfoProps) {
-  const { queryResult, onDownload } = props;
+  const { queryResult, onDownload, onLoadMore } = props;
+  const wrapQueryLimit = queryResult.getSqlOuterLimit();
+  const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
 
-  function handleQueryInfoClick() {
-    const id = queryResult.queryId || queryResult.sqlQueryId;
-    if (!id) return;
+  function handleQueryInfoClick(e: MouseEvent<HTMLDivElement>) {
+    if (e.altKey) {
+      if (hasMoreResults) {
+        onLoadMore();
+      }
+    } else {
+      const id = queryResult.queryId || queryResult.sqlQueryId;
+      if (!id) return;
 
-    copy(id, { format: 'text/plain' });
-    AppToaster.show({
-      message: 'Query ID copied to clipboard',
-      intent: Intent.SUCCESS,
-    });
+      copy(id, { format: 'text/plain' });
+      AppToaster.show({
+        message: 'Query ID copied to clipboard',
+        intent: Intent.SUCCESS,
+      });
+    }
   }
 
   function handleDownload(format: string) {
@@ -71,13 +80,9 @@ export const QueryExtraInfo = React.memo(function QueryExtraInfo(props: QueryExt
     </Menu>
   );
 
-  const wrapQueryLimit = queryResult.getSqlOuterLimit();
-  let resultCount: string;
-  if (wrapQueryLimit && queryResult.getNumResults() === wrapQueryLimit) {
-    resultCount = `${queryResult.getNumResults() - 1}+ results`;
-  } else {
-    resultCount = pluralIfNeeded(queryResult.getNumResults(), 'result');
-  }
+  const resultCount = hasMoreResults
+    ? `${queryResult.getNumResults() - 1}+ results`
+    : pluralIfNeeded(queryResult.getNumResults(), 'result');
 
   let tooltipContent: JSX.Element | undefined;
   if (queryResult.queryId) {

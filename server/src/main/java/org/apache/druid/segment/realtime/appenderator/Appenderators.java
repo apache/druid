@@ -89,7 +89,8 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        true
     );
   }
 
@@ -103,7 +104,8 @@ public class Appenderators
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean batchMemoryMappedIndex
   )
   {
     return new AppenderatorImpl(
@@ -119,7 +121,8 @@ public class Appenderators
         indexMerger,
         null,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        batchMemoryMappedIndex // This is a task config (default false) to fallback to "old" code in case of bug with the new memory optimization code
     );
   }
 }

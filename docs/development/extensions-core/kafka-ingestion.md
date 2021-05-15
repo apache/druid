@@ -40,6 +40,8 @@ This service is provided in the `druid-kafka-indexing-service` core Apache Druid
 > In addition, users could set `isolation.level` `read_uncommitted` in `consumerProperties`, if don't need Druid to consume transactional topics or need Druid to consume older versions of Kafka.
 > Make sure offsets are sequential, since there is no offset gap check in Druid anymore.
 
+> If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group id.
+
 ## Tutorial
 
 This page contains reference documentation for Apache Kafka-based ingestion.

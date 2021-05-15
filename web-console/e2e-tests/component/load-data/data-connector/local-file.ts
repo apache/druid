@@ -20,8 +20,7 @@ import * as playwright from 'playwright-chromium';
 
 import { setLabeledInput } from '../../../util/playwright';
 
-import { clickApplyButton } from './data-connector';
-import { DataConnector } from './data-connector';
+import { clickApplyButton, DataConnector } from './data-connector';
 
 /**
  * Local file connector for data loader input data.
@@ -29,7 +28,7 @@ import { DataConnector } from './data-connector';
 export class LocalFileDataConnector implements DataConnector {
   readonly name: string;
   readonly needParse: boolean;
-  private page: playwright.Page;
+  private readonly page: playwright.Page;
 
   constructor(page: playwright.Page, props: LocalFileDataConnectorProps) {
     Object.assign(this, props);

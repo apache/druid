@@ -59,7 +59,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("a", new String[] {"foo", "bar", "baz", "foobar"})
         .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
         .put("c", new Double[] {3.1, 4.2, 5.3});
-    bindings = Parser.withMap(builder.build());
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test
@@ -288,6 +288,27 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_concat(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
     assertArrayExpr("array_concat(map(y -> y * 3, b), [1, 2, 3])", new Long[]{3L, 6L, 9L, 12L, 15L, 1L, 2L, 3L});
     assertArrayExpr("array_concat(0, 1)", new Long[]{0L, 1L});
+  }
+
+  @Test
+  public void testArraySetAdd()
+  {
+    assertArrayExpr("array_set_add([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{null, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add([1, 2, 2], 1)", new Long[]{1L, 2L});
+    assertArrayExpr("array_set_add([], 1)", new String[]{"1"});
+    assertArrayExpr("array_set_add(<LONG>[], 1)", new Long[]{1L});
+    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{null});
+  }
+
+  @Test
+  public void testArraySetAddAll()
+  {
+    assertArrayExpr("array_set_add_all([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 4L, 6L});
+    assertArrayExpr("array_set_add_all([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add_all(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add_all(map(y -> y * 3, b), [1, 2, 3])", new Long[]{1L, 2L, 3L, 6L, 9L, 12L, 15L});
+    assertArrayExpr("array_set_add_all(0, 1)", new Long[]{0L, 1L});
   }
 
   @Test

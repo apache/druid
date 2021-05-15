@@ -5,8 +5,8 @@ exports[`AutoForm matches snapshot 1`] = `
   className="auto-form"
 >
   <Memo(FormGroupWithInfo)
-    key="testOne"
-    label="Test one"
+    key="testNumber"
+    label="Test number"
   >
     <Memo(NumericInputWithDefault)
       disabled={false}
@@ -18,8 +18,8 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testTwo"
-    label="Test two"
+    key="testSizeBytes"
+    label="Test size bytes"
   >
     <Blueprint3.NumericInput
       allowNumericCharactersOnly={true}
@@ -40,8 +40,8 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testThree"
-    label="Test three"
+    key="testString"
+    label="Test string"
   >
     <Memo(SuggestibleInput)
       disabled={false}
@@ -52,8 +52,20 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testFour"
-    label="Test four"
+    key="testStringWithDefault"
+    label="Test string with default"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value="Hello World"
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testBoolean"
+    label="Test boolean"
   >
     <Blueprint3.ButtonGroup>
       <Blueprint3.Button
@@ -73,8 +85,8 @@ exports[`AutoForm matches snapshot 1`] = `
     </Blueprint3.ButtonGroup>
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testFourWithDefault"
-    label="Test four with default"
+    key="testBooleanWithDefault"
+    label="Test boolean with default"
   >
     <Blueprint3.ButtonGroup>
       <Blueprint3.Button
@@ -94,8 +106,8 @@ exports[`AutoForm matches snapshot 1`] = `
     </Blueprint3.ButtonGroup>
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testFive"
-    label="Test five"
+    key="testStringArray"
+    label="Test string array"
   >
     <Memo(ArrayInput)
       disabled={false}
@@ -105,8 +117,24 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testSix"
-    label="Test six"
+    key="testStringArrayWithDefault"
+    label="Test string array with default"
+  >
+    <Memo(ArrayInput)
+      disabled={false}
+      onChange={[Function]}
+      placeholder=""
+      values={
+        Array [
+          "Hello",
+          "World",
+        ]
+      }
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testJson"
+    label="Test json"
   >
     <Memo(JsonInput)
       onChange={[Function]}
@@ -114,12 +142,16 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testSeven"
-    label="Test seven"
+    key="testStringRequiredAndDefaultValue"
+    label="Test string required and default value"
   >
-    <Memo(JsonInput)
-      onChange={[Function]}
+    <Memo(SuggestibleInput)
+      disabled={false}
+      intent="primary"
+      onBlur={[Function]}
+      onValueChange={[Function]}
       placeholder=""
+      value=""
     />
   </Memo(FormGroupWithInfo)>
   <Blueprint3.FormGroup

@@ -303,32 +303,4 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.
   }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForArrayResponse();
-    }
-  }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForMapResponse();
-    }
-  }
-
-  @Override
-  @Test
-  public void testTimeseriesWithPostAggregatorReferencingTimestampResultField()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithPostAggregatorReferencingTimestampResultField();
-    }
-  }
 }

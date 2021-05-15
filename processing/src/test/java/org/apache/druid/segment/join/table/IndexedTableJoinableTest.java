@@ -50,6 +50,7 @@ public class IndexedTableJoinableTest
   private static final String PREFIX = "j.";
   private static final String KEY_COLUMN = "str";
   private static final String VALUE_COLUMN = "long";
+  private static final String ALL_SAME_COLUMN = "allsame";
   private static final String UNKNOWN_COLUMN = "unknown";
   private static final String SEARCH_KEY_NULL_VALUE = "baz";
   private static final String SEARCH_KEY_VALUE = "foo";
@@ -84,13 +85,14 @@ public class IndexedTableJoinableTest
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
       ImmutableList.of(
-          new Object[]{"foo", 1L},
-          new Object[]{"bar", 2L},
-          new Object[]{"baz", null}
+          new Object[]{"foo", 1L, 1L},
+          new Object[]{"bar", 2L, 1L},
+          new Object[]{"baz", null, 1L}
       ),
       RowSignature.builder()
-                  .add("str", ValueType.STRING)
-                  .add("long", ValueType.LONG)
+                  .add(KEY_COLUMN, ValueType.STRING)
+                  .add(VALUE_COLUMN, ValueType.LONG)
+                  .add(ALL_SAME_COLUMN, ValueType.LONG)
                   .build()
   );
 
@@ -113,7 +115,7 @@ public class IndexedTableJoinableTest
   @Test
   public void getAvailableColumns()
   {
-    Assert.assertEquals(ImmutableList.of("str", "long"), target.getAvailableColumns());
+    Assert.assertEquals(ImmutableList.of(KEY_COLUMN, VALUE_COLUMN, ALL_SAME_COLUMN), target.getAvailableColumns());
   }
 
   @Test
@@ -339,5 +341,51 @@ public class IndexedTableJoinableTest
         10,
         true);
     Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnValues()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(VALUE_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(Optional.of(ImmutableSet.of("1", "2")), values);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique("nonexistent", Integer.MAX_VALUE);
+
+    Assert.assertEquals(Optional.empty(), values);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(
+        Optional.of(ImmutableSet.of("foo", "bar", "baz")),
+        values
+    );
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForAllSameColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(ALL_SAME_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(
+        Optional.empty(),
+        values
+    );
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, 1);
+
+    Assert.assertEquals(Optional.empty(), values);
   }
 }

@@ -102,6 +102,10 @@
                     <groupId>javax.servlet</groupId>
                     <artifactId>servlet-api</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.squareup.okhttp</groupId>
+                    <artifactId>okhttp</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -490,6 +494,7 @@
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                         <CONFLUENT_VERSION>5.5.1</CONFLUENT_VERSION>
+                                        <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zk.version}</ZK_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>

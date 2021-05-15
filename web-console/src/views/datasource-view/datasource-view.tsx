@@ -71,7 +71,7 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 import './datasource-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Datasource name',
     'Availability',
     'Availability detail',
@@ -111,6 +111,8 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     ACTION_COLUMN_LABEL,
   ],
 };
+
+const DEFAULT_RULES_KEY = '_default';
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
   const loadDrop: string[] = [];
@@ -167,6 +169,27 @@ interface DatasourceQueryResultRow {
   readonly avg_row_size: number;
 }
 
+function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryResultRow {
+  return {
+    datasource,
+    num_segments: 0,
+    num_segments_to_load: 0,
+    num_segments_to_drop: 0,
+    minute_aligned_segments: 0,
+    hour_aligned_segments: 0,
+    day_aligned_segments: 0,
+    month_aligned_segments: 0,
+    year_aligned_segments: 0,
+    total_data_size: 0,
+    replicated_size: 0,
+    min_segment_rows: 0,
+    avg_segment_rows: 0,
+    max_segment_rows: 0,
+    total_rows: 0,
+    avg_row_size: 0,
+  };
+}
+
 function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
   return (
     Number(Boolean(row.num_segments)) +
@@ -183,6 +206,10 @@ interface Datasource extends DatasourceQueryResultRow {
   readonly compactionConfig?: CompactionConfig;
   readonly compactionStatus?: CompactionStatus;
   readonly unused?: boolean;
+}
+
+function makeUnusedDatasource(datasource: string): Datasource {
+  return { ...makeEmptyDatasourceQueryResultRow(datasource), rules: [], unused: true };
 }
 
 interface DatasourcesAndDefaultRules {
@@ -301,8 +328,12 @@ ORDER BY 1`;
     }
   }
 
-  private datasourceQueryManager: QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>;
-  private tiersQueryManager: QueryManager<Capabilities, string[]>;
+  private readonly datasourceQueryManager: QueryManager<
+    DatasourceQuery,
+    DatasourcesAndDefaultRules
+  >;
+
+  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -380,11 +411,8 @@ ORDER BY 1`;
         }
 
         if (!capabilities.hasCoordinatorAccess()) {
-          datasources.forEach((ds: any) => {
-            ds.rules = [];
-          });
           return {
-            datasources,
+            datasources: datasources.map(ds => ({ ...ds, rules: [] })),
             defaultRules: [],
           };
         }
@@ -393,43 +421,43 @@ ORDER BY 1`;
 
         let unused: string[] = [];
         if (showUnused) {
-          const unusedResp = await Api.instance.get(
+          const unusedResp = await Api.instance.get<string[]>(
             '/druid/coordinator/v1/metadata/datasources?includeUnused',
           );
-          unused = unusedResp.data.filter((d: string) => !seen[d]);
+          unused = unusedResp.data.filter(d => !seen[d]);
         }
 
-        const rulesResp = await Api.instance.get('/druid/coordinator/v1/rules');
+        const rulesResp = await Api.instance.get<Record<string, Rule[]>>(
+          '/druid/coordinator/v1/rules',
+        );
         const rules = rulesResp.data;
 
-        const compactionConfigsResp = await Api.instance.get(
-          '/druid/coordinator/v1/config/compaction',
-        );
+        const compactionConfigsResp = await Api.instance.get<{
+          compactionConfigs: CompactionConfig[];
+        }>('/druid/coordinator/v1/config/compaction');
         const compactionConfigs = lookupBy(
           compactionConfigsResp.data.compactionConfigs || [],
-          (c: CompactionConfig) => c.dataSource,
+          c => c.dataSource,
         );
 
-        const compactionStatusesResp = await Api.instance.get(
+        const compactionStatusesResp = await Api.instance.get<{ latestStatus: CompactionStatus[] }>(
           '/druid/coordinator/v1/compaction/status',
         );
         const compactionStatuses = lookupBy(
           compactionStatusesResp.data.latestStatus || [],
-          (c: CompactionStatus) => c.dataSource,
+          c => c.dataSource,
         );
-
-        const allDatasources = (datasources as any).concat(
-          unused.map(d => ({ datasource: d, unused: true })),
-        );
-        allDatasources.forEach((ds: any) => {
-          ds.rules = rules[ds.datasource] || [];
-          ds.compactionConfig = compactionConfigs[ds.datasource];
-          ds.compactionStatus = compactionStatuses[ds.datasource];
-        });
 
         return {
-          datasources: allDatasources,
-          defaultRules: rules['_default'],
+          datasources: datasources.concat(unused.map(makeUnusedDatasource)).map(ds => {
+            return {
+              ...ds,
+              rules: rules[ds.datasource] || [],
+              compactionConfig: compactionConfigs[ds.datasource],
+              compactionStatus: compactionStatuses[ds.datasource],
+            };
+          }),
+          defaultRules: rules[DEFAULT_RULES_KEY] || [],
         };
       },
       onStateChange: datasourcesAndDefaultRulesState => {
@@ -454,14 +482,14 @@ ORDER BY 1`;
     });
   }
 
-  private handleResize = () => {
+  private readonly handleResize = () => {
     this.setState({
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
     });
   };
 
-  private refresh = (auto: any): void => {
+  private readonly refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
   };
@@ -695,7 +723,7 @@ ORDER BY 1`;
     );
   }
 
-  private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
+  private readonly saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
       await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
@@ -718,7 +746,7 @@ ORDER BY 1`;
     this.fetchDatasourceData();
   };
 
-  private editDefaultRules = () => {
+  private readonly editDefaultRules = () => {
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState(state => {
@@ -735,7 +763,7 @@ ORDER BY 1`;
     }, 50);
   };
 
-  private saveCompaction = async (compactionConfig: any) => {
+  private readonly saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
       await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
@@ -749,7 +777,7 @@ ORDER BY 1`;
     }
   };
 
-  private deleteCompaction = async () => {
+  private readonly deleteCompaction = () => {
     const { compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;
@@ -1417,7 +1445,7 @@ ORDER BY 1`;
           />
         </ViewControlBar>
         {showChart && (
-          <div className={'chart-container'}>
+          <div className="chart-container">
             <SegmentTimeline
               capabilities={capabilities}
               chartHeight={chartHeight}

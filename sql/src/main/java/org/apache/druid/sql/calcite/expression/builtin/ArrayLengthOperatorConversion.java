@@ -38,9 +38,8 @@ public class ArrayLengthOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("ARRAY_LENGTH")
       .operandTypeChecker(
           OperandTypes.or(
-              OperandTypes.family(SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.ARRAY),
-              OperandTypes.family(SqlTypeFamily.MULTISET)
+              OperandTypes.family(SqlTypeFamily.STRING)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)

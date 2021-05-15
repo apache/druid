@@ -77,7 +77,7 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.7.0</apache.kafka.version>
+        <apache.kafka.version>2.8.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.17.0</avatica.version>
@@ -90,7 +90,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.39.v20210325</jetty.version>
+        <jetty.version>9.4.40.v20210413</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
@@ -100,7 +100,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
-        <netty4.version>4.1.48.Final</netty4.version>
+        <netty4.version>4.1.63.Final</netty4.version>
         <node.version>v10.24.0</node.version>
         <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
@@ -269,7 +269,7 @@
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-sts</artifactId>
                 <version>${aws.sdk.version}</version>
-            </dependency>            
+            </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
@@ -1312,7 +1312,7 @@
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
 
-                        <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>                      
+                        <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
                   </excludes>
                 </configuration>
                 <executions>
@@ -1970,11 +1970,11 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
-                                <exclude>coordinator-console/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
+                                <exclude>.editorconfig</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

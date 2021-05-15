@@ -20,6 +20,7 @@ FROM openjdk:$JDK_VERSION as druidbase
 # Otherwise docker's layered images mean that things are not actually deleted.
 
 COPY base-setup.sh /root/base-setup.sh
+ARG KAFKA_VERSION
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
 RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && rm -f /root/base-setup.sh
 
