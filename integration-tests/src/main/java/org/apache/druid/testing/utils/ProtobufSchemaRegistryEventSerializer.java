@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -81,7 +80,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   }
 
   @Override
-  public byte[] serialize(List<Pair<String, Object>> event) throws IOException
+  public byte[] serialize(List<Pair<String, Object>> event)
   {
     Descriptors.Descriptor msgDesc = MSG_BUILDER.getDescriptorForType();
     for (Pair<String, Object> pair : event) {
