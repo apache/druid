@@ -17394,4 +17394,65 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testEmptyGroupWithOffsetDoesntInfiniteLoop() throws Exception
+  {
+    testQuery(
+        "SELECT r0.c, r1.c\n"
+        + "FROM (\n"
+        + "  SELECT COUNT(*) AS c\n"
+        + "  FROM \"foo\"\n"
+        + "  GROUP BY ()\n"
+        + "  OFFSET 1\n"
+        + ") AS r0\n"
+        + "LEFT JOIN (\n"
+        + "  SELECT COUNT(*) AS c\n"
+        + "  FROM \"foo\"\n"
+        + "  GROUP BY ()\n"
+        + ") AS r1 ON TRUE LIMIT 10",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new QueryDataSource(
+                              GroupByQuery.builder()
+                                          .setDataSource(CalciteTests.DATASOURCE1)
+                                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                                          .setGranularity(Granularities.ALL)
+                                          .setAggregatorSpecs(
+                                              aggregators(
+                                                  new CountAggregatorFactory("a0")
+                                              )
+                                          )
+                                          .setLimitSpec(DefaultLimitSpec.builder().offset(1).limit(10).build())
+                                          .setContext(QUERY_CONTEXT_DEFAULT)
+                                          .build()
+                          ),
+                          new QueryDataSource(
+                              Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .granularity(Granularities.ALL)
+                                    .aggregators(new CountAggregatorFactory("a0"))
+                                    .context(QUERY_CONTEXT_DEFAULT)
+                                    .build()
+                          ),
+                          "j0.",
+                          "1",
+                          JoinType.LEFT,
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("a0", "j0.a0")
+                  .limit(10)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+  }
 }
