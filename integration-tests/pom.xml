@@ -489,7 +489,6 @@
                                         <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
-                                        <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                         <CONFLUENT_VERSION>5.5.1</CONFLUENT_VERSION>
                                         <ZK_VERSION>${zk.version}</ZK_VERSION>
                                     </environmentVariables>
