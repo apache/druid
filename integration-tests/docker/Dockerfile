@@ -26,6 +26,7 @@ RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh
 
 FROM druidbase
 ARG MYSQL_VERSION
+ARG CONFLUENT_VERSION
 
 # Verify Java version
 RUN java -version
@@ -45,6 +46,9 @@ ADD lib/* /usr/local/druid/lib/
 # target path must match the exact path referenced in environment-configs/common
 RUN wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_VERSION/mysql-connector-java-$MYSQL_VERSION.jar" \
     -O /usr/local/druid/lib/mysql-connector-java.jar
+
+RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \
+    -O /usr/local/druid/lib/kafka-protobuf-provider.jar
 
 # Add sample data
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
