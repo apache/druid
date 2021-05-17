@@ -71,6 +71,7 @@ druid.extensions.loadList=["druid-moving-average-query"]
 There are currently no configuration properties specific to Moving Average.
 
 ## Limitations
+* movingAverage is not supported by Druid router(including the Web Console), all queries should be sent to broker nodes directly.
 * movingAverage is missing support for the following groupBy properties: `subtotalsSpec`, `virtualColumns`.
 * movingAverage is missing support for the following timeseries properties: `descending`.
 * movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error).
