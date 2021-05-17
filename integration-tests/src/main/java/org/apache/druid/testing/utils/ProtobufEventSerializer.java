@@ -34,7 +34,7 @@ public class ProtobufEventSerializer implements EventSerializer
 
   private static final Logger LOGGER = new Logger(ProtobufEventSerializer.class);
 
-  public static DynamicSchema SCHEMA;
+  public static final DynamicSchema SCHEMA;
 
   static {
     DynamicSchema.Builder schemaBuilder = DynamicSchema.newBuilder();
@@ -57,12 +57,14 @@ public class ProtobufEventSerializer implements EventSerializer
         .addField("optional", "int32", "delta", 16)
         .build();
     schemaBuilder.addMessageDefinition(wikiDef);
+    DynamicSchema schema = null;
     try {
-      SCHEMA = schemaBuilder.build();
+      schema = schemaBuilder.build();
     }
     catch (Descriptors.DescriptorValidationException e) {
       LOGGER.error("Could not init protobuf schema.");
     }
+    SCHEMA = schema;
   }
 
   @Override
