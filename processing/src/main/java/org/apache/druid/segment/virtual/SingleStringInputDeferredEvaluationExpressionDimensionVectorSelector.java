@@ -21,6 +21,8 @@ package org.apache.druid.segment.virtual;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -41,8 +43,8 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     implements SingleValueDimensionVectorSelector
 {
   private final SingleValueDimensionVectorSelector selector;
-  private final Expr expression;
-  private final SingleInputBindings bindings = new SingleInputBindings();
+  private final ExprVectorProcessor<String[]> stringProcessor;
+  private final StringVectorInputBindings inputBinding;
 
   public SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
       SingleValueDimensionVectorSelector selector,
@@ -52,10 +54,14 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     // Verify selector has a working dictionary.
     if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {
-      throw new ISE("Selector of class[%s] does not have a dictionary, cannot use it.", selector.getClass().getName());
+      throw new ISE(
+          "Selector of class[%s] does not have a dictionary, cannot use it.",
+          selector.getClass().getName()
+      );
     }
     this.selector = selector;
-    this.expression = expression;
+    this.inputBinding = new StringVectorInputBindings();
+    this.stringProcessor = expression.buildVectorized(inputBinding);
   }
 
   @Override
@@ -68,18 +74,14 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
   @Override
   public String lookupName(int id)
   {
-    final String value;
-
-    value = selector.lookupName(id);
-
-    bindings.set(value);
-    return expression.eval(bindings).asString();
+    inputBinding.currentValue[0] = selector.lookupName(id);
+    return stringProcessor.evalVector(inputBinding).values()[0];
   }
 
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return selector.nameLookupPossibleInAdvance();
+    return true;
   }
 
   @Nullable
@@ -105,5 +107,60 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
   public int getCurrentVectorSize()
   {
     return selector.getCurrentVectorSize();
+  }
+
+  private static final class StringVectorInputBindings implements Expr.VectorInputBinding
+  {
+    private final String[] currentValue = new String[1];
+
+    @Nullable
+    @Override
+    public ExprType getType(String name)
+    {
+      return ExprType.STRING;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return 1;
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return 1;
+    }
+
+    @Override
+    public int getCurrentVectorId()
+    {
+      return -1;
+    }
+
+    @Override
+    public <T> T[] getObjectVector(String name)
+    {
+      return (T[]) currentValue;
+    }
+
+    @Override
+    public long[] getLongVector(String name)
+    {
+      throw new UnsupportedOperationException("attempt to get long[] from string[] only scalar binding");
+    }
+
+    @Override
+    public double[] getDoubleVector(String name)
+    {
+      throw new UnsupportedOperationException("attempt to get double[] from string[] only scalar binding");
+    }
+
+    @Nullable
+    @Override
+    public boolean[] getNullVector(String name)
+    {
+      throw new UnsupportedOperationException("attempt to get boolean[] null vector from string[] only scalar binding");
+    }
   }
 }

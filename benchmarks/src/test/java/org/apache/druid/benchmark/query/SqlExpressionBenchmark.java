@@ -188,7 +188,10 @@ public class SqlExpressionBenchmark
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"false", "force"})
+  @Param({
+      "false",
+      "force"
+  })
   private String vectorize;
 
   @Param({
