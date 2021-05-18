@@ -676,6 +676,9 @@ public class TaskLockbox
 
   /**
    * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   * Here, Segment Locks are being treated the same as Time Chunk Locks i.e.
+   * a Task with a Segment Lock is assumed to lock a whole Interval and not just
+   * the corresponding Segment.
    *
    * @param minTaskPriority Minimum task priority for each datasource. Only the
    *                        Intervals that are locked by Tasks higher than this
