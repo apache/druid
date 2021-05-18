@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import junitparams.JUnitParamsRunner;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,6 +42,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * This class has copied a subset of the tests in {@link CalciteQueryTest} and replaced various parts of queries with
@@ -48,10 +50,9 @@ import org.junit.Test;
  * were merely chosen to produce a selection of parameter types and positions within query expressions and have been
  * renamed to reflect this
  */
+@RunWith(JUnitParamsRunner.class)
 public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
-
   @Test
   public void testSelectConstantParamGetsConstant() throws Exception
   {

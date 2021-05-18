@@ -112,6 +112,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
+  final boolean useDefault = NullHandling.replaceWithDefault();
+
   @BeforeClass
   public static void setupNullValues()
   {
@@ -174,6 +176,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                   .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
                   .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT = DEFAULT_QUERY_CONTEXT_BUILDER.build();
+
+  public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false)
+                                   .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,

@@ -259,6 +259,20 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testStringArrayToNumberArray()
+  {
+    ExprEval someStringArray = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
+    Assert.assertArrayEquals(
+        new Long[]{1L, 2L, null, null, 3L},
+        someStringArray.asLongArray()
+    );
+    Assert.assertArrayEquals(
+        new Double[]{1.0, 2.0, null, null, 3.3},
+        someStringArray.asDoubleArray()
+    );
+  }
+
   private void assertExpr(int position, Object expected)
   {
     assertExpr(position, ExprEval.bestEffortOf(expected));

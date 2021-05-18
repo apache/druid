@@ -430,11 +430,14 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testRoundWithNullValue()
+  public void testRoundWithNullValueOrInvalid()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("null", "STRING"),
-        Pair.of("x", "STRING")
+        Pair.of("x", "STRING"),
+        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("c", "DOUBLE_ARRAY"),
+        Pair.of("a", "STRING_ARRAY")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       if (NullHandling.sqlCompatible()) {
@@ -446,41 +449,13 @@ public class FunctionTest extends InitializedNullHandlingTest
         }
         catch (IllegalArgumentException e) {
           Assert.assertEquals(
-              String.format(
-                  Locale.ENGLISH,
+              StringUtils.format(
                   "The first argument to the function[round] should be integer or double type but got the type: %s",
                   argAndType.rhs
               ),
               e.getMessage()
           );
         }
-      }
-    }
-  }
-
-  @Test
-  public void testRoundWithInvalidFirstArgument()
-  {
-    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
-        Pair.of("b", "LONG_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY"),
-        Pair.of("a", "STRING_ARRAY")
-
-    );
-    for (Pair<String, String> argAndType : invalidArguments) {
-      try {
-        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
-        Assert.fail("Did not throw IllegalArgumentException");
-      }
-      catch (IllegalArgumentException e) {
-        Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
-                "The first argument to the function[round] should be integer or double type but got the type: %s",
-                argAndType.rhs
-            ),
-            e.getMessage()
-        );
       }
     }
   }
@@ -502,8 +477,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       }
       catch (IllegalArgumentException e) {
         Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
+            StringUtils.format(
                 "The second argument to the function[round] should be integer type but got the type: %s",
                 argAndType.rhs
             ),
