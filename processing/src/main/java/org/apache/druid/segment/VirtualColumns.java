@@ -415,6 +415,10 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toArray(new VirtualColumn[0]);
   }
 
+  /**
+   * Creates a {@link VirtualizedColumnSelectorFactory} which can create column selectors for {@link #virtualColumns}
+   * in addition to selectors for all physical columns in the underlying factory.
+   */
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
     if (virtualColumns.isEmpty()) {
@@ -424,7 +428,10 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-
+  /**
+   * Creates a {@link VirtualizedColumnInspector} that provides {@link ColumnCapabilities} information for all
+   * {@link #virtualColumns} in addition to the capabilities of all physical columns in the underlying inspector.
+   */
   public ColumnInspector wrapInspector(ColumnInspector inspector)
   {
     if (virtualColumns.isEmpty()) {

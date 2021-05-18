@@ -97,6 +97,13 @@ public interface VectorColumnProcessorFactory<T>
    * available ({@link ColumnCapabilities#isDictionaryEncoded()} is true), and there is a unique mapping of dictionary
    * id to value ({@link ColumnCapabilities#areDictionaryValuesUnique()} is true), but this can be overridden
    * if there is more appropriate behavior for a given processor.
+   *
+   * For processors, this means by default only actual dictionary encoded string columns (likely from real segments)
+   * will use {@link SingleValueDimensionVectorSelector} and {@link MultiValueDimensionVectorSelector}, while
+   * processors on things like string expression virtual columns will prefer to use {@link VectorObjectSelector}. In
+   * other words, it is geared towards use cases where there is a clear opportunity to benefit to deferring having to
+   * deal with the actual string value in exchange for the increased complexity of dealing with dictionary encoded
+   * selectors.
    */
   default boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
   {
