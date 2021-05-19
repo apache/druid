@@ -59,7 +59,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -616,89 +615,23 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testAutoCompactionDutySkipsLockedIntervals() throws Exception
-  {
-    loadData(INDEX_TASK);
-
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
-      // 4 segments across 2 days (4 total)...
-      verifySegmentsCount(4);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-
-      // Submit another index task
-      submitIndexTask(INDEX_TASK, fullDatasourceName);
-
-      final Map<String, Integer> minTaskPriority = Collections.singletonMap(fullDatasourceName, 0);
-
-      // Ensure that the intervals are locked
-      ITRetryUtil.retryUntilFalse(
-          () -> indexer.getLockedIntervals(minTaskPriority).isEmpty(),
-          "Get Locked Intervals"
-      );
-
-      // Trigger a compaction with no skip offset
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
-      forceTriggerAutoCompaction(4);
-
-      // Verify that no compaction tasks were submitted
-      verifyCompactionTaskCount(0);
-      verifySegmentsCompacted(0, MAX_ROWS_PER_SEGMENT_COMPACTED);
-
-      // After locks have been released, trigger compaction again
-      forceTriggerAutoCompaction(2);
-
-      // Verify that segments have now been compacted
-      verifyCompactionTaskCount(2);
-      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-
-      checkCompactionIntervals(intervalsBeforeCompaction);
-      getAndAssertCompactionStatus(
-          fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          28623,
-          0,
-          0,
-          4,
-          0,
-          0,
-          2,
-          0);
-    }
-  }
-
-  /**
-   * Checks if the given TaskResponseObject represents a Compaction Task.
-   */
-  private boolean isCompactionTask(TaskResponseObject taskResponse)
-  {
-    return "compact".equalsIgnoreCase(taskResponse.getType());
-  }
-
-  /**
-   * Verifies that the total number of complete or incomplete compaction tasks
-   * for the current datasource is as expected.
-   */
-  private void verifyCompactionTaskCount(int expectedCount)
-  {
-    List<TaskResponseObject> incompleteTasks = indexer
-        .getUncompletedTasksForDataSource(fullDatasourceName);
-    List<TaskResponseObject> completeTasks = indexer
-        .getCompleteTasksForDataSource(fullDatasourceName);
-
-    long observedCount = incompleteTasks.stream().filter(this::isCompactionTask).count()
-                         + completeTasks.stream().filter(this::isCompactionTask).count();
-
-    Assert.assertEquals(observedCount, expectedCount);
-  }
-
   private void loadData(String indexTask) throws Exception
   {
-    loadData(indexTask, fullDatasourceName);
+    String taskSpec = getResourceAsString(indexTask);
+    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+        jsonMapper.writeValueAsString("0")
+    );
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for loading index task %s", taskID);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Load"
+    );
   }
 
   private void verifyQuery(String queryResource) throws Exception
