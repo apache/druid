@@ -634,31 +634,31 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolNumTotalThreads": {
+  "jetty/threadPool/total": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolNumIdleThreads": {
+  "jetty/threadPool/idle": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolNumBusyThreads": {
+  "jetty/threadPool/busy": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolIsLowOnThreads": {
+  "jetty/threadPool/isLowOnThreads": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolMinThreads": {
+  "jetty/threadPool/min": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolMaxThreads": {
+  "jetty/threadPool/max": {
     "dimensions": [],
     "type": "gauge"
   },
-  "jetty/threadPoolQueueSize": {
+  "jetty/threadPool/queueSize": {
     "dimensions": [],
     "type": "gauge"
   }

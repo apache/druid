@@ -133,11 +133,11 @@
   "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
 
   "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolNumTotalThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolNumIdleThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolNumBusyThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolIsLowOnThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolMinThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolMaxThreads": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPoolQueueSize": { "dimensions" : [], "type" : "gauge" }
+  "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/idle": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/busy": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/isLowOnThreads": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/min": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/max": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" }
 }

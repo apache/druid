@@ -76,7 +76,6 @@ import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
-import org.eclipse.jetty.util.thread.ThreadPool;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
@@ -93,7 +92,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -103,8 +101,8 @@ public class JettyServerModule extends JerseyServletModule
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
-  private static final AtomicReference<ThreadPool> JETTY_SERVER_THREAD_POOL = new AtomicReference<>(null);
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
+  private static QueuedThreadPool jettyServerThreadPool = null;
 
   @Override
   protected void configureServlets()
@@ -225,7 +223,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     threadPool.setDaemon(true);
-    JETTY_SERVER_THREAD_POOL.compareAndSet(null, threadPool);
+    jettyServerThreadPool = threadPool;
 
     final Server server = new Server(threadPool);
 
@@ -503,21 +501,14 @@ public class JettyServerModule extends JerseyServletModule
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
-      ThreadPool jettyServerThreadPool = JETTY_SERVER_THREAD_POOL.get();
-      emitter.emit(builder.build("jetty/threadPoolNumTotalThreads", jettyServerThreadPool.getThreads()));
-      emitter.emit(builder.build("jetty/threadPoolNumIdleThreads", jettyServerThreadPool.getIdleThreads()));
-      emitter.emit(builder.build("jetty/threadPoolIsLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
-      if (jettyServerThreadPool instanceof ThreadPool.SizedThreadPool) {
-        emitter.emit(builder.build("jetty/threadPoolMinThreads",
-                                   ((ThreadPool.SizedThreadPool) jettyServerThreadPool).getMinThreads()));
-        emitter.emit(builder.build("jetty/threadPoolMaxThreads",
-                                   ((ThreadPool.SizedThreadPool) jettyServerThreadPool).getMaxThreads()));
-      }
-      if (jettyServerThreadPool instanceof QueuedThreadPool) {
-        emitter.emit(builder.build("jetty/threadPoolQueueSize",
-                                   ((QueuedThreadPool) jettyServerThreadPool).getQueueSize()));
-        emitter.emit(builder.build("jetty/threadPoolNumBusyThreads",
-                                   ((QueuedThreadPool) jettyServerThreadPool).getBusyThreads()));
+      if (jettyServerThreadPool != null) {
+        emitter.emit(builder.build("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
+        emitter.emit(builder.build("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+        emitter.emit(builder.build("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
+        emitter.emit(builder.build("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
+        emitter.emit(builder.build("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
+        emitter.emit(builder.build("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
+        emitter.emit(builder.build("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
       }
 
       return true;
