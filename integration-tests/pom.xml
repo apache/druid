@@ -540,6 +540,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                -Xmx64m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
