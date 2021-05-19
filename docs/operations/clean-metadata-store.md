@@ -2,7 +2,7 @@
 id: clean-metadata-store
 title: "Automated cleanup for metadata records"
 sidebar_label: Automated metadata cleanup
-description: "Defines a strategy to maintain Druid metadata store performance by automatically removing leftover records for deleted entities: datasources, supervisors, rulles, compaction configuration, audit records, etc. Most applicable to databases with 'high-churn' datasources."
+description: "Defines a strategy to maintain Druid metadata store performance by automatically removing leftover records for deleted entities: datasources, supervisors, rules, compaction configuration, audit records, etc. Most applicable to databases with 'high-churn' datasources."
 ---
 
 <!--
@@ -38,18 +38,18 @@ To maintain metadata store performance in this case, you can configure Apache Dr
 
 ## Automated cleanup strategies
 There are several cases when you should consider automated cleanup of the metadata related to deleted datasources:
-- Proactively, if you know you have many high-churn datasources. For example you have scripts that create and delete supervisors regularly.
+- If you know you have many high-churn datasources,  for example, you have scripts that create and delete supervisors regularly.
 - If you have issues with the hard disk for your metadata database filling up.
-- If you run into performance issues with the metadata database. For example API calls are very slow or fail to execute.
+- If you run into performance issues with the metadata database. For example, API calls are very slow or fail to execute.
 
-If you have compliance requirements to keep audit records, use alternative methods to preserve audit metadata if you enable automated cleanup for audit records. For example, periodically export audit metadata records to external storage.
+If you have compliance requirements to keep audit records and you enable automated cleanup for audit records, use alternative methods to preserve audit metadata, for example, by periodically exporting audit metadata records to external storage.
 
 ## Configure automated metadata cleanup
 By default, automatic cleanup for metadata is disabled. See [Metadata storage](../configuration/index.md#metadata-storage) for the default configuration settings after you enable the feature.
 
 You can configure cleanup on a per-entity basis with the following constraints:
 - You have to configure a [kill task for segment records](#kill-task) before you can configure automated cleanup for [rules](#rules-records) or [compaction configuration](#compaction-configuration-records).
-- You have to configure the scheduler for the cleanup jobs to run at a the same frequency or more frequently than your most frequent cleanup job. For example, if your most frequent cleanup job is every hour, set the scheduler metadata store management period to one hour or less: `druid.coordinator.period.metadataStoreManagementPeriod=P1H`.
+- You have to configure the scheduler for the cleanup jobs to run at the same frequency or more frequently than your most frequent cleanup job. For example, if your most frequent cleanup job is every hour, set the scheduler metadata store management period to one hour or less: `druid.coordinator.period.metadataStoreManagementPeriod=P1H`.
 
 For details on configuration properties, see [Metadata management](../configuration/index.md#metadata-management).
 
@@ -61,7 +61,7 @@ Segment records and segments in deep storage become eligible for deletion:
 - The `durationToRetain` time has passed since their creation.
 
 Kill tasks use the following configuration:
-- `druid.coordinator.kill.on`: When `True`, enables the Coordinator to submit kill task for unused segments which deletes them completely from metadata store and from deep storage. Only applies dataSources according to allowed datasources or all datasources.
+- `druid.coordinator.kill.on`: When `True`, enables the Coordinator to submit kill task for unused segments, which deletes them completely from metadata store and from deep storage. Only applies `dataSources` according to the dynamic configuration: allowed datasources (`killDataSourceWhitelist`) or all datasources (`killAllDataSources`).
 - `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
@@ -91,7 +91,7 @@ Rule cleanup uses the following configuration:
  - `druid.coordinator.kill.rule.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible rules records. Defaults to `P1D`.
  - `druid.coordinator.kill.rule.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that rules records become eligible for deletion.
 
- ### Compaction configuration records
+### Compaction configuration records
 Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
 Compaction configuration cleanup uses the following configuration:
