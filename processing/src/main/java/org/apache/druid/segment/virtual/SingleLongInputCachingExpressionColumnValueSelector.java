@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,16 +49,13 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   // Last read input value.
   private long lastInput;
 
-  // Last read input value is null.
-  private boolean cachedIsNull = false;
-
   // Last computed output value, or null if there is none.
   @Nullable
   private ExprEval lastOutput;
 
   // Computed output value for null.
-  @Nullable
-  private ExprEval outputForNull;
+  @MonotonicNonNull
+  private ExprEval nullOutput;
 
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
@@ -104,30 +102,30 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public ExprEval getObject()
   {
-    boolean cached;
-    boolean currentInputIsNull = false;
+    // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
     if (selector.isNull()) {
-      cached = cachedIsNull;
-      currentInputIsNull = true;
-    } else {
-      cached = selector.getLong() == lastInput && lastOutput != null;
+      if (nullOutput == null) {
+        bindings.set(null);
+        nullOutput = expression.eval(bindings);
+      }
+      return nullOutput;
     }
+    // No assert for null handling, as the delegate selector already has it.
+    final long input = selector.getLong();
+    final boolean cached = input == lastInput && lastOutput != null;
 
     if (!cached) {
-      if (lruEvalCache == null || currentInputIsNull) {
-        bindings.set(currentInputIsNull ? null : selector.getLong());
-        outputForNull = expression.eval(bindings);
+      if (lruEvalCache == null) {
+        bindings.set(input);
+        lastOutput = expression.eval(bindings);
       } else {
-        lastOutput = lruEvalCache.compute(selector.getLong());
+        lastOutput = lruEvalCache.compute(input);
       }
 
-      cachedIsNull = currentInputIsNull ? true : false;
-      if (!currentInputIsNull) {
-        lastInput = selector.getLong();
-      }
+      lastInput = input;
     }
 
-    return (lruEvalCache == null || currentInputIsNull) ? outputForNull : lastOutput;
+    return lastOutput;
   }
 
   @Override
