@@ -45,6 +45,7 @@ There are several cases when you should consider automated cleanup of the metada
 If you have compliance requirements to keep audit records, use alternative methods to preserve audit metadata if you enable automated cleanup for audit records. For example, periodically export audit metadata records to external storage.
 
 ## Configure automated metadata cleanup
+By default, automatic cleanup for metadata is disabled. See [Metadata storage](../configuration/index.md#metadata-storage) for the default configuration settings after you enable the feature.
 
 You can configure cleanup on a per-entity basis with the following constraints:
 - You have to configure a [kill task for segment records](#kill-task) before you can configure automated cleanup for [rules](#rules-records) or [compaction configuration](#compaction-configuration-records).
@@ -91,7 +92,7 @@ Rule cleanup uses the following configuration:
  - `druid.coordinator.kill.rule.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that rules records become eligible for deletion.
 
  ### Compaction configuration records
-Compaction configuration records in the records in the `druid_config` table become eligible for deletion all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
+Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
 Compaction configuration cleanup uses the following configuration:
  - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction  configuration records.
@@ -108,7 +109,7 @@ Datasource cleanup uses the following configuration:
  - `druid.coordinator.kill.datasource.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that datasource records become eligible for deletion.
 
 ### Indexer task logs
-The Druid Overlord handles task log metadata management.
+You can configure the Overlord to delete indexer task log metadata and the indexer task logs from local disk or from cloud storage.
 
 Indexer task log cleanup on the Overlord uses the following configuration:
 - `druid.indexer.logs.kill.enabled`: When `true`, enables cleanup of task logs.
@@ -126,10 +127,11 @@ Consider a scenario where you have scripts to create and delete hundreds of data
 # Schedule the metadata management store task for every hour:
 druid.coordinator.period.metadataStoreManagementPeriod=P1H
 
-# Set a kill task to poll every day to delete Segment records
-# and segments in deep storage > 4 days old.
-# Required also for automated cleanup of rules
-# and compaction configuration.
+# Set a kill task to poll every day to delete Segment records and segments
+# in deep storage > 4 days old. When druid.coordinator.kill.on is set to true,
+# you must set either killAllDataSources or killDataSourceWhitelist in the dynamic
+# configuration. For this example, assume killAllDataSources is set to true.
+# Required also for automated cleanup of rules and compaction configuration.
 
 druid.coordinator.kill.on=true
 druid.coordinator.kill.period=P1D 
@@ -151,7 +153,7 @@ druid.coordinator.kill.rule.on=true
 druid.coordinator.kill.rule.period=P1D
 druid.coordinator.kill.rule.durationToRetain=P4D
 
-# Poll every day to delete compaction configuration records > 4 days old
+# Poll every day to delete compaction configuration records
 druid.coordinator.kill.compaction.on=true
 druid.coordinator.kill.compaction.period=P1D
 
