@@ -25,6 +25,7 @@ import {
   SqlLiteral,
   SqlQuery,
   SqlRef,
+  SqlTableRef,
 } from 'druid-query-toolkit';
 import React from 'react';
 
@@ -159,7 +160,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(SqlFunction.decorated('COUNT', 'DISTINCT', [ref]), `dist_${columnName}`)}
         {aggregateMenuItem(
-          SqlFunction.simple('COUNT', [SqlRef.STAR], ref.equal(EMPTY_LITERAL)),
+          SqlFunction.COUNT_STAR.addWhereExpression(ref.equal(EMPTY_LITERAL)),
           `filtered_dist_${columnName}`,
           false,
         )}
@@ -187,7 +188,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
               parsedQuery.addJoin(
                 SqlJoinPart.create(
                   'LEFT',
-                  SqlRef.column(table, schema).upgrade(),
+                  SqlTableRef.create(table, schema),
                   SqlRef.column(columnName, table, 'lookup').equal(
                     SqlRef.column(
                       lookupColumn === columnName ? originalTableColumn : 'XXX',
@@ -208,7 +209,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
               parsedQuery.addJoin(
                 SqlJoinPart.create(
                   'INNER',
-                  SqlRef.column(table, schema).upgrade(),
+                  SqlTableRef.create(table, schema),
                   SqlRef.column(columnName, table, 'lookup').equal(
                     SqlRef.column(
                       lookupColumn === columnName ? originalTableColumn : 'XXX',

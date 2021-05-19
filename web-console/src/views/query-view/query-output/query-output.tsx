@@ -300,7 +300,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
-          ex = selectValue.expression as SqlExpression;
+          ex = selectValue.getUnderlyingExpression();
         }
       } else if (parsedQuery.hasStarInSelect()) {
         ex = SqlRef.column(header);
@@ -372,10 +372,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       if (parsedQuery.hasStarInSelect()) return;
       const selectExpression = parsedQuery.getSelectExpressionForIndex(renamingColumn);
       if (!selectExpression) return;
-      onQueryChange(
-        parsedQuery.changeSelect(renamingColumn, selectExpression.changeAliasName(renameTo)),
-        true,
-      );
+      onQueryChange(parsedQuery.changeSelect(renamingColumn, selectExpression.as(renameTo)), true);
     }
   }
 

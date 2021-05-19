@@ -47,6 +47,12 @@ exports.SQL_KEYWORDS = [
   'FULL',
   'CROSS',
   'USING',
+  'FETCH',
+  'FIRST',
+  'NEXT',
+  'ROW',
+  'ROWS',
+  'ONLY',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
