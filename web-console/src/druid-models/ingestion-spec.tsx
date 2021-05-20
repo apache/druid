@@ -883,7 +883,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             'kinesis.us-gov-east-1.amazonaws.com',
             'kinesis.us-gov-west-1.amazonaws.com',
           ],
-          required: true,
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}

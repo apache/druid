@@ -27,6 +27,8 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 
+import javax.ws.rs.core.MediaType;
+
 public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQuery>
 {
 
@@ -37,7 +39,9 @@ public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQu
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    // currently smile encoding is not supported on SQL endpoint
+    // so no need to pass smile ObjectMapper
+    super(jsonMapper, null, httpClient, config.getRouterUrl(), MediaType.APPLICATION_JSON, null);
   }
 
   @Override

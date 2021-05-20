@@ -41,21 +41,33 @@ public class ReplicationThrottler
 
   private volatile int maxReplicants;
   private volatile int maxLifetime;
+  private volatile boolean loadPrimaryReplicantsOnly;
 
-  public ReplicationThrottler(int maxReplicants, int maxLifetime)
+  public ReplicationThrottler(int maxReplicants, int maxLifetime, boolean loadPrimaryReplicantsOnly)
   {
-    updateParams(maxReplicants, maxLifetime);
+    updateParams(maxReplicants, maxLifetime, loadPrimaryReplicantsOnly);
   }
 
-  public void updateParams(int maxReplicants, int maxLifetime)
+  public void updateParams(int maxReplicants, int maxLifetime, boolean loadPrimaryReplicantsOnly)
   {
     this.maxReplicants = maxReplicants;
     this.maxLifetime = maxLifetime;
+    this.loadPrimaryReplicantsOnly = loadPrimaryReplicantsOnly;
   }
 
   public void updateReplicationState(String tier)
   {
     update(tier, currentlyReplicating, replicatingLookup, "create");
+  }
+
+  public boolean isLoadPrimaryReplicantsOnly()
+  {
+    return loadPrimaryReplicantsOnly;
+  }
+
+  public void setLoadPrimaryReplicantsOnly(boolean loadPrimaryReplicantsOnly)
+  {
+    this.loadPrimaryReplicantsOnly = loadPrimaryReplicantsOnly;
   }
 
   private void update(String tier, ReplicatorSegmentHolder holder, Map<String, Boolean> lookup, String type)
@@ -87,7 +99,7 @@ public class ReplicationThrottler
 
   public boolean canCreateReplicant(String tier)
   {
-    return replicatingLookup.get(tier) && !currentlyReplicating.isAtMaxReplicants(tier);
+    return !loadPrimaryReplicantsOnly && replicatingLookup.get(tier) && !currentlyReplicating.isAtMaxReplicants(tier);
   }
 
   public void registerReplicantCreation(String tier, SegmentId segmentId, String serverId)

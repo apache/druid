@@ -61,6 +61,12 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
 
   private PartialGenericSegmentMergeTask target;
 
+  public PartialGenericSegmentMergeTaskTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @Before
   public void setup()
   {
@@ -69,6 +75,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.GROUP_ID,
         ParallelIndexTestingFactory.TASK_RESOURCE,
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
         ParallelIndexTestingFactory.CONTEXT
@@ -99,6 +106,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.GROUP_ID,
         ParallelIndexTestingFactory.TASK_RESOURCE,
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         new PartialGenericSegmentMergeIngestionSpec(
             ParallelIndexTestingFactory.createDataSchema(null),

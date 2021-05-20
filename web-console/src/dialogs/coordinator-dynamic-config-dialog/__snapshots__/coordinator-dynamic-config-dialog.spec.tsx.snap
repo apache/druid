@@ -191,6 +191,14 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           "name": "replicateAfterLoadTimeout",
           "type": "boolean",
         },
+        Object {
+          "defaultValue": 2147483647,
+          "info": <React.Fragment>
+            The maximum number of non-primary replicants to load in a single Coordinator cycle. Once this limit is hit, only primary replicants will be loaded for the remainder of the cycle. Tuning this value lower can help reduce the delay in loading primary segments when the cluster has a very large number of non-primary replicants to load (such as when a single historical drops out of the cluster leaving many under-replicated segments).
+          </React.Fragment>,
+          "name": "maxNonPrimaryReplicantsToLoad",
+          "type": "number",
+        },
       ]
     }
     model={Object {}}

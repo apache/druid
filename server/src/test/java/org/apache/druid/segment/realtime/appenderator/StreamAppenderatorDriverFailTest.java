@@ -545,5 +545,11 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     {
       throw new UnsupportedOperationException();
     }
+    @Override
+    public boolean isRealTime()
+    {
+      return true;
+    }
+
   }
 }
