@@ -4948,6 +4948,42 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testLongPredicateIsNull() throws Exception
+  {
+    testQuery(
+          "SELECT l1 is null FROM druid.numfoo",
+          ImmutableList.of(
+            newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .columns("v0")
+            .virtualColumns(
+            expressionVirtualColumn("v0", NullHandling.replaceWithDefault() ? "0" : "isnull(\"l1\")", ValueType.LONG)
+        )
+          .context(QUERY_CONTEXT_DEFAULT)
+          .build()
+        ),
+              NullHandling.replaceWithDefault() ?
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false}
+                      ) :
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{true},
+                              new Object[]{true},
+                              new Object[]{true}
+                      )
+    );
+  }
+
+  @Test
   public void testLongPredicateFilterNulls() throws Exception
   {
     testQuery(
