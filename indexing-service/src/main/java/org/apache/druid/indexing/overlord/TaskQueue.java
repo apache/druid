@@ -356,13 +356,13 @@ public class TaskQueue
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
+    defaultTaskConfig.getContext().forEach(task::addToContextIfAbsent);
     // Every task shuold use the lineage-based segment allocation protocol unless it is explicitly set to
     // using the legacy protocol.
     task.addToContextIfAbsent(
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
-    defaultTaskConfig.getContext().forEach(task::addToContextIfAbsent);
 
     giant.lock();
 
@@ -719,5 +719,11 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
     return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                 .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
+
+  @VisibleForTesting
+  List<Task> getTasks()
+  {
+    return tasks;
   }
 }

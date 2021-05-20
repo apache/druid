@@ -248,7 +248,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
         thePlan.getExpression(),
-        thePlan.getBindings()
+        thePlan.getBindings(),
+        maxSizeBytes.getBytesInInt()
     );
   }
 

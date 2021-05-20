@@ -780,6 +780,11 @@ public class DruidQuery
       return null;
     }
 
+    if (sorting != null && sorting.getOffsetLimit().hasOffset()) {
+      // Timeseries cannot handle offsets.
+      return null;
+    }
+
     final Granularity queryGranularity;
     final boolean descending;
     int timeseriesLimit = 0;
@@ -803,11 +808,6 @@ public class DruidQuery
           Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
       );
       if (sorting != null) {
-        if (sorting.getOffsetLimit().hasOffset()) {
-          // Timeseries cannot handle offsets.
-          return null;
-        }
-
         if (sorting.getOffsetLimit().hasLimit()) {
           final long limit = sorting.getOffsetLimit().getLimit();
 

@@ -398,4 +398,4 @@ services:
       SCHEMA_REGISTRY_AUTHENTICATION_METHOD: BASIC
       SCHEMA_REGISTRY_AUTHENTICATION_REALM: druid
       SCHEMA_REGISTRY_AUTHENTICATION_ROLES: users
-      SCHEMA_REGISTRY_OPTS: -Djava.security.auth.login.config=/usr/lib/druid/conf/jaas_config.file
+      SCHEMA_REGISTRY_OPTS: -Djava.security.auth.login.config=/usr/lib/druid/conf/jaas_config.file -Xmx32m
