@@ -386,7 +386,7 @@ class BinAndExpr extends BinaryOpExprBase
 
     // if left is false, always false
     if (leftVal.value() != null && !leftVal.asBoolean()) {
-      return ExprEval.of(false, leftVal.type());
+      return ExprEval.ofBoolean(false, leftVal.type());
     }
     ExprEval rightVal;
     if (NullHandling.sqlCompatible() || leftVal.type() == ExprType.STRING) {
@@ -397,7 +397,7 @@ class BinAndExpr extends BinaryOpExprBase
         if (rightVal.value() == null || rightVal.asBoolean()) {
           return ExprEval.ofNull(rightVal.type());
         }
-        return ExprEval.of(false, rightVal.type());
+        return ExprEval.ofBoolean(false, rightVal.type());
       } else {
         // left value must be true
         rightVal = right.eval(bindings);
@@ -409,7 +409,7 @@ class BinAndExpr extends BinaryOpExprBase
       rightVal = right.eval(bindings);
     }
     ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    return ExprEval.of(leftVal.asBoolean() && rightVal.asBoolean(), type);
+    return ExprEval.ofBoolean(leftVal.asBoolean() && rightVal.asBoolean(), type);
   }
 
   @Override
@@ -450,7 +450,7 @@ class BinOrExpr extends BinaryOpExprBase
 
     // if left is true, always true
     if (leftVal.value() != null && leftVal.asBoolean()) {
-      return ExprEval.of(true, leftVal.type());
+      return ExprEval.ofBoolean(true, leftVal.type());
     }
 
     final ExprEval rightVal;
@@ -462,7 +462,7 @@ class BinOrExpr extends BinaryOpExprBase
         if (rightVal.value() == null || !rightVal.asBoolean()) {
           return ExprEval.ofNull(rightVal.type());
         }
-        return ExprEval.of(true, rightVal.type());
+        return ExprEval.ofBoolean(true, rightVal.type());
       } else {
         // leftval is false
         rightVal = right.eval(bindings);
@@ -474,7 +474,7 @@ class BinOrExpr extends BinaryOpExprBase
       rightVal = right.eval(bindings);
     }
     ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    return ExprEval.of(leftVal.asBoolean() || rightVal.asBoolean(), type);
+    return ExprEval.ofBoolean(leftVal.asBoolean() || rightVal.asBoolean(), type);
   }
 
 

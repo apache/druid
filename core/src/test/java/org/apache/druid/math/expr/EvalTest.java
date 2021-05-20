@@ -376,7 +376,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testLogicalOperators()
   {
-    Expr.ObjectBinding bindings = Parser.withMap(
+    Expr.ObjectBinding bindings = InputBindings.withMap(
         ImmutableMap.of()
     );
 
