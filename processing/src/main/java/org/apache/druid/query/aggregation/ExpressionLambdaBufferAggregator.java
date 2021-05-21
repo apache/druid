@@ -27,21 +27,27 @@ import java.nio.ByteBuffer;
 
 public class ExpressionLambdaBufferAggregator implements BufferAggregator
 {
+  private static final short NOT_AGGREGATED_BIT = 1 << 7;
+  private static final short IS_AGGREGATED_MASK = 0x3F;
   private final Expr lambda;
   private final ExprEval<?> initialValue;
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
+  private final boolean initiallyNull;
+
 
   public ExpressionLambdaBufferAggregator(
       Expr lambda,
       ExprEval<?> initialValue,
       ExpressionLambdaAggregatorInputBindings bindings,
+      boolean initiallyNull,
       int maxSizeBytes
   )
   {
     this.lambda = lambda;
     this.initialValue = initialValue;
     this.bindings = bindings;
+    this.initiallyNull = initiallyNull;
     this.maxSizeBytes = maxSizeBytes;
   }
 
@@ -49,6 +55,10 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     ExprEval.serialize(buf, position, initialValue, maxSizeBytes);
+    // set a bit to indicate we haven't aggregated on top of expression type (not going to lie this could be nicer)
+    if (initiallyNull) {
+      buf.put(position, (byte) (buf.get(position) | NOT_AGGREGATED_BIT));
+    }
   }
 
   @Override
@@ -58,12 +68,17 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);
     ExprEval.serialize(buf, position, newAcc, maxSizeBytes);
+    // scrub not aggregated bit
+    buf.put(position, (byte) (buf.get(position) & IS_AGGREGATED_MASK));
   }
 
   @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
+    if (initiallyNull && (buf.get(position) & NOT_AGGREGATED_BIT) != 0) {
+      return null;
+    }
     return ExprEval.deserialize(buf, position).value();
   }
 

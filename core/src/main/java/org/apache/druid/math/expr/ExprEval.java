@@ -38,6 +38,7 @@ import java.util.Objects;
  */
 public abstract class ExprEval<T>
 {
+  private static final byte TYPE_MASK = 0x0F;
   private static final int NULL_LENGTH = -1;
 
   /**
@@ -48,7 +49,7 @@ public abstract class ExprEval<T>
   public static ExprEval deserialize(ByteBuffer buffer, int position)
   {
     // | expression type (byte) | expression bytes |
-    ExprType type = ExprType.fromByte(buffer.get(position));
+    ExprType type = ExprType.fromByte((byte) (buffer.get(position) & TYPE_MASK));
     int offset = position + 1;
     switch (type) {
       case LONG:
