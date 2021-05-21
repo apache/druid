@@ -48,7 +48,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Implements an in-heap TaskStorage facility, with no persistence across restarts.
+ * Implements an in-heap TaskStorage facility, with no persistence across restarts. This class
+ * is thread safe.
  */
 public class HeapMemoryTaskStorage implements TaskStorage
 {
