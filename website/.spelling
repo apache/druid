@@ -489,6 +489,8 @@ partitionNum
 v9
  - ../docs/development/build.md
 3.x
+3.5.x
+3.4.x
 8u92
 DskipTests
 Papache-release
