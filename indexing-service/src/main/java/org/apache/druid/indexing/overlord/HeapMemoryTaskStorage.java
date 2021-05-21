@@ -45,7 +45,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -55,7 +54,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 {
   private final TaskStorageConfig config;
 
-  private final ConcurrentMap<String, TaskStuff> tasks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, TaskStuff> tasks = new ConcurrentHashMap<>();
 
   @GuardedBy("itself")
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
