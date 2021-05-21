@@ -52,6 +52,8 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialGenericSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
@@ -62,6 +64,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         groupId,
         taskResource,
         supervisorTaskId,
+        subtaskSpecId,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getIOConfig(),
         ingestionSchema.getTuningConfig(),

@@ -84,7 +84,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "finalizeExpression",
                       "compareBindings",
                       "combineBindings",
-                      "finalizeBindings"
+                      "finalizeBindings",
+                      "finalizeInspector"
                   )
                   .verify();
   }

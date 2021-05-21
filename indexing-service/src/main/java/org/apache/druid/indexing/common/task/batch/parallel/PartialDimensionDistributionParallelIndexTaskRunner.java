@@ -37,6 +37,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context
   )
@@ -45,6 +46,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
         toolbox,
         taskId,
         groupId,
+        baseSubtaskSpecName,
         ingestionSchema,
         context
     );
@@ -82,6 +84,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
             getGroupId(),
             null,
             getSupervisorTaskId(),
+            id,
             numAttempts,
             subTaskIngestionSpec,
             getContext()

@@ -712,7 +712,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     comboType: IngestionComboTypeWithExtra,
     disabled?: boolean,
   ): JSX.Element | undefined {
-    const { overlordModules, selectedComboType } = this.state;
+    const { overlordModules, selectedComboType, spec } = this.state;
     if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
     const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
@@ -722,10 +722,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         elevation={1}
-        onClick={() => {
-          this.setState({
-            selectedComboType: selectedComboType !== comboType ? comboType : undefined,
-          });
+        onClick={e => {
+          if (e.altKey && e.shiftKey) {
+            this.updateSpec(updateIngestionType(spec, comboType as any));
+            this.updateStep('connect');
+          } else {
+            this.setState({
+              selectedComboType: selectedComboType !== comboType ? comboType : undefined,
+            });
+          }
         }}
       >
         <img
