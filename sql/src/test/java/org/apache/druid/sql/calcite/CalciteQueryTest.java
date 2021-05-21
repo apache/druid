@@ -94,7 +94,6 @@ import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQuery.Builder;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -12684,47 +12683,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               new HumanReadableBytes(1024),
                               TestExprMacroTable.INSTANCE
                           ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a7",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseAnd(\"__acc\", \"l1\")",
-                              "bitwiseAnd(\"__acc\", \"a7\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
+                          new FilteredAggregatorFactory(
+                            new ExpressionLambdaAggregatorFactory(
+                                "a7",
+                                ImmutableSet.of("l1"),
+                                "__acc",
+                                "0",
+                                "0",
+                                NullHandling.sqlCompatible(),
+                                "bitwiseAnd(\"__acc\", \"l1\")",
+                                "bitwiseAnd(\"__acc\", \"a7\")",
+                                null,
+                                null,
+                                new HumanReadableBytes(1024),
+                                TestExprMacroTable.INSTANCE
+                            ),
+                            not(selector("l1", null, null))
                           ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a8",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseOr(\"__acc\", \"l1\")",
-                              "bitwiseOr(\"__acc\", \"a8\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a8",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "0",
+                                  "0",
+                                  NullHandling.sqlCompatible(),
+                                  "bitwiseOr(\"__acc\", \"l1\")",
+                                  "bitwiseOr(\"__acc\", \"a8\")",
+                                  null,
+                                  null,
+                                  new HumanReadableBytes(1024),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
                           ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a9",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseXor(\"__acc\", \"l1\")",
-                              "bitwiseXor(\"__acc\", \"a9\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a9",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "0",
+                                  "0",
+                                  NullHandling.sqlCompatible(),
+                                  "bitwiseXor(\"__acc\", \"l1\")",
+                                  "bitwiseXor(\"__acc\", \"a9\")",
+                                  null,
+                                  null,
+                                  new HumanReadableBytes(1024),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
                           )
                       )
                   )
@@ -12946,7 +12954,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
                                 ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
@@ -12963,7 +12971,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
                                 ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
@@ -12980,7 +12988,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
                                 )
                             )
                         )
@@ -17602,10 +17610,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT\n"
         + " BIT_AND(l1),\n"
         + " BIT_OR(l1),\n"
-        + " BIT_XOR(l1),\n"
-        + " BIT_AND(l1) FILTER(WHERE l1 IS NOT NULL),\n"
-        + " BIT_OR(l1) FILTER(WHERE l1 IS NOT NULL),\n"
-        + " BIT_XOR(l1) FILTER(WHERE l1 IS NOT NULL)\n"
+        + " BIT_XOR(l1)\n"
         + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -17614,98 +17619,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new ExpressionLambdaAggregatorFactory(
-                              "a0",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseAnd(\"__acc\", \"l1\")",
-                              "bitwiseAnd(\"__acc\", \"a0\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
-                          ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a1",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseOr(\"__acc\", \"l1\")",
-                              "bitwiseOr(\"__acc\", \"a1\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
-                          ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a2",
-                              ImmutableSet.of("l1"),
-                              "__acc",
-                              "0",
-                              "0",
-                              NullHandling.sqlCompatible(),
-                              "bitwiseXor(\"__acc\", \"l1\")",
-                              "bitwiseXor(\"__acc\", \"a2\")",
-                              null,
-                              null,
-                              new HumanReadableBytes(1024),
-                              TestExprMacroTable.INSTANCE
-                          ),
                           new FilteredAggregatorFactory(
                               new ExpressionLambdaAggregatorFactory(
-                                  "a3",
+                                  "a0",
                                   ImmutableSet.of("l1"),
                                   "__acc",
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
                                   "bitwiseAnd(\"__acc\", \"l1\")",
-                                  "bitwiseAnd(\"__acc\", \"a3\")",
+                                  "bitwiseAnd(\"__acc\", \"a0\")",
                                   null,
                                   null,
                                   new HumanReadableBytes(1024),
                                   TestExprMacroTable.INSTANCE
                               ),
-                              NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                              not(selector("l1", null, null))
                           ),
                           new FilteredAggregatorFactory(
                               new ExpressionLambdaAggregatorFactory(
-                                  "a4",
+                                  "a1",
                                   ImmutableSet.of("l1"),
                                   "__acc",
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
                                   "bitwiseOr(\"__acc\", \"l1\")",
-                                  "bitwiseOr(\"__acc\", \"a4\")",
+                                  "bitwiseOr(\"__acc\", \"a1\")",
                                   null,
                                   null,
                                   new HumanReadableBytes(1024),
                                   TestExprMacroTable.INSTANCE
                               ),
-                              NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                              not(selector("l1", null, null))
                           ),
                           new FilteredAggregatorFactory(
                               new ExpressionLambdaAggregatorFactory(
-                                  "a5",
+                                  "a2",
                                   ImmutableSet.of("l1"),
                                   "__acc",
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
                                   "bitwiseXor(\"__acc\", \"l1\")",
-                                  "bitwiseXor(\"__acc\", \"a5\")",
+                                  "bitwiseXor(\"__acc\", \"a2\")",
                                   null,
                                   null,
                                   new HumanReadableBytes(1024),
                                   TestExprMacroTable.INSTANCE
                               ),
-                              NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                              not(selector("l1", null, null))
                           )
                       )
                   )
@@ -17714,8 +17677,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{0L, 325327L, 325324L, 0L, 325327L, 325324L}
-            : new Object[]{null, null, null, 0L, 325327L, 325324L}
+            ? new Object[]{0L, 325327L, 325324L}
+            : new Object[]{0L, 325327L, 325324L}
         )
     );
   }
@@ -17729,11 +17692,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " dim2,\n"
         + " BIT_AND(l1),\n"
         + " BIT_OR(l1),\n"
-        + " BIT_XOR(l1),\n"
-        + " BIT_AND(l1) FILTER(WHERE l1 IS NOT NULL),\n"
-        + " BIT_OR(l1) FILTER(WHERE l1 IS NOT NULL),\n"
-        + " BIT_XOR(l1) FILTER(WHERE l1 IS NOT NULL)\n"
-        + "FROM druid.numfoo GROUP BY 1 ORDER BY 6",
+        + " BIT_XOR(l1)\n"
+        + "FROM druid.numfoo GROUP BY 1 ORDER BY 4",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -17742,98 +17702,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimensions(new DefaultDimensionSpec("dim2", "_d0", ValueType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
-                                new ExpressionLambdaAggregatorFactory(
-                                    "a0",
-                                    ImmutableSet.of("l1"),
-                                    "__acc",
-                                    "0",
-                                    "0",
-                                    NullHandling.sqlCompatible(),
-                                    "bitwiseAnd(\"__acc\", \"l1\")",
-                                    "bitwiseAnd(\"__acc\", \"a0\")",
-                                    null,
-                                    null,
-                                    new HumanReadableBytes(1024),
-                                    TestExprMacroTable.INSTANCE
-                                ),
-                                new ExpressionLambdaAggregatorFactory(
-                                    "a1",
-                                    ImmutableSet.of("l1"),
-                                    "__acc",
-                                    "0",
-                                    "0",
-                                    NullHandling.sqlCompatible(),
-                                    "bitwiseOr(\"__acc\", \"l1\")",
-                                    "bitwiseOr(\"__acc\", \"a1\")",
-                                    null,
-                                    null,
-                                    new HumanReadableBytes(1024),
-                                    TestExprMacroTable.INSTANCE
-                                ),
-                                new ExpressionLambdaAggregatorFactory(
-                                    "a2",
-                                    ImmutableSet.of("l1"),
-                                    "__acc",
-                                    "0",
-                                    "0",
-                                    NullHandling.sqlCompatible(),
-                                    "bitwiseXor(\"__acc\", \"l1\")",
-                                    "bitwiseXor(\"__acc\", \"a2\")",
-                                    null,
-                                    null,
-                                    new HumanReadableBytes(1024),
-                                    TestExprMacroTable.INSTANCE
-                                ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
-                                        "a3",
+                                        "a0",
                                         ImmutableSet.of("l1"),
                                         "__acc",
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
                                         "bitwiseAnd(\"__acc\", \"l1\")",
-                                        "bitwiseAnd(\"__acc\", \"a3\")",
+                                        "bitwiseAnd(\"__acc\", \"a0\")",
                                         null,
                                         null,
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                                    not(selector("l1", null, null))
                                 ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
-                                        "a4",
+                                        "a1",
                                         ImmutableSet.of("l1"),
                                         "__acc",
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
                                         "bitwiseOr(\"__acc\", \"l1\")",
-                                        "bitwiseOr(\"__acc\", \"a4\")",
+                                        "bitwiseOr(\"__acc\", \"a1\")",
                                         null,
                                         null,
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                                    not(selector("l1", null, null))
                                 ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
-                                        "a5",
+                                        "a2",
                                         ImmutableSet.of("l1"),
                                         "__acc",
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
                                         "bitwiseXor(\"__acc\", \"l1\")",
-                                        "bitwiseXor(\"__acc\", \"a5\")",
+                                        "bitwiseXor(\"__acc\", \"a2\")",
                                         null,
                                         null,
                                         new HumanReadableBytes(1024),
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    NullHandling.sqlCompatible() ? not(selector("l1", null, null)) : TrueDimFilter.instance()
+                                    not(selector("l1", null, null))
                                 )
                             )
                         )
@@ -17841,7 +17759,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             DefaultLimitSpec.builder()
                                             .orderBy(
                                                 new OrderByColumnSpec(
-                                                    "a4",
+                                                    "a2",
                                                     Direction.ASCENDING,
                                                     StringComparators.NUMERIC
                                                 )
@@ -17853,15 +17771,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         useDefault
         ? ImmutableList.of(
-            new Object[]{"abc", 0L, 0L, 0L, 0L, 0L, 0L},
-            new Object[]{"a", 0L, 7L, 7L, 0L, 7L, 7L},
-            new Object[]{"", 0L, 325323L, 325323L, 0L, 325323L, 325323L}
+            new Object[]{"abc", 0L, 0L, 0L},
+            new Object[]{"a", 0L, 7L, 7L},
+            new Object[]{"", 0L, 325323L, 325323L}
         )
         : ImmutableList.of(
-            new Object[]{"abc", null, null, null, null, null, null},
-            new Object[]{"", 0L, 0L, 0L, 0L, 0L, 0L},
-            new Object[]{"a", null, null, null, 0L, 7L, 7L},
-            new Object[]{null, null, null, null, 0L, 325323L, 325323L}
+            new Object[]{"abc", null, null, null},
+            new Object[]{"", 0L, 0L, 0L},
+            new Object[]{"a", 0L, 7L, 7L},
+            new Object[]{null, 0L, 325323L, 325323L}
         )
     );
   }

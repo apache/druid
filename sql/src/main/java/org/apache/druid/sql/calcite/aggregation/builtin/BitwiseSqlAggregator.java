@@ -35,6 +35,9 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -151,19 +154,22 @@ public class BitwiseSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        new ExpressionLambdaAggregatorFactory(
-            name,
-            ImmutableSet.of(fieldName),
-            null,
-            "0",
-            null,
-            null,
-            StringUtils.format("%s(\"__acc\", \"%s\")", op.getDruidFunction(), fieldName),
-            null,
-            null,
-            null,
-            null,
-            macroTable
+        new FilteredAggregatorFactory(
+            new ExpressionLambdaAggregatorFactory(
+                name,
+                ImmutableSet.of(fieldName),
+                null,
+                "0",
+                null,
+                null,
+                StringUtils.format("%s(\"__acc\", \"%s\")", op.getDruidFunction(), fieldName),
+                null,
+                null,
+                null,
+                null,
+                macroTable
+            ),
+            new NotDimFilter(new SelectorDimFilter(fieldName, null, null))
         )
     );
   }
