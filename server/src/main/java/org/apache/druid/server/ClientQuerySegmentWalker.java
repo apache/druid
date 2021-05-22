@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingClusteredClient;
@@ -444,7 +445,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
-  private static <T, QueryType extends Query<T>> InlineDataSource toInlineDataSource(
+  @VisibleForTesting
+  static <T, QueryType extends Query<T>> InlineDataSource toInlineDataSource(
       final QueryType query,
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
@@ -454,12 +456,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
 
-    if (limitAccumulator.get() >= limitToUse) {
-      throw ResourceLimitExceededException.withMessage(
-          "Cannot issue subquery, maximum[%d] reached",
-          limitToUse
-      );
-    }
+    // We don't check the accumulated subquery result size (limitAccumulator)
+    // before executing the subquery because it can return empty result.
 
     final RowSignature signature = toolChest.resultArraySignature(query);
 
@@ -479,7 +477,26 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
     );
 
+    // Since the queryDataSource of the given query will be replaced with the inlineDataSource
+    // we create here, all inlineDataSources of the query will be GCed.
+    limitAccumulator.getAndAdd(-getAccumulateInlineDataSourceSize(query.getDataSource()));
+
     return InlineDataSource.fromIterable(resultList, signature);
+  }
+
+  private static int getAccumulateInlineDataSourceSize(DataSource dataSource)
+  {
+    if (dataSource instanceof InlineDataSource) {
+      return Iterables.size(((InlineDataSource) dataSource).getRows());
+    } else if (dataSource.getChildren().size() > 0) {
+      return dataSource
+          .getChildren()
+          .stream()
+          .mapToInt(ClientQuerySegmentWalker::getAccumulateInlineDataSourceSize)
+          .sum();
+    } else {
+      return 0;
+    }
   }
 
   /**
