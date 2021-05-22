@@ -373,25 +373,6 @@ public class BatchAppenderator implements Appenderator
           throw new RuntimeException(errorMessage);
         }
 
-
-//        Futures.addCallback(
-//            persistAll(null),
-//            new FutureCallback<Object>()
-//            {
-//              @Override
-//              public void onSuccess(@Nullable Object result)
-//              {
-//                // do nothing
-//              }
-//
-//              @Override
-//              public void onFailure(Throwable t)
-//              {
-//                persistError = t;
-//              }
-//            }
-//        );
-
         persistAllAndClear();
 
       } else {
@@ -837,6 +818,9 @@ public class BatchAppenderator implements Appenderator
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
       // mapped file references
       // can generate OOMs during merge if enough of them are held back...
+      // we need to put the sink back so downstream code (i.e. drop segment) can process
+      // agfixme: Maybe we ought to keep the sink references all along...
+      sinks.put(identifier,sink);
       for (FireHydrant fireHydrant : sink) {
         fireHydrant.swapSegment(null);
       }
