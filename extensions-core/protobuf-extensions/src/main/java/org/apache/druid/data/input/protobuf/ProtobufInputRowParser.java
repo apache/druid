@@ -26,16 +26,18 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -43,8 +45,6 @@ import java.util.Map;
 
 public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
-  private static final Logger LOG = new Logger(ByteBufferInputRowParser.class);
-
   private final ParseSpec parseSpec;
   private final ProtobufBytesDecoder protobufBytesDecoder;
   private Parser<String, Object> parser;
@@ -89,11 +89,13 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       parser = parseSpec.makeParser();
     }
     Map<String, Object> record;
+    DateTime timestamp;
 
     if (parseSpec instanceof JSONParseSpec && ((JSONParseSpec) parseSpec).getFlattenSpec().getFields().isEmpty()) {
       try {
         DynamicMessage message = protobufBytesDecoder.parse(input);
         record = CollectionUtils.mapKeys(message.getAllFields(), k -> k.getJsonName());
+        timestamp = extractTimestampAsJson(record);
       }
       catch (Exception ex) {
         throw new ParseException(ex, "Protobuf message could not be parsed");
@@ -103,6 +105,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         DynamicMessage message = protobufBytesDecoder.parse(input);
         String json = JsonFormat.printer().print(message);
         record = parser.parseToMap(json);
+        timestamp = parseSpec.getTimestampSpec().extractTimestamp(record);
       }
       catch (InvalidProtocolBufferException e) {
         throw new ParseException(e, "Protobuf message could not be parsed");
@@ -117,10 +120,22 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
           Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
       );
     }
-    return ImmutableList.of(new MapBasedInputRow(
-        parseSpec.getTimestampSpec().extractTimestamp(record),
-        dimensions,
-        record
-    ));
+    return ImmutableList.of(new MapBasedInputRow(timestamp, dimensions, record));
+  }
+
+  /**
+   * Extracts the timestamp from the record. If the timestamp column is of complex type such as {@link Timestamp}, then the timestamp
+   * is first serialized to string via {@link JsonFormat}. Directly calling {@code toString()} on {@code Timestamp}
+   * returns an unparseable string.
+   */
+  private DateTime extractTimestampAsJson(Map<String, Object> record) throws InvalidProtocolBufferException
+  {
+    Object rawTimestamp = parseSpec.getTimestampSpec().getRawTimestamp(record);
+    if (rawTimestamp instanceof Message) {
+      String timestampStr = JsonFormat.printer().print((Message) rawTimestamp);
+      return parseSpec.getTimestampSpec().parseDateTime(timestampStr);
+    } else {
+      return parseSpec.getTimestampSpec().parseDateTime(rawTimestamp);
+    }
   }
 }
