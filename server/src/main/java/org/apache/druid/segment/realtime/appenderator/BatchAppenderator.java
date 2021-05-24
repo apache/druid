@@ -818,16 +818,18 @@ public class BatchAppenderator implements Appenderator
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
       // mapped file references
       // can generate OOMs during merge if enough of them are held back...
-      // we need to put the sink back so downstream code (i.e. drop segment) can process
-      // agfixme: Maybe we ought to keep the sink references all along...
-      sinks.put(identifier,sink);
+      // agfixme: Since we cannot keep sinks due to memory growth then we have to add the sink metadata table and keep it up to date
+      //sinks.put(identifier,sink);
       for (FireHydrant fireHydrant : sink) {
         fireHydrant.swapSegment(null);
       }
 
+      // cleanup, sink no longer needed
+      removeDirectory(computePersistDir(identifier));
+
       final long pushFinishTime = System.nanoTime();
 
-      objectMapper.writeValue(descriptorFile, segment);
+      //objectMapper.writeValue(descriptorFile, segment);
 
       log.info(
           "Segment[%s] of %,d bytes "
@@ -1477,6 +1479,7 @@ public class BatchAppenderator implements Appenderator
     if (target.exists()) {
       try {
         FileUtils.deleteDirectory(target);
+        log.info("Removed directory [%s]", target);
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to remove directory[%s]", schema.getDataSource())
