@@ -132,16 +132,15 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <!-- Kafka brokers require ZooKeeper 3.5.x clients for testing -->
-      <version>3.5.8</version>
+      <groupId>org.apache.rocketmq</groupId>
+      <artifactId>rocketmq-broker</artifactId>
+      <version>4.8.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.13</artifactId>
-      <version>${apache.kafka.version}</version>
+      <groupId>org.apache.rocketmq</groupId>
+      <artifactId>rocketmq-namesrv</artifactId>
+      <version>4.8.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

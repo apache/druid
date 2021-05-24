@@ -22,6 +22,7 @@ package org.apache.druid.indexing.rocketmq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.rocketmq.PartitionUtil;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -50,7 +51,6 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   private final DefaultLitePullConsumer consumer;
   private boolean closed;
   private Set<StreamPartition<String>> streamPartitions;
-  private final String PARTITION_SEPARATOR = "-queueid-";
 
   public RocketMQRecordSupplier(
       Map<String, Object> consumerProperties,
@@ -74,11 +74,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     this.streamPartitions = streamPartitions;
     Set<MessageQueue> messageQueues = new HashSet<>();
     for (StreamPartition<String> streamPartition : streamPartitions) {
-      MessageQueue mq = new MessageQueue();
-      String[] brokerAndQueueID = streamPartition.getPartitionId().split(PARTITION_SEPARATOR);
-      mq.setTopic(streamPartition.getStream());
-      mq.setBrokerName(brokerAndQueueID[0]);
-      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      MessageQueue mq = PartitionUtil.genMessageQueue(streamPartition.getStream(), streamPartition.getPartitionId());
       messageQueues.add(mq);
     }
 
@@ -99,11 +95,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public void seek(StreamPartition<String> partition, Long sequenceNumber)
   {
-    MessageQueue mq = new MessageQueue();
-    String[] brokerAndQueueID = partition.getPartitionId().split(PARTITION_SEPARATOR);
-    mq.setTopic(partition.getStream());
-    mq.setBrokerName(brokerAndQueueID[0]);
-    mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+    MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
     try {
       consumer.seek(mq, sequenceNumber);
     }
@@ -116,11 +108,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
     for (StreamPartition<String> partition : partitions) {
-      MessageQueue mq = new MessageQueue();
-      String[] brokerAndQueueID = partition.getPartitionId().split(PARTITION_SEPARATOR);
-      mq.setTopic(partition.getStream());
-      mq.setBrokerName(brokerAndQueueID[0]);
-      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
       try {
         consumer.seekToBegin(mq);
       }
@@ -134,11 +122,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
     for (StreamPartition<String> partition : partitions) {
-      MessageQueue mq = new MessageQueue();
-      String[] brokerAndQueueID = partition.getPartitionId().split(PARTITION_SEPARATOR);
-      mq.setTopic(partition.getStream());
-      mq.setBrokerName(brokerAndQueueID[0]);
-      mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+      MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
       try {
         consumer.seekToEnd(mq);
       }
@@ -166,8 +150,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
 
       polledRecords.add(new OrderedPartitionableRecord<>(
           messageExt.getTopic(),
-          messageExt
-              .getBrokerName() + PARTITION_SEPARATOR + messageExt.getQueueId(),
+          PartitionUtil.genPartition(messageExt.getBrokerName(), messageExt.getQueueId()),
           messageExt.getQueueOffset(),
           messageExt.getBody() == null ? null : ImmutableList.of(new RocketMQRecordEntity(messageExt.getBody()))
       ));
@@ -198,11 +181,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public Long getPosition(StreamPartition<String> partition)
   {
-    MessageQueue mq = new MessageQueue();
-    String[] brokerAndQueueID = partition.getPartitionId().split(PARTITION_SEPARATOR);
-    mq.setTopic(partition.getStream());
-    mq.setBrokerName(brokerAndQueueID[0]);
-    mq.setQueueId(Integer.parseInt(brokerAndQueueID[1]));
+    MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
     return consumer.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
   }
 
@@ -221,7 +200,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
       log.error(e.getErrorMessage());
     }
     for (MessageQueue messageQueue : messageQueues) {
-      partitionIds.add(messageQueue.getBrokerName() + PARTITION_SEPARATOR + messageQueue.getQueueId());
+      partitionIds.add(PartitionUtil.genPartition(messageQueue));
     }
     return partitionIds;
   }
