@@ -711,7 +711,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1 * 1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertEquals(1, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -752,7 +752,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1 * 1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertEquals(1, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -794,7 +794,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(2, taskCountBeforeScaleOut);
     Thread.sleep(1 * 1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assert.assertEquals(2, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();

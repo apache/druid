@@ -1029,6 +1029,36 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
   }
 
+  @Test
+  public void testStopUnfinishedPauseTasks() throws Exception
+  {
+    final int numRequests = TEST_IDS.size();
+    Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(httpClient.go(
+            EasyMock.capture(captured),
+            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.eq(TEST_HTTP_TIMEOUT)
+    )).andReturn(
+            Futures.immediateFuture(responseHolder)
+    ).times(numRequests);
+    replayAll();
+
+    List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    for (String testId : TEST_IDS) {
+      futures.add(client.pauseAsync(testId));
+    }
+
+    Assert.assertEquals(client.getPauseFutureSize(), TEST_IDS.size());
+
+    Futures.allAsList(futures).get();
+    verifyAll();
+
+    client.stopUnfinishedPauseTasks();
+    Assert.assertEquals(client.getPauseFutureSize(), 0);
+  }
+
   private class TestableKafkaIndexTaskClient extends KafkaIndexTaskClient
   {
     TestableKafkaIndexTaskClient(

@@ -396,7 +396,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private boolean changeTaskCount(int desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
+  private boolean changeTaskCount(int desiredActiveTaskCount)
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
@@ -1283,7 +1283,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  public void gracefulShutdownInternal()
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
@@ -2527,7 +2527,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
+  private void checkTaskDuration()
   {
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
@@ -2562,60 +2562,84 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    List<Map<PartitionIdType, SequenceOffsetType>> results = Futures.successfulAsList(futures)
-                                                                    .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-    for (int j = 0; j < results.size(); j++) {
-      Integer groupId = futureGroupIds.get(j);
-      TaskGroup group = activelyReadingTaskGroups.get(groupId);
-      Map<PartitionIdType, SequenceOffsetType> endOffsets = results.get(j);
+    try {
+      Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    }
+    catch (Exception e) {
+      log.warn(e, "Pause exception, GroupIds [%s]", Joiner.on(",").join(futureGroupIds));
+    }
+    finally {
+      for (int i = 0; i < futureGroupIds.size(); ++i) {
+        Integer groupId = futureGroupIds.get(i);
+        ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future = futures.get(i);
 
-      if (endOffsets != null) {
-        // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
-        group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
-        pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
+        if (future.isDone()) {
+          log.info("GroupId [%d] checking task finished", groupId);
 
-
-        boolean endOffsetsAreInvalid = false;
-        for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-          if (entry.getValue().equals(getEndOfPartitionMarker())) {
-            log.info(
-                "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
-                entry.getKey()
-            );
-            endOffsetsAreInvalid = true;
+          try {
+            this.moveGroupFromReadingToPending(groupId, future.get());
           }
-        }
-
-        // set endOffsets as the next startOffsets
-        // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
-        // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
-        if (!endOffsetsAreInvalid) {
-          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-            partitionOffsets.put(entry.getKey(), entry.getValue());
+          catch (Exception e1) {
+            log.warn(e1, "Get future result failed for groupId[%d]", groupId);
           }
         } else {
-          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-            partitionOffsets.put(entry.getKey(), getNotSetMarker());
-          }
-        }
-      } else {
-        for (String id : group.taskIds()) {
-          killTask(
-              id,
-              "All tasks in group [%s] failed to transition to publishing state",
-              groupId
-          );
-        }
-        // clear partitionGroups, so that latest sequences from db is used as start sequences not the stale ones
-        // if tasks did some successful incremental handoffs
-        for (PartitionIdType partitionId : group.startingSequences.keySet()) {
-          partitionOffsets.put(partitionId, getNotSetMarker());
+          log.warn("GroupId [%d] checking task not finished", groupId);
         }
       }
 
-      // remove this task group from the list of current task groups now that it has been handled
-      activelyReadingTaskGroups.remove(groupId);
+      taskClient.stopUnfinishedPauseTasks();
     }
+  }
+
+  private void moveGroupFromReadingToPending(Integer groupId, Map<PartitionIdType, SequenceOffsetType> endOffsets)
+  {
+    TaskGroup group = activelyReadingTaskGroups.get(groupId);
+
+    if (endOffsets != null) {
+      // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
+      group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+      pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
+
+      boolean endOffsetsAreInvalid = false;
+      for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+        if (entry.getValue().equals(getEndOfPartitionMarker())) {
+          log.info(
+                  "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
+                  entry.getKey()
+          );
+          endOffsetsAreInvalid = true;
+        }
+      }
+
+      // set endOffsets as the next startOffsets
+      // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
+      // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
+      if (!endOffsetsAreInvalid) {
+        for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+          partitionOffsets.put(entry.getKey(), entry.getValue());
+        }
+      } else {
+        for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+          partitionOffsets.put(entry.getKey(), getNotSetMarker());
+        }
+      }
+    } else {
+      for (String id : group.taskIds()) {
+        killTask(
+                id,
+                "All tasks in group [%s] failed to transition to publishing state",
+                groupId
+        );
+      }
+      // clear partitionGroups, so that latest sequences from db is used as start sequences not the stale ones
+      // if tasks did some successful incremental handoffs
+      for (PartitionIdType partitionId : group.startingSequences.keySet()) {
+        partitionOffsets.put(partitionId, getNotSetMarker());
+      }
+    }
+
+    // remove this task group from the list of current task groups now that it has been handled
+    activelyReadingTaskGroups.remove(groupId);
   }
 
   private ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> checkpointTaskGroup(
