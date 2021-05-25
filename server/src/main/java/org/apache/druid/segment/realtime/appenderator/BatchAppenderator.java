@@ -197,7 +197,6 @@ public class BatchAppenderator implements Appenderator
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
-
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
   }
@@ -407,7 +406,7 @@ public class BatchAppenderator implements Appenderator
   }
 
   @VisibleForTesting
-  int getRowsInMemory()
+  public int getRowsInMemory()
   {
     return rowsCurrentlyInMemory.get();
   }
@@ -419,7 +418,7 @@ public class BatchAppenderator implements Appenderator
   }
 
   @VisibleForTesting
-  long getBytesInMemory(SegmentIdWithShardSpec identifier)
+  public long getBytesInMemory(SegmentIdWithShardSpec identifier)
   {
     final Sink sink = sinks.get(identifier);
 

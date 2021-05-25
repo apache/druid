@@ -76,8 +76,10 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // getSegments
-      Assert.assertEquals(IDENTIFIERS.subList(0,2),
-                          appenderator.getSegments().stream().sorted().collect(Collectors.toList()));
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 2),
+          appenderator.getSegments().stream().sorted().collect(Collectors.toList())
+      );
 
       // add one more to hit max rows in memory:
       Assert.assertEquals(
