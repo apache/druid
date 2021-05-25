@@ -101,9 +101,9 @@ jobs:
         - mkdir -p target
         - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
         - distribution/bin/check-licenses.py licenses.yaml target/license-reports
-
     - name: "script checks"
       install: skip
+      # who watches the watchers?
       script: ./check_test_suite_test.py
 
     - name: "(openjdk8) strict compilation"

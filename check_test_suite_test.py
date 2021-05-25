@@ -19,6 +19,13 @@ import unittest
 import check_test_suite
 
 class CheckTestSuite(unittest.TestCase):
+    def test_always_run(self):
+        for job in check_test_suite.always_run_jobs:
+            self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['.travis.yml']))
+            self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['docs/ingestion/index.md']))
+            self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['web-console/src/views/index.ts']))
+            self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['core/src/main/java/org/apache/druid/math/expr/Expr.java']))
+
     def test_docs(self):
         self.assertEqual(False, check_test_suite.check_docs('.travis.yml'))
         self.assertEqual(False, check_test_suite.check_docs('check_test_suite_test.py'))
@@ -59,6 +66,39 @@ class CheckTestSuite(unittest.TestCase):
                 check_test_suite.check_should_run_suite(
                     job,
                     ['check_test_suite_test.py', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
+                )
+            )
+
+    def test_some_java(self):
+
+        some_java_job = "spotbugs checks"
+        some_non_java_diffs = [
+            ['.travis.yml'],
+            ['check_test_suite_test.py'],
+            ['website/core/Footer.js'],
+            ['web-console/src/views/index.ts'],
+            ['check_test_suite_test.py', 'website/core/Footer.js', 'web-console/unified-console.html']
+        ]
+        some_java_diffs = [
+            ['core/src/main/java/org/apache/druid/math/expr/Expr.java'],
+            ['processing/src/main/java/org/apache/druid/segment/virtual/ExpressionPlan.java'],
+            ['check_test_suite_test.py', 'website/core/Footer.js', 'web-console/unified-console.html', 'core/src/main/java/org/apache/druid/math/expr/Expr.java']
+        ]
+
+        for false_diff in some_non_java_diffs:
+            self.assertEqual(
+                False,
+                check_test_suite.check_should_run_suite(
+                    some_java_job,
+                    false_diff
+                )
+            )
+        for true_diff in some_java_diffs:
+            self.assertEqual(
+                True,
+                check_test_suite.check_should_run_suite(
+                    some_java_job,
+                    true_diff
                 )
             )
 
