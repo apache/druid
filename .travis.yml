@@ -26,7 +26,6 @@ cache:
 
 env:
   global:
-    - ZK_VERSION=3.5 # default ZK version for integration tests
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
@@ -153,6 +152,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
     
+    - <<: *package
+      name: "(openjdk15) packaging check"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_processing_module
       name: "(openjdk8) processing module test"
       stage: Tests - phase 1
@@ -219,6 +223,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
 
+    - <<: *test_processing_module
+      name: "(openjdk15) processing module test"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_processing_module_sqlcompat
       <<: *test_processing_module
       name: "(openjdk8) processing module test (SQL Compatibility)"
@@ -231,6 +240,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
 
+    - <<: *test_processing_module_sqlcompat
+      name: "(openjdk15) processing module test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_indexing_module
       <<: *test_processing_module
       name: "(openjdk8) indexing modules test"
@@ -241,6 +255,11 @@ jobs:
       name: "(openjdk11) indexing modules test"
       stage: Tests - phase 2
       jdk: openjdk11
+
+    - <<: *test_indexing_module
+      name: "(openjdk15) indexing modules test"
+      stage: Tests - phase 2
+      jdk: openjdk15
 
     - &test_indexing_module_sqlcompat
       <<: *test_indexing_module
@@ -253,6 +272,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
 
+    - <<: *test_indexing_module_sqlcompat
+      name: "(openjdk15) indexing modules test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_server_module
       <<: *test_processing_module
       name: "(openjdk8) server module test"
@@ -264,6 +288,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
 
+    - <<: *test_server_module
+      name: "(openjdk15) server module test"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_server_module_sqlcompat
       <<: *test_server_module
       name: "(openjdk8) server module test (SQL Compatibility)"
@@ -273,6 +302,11 @@ jobs:
       name: "(openjdk11) server module test (SQL Compatibility)"
       stage: Tests - phase 2
       jdk: openjdk11
+
+    - <<: *test_server_module_sqlcompat
+      name: "(openjdk15) server module test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
 
     - &test_other_modules
       <<: *test_processing_module
@@ -285,6 +319,11 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk11
 
+    - <<: *test_other_modules
+      name: "(openjdk15) other modules test"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_other_modules_sqlcompat
       <<: *test_other_modules
       name: "(openjdk8) other modules test (SQL Compatibility)"
@@ -294,6 +333,11 @@ jobs:
       name: "(openjdk11) other modules test (SQL Compatibility)"
       stage: Tests - phase 2
       jdk: openjdk11
+
+    - <<: *test_other_modules_sqlcompat
+      name: "(openjdk15) other modules test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
 
     - name: "web console"
       install: skip
@@ -342,7 +386,7 @@ jobs:
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} -Dzk.version=${ZK_VERSION} ${MAVEN_SKIP}
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} ${MAVEN_SKIP}
       after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
@@ -554,16 +598,6 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
 
-    # Subset of integration tests to run with ZooKeeper 3.4.x for backwards compatibility
-    - <<: *integration_tests
-      name: "(Compile=openjdk8, Run=openjdk8, ZK=3.4) leadership and high availability integration tests"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' ZK_VERSION=3.4
-
-    - <<: *integration_kafka_format_tests
-      name: "(Compile=openjdk8, Run=openjdk8, ZK=3.4) Kafka index integration test with various formats"
-      env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' ZK_VERSION=3.4
-
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
     # START - Integration tests for Compile with Java 8 and Run with Java 11
@@ -636,12 +670,6 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk11) leadership and high availability integration tests"
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
-
-    # Subset of integration tests to run with ZooKeeper 3.4.x for backwards compatibility
-    - <<: *integration_tests
-      name: "(Compile=openjdk8, Run=openjdk11, ZK=3.4) leadership and high availability integration tests"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' ZK_VERSION=3.4
 
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
