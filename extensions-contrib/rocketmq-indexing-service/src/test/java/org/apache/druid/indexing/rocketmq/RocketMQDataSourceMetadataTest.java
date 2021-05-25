@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class RocketMQDataSourceMetadataTest
 {
-  private static String brokerName = "broker-a";
+  private static final String brokerName = "broker-a";
   private static final RocketMQDataSourceMetadata START0 = startMetadata(ImmutableMap.of());
   private static final RocketMQDataSourceMetadata START1 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 3L));
   private static final RocketMQDataSourceMetadata START2 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L));

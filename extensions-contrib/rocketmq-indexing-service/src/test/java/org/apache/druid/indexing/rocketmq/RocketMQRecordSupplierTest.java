@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 public class RocketMQRecordSupplierTest
 {
   private static String topic = "topic";
-  private static String brokerName = "broker-a";
+  private static final String brokerName = "broker-a";
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
   private static int topicPosFix = 0;
