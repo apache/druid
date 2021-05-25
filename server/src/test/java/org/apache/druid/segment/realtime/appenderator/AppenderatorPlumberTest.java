@@ -104,8 +104,8 @@ public class AppenderatorPlumberTest
     Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
     InputRow[] rows = new InputRow[] {
-        RealtimeAppenderatorTest.ir("2000", "foo", 1),
-        RealtimeAppenderatorTest.ir("2000", "bar", 2), RealtimeAppenderatorTest.ir("2000", "qux", 4)};
+        StreamAppenderatorTest.ir("2000", "foo", 1),
+        StreamAppenderatorTest.ir("2000", "bar", 2), StreamAppenderatorTest.ir("2000", "qux", 4)};
     // add
     Assert.assertEquals(1, plumber.add(rows[0], null).getRowCount());
 

@@ -63,7 +63,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new RealtimeAppenderator(
+    return new StreamAppenderator(
         id,
         schema,
         config,
