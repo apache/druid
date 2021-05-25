@@ -41,6 +41,13 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.apache.hadoop.shaded.javax.servlet.FilterChain;
+import org.apache.hadoop.shaded.javax.servlet.FilterConfig;
+import org.apache.hadoop.shaded.javax.servlet.ServletContext;
+import org.apache.hadoop.shaded.javax.servlet.ServletRequest;
+import org.apache.hadoop.shaded.javax.servlet.ServletResponse;
+import org.apache.hadoop.shaded.javax.servlet.http.Cookie;
+import org.apache.hadoop.shaded.javax.servlet.http.HttpServletRequestWrapper;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.http.HttpHeader;
 
@@ -51,15 +58,8 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
@@ -121,12 +121,12 @@ public class KerberosAuthenticator implements Authenticator
   @Override
   public Filter getFilter()
   {
-    return new AuthenticationFilter()
+    AuthenticationFilter authenticationFilter = new AuthenticationFilter()
     {
       private Signer mySigner;
 
       @Override
-      public void init(FilterConfig filterConfig) throws ServletException
+      public void init(FilterConfig filterConfig) throws org.apache.hadoop.shaded.javax.servlet.ServletException
       {
         ClassLoader prevLoader = Thread.currentThread().getContextClassLoader();
         try {
@@ -173,7 +173,7 @@ public class KerberosAuthenticator implements Authenticator
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
-      protected AuthenticationToken getToken(HttpServletRequest request) throws AuthenticationException
+      protected AuthenticationToken getToken(org.apache.hadoop.shaded.javax.servlet.http.HttpServletRequest request) throws AuthenticationException
       {
         AuthenticationToken token = null;
         String tokenStr = null;
@@ -205,8 +205,12 @@ public class KerberosAuthenticator implements Authenticator
       }
 
       @Override
-      public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
-          throws IOException, ServletException
+      public void doFilter(
+          ServletRequest request,
+          ServletResponse response,
+          FilterChain filterChain
+      )
+          throws IOException, org.apache.hadoop.shaded.javax.servlet.ServletException
       {
         // If there's already an auth result, then we have authenticated already, skip this.
         if (request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
@@ -219,7 +223,12 @@ public class KerberosAuthenticator implements Authenticator
         // Since we co-exist with other authentication schemes, don't login until we've checked that
         // some other Authenticator didn't already validate this request.
         if (loginContext == null) {
-          initializeKerberosLogin();
+          try {
+            initializeKerberosLogin();
+          }
+          catch (ServletException e) {
+            throw new IOException(e);
+          }
         }
 
         // Run the original doFilter method, but with modifications to error handling
@@ -232,14 +241,18 @@ public class KerberosAuthenticator implements Authenticator
        * Specifically, we want to defer the sending of 401 Unauthorized so that other Authenticators later in the chain
        * can check the request.
        */
-      private void doFilterSuper(ServletRequest request, ServletResponse response, FilterChain filterChain)
-          throws IOException, ServletException
+      private void doFilterSuper(
+          ServletRequest request,
+          ServletResponse response,
+          FilterChain filterChain
+      )
+          throws IOException, org.apache.hadoop.shaded.javax.servlet.ServletException
       {
         boolean unauthorizedResponse = true;
         int errCode = HttpServletResponse.SC_UNAUTHORIZED;
         AuthenticationException authenticationEx = null;
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        HttpServletResponse httpResponse = (HttpServletResponse) response;
+        org.apache.hadoop.shaded.javax.servlet.http.HttpServletRequest httpRequest = (org.apache.hadoop.shaded.javax.servlet.http.HttpServletRequest) request;
+        org.apache.hadoop.shaded.javax.servlet.http.HttpServletResponse httpResponse = (org.apache.hadoop.shaded.javax.servlet.http.HttpServletResponse) response;
         boolean isHttps = "https".equals(httpRequest.getScheme());
         try {
           boolean newToken = false;
@@ -365,6 +378,7 @@ public class KerberosAuthenticator implements Authenticator
         }
       }
     };
+    return (Filter) authenticationFilter;
   }
 
   @Override
@@ -547,7 +561,7 @@ public class KerberosAuthenticator implements Authenticator
    *                           long, boolean, boolean)
    */
   private static void tokenToAuthCookie(
-      HttpServletResponse resp,
+      org.apache.hadoop.shaded.javax.servlet.http.HttpServletResponse resp,
       String token,
       String domain,
       String path,

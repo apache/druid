@@ -40,7 +40,8 @@ import java.util.List;
 public class TaskConfig
 {
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
-      "org.apache.hadoop:hadoop-client:2.8.5"
+      "org.apache.hadoop:hadoop-client-api:3.2.2",
+      "org.apache.hadoop:hadoop-client-runtime:3.2.2"
   );
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");

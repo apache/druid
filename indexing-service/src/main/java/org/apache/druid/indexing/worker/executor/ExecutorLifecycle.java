@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
@@ -179,30 +179,26 @@ public class ExecutorLifecycle
 
     statusFuture = Futures.transform(
         taskRunner.run(task),
-        new Function<TaskStatus, TaskStatus>()
-        {
-          @Override
-          public TaskStatus apply(TaskStatus taskStatus)
-          {
-            try {
-              log.info(
-                  "Task completed with status: %s",
-                  jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(taskStatus)
-              );
+        taskStatus -> {
+          try {
+            log.info(
+                "Task completed with status: %s",
+                jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(taskStatus)
+            );
 
-              final File statusFileParent = statusFile.getParentFile();
-              if (statusFileParent != null) {
-                FileUtils.forceMkdir(statusFileParent);
-              }
-              jsonMapper.writeValue(statusFile, taskStatus);
+            final File statusFileParent = statusFile.getParentFile();
+            if (statusFileParent != null) {
+              FileUtils.forceMkdir(statusFileParent);
+            }
+            jsonMapper.writeValue(statusFile, taskStatus);
 
-              return taskStatus;
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+            return taskStatus;
           }
-        }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 

@@ -73,7 +73,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
+      <artifactId>hadoop-client-api</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -117,7 +117,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
+      <artifactId>hadoop-client-runtime</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
