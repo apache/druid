@@ -58,7 +58,10 @@ COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
 RUN mkdir /opt/druid/var \
  && chown druid:druid /opt/druid/var \
- && chmod 775 /opt/druid/var
+ && chmod 775 /opt/druid/var \
+ && mkdir /opt/data \
+ && chown druid:druid /opt/data \
+ && chmod 775 /opt/data
 
 USER druid
 VOLUME /opt/druid/var
