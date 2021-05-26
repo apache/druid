@@ -89,7 +89,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -166,7 +167,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -222,7 +224,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -289,7 +292,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -360,7 +364,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -430,7 +435,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             virtualColumns,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -504,7 +510,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             virtualColumns,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -608,7 +615,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -735,7 +743,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -829,7 +838,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -879,7 +889,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -981,7 +992,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1071,7 +1083,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1145,7 +1158,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1203,7 +1217,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1260,7 +1275,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1316,7 +1332,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1373,7 +1390,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1430,7 +1448,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1494,7 +1513,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1555,7 +1575,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1610,7 +1631,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1664,7 +1686,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1722,7 +1745,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1779,7 +1803,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1835,7 +1860,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1902,7 +1928,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1973,7 +2000,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2053,7 +2081,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2114,7 +2143,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2194,7 +2224,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2397,7 +2428,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2535,7 +2567,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2615,7 +2648,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",

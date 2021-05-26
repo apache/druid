@@ -44,7 +44,8 @@ public abstract class AbstractIndex
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     ).toList();
     List<String> columnNames = new ArrayList<>();
     columnNames.add(ColumnHolder.TIME_COLUMN_NAME);

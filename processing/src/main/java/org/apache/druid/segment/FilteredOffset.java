@@ -36,7 +36,7 @@ public final class FilteredOffset extends Offset
   private final Offset baseOffset;
   private final ValueMatcher filterMatcher;
 
-  FilteredOffset(
+  public FilteredOffset(
       Offset baseOffset,
       ColumnSelectorFactory columnSelectorFactory,
       boolean descending,

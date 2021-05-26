@@ -1505,6 +1505,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig);

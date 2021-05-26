@@ -399,6 +399,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public boolean isEnableInMemoryBitmap()
+    {
+      return baseConfig.isEnableInMemoryBitmap();
+    }
+
+    @Override
     public AppendableIndexSpec getAppendableIndexSpec()
     {
       return baseConfig.getAppendableIndexSpec();

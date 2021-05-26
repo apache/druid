@@ -194,7 +194,8 @@ public class GroupByQueryEngineV2
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        null,
+        QueryContexts.isUseInMemoryBitmapInQuery(query)
     );
 
     return cursors.flatMap(

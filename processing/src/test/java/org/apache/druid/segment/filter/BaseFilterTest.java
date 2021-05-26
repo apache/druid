@@ -387,7 +387,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         VIRTUAL_COLUMNS,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
   }
 

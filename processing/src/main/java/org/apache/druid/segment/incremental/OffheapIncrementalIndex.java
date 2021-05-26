@@ -83,12 +83,12 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, false);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
-    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(sortFacts, dimsComparator());
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions(), false)
+                                                   : new PlainFactsHolder(sortFacts, dimsComparator(), false);
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();

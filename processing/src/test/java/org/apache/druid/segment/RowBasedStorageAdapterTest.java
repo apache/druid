@@ -452,7 +452,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -474,7 +475,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -506,7 +508,8 @@ public class RowBasedStorageAdapterTest
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -528,7 +531,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         true,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -552,7 +556,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -572,7 +577,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -594,7 +600,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.HOUR,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -620,7 +627,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.HOUR,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -644,7 +652,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.HOUR,
         true,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -668,7 +677,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(
@@ -779,7 +789,8 @@ public class RowBasedStorageAdapterTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     Assert.assertEquals(

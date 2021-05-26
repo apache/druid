@@ -85,7 +85,8 @@ public class IngestSegmentFirehose implements Firehose
                             VirtualColumns.EMPTY,
                             Granularities.ALL,
                             false,
-                            null
+                            null,
+                            false
                         ), new Function<Cursor, Sequence<InputRow>>()
                         {
                           @Nullable

@@ -850,6 +850,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         handoffTimeout,
         null,
         null,
+        null,
         null
     );
     return new RealtimeIndexTask(

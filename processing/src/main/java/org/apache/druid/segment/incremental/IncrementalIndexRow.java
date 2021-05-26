@@ -107,6 +107,11 @@ public final class IncrementalIndexRow
     return rowIndex;
   }
 
+  public List<IncrementalIndex.DimensionDesc> getDimensionDescsList()
+  {
+    return dimensionDescsList;
+  }
+
   void setRowIndex(int rowIndex)
   {
     this.rowIndex = rowIndex;

@@ -31,6 +31,8 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
@@ -48,6 +50,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractIndex;
+import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandler;
@@ -64,11 +67,13 @@ import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.StringDimensionIndexer;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SimpleColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -97,7 +102,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
+public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable,
+    ColumnSelector
 {
   /**
    * Column selector used at ingestion time for inputs to aggregators.
@@ -237,6 +243,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private volatile DateTime maxIngestedEventTime;
 
+  private final boolean enableInMemoryBitmap;
+  private final Map<String, ColumnHolder> columns;
+  protected final BitmapFactory inMemoryBitmapFactory;
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -253,7 +262,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final boolean enableInMemoryBitmap
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -263,6 +273,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
+    if (enableInMemoryBitmap) {
+      this.columns = new HashMap<>();
+      this.inMemoryBitmapFactory = new RoaringBitmapFactory();
+    } else {
+      this.columns = null;
+      this.inMemoryBitmapFactory = null;
+    }
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
@@ -303,16 +322,48 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
           dimName,
           capabilities,
-          dimSchema.getMultiValueHandling()
+          dimSchema.getMultiValueHandling(),
+          enableInMemoryBitmap
       );
-      addNewDimension(dimName, handler);
+      DimensionDesc desc = addNewDimension(dimName, handler);
+
+      if (enableInMemoryBitmap && type == ValueType.STRING) {
+        columns.put(
+            dimName,
+            new SimpleColumnHolder(
+                capabilities,
+                new IncrementalIndexDictionaryEncodedColumnSupplier(
+                    (StringDimensionIndexer) desc.getIndexer()
+                ),
+                new IncrementalIndexBitmapIndexSupplier(
+                    inMemoryBitmapFactory,
+                    (StringDimensionIndexer) desc.getIndexer()
+                ),
+                null
+            )
+        );
+      }
     }
 
     //__time capabilities
+    ColumnCapabilities timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     timeAndMetricsColumnCapabilities.put(
         ColumnHolder.TIME_COLUMN_NAME,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
+        timeCapabilities
     );
+    if (enableInMemoryBitmap) {
+      columns.put(
+          ColumnHolder.TIME_COLUMN_NAME,
+          new SimpleColumnHolder(
+              timeCapabilities,
+              new IncrementalIndexLongNumericColumnSupplier(
+                  () -> getFacts()
+              ),
+              null,
+              null
+          )
+      );
+    }
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
@@ -417,6 +468,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public boolean isRollup()
   {
     return rollup;
+  }
+
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(String columnName)
+  {
+    return columns.get(columnName);
   }
 
   @Override
@@ -527,16 +585,35 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           absentDimensions.remove(dimension);
         } else {
           wasNewDim = true;
+          ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(ValueType.STRING, null);
           desc = addNewDimension(
               dimension,
               DimensionHandlerUtils.getHandlerFromCapabilities(
                   dimension,
                   // for schemaless type discovery, everything is a String. this should probably try to autodetect
                   // based on the value to use a better handler
-                  makeDefaultCapabilitiesFromValueType(ValueType.STRING, null),
-                  null
+                  capabilities,
+                  null,
+                  enableInMemoryBitmap
               )
           );
+
+          if (enableInMemoryBitmap) {
+            columns.put(
+                dimension,
+                new SimpleColumnHolder(
+                    capabilities,
+                    new IncrementalIndexDictionaryEncodedColumnSupplier(
+                        (StringDimensionIndexer) desc.getIndexer()
+                    ),
+                    new IncrementalIndexBitmapIndexSupplier(
+                        inMemoryBitmapFactory,
+                        (StringDimensionIndexer) desc.getIndexer()
+                    ),
+                    null
+                )
+            );
+          }
         }
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
@@ -663,6 +740,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
+  }
+
+  boolean isEnableInMemoryBitmap()
+  {
+    return enableInMemoryBitmap;
   }
 
   AtomicInteger getNumEntries()
@@ -821,7 +903,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               oldColumnCapabilities.get(dim),
               IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
           );
-          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null, enableInMemoryBitmap);
           addNewDimension(dim, handler);
         }
       }
@@ -1143,6 +1225,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     int putIfAbsent(IncrementalIndexRow key, int rowIndex);
 
     void clear();
+
+    long getTimestamp(int rowIndex);
+
+    IncrementalIndexRow getRow(int rowInex);
+
+    int getNumRows();
   }
 
   static class RollupFactsHolder implements FactsHolder
@@ -1151,11 +1239,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     // Can't use Set because we need to be able to get from collection
     private final ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> facts;
     private final List<DimensionDesc> dimensionDescsList;
+    // Used if in memory bitmaps are enabled to retrieve a row based on a row index
+    // The reason not to use a list directly is because there can be valid race conditions during insertion that result
+    // in non consecutive row indexes (gaps) which makes it unable to take advantage of array index directly
+    @Nullable
+    private final ConcurrentHashMap<Integer, IncrementalIndexRow> rowIndexToFacts;
+    private final boolean enableInMemoryBitmap;
 
     RollupFactsHolder(
         boolean sortFacts,
         Comparator<IncrementalIndexRow> incrementalIndexRowComparator,
-        List<DimensionDesc> dimensionDescsList
+        List<DimensionDesc> dimensionDescsList,
+        boolean enableInMemoryBitmap
     )
     {
       this.sortFacts = sortFacts;
@@ -1165,6 +1260,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.facts = new ConcurrentHashMap<>();
       }
       this.dimensionDescsList = dimensionDescsList;
+      this.enableInMemoryBitmap = enableInMemoryBitmap;
+      if (this.enableInMemoryBitmap) {
+        this.rowIndexToFacts = new ConcurrentHashMap<>();
+      } else {
+        this.rowIndexToFacts = null;
+      }
     }
 
     @Override
@@ -1238,6 +1339,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       // setRowIndex() must be called before facts.putIfAbsent() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
       IncrementalIndexRow prev = facts.putIfAbsent(key, key);
+      if (enableInMemoryBitmap && prev == null) {
+        rowIndexToFacts.put(rowIndex, key);
+      }
       return prev == null ? IncrementalIndexRow.EMPTY_ROW_INDEX : prev.getRowIndex();
     }
 
@@ -1246,16 +1350,45 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       facts.clear();
     }
+
+    @Override
+    public long getTimestamp(int rowIndex)
+    {
+      if (!enableInMemoryBitmap) {
+        throw new UnsupportedOperationException();
+      } else {
+        return rowIndexToFacts.get(rowIndex).getTimestamp();
+      }
+    }
+
+    @Override
+    public IncrementalIndexRow getRow(int rowInex)
+    {
+      if (!enableInMemoryBitmap) {
+        throw new UnsupportedOperationException();
+      } else {
+        return rowIndexToFacts.get(rowInex);
+      }
+    }
+
+    @Override
+    public int getNumRows()
+    {
+      return rowIndexToFacts.size();
+    }
   }
 
   static class PlainFactsHolder implements FactsHolder
   {
     private final boolean sortFacts;
     private final ConcurrentMap<Long, Deque<IncrementalIndexRow>> facts;
+    private final ConcurrentHashMap<Integer, IncrementalIndexRow> rowIndexToFacts;
+    private final boolean enableInMemoryBitmap;
 
     private final Comparator<IncrementalIndexRow> incrementalIndexRowComparator;
 
-    public PlainFactsHolder(boolean sortFacts, Comparator<IncrementalIndexRow> incrementalIndexRowComparator)
+    public PlainFactsHolder(boolean sortFacts, Comparator<IncrementalIndexRow> incrementalIndexRowComparator,
+                            boolean enableInMemoryBitmap)
     {
       this.sortFacts = sortFacts;
       if (sortFacts) {
@@ -1264,6 +1397,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.facts = new ConcurrentHashMap<>();
       }
       this.incrementalIndexRowComparator = incrementalIndexRowComparator;
+      this.enableInMemoryBitmap = enableInMemoryBitmap;
+      if (this.enableInMemoryBitmap) {
+        this.rowIndexToFacts = new ConcurrentHashMap<>();
+      } else {
+        this.rowIndexToFacts = null;
+      }
     }
 
     @Override
@@ -1359,6 +1498,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       // setRowIndex() must be called before rows.add() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
       rows.add(key);
+      if (enableInMemoryBitmap) {
+        rowIndexToFacts.put(rowIndex, key);
+      }
       // always return EMPTY_ROW_INDEX to indicate that we always add new row
       return IncrementalIndexRow.EMPTY_ROW_INDEX;
     }
@@ -1367,6 +1509,32 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public void clear()
     {
       facts.clear();
+    }
+
+    @Override
+    public long getTimestamp(int rowIndex)
+    {
+      if (!enableInMemoryBitmap) {
+        throw new UnsupportedOperationException();
+      } else {
+        return rowIndexToFacts.get(rowIndex).getTimestamp();
+      }
+    }
+
+    @Override
+    public IncrementalIndexRow getRow(int rowInex)
+    {
+      if (!enableInMemoryBitmap) {
+        throw new UnsupportedOperationException();
+      } else {
+        return rowIndexToFacts.get(rowInex);
+      }
+    }
+
+    @Override
+    public int getNumRows()
+    {
+      return rowIndexToFacts.size();
     }
   }
 

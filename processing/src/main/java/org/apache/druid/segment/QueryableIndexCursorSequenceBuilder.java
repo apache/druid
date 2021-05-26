@@ -543,7 +543,7 @@ public class QueryableIndexCursorSequenceBuilder
 
   public static class AscendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
-    AscendingTimestampCheckingOffset(
+    public AscendingTimestampCheckingOffset(
         Offset baseOffset,
         NumericColumn timestamps,
         long timeLimit,
@@ -576,7 +576,7 @@ public class QueryableIndexCursorSequenceBuilder
 
   public static class DescendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
-    DescendingTimestampCheckingOffset(
+    public DescendingTimestampCheckingOffset(
         Offset baseOffset,
         NumericColumn timestamps,
         long timeLimit,

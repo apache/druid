@@ -101,7 +101,8 @@ public class QueryableIndexStorageAdapterTest
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         );
 
         final Yielder<Cursor> yielder = closer.register(Yielders.each(cursors));

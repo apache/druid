@@ -377,7 +377,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "countryIsoCode"));
@@ -394,7 +395,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "countryIsoCode"));
@@ -411,7 +413,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.v"));
@@ -428,7 +431,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.v"));
@@ -445,7 +449,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.v"));
@@ -462,7 +467,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.v"));
@@ -479,7 +485,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.countryName"));
@@ -496,7 +503,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.countryName"));
@@ -513,7 +521,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.countryName"));
@@ -530,7 +539,8 @@ public class JoinAndLookupBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, "c.countryName"));
@@ -547,7 +557,8 @@ public class JoinAndLookupBenchmark
         lookupVirtualColumns,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_CODE_TO_NAME));
@@ -564,7 +575,8 @@ public class JoinAndLookupBenchmark
         lookupVirtualColumns,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_CODE_TO_NAME));
@@ -581,7 +593,8 @@ public class JoinAndLookupBenchmark
         lookupVirtualColumns,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_NUMBER_TO_NAME));
@@ -598,7 +611,8 @@ public class JoinAndLookupBenchmark
         lookupVirtualColumns,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_NUMBER_TO_NAME));

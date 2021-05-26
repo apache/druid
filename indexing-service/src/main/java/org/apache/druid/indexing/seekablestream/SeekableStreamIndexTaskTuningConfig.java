@@ -60,6 +60,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
+  private final boolean enableInMemoryBitmap;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -83,7 +84,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Period intermediateHandoffPeriod,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Boolean enableInMemoryBitmap
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -136,6 +138,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+    this.enableInMemoryBitmap = enableInMemoryBitmap == null ? TuningConfig.DEFAULT_ENABLE_IN_MEMORY_BITMAP :
+                                enableInMemoryBitmap;
   }
 
   @Override
@@ -291,6 +295,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @Override
+  @JsonProperty
+  public boolean isEnableInMemoryBitmap()
+  {
+    return enableInMemoryBitmap;
+  }
+
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -321,7 +332,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
+           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
+           enableInMemoryBitmap == that.enableInMemoryBitmap;
   }
 
   @Override
@@ -346,7 +358,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         skipSequenceNumberAvailabilityCheck,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        enableInMemoryBitmap
     );
   }
 

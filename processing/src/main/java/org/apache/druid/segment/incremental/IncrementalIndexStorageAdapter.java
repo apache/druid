@@ -29,11 +29,13 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,6 +49,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
  */
@@ -267,7 +270,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final VirtualColumns virtualColumns,
       final Granularity gran,
       final boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
+      @Nullable QueryMetrics<?> queryMetrics,
+      final boolean useInMemoryBitmapInQuery
   )
   {
     if (index.isEmpty()) {
@@ -285,9 +289,40 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       intervals = Lists.reverse(ImmutableList.copyOf(intervals));
     }
 
-    return Sequences
+    if (!index.isEnableInMemoryBitmap() || !useInMemoryBitmapInQuery) {
+      return Sequences
         .simple(intervals)
         .map(i -> new IncrementalIndexCursor(virtualColumns, descending, filter, i, actualInterval, gran));
+    } else {
+      final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
+      final QueryableIndexStorageAdapter.FilterAnalysis filterAnalysis = QueryableIndexStorageAdapter
+          .analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
+
+      return Sequences.filter(
+          new IncrementalIndexInMemoryBitmapEnabledCursorSequenceBuilder(
+              this,
+              index,
+              actualInterval,
+              virtualColumns,
+              filterAnalysis.getPreFilterBitmap(),
+              getMinTime().getMillis(),
+              getMaxTime().getMillis(),
+              descending,
+              filterAnalysis.getPostFilter(),
+              bitmapIndexSelector
+          ).build(gran),
+          Objects::nonNull
+      );
+    }
+  }
+
+  private ColumnSelectorBitmapIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
+  {
+    return new ColumnSelectorBitmapIndexSelector(
+        index.inMemoryBitmapFactory,
+        virtualColumns,
+        index
+    );
   }
 
   @Override

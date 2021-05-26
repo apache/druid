@@ -65,6 +65,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
+      @JsonProperty("enableInMemoryBitmap") @Nullable Boolean enableInMemoryBitmap,
       @JsonProperty("extra") String extra
   )
   {
@@ -95,7 +96,8 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        enableInMemoryBitmap
     );
     this.extra = extra;
   }
@@ -129,7 +131,8 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getMaxParseExceptions(),
         base.getMaxSavedParseExceptions(),
         base.getMaxRecordsPerPoll(),
-        base.getIntermediateHandoffPeriod()
+        base.getIntermediateHandoffPeriod(),
+        base.isEnableInMemoryBitmap()
     );
     this.extra = extra;
   }

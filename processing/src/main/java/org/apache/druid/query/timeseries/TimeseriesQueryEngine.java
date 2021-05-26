@@ -296,7 +296,8 @@ public class TimeseriesQueryEngine
               agg.close();
             }
           }
-        }
+        },
+        QueryContexts.isUseInMemoryBitmapInQuery(query)
     );
   }
 }

@@ -317,7 +317,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -381,7 +382,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -443,7 +445,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -500,7 +503,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -559,7 +563,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -624,7 +629,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -685,7 +691,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -721,7 +728,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -756,7 +764,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -794,7 +803,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -831,7 +841,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -869,7 +880,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -911,7 +923,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -953,7 +966,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -995,7 +1009,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1037,7 +1052,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1092,7 +1108,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1168,7 +1185,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1227,7 +1245,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1301,7 +1320,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1365,7 +1385,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1411,7 +1432,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1475,7 +1497,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1525,7 +1548,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             virtualColumns,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1581,7 +1605,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             virtualColumns,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1634,7 +1659,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1686,7 +1712,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1740,7 +1767,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1796,7 +1824,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of()
     );
@@ -1838,7 +1867,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of()
     );
@@ -1880,7 +1910,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of()
     );
@@ -1922,7 +1953,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of()
     );
@@ -1950,7 +1982,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -1984,7 +2017,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2017,7 +2051,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
   }
 
@@ -2048,7 +2083,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2092,7 +2128,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2135,7 +2172,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",
@@ -2195,7 +2233,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             VirtualColumns.EMPTY,
             Granularities.ALL,
             false,
-            null
+            null,
+            false
         ),
         ImmutableList.of(
             "page",

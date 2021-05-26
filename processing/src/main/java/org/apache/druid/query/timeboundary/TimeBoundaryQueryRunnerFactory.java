@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -118,7 +119,8 @@ public class TimeBoundaryQueryRunnerFactory
           VirtualColumns.EMPTY,
           descending,
           Granularities.ALL,
-          this.skipToFirstMatching
+          this.skipToFirstMatching,
+          QueryContexts.isUseInMemoryBitmapInQuery(legacyQuery)
       );
       final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
       if (resultList.size() > 0) {

@@ -152,7 +152,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -175,7 +176,8 @@ public class ExpressionSelectorBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -206,7 +208,8 @@ public class ExpressionSelectorBenchmark
         VirtualColumns.EMPTY,
         Granularities.HOUR,
         false,
-        null
+        null,
+        false
     );
 
     final List<Long> results = cursors
@@ -246,7 +249,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -271,7 +275,8 @@ public class ExpressionSelectorBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -311,7 +316,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -343,7 +349,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -369,7 +376,8 @@ public class ExpressionSelectorBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -404,7 +412,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors
@@ -436,7 +445,8 @@ public class ExpressionSelectorBenchmark
         ),
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final List<?> results = cursors

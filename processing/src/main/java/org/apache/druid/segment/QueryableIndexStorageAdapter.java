@@ -248,7 +248,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
 
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
+    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics, index.getNumRows());
 
     return new QueryableIndexCursorSequenceBuilder(
         index,
@@ -270,7 +270,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       VirtualColumns virtualColumns,
       Granularity gran,
       boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
+      @Nullable QueryMetrics<?> queryMetrics,
+      boolean useInMemoryBitmapInQuery
   )
   {
     if (queryMetrics != null) {
@@ -285,7 +286,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
 
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
+    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics, index.getNumRows());
 
     return Sequences.filter(
         new QueryableIndexCursorSequenceBuilder(
@@ -358,15 +359,27 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  @VisibleForTesting
-  public FilterAnalysis analyzeFilter(
+  /**
+   * Only called by tests
+   */
+  public static FilterAnalysis analyzeFilter(
+
       @Nullable final Filter filter,
       ColumnSelectorBitmapIndexSelector indexSelector,
       @Nullable QueryMetrics queryMetrics
   )
   {
-    final int totalRows = index.getNumRows();
+    return analyzeFilter(filter, indexSelector, queryMetrics, -1);
+  }
 
+  @VisibleForTesting
+  public static FilterAnalysis analyzeFilter(
+      @Nullable final Filter filter,
+      ColumnSelectorBitmapIndexSelector indexSelector,
+      @Nullable QueryMetrics queryMetrics,
+      int totalRows
+  )
+  {
     /*
      * Filters can be applied in two stages:
      * pre-filtering: Use bitmap indexes to prune the set of rows to be scanned.

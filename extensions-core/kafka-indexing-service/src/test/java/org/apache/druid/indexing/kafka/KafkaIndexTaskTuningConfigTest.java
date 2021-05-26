@@ -145,6 +145,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         null,
         null,
+        null,
         null
     );
     KafkaIndexTaskTuningConfig copy = (KafkaIndexTaskTuningConfig) original.convertToTaskTuningConfig();
@@ -185,7 +186,8 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         true,
         42,
-        42
+        42,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -211,6 +213,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assert.assertEquals(base.isEnableInMemoryBitmap(), deserialized.isEnableInMemoryBitmap());
   }
 
   @Test
@@ -237,6 +240,7 @@ public class KafkaIndexTaskTuningConfigTest
         true,
         42,
         42,
+        null,
         "extra string"
     );
 
@@ -262,6 +266,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assert.assertEquals(base.isEnableInMemoryBitmap(), deserialized.isEnableInMemoryBitmap());
   }
 
   @Test

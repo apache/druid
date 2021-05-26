@@ -37,7 +37,8 @@ public class DimensionHandlerUtilsTest
     DimensionHandler dimensionHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
         "dim",
         new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX).setComplexTypeName("testType"),
-        null
+        null,
+        false
     );
 
     Assert.assertEquals("dim", dimensionHandler.getDimensionName());

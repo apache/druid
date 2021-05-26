@@ -236,6 +236,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
+  private boolean enableInMemoryBitmap = false;
 
   private AppenderatorsManager appenderatorsManager;
   private String topic;
@@ -2693,7 +2694,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        enableInMemoryBitmap
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();

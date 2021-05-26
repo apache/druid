@@ -357,7 +357,8 @@ public class IndexTaskTest extends IngestionTestBase
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
     final List<Map<String, Object>> transforms = cursorSequence
         .map(cursor -> {
@@ -608,7 +609,8 @@ public class IndexTaskTest extends IngestionTestBase
           VirtualColumns.EMPTY,
           Granularities.ALL,
           false,
-          null
+          null,
+          false
       );
       final List<Integer> hashes = cursorSequence
           .map(cursor -> {

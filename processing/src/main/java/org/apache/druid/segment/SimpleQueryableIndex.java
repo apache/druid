@@ -80,7 +80,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
             Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
             for (String dim : availableDimensions) {
               ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
-              DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+              DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null, false);
               dimensionHandlerMap.put(dim, handler);
             }
             return dimensionHandlerMap;
@@ -90,7 +90,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
       Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
       for (String dim : availableDimensions) {
         ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
-        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null, false);
         dimensionHandlerMap.put(dim, handler);
       }
       this.dimensionHandlers = () -> dimensionHandlerMap;

@@ -48,7 +48,7 @@ public interface OverwriteShardSpec extends ShardSpec
 
   /**
    * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
-   * This shardSpec uses non-root-generation partition space and thus does not share the space with other shardSpecs.
+   * This shardSpec usesKafkaIndexTaskTuningConfig.java non-root-generation partition space and thus does not share the space with other shardSpecs.
    *
    * @see PartitionIds
    */

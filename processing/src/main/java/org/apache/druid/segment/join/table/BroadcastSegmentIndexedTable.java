@@ -121,7 +121,8 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null
+        null,
+        false
     );
 
     final Sequence<Integer> sequence = Sequences.map(
