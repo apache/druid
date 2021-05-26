@@ -412,7 +412,7 @@ public class BatchAppenderator implements Appenderator
   }
 
   @VisibleForTesting
-  long getBytesCurrentlyInMemory()
+  public long getBytesCurrentlyInMemory()
   {
     return bytesCurrentlyInMemory.get();
   }
@@ -423,7 +423,7 @@ public class BatchAppenderator implements Appenderator
     final Sink sink = sinks.get(identifier);
 
     if (sink == null) {
-      throw new ISE("No such sink: %s", identifier);
+      return 0L; // sinks are removed after a persist
     } else {
       return sink.getBytesInMemory();
     }
@@ -895,6 +895,7 @@ public class BatchAppenderator implements Appenderator
       persistExecutor = null;
       pushExecutor = null;
       intermediateTempExecutor = null;
+
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -903,6 +904,12 @@ public class BatchAppenderator implements Appenderator
 
     // Only unlock if executors actually shut down.
     unlockBasePersistDirectory();
+
+    // cleanup:
+    List<File> persistedIdentifiers = getPersistedidentifierPaths();
+    for (File identifier : persistedIdentifiers) {
+      removeDirectory(identifier);
+    }
   }
 
   /**
@@ -1181,7 +1188,8 @@ public class BatchAppenderator implements Appenderator
   }
 
 
-  private List<File> getPersistedidentifierPaths()
+  @VisibleForTesting
+  public List<File> getPersistedidentifierPaths()
   {
 
     ArrayList<File> retVal = new ArrayList<>();

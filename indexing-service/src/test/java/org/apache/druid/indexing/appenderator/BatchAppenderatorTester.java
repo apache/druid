@@ -92,6 +92,15 @@ public class BatchAppenderatorTester implements AutoCloseable
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
+  }
+
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure
   )
@@ -147,7 +156,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         null,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-        false,
+        skipBytesInMemoryOverheadCheck,
         null,
         null,
         null,
@@ -166,7 +175,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         null,
         null,
         null
-    ).withBasePersistDirectory(createNewBasePersistDirectory());
+    ).withBasePersistDirectory(basePersistDirectory != null ? basePersistDirectory : createNewBasePersistDirectory());
 
     metrics = new FireDepartmentMetrics();
 
