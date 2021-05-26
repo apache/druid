@@ -3521,7 +3521,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final Map<String, Object> consumerProperties = RocketMQConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
-    consumerProperties.put("bootstrap.servers", rocketmqHost);
+    consumerProperties.put("nameserver.url", rocketmqHost);
     RocketMQSupervisorIOConfig rocketmqSupervisorIOConfig = new RocketMQSupervisorIOConfig(
         topic,
         INPUT_FORMAT,
@@ -3750,7 +3750,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     Map<String, Object> consumerProperties = new HashMap<>();
     consumerProperties.put("myCustomKey", "myCustomValue");
-    consumerProperties.put("bootstrap.servers", rocketmqHost);
+    consumerProperties.put("nameserver.url", rocketmqHost);
     consumerProperties.put("isolation.level", "read_committed");
     RocketMQSupervisorIOConfig rocketmqSupervisorIOConfig = new RocketMQSupervisorIOConfig(
         topic,
