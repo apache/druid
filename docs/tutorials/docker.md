@@ -89,14 +89,21 @@ From here you can follow along with the [Quickstart](./index.md#step-4-load-data
 > sudo docker exec --user root middlemanager chown druid:druid /opt/data
 > ```
 >
-> or use a named volume in docker-compose.yml by replacing all lines
+> or use a named volume in the docker-compose.yml by replacing all lines
 > ```
 > ./storage:/opt/data
 > ```
-> in the example docker-compose.yml to
+> to
 > ```
 > druid_data_storage:/opt/data
 > ```
+> and declare the named volume under the 'volumes' property as
+> ```
+> volumes:
+>   ...
+>   druid_data_storage: {}
+> ```
+> 
 
 ## Docker Memory Requirements
 If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker. 6 GB may be a good place to start. 
