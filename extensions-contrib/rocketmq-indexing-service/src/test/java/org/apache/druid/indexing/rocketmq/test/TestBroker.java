@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.rocketmq.test;
 
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.BrokerConfig;
@@ -38,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestBroker implements Closeable
 {
@@ -69,7 +71,7 @@ public class TestBroker implements Closeable
   {
     NamesrvConfig namesrvConfig = new NamesrvConfig();
     NettyServerConfig nettyServerConfig = new NettyServerConfig();
-    nettyServerConfig.setListenPort(9876);
+    nettyServerConfig.setListenPort(ThreadLocalRandom.current().nextInt(9999) + 10000);
     this.nameServer = new NamesrvController(namesrvConfig, nettyServerConfig);
     nameServer.initialize();
     nameServer.start();
@@ -87,17 +89,17 @@ public class TestBroker implements Closeable
     brokerConfig.setBrokerName("broker-a");
     brokerConfig.setClusterTopicEnable(true);
     brokerConfig.setBrokerId(0);
-    brokerConfig.setNamesrvAddr("127.0.0.1:9876");
+    brokerConfig.setNamesrvAddr(StringUtils.format("127.0.0.1:%d", getPort()));
 
     NettyServerConfig brokerNettyServerConfig = new NettyServerConfig();
     NettyClientConfig brokerNettyClientConfig = new NettyClientConfig();
-    brokerNettyServerConfig.setListenPort(10911);
+    brokerNettyServerConfig.setListenPort(ThreadLocalRandom.current().nextInt(9999) + 10000);
     MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
     messageStoreConfig.setBrokerRole("ASYNC_MASTER");
     messageStoreConfig.setFlushDiskType("ASYNC_FLUSH");
     messageStoreConfig.setStorePathRootDir(directory.toString());
     messageStoreConfig.setStorePathCommitLog(commitlogDirectory.toString());
-    messageStoreConfig.setHaListenPort(10912);
+    messageStoreConfig.setHaListenPort(ThreadLocalRandom.current().nextInt(9999) + 10000);
 
     this.brokerServer = new BrokerController(brokerConfig, brokerNettyServerConfig, brokerNettyClientConfig, messageStoreConfig);
 
@@ -106,11 +108,16 @@ public class TestBroker implements Closeable
 
   }
 
+  public int getPort()
+  {
+    return nameServer.getNettyServerConfig().getListenPort();
+  }
+
   public DefaultMQProducer newProducer()
   {
     DefaultMQProducer producer = new
         DefaultMQProducer("test_producer");
-    producer.setNamesrvAddr("127.0.0.1:9876");
+    producer.setNamesrvAddr(StringUtils.format("127.0.0.1:%d", getPort()));
     producer.setSendMsgTimeout(10000);
     return producer;
   }
@@ -118,7 +125,7 @@ public class TestBroker implements Closeable
   public Map<String, Object> consumerProperties()
   {
     final Map<String, Object> props = new HashMap<>();
-    props.put("nameserver.url", "127.0.0.1:9876");
+    props.put("nameserver.url", StringUtils.format("127.0.0.1:%d", getPort()));
     return props;
   }
 
