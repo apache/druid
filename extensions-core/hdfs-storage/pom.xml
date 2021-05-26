@@ -47,11 +47,6 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client-runtime</artifactId>
-          <version>${hadoop.compile.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-aws</artifactId>
           <version>${hadoop.compile.version}</version>
           <scope>runtime</scope>
@@ -131,31 +126,18 @@
           <type>test-jar</type>
           <scope>test</scope>
         </dependency>
-<!--      <dependency>-->
-<!--        <groupId>org.apache.hadoop</groupId>-->
-<!--        <artifactId>hadoop-client-runtime</artifactId>-->
-<!--        <version>${hadoop.compile.version}</version>-->
-<!--        <classifier>test</classifier>-->
-<!--      </dependency>-->
-<!--      <dependency>-->
-<!--        <groupId>org.apache.hadoop</groupId>-->
-<!--        <artifactId>hadoop-client-api</artifactId>-->
-<!--        <version>${hadoop.compile.version}</version>-->
-<!--        <classifier>test</classifier>-->
-<!--      </dependency>-->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
+          <artifactId>hadoop-client-minicluster</artifactId>
           <version>${hadoop.compile.version}</version>
-          <classifier>tests</classifier>
           <scope>test</scope>
         </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-common</artifactId>
-        <version>${hadoop.compile.version}</version>
-        <classifier>tests</classifier>
-      </dependency>
+        <dependency>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+          <version>1.2.17</version>
+          <scope>test</scope>
+        </dependency>
       <dependency>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid-indexing-hadoop</artifactId>
