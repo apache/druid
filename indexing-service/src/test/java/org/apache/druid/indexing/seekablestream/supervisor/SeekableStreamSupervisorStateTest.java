@@ -60,6 +60,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamExceptionEvent;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamState;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -88,6 +89,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -751,6 +753,147 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     latch.await();
     Assert.assertEquals(0, emitter.getEvents().size());
+    verifyAll();
+  }
+
+  @Test
+  public void testMoveGroupFromReadingToPendingEndoffsetIsNull() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskQueue.shutdown(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    int groupId = 1;
+    ImmutableMap<String, String> offsets = ImmutableMap.of("1", "10");
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(groupId,
+        offsets,
+        Optional.of(DateTimes.nowUtc()),
+        Optional.of(DateTimes.nowUtc().plusHours(1)),
+        ImmutableSet.of("task1"),
+        Collections.emptySet());
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
+    supervisor.moveGroupFromReadingToPending(1, null);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testMoveGroupFromReadingToPendingEndoffsetEmpty() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskQueue.shutdown(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    int groupId = 1;
+    ImmutableMap<String, String> offsets = ImmutableMap.of("1", "10");
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(groupId,
+            offsets,
+            Optional.of(DateTimes.nowUtc()),
+            Optional.of(DateTimes.nowUtc().plusHours(1)),
+            ImmutableSet.of("task1"),
+            Collections.emptySet()
+    );
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
+    supervisor.moveGroupFromReadingToPending(1, Collections.emptyMap());
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testMoveGroupFromReadingToPendingEndoffsetNotEmpty() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskQueue.shutdown(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    int groupId = 1;
+    ImmutableMap<String, String> offsets = ImmutableMap.of("1", "10");
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(groupId,
+            offsets,
+            Optional.of(DateTimes.nowUtc()),
+            Optional.of(DateTimes.nowUtc().plusHours(1)),
+            ImmutableSet.of("task1"),
+            Collections.emptySet()
+    );
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
+    supervisor.moveGroupFromReadingToPending(1, offsets);
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testMoveGroupFromReadingToPendingEndoffsetIsEOF() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskQueue.shutdown(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    int groupId = 1;
+    ImmutableMap<String, String> offsets = ImmutableMap.of("1", "EOF");
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(groupId,
+            offsets,
+            Optional.of(DateTimes.nowUtc()),
+            Optional.of(DateTimes.nowUtc().plusHours(1)),
+            ImmutableSet.of("task1"),
+            Collections.emptySet()
+    );
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 2);
+    supervisor.moveGroupFromReadingToPending(1, offsets);
+
+    Assert.assertEquals(supervisor.getActiveTaskGroupsCount(), 1);
+
     verifyAll();
   }
 

@@ -2591,7 +2591,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void moveGroupFromReadingToPending(Integer groupId, Map<PartitionIdType, SequenceOffsetType> endOffsets)
+  protected void moveGroupFromReadingToPending(Integer groupId, Map<PartitionIdType, SequenceOffsetType> endOffsets)
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
 

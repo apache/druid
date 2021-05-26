@@ -318,7 +318,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     return pauseFutureMap.size();
   }
 
-  private void stopTask(ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future, PauseCallable pauseCallable)
+  protected void stopTask(ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> future, PauseCallable pauseCallable)
   {
     pauseCallable.stop();
 
@@ -368,7 +368,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
   protected abstract Class<SequenceOffsetType> getSequenceType();
 
-  private class PauseCallable implements Callable<Map<PartitionIdType, SequenceOffsetType>>
+  public class PauseCallable implements Callable<Map<PartitionIdType, SequenceOffsetType>>
   {
     private String taskId;
 
@@ -454,6 +454,11 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     public void stop()
     {
       this.running = false;
+    }
+
+    public boolean isRunning()
+    {
+      return this.running;
     }
 
     @Override
