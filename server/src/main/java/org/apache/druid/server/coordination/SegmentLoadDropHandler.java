@@ -264,14 +264,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    *
    * @throws SegmentLoadingException if it fails to load the given segment
    */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy, ExecutorService exec)
       throws SegmentLoadingException
   {
     final boolean loaded;
     try {
       loaded = segmentManager.loadSegment(segment,
               lazy,
-          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false),
+              exec
       );
     }
     catch (Exception e) {
@@ -295,6 +296,18 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
     }
+  }
+
+  /**
+   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
+   * throw a SegmentLoadingException
+   *
+   * @throws SegmentLoadingException if it fails to load the given segment
+   */
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
+      throws SegmentLoadingException
+  {
+    loadSegment(segment, callback, lazy, null);
   }
 
   @Override
@@ -345,9 +358,19 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  /**
+   * Bulk adding segments during bootstrap
+   * @param segments A collection of segments to add
+   * @param callback Segment loading callback
+   */
   private void addSegments(Collection<DataSegment> segments, final DataSegmentChangeCallback callback)
   {
+    // Start a temporary thread pool to load segments into page cache during bootstrap
     ExecutorService loadingExecutor = null;
+    ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec =
+        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0 ?
+        Execs.multiThreaded(config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+                            "Load-Segments-Into-Page-Cache-On-Bootstrap-%s") : null;
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
              new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
 
@@ -369,7 +392,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                     numSegments,
                     segment.getId()
                 );
-                loadSegment(segment, callback, config.isLazyLoadOnStart());
+                loadSegment(segment, callback, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
                 try {
                   backgroundSegmentAnnouncer.announceSegment(segment);
                 }
@@ -414,6 +437,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       callback.execute();
       if (loadingExecutor != null) {
         loadingExecutor.shutdownNow();
+      }
+      if (loadSegmentsIntoPageCacheOnBootstrapExec != null) {
+        // At this stage, all tasks have been submitted, send a shutdown command to the bootstrap
+        // thread pool so threads will exit after finishing the tasks
+        loadSegmentsIntoPageCacheOnBootstrapExec.shutdown();
       }
     }
   }

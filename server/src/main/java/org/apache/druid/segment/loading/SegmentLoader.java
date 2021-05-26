@@ -24,6 +24,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Loading segments from deep storage to local storage.
@@ -35,4 +36,5 @@ public interface SegmentLoader
   Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
   void cleanup(DataSegment segment);
+  void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec);
 }

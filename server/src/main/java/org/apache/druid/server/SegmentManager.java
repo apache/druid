@@ -49,6 +49,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -215,12 +216,17 @@ public class SegmentManager
    * @param segment segment to load
    * @param lazy    whether to lazy load columns metadata
    * @param loadFailed callBack to execute when segment lazy load failed
+   * @param loadSegmentIntoPageCacheExec If null is specified, the default thread pool in segment loader to load
+   *                                     segments into page cache on download will be used. You can specify a dedicated
+   *                                     thread pool of larger capacity when this function is called during historical
+   *                                     process bootstrap to speed up initial loading.
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed,
+                             ExecutorService loadSegmentIntoPageCacheExec) throws SegmentLoadingException
   {
     final Segment adapter = getAdapter(segment, lazy, loadFailed);
 
@@ -262,6 +268,8 @@ public class SegmentManager
                 )
             );
             dataSourceState.addSegment(segment);
+            // Asyncly load segment index files into page cache in a thread pool
+            segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
             resultSupplier.set(true);
 
           }
@@ -271,6 +279,23 @@ public class SegmentManager
     );
 
     return resultSupplier.get();
+  }
+
+  /**
+   * Load a single segment.
+   *
+   * @param segment segment to load
+   * @param lazy    whether to lazy load columns metadata
+   * @param loadFailed callBack to execute when segment lazy load failed
+   *
+   * @return true if the segment was newly loaded, false if it was already loaded
+   *
+   * @throws SegmentLoadingException if the segment cannot be loaded
+   */
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
+  {
+    return loadSegment(segment, lazy, loadFailed, null);
   }
 
   private Segment getAdapter(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException

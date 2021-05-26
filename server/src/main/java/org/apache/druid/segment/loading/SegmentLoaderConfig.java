@@ -56,6 +56,12 @@ public class SegmentLoaderConfig
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
 
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnDownload")
+  private int numThreadsToLoadSegmentsIntoPageCacheOnDownload = 0;
+
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnBootstrap")
+  private Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = null;
+
   @JsonProperty
   private File infoDir = null;
 
@@ -97,6 +103,18 @@ public class SegmentLoaderConfig
   public int getNumBootstrapThreads()
   {
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
+  }
+
+  public int getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
+  {
+    return numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+  }
+
+  public int getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap()
+  {
+    return numThreadsToLoadSegmentsIntoPageCacheOnBootstrap == null ?
+           numThreadsToLoadSegmentsIntoPageCacheOnDownload :
+           numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
   }
 
   public File getInfoDir()
