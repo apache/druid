@@ -142,19 +142,18 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
-  static formatStr(s: string | number, format: 'csv' | 'tsv') {
+  static formatStr(s: null | string | number | Date, format: 'csv' | 'tsv') {
+    let str = s && (s as any).toISOString ? (s as any).toISOString() : String(s);
+
+    // remove line break
+    str = str.replace(/(?:\r\n|\r|\n)/g, ' ');
+
     if (format === 'csv') {
-      // remove line break, single quote => double quote, handle ','
-      return `"${String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/"/g, '""')}"`;
+      // csv: single quote => double quote, handle ','
+      return `"${str.replace(/"/g, '""')}"`;
     } else {
-      // tsv
-      // remove line break, single quote => double quote, \t => ''
-      return String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/\t/g, '')
-        .replace(/"/g, '""');
+      // tsv: single quote => double quote, \t => ''
+      return str.replace(/\t/g, '').replace(/"/g, '""');
     }
   }
 

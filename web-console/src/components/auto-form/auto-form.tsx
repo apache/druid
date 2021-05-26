@@ -56,6 +56,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
   adjustment?: (model: M) => M;
@@ -456,10 +457,15 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     let shouldShowMore = false;
     const shownFields = fields.filter(field => {
       if (AutoForm.evaluateFunctor(field.defined, model, true)) {
+        if (AutoForm.evaluateFunctor(field.hide, model, false)) {
+          return false;
+        }
+
         if (AutoForm.evaluateFunctor(field.hideInMore, model, false)) {
           shouldShowMore = true;
           return showMore;
         }
+
         return true;
       } else {
         return false;

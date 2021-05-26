@@ -70,9 +70,11 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
+    placeholder: `(defaults to 500000)`,
     defined: (t: CompactionConfig) =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
-      !deepGet(t, 'tuningConfig.partitionsSpec.numShards'),
+      !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
       <>
         <p>
@@ -87,11 +89,33 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
+    name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
+    type: 'number',
+    zeroMeansUndefined: true,
+    defined: (t: CompactionConfig) =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
+    info: (
+      <>
+        <p>
+          Target number of rows to include in a partition, should be a number that targets segments
+          of 500MB~1GB.
+        </p>
+        <p>
+          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code>. Only one
+          of these properties can be used.
+        </p>
+      </>
+    ),
+  },
+  {
     name: 'tuningConfig.partitionsSpec.numShards',
     type: 'number',
     zeroMeansUndefined: true,
     defined: (t: CompactionConfig) =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     info: (
       <>

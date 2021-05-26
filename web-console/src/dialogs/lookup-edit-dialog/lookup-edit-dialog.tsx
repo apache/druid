@@ -58,6 +58,11 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
   } = props;
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [updateVersionOnSubmit, setUpdateVersionOnSubmit] = useState(true);
+  const [jsonError, setJsonError] = useState<Error | undefined>();
+
+  const disableSubmit = Boolean(
+    jsonError || isLookupInvalid(lookupName, lookupVersion, lookupTier, lookupSpec),
+  );
 
   return (
     <Dialog
@@ -122,10 +127,12 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
         ) : (
           <JsonInput
             value={lookupSpec}
+            height="80vh"
             onChange={m => {
               onChange('spec', m);
+              setJsonError(undefined);
             }}
-            height="80vh"
+            onError={setJsonError}
           />
         )}
       </div>
@@ -135,10 +142,10 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
           <Button
             text="Submit"
             intent={Intent.PRIMARY}
+            disabled={disableSubmit}
             onClick={() => {
               onSubmit(updateVersionOnSubmit && isEdit);
             }}
-            disabled={isLookupInvalid(lookupName, lookupVersion, lookupTier, lookupSpec)}
           />
         </div>
       </div>
