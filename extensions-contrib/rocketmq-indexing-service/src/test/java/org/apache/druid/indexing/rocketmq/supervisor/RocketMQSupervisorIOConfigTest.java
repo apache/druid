@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTaskModule;
-import org.apache.druid.indexing.rocketmq.RocketMQRecordSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.hamcrest.CoreMatchers;
@@ -33,8 +32,6 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.util.Properties;
 
 public class RocketMQSupervisorIOConfigTest
 {
