@@ -48,6 +48,7 @@ import {
   QueryState,
   RowColumn,
   SemiJoinQueryExplanation,
+  stringifyValue,
 } from '../../utils';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
@@ -143,10 +144,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   static formatStr(s: null | string | number | Date, format: 'csv' | 'tsv') {
-    let str = s && (s as any).toISOString ? (s as any).toISOString() : String(s);
-
-    // remove line break
-    str = str.replace(/(?:\r\n|\r|\n)/g, ' ');
+    // stringify and remove line break
+    const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
 
     if (format === 'csv') {
       // csv: single quote => double quote, handle ','
