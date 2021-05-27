@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -214,8 +213,9 @@ public class CoordinatorCompactionConfigsResource
       }
     }
     catch (Exception e) {
+      String errorMessage = e.getMessage();
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .entity(ImmutableMap.of("error", errorMessage == null ? "Unknown Error" : errorMessage))
                      .build();
     }
 
@@ -224,8 +224,9 @@ public class CoordinatorCompactionConfigsResource
     } else if (setResult.getException() instanceof NoSuchElementException) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
+      String errorMessage = setResult.getException().getMessage();
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException().getMessage()))
+                     .entity(ImmutableMap.of("error", errorMessage == null ? "Unknown Error" : errorMessage))
                      .build();
     }
   }
