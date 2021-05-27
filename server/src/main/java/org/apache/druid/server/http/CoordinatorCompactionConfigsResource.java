@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -28,6 +29,8 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -61,11 +64,19 @@ public class CoordinatorCompactionConfigsResource
   static final int UPDATE_NUM_RETRY = 5;
 
   private final JacksonConfigManager manager;
+  private final MetadataStorageConnector connector;
+  private final MetadataStorageTablesConfig connectorConfig;
 
   @Inject
-  public CoordinatorCompactionConfigsResource(JacksonConfigManager manager)
+  public CoordinatorCompactionConfigsResource(
+      JacksonConfigManager manager,
+      MetadataStorageConnector connector,
+      MetadataStorageTablesConfig connectorConfig
+  )
   {
     this.manager = manager;
+    this.connector = connector;
+    this.connectorConfig = connectorConfig;
   }
 
   @GET
@@ -87,8 +98,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
-
+      final byte[] currenInByte = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
       final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
           current,
           compactionTaskSlotRatio,
@@ -97,8 +108,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currenInByte,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -116,7 +126,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
+      final byte[] currenInByte = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
       final CoordinatorCompactionConfig newCompactionConfig;
       final Map<String, DataSourceCompactionConfig> newConfigs = current
           .getCompactionConfigs()
@@ -127,8 +138,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currenInByte,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -166,7 +176,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
+      final byte[] currenInByte = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
       final Map<String, DataSourceCompactionConfig> configs = current
           .getCompactionConfigs()
           .stream()
@@ -179,8 +190,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currenInByte,
           CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -205,7 +215,7 @@ public class CoordinatorCompactionConfigsResource
     }
     catch (Exception e) {
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", e))
+                     .entity(ImmutableMap.of("error", e.getMessage()))
                      .build();
     }
 
@@ -215,7 +225,7 @@ public class CoordinatorCompactionConfigsResource
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .entity(ImmutableMap.of("error", setResult.getException().getMessage()))
                      .build();
     }
   }
@@ -228,5 +238,11 @@ public class CoordinatorCompactionConfigsResource
     catch (InterruptedException ie) {
       throw new RuntimeException(ie);
     }
+  }
+
+  private byte[] getCurrentConfigInByteFromDb()
+  {
+    return CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+
   }
 }
