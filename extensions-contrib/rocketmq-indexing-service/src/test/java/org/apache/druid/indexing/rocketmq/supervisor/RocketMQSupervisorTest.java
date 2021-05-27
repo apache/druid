@@ -182,7 +182,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   public static void setupClass() throws Exception
   {
     rocketmqServer = new TestBroker(
-        null
+        null,
+        ImmutableMap.of("default.topic.queue.nums", 2)
     );
     rocketmqServer.start();
 

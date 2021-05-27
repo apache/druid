@@ -304,7 +304,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EmittingLogger.registerEmitter(emitter);
 
     rocketmqServer = new TestBroker(
-        null
+        null,
+        ImmutableMap.of("default.topic.queue.nums", 2)
     );
     rocketmqServer.start();
 

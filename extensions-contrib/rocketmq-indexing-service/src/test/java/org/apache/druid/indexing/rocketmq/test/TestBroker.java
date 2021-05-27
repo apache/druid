@@ -47,18 +47,21 @@ public class TestBroker implements Closeable
   private final File consumequeuedDirectory;
   private final File commitlogDirectory;
   private final boolean directoryCleanup;
+  private final Map<String, Object> brokerProps;
 
   private volatile NamesrvController nameServer;
   private volatile BrokerController brokerServer;
 
   public TestBroker(
-      @Nullable File directory
+      @Nullable File directory,
+      Map<String, Object> brokerProps
   )
   {
     this.directory = directory == null ? FileUtils.createTempDir() : directory;
-    this.consumequeuedDirectory = new File(directory + "/consumequeue");
-    this.commitlogDirectory = new File(directory + "/commitlog");
-    this.directoryCleanup = directory == null;
+    this.consumequeuedDirectory = new File(this.directory + "/consumequeue");
+    this.commitlogDirectory = new File(this.directory + "/commitlog");
+    this.directoryCleanup = this.directory == null;
+    this.brokerProps = brokerProps;
   }
 
   public void start() throws Exception
@@ -90,6 +93,7 @@ public class TestBroker implements Closeable
     brokerConfig.setClusterTopicEnable(true);
     brokerConfig.setBrokerId(0);
     brokerConfig.setNamesrvAddr(StringUtils.format("127.0.0.1:%d", getPort()));
+    brokerConfig.setDefaultTopicQueueNums(brokerProps.get("default.topic.queue.nums") == null ? 2 : Integer.parseInt(brokerProps.get("default.topic.queue.nums").toString()));
 
     NettyServerConfig brokerNettyServerConfig = new NettyServerConfig();
     NettyClientConfig brokerNettyClientConfig = new NettyClientConfig();
