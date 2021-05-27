@@ -145,16 +145,11 @@ object DruidMetadataClient {
     require(metadataConf.isPresent(DruidConfigurationKeys.metadataDbTypeKey),
       s"Must set ${DruidConfigurationKeys.metadataPrefix}." +
         s"${DruidConfigurationKeys.metadataDbTypeKey} or provide segments directly!")
-    val dbcpProperties = new Properties()
-    if (metadataConf.isPresent(DruidConfigurationKeys.metadataDbcpPropertiesKey)) {
-      // Assuming that .store was used to serialize the original DbcpPropertiesMap to a string
-      dbcpProperties.load(
-        new ByteArrayInputStream(
-          StringUtils.toUtf8(metadataConf
-            .getString(DruidConfigurationKeys.metadataDbcpPropertiesKey)
-          )
-        )
-      )
+    val dbcpProperties = if (metadataConf.isPresent(DruidConfigurationKeys.metadataDbcpPropertiesKey)) {
+      MAPPER.readValue[Properties](metadataConf.getString(DruidConfigurationKeys.metadataDbcpPropertiesKey),
+        new TypeReference[Properties] {})
+    } else {
+      new Properties()
     }
 
     new DruidMetadataClient(

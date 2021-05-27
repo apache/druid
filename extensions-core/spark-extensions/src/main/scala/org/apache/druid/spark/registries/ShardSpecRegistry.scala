@@ -165,11 +165,11 @@ object ShardSpecRegistry extends Logging {
       "single" -> ((properties: Map[String, String]) =>
         new SingleDimensionShardSpec(
           properties("dimension"),
-          properties("start"),
-          properties("end"),
+          properties.get("start").orNull,
+          properties.get("end").orNull,
           properties("partitionId").toInt,
           // Explicitly constructing an Integer since Scala options and auto-boxing don't play nicely
-          new Integer(properties.get("numPartitions").map(_.toInt).getOrElse(1))
+          new Integer(properties.get("numPartitions").map(_.toInt).getOrElse(-1))
         ),
         (baseSpec: ShardSpec, partitionNum: Int, numPartitions: Int) => {
           val spec = baseSpec.asInstanceOf[SingleDimensionShardSpec]

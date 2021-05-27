@@ -43,8 +43,14 @@ object DruidConfigurationKeys {
   val brokerPrefix: String = "broker"
   val brokerHostKey: String = "host"
   val brokerPortKey: String = "port"
+  val numRetriesKey: String = "numRetries"
+  val retryWaitSecondsKey: String = "retryWaitSeconds"
+  val timeoutMillisecondsKey: String = "timeoutMilliseconds"
   private[spark] val brokerHostDefaultKey: (String, String) = (brokerHostKey, "localhost")
   private[spark] val brokerPortDefaultKey: (String, Int) = (brokerPortKey, 8082)
+  private[spark] val numRetriesDefaultKey: (String, Int) = (numRetriesKey, 5)
+  private[spark] val retryWaitSecondsDefaultKey: (String, Int) = (retryWaitSecondsKey, 5)
+  private[spark] val timeoutMillisecondsDefaultKey: (String, Int) = (timeoutMillisecondsKey, 300000)
 
   // Common configs
   val useCompactSketchesKey: String = "useCompactSketches" // Default: false
@@ -98,6 +104,11 @@ object DruidConfigurationKeys {
   private[spark] val bitmapTypeDefaultKey: (String, String) = (bitmapTypeKey, "roaring")
   private[spark] val compressRunOnSerializationDefaultKey: (String, Boolean) = (compressRunOnSerializationKey, true)
 
+  // Common SegmentWriter Configs
+  val storageDirectoryKey: String = "storageDirectory"
+  val bucketKey: String = "bucket"
+  val maxListingLengthKey: String = "maxListingLength"
+
   // Local SegmentWriter Configs
   val localDeepStorageTypeKey: String = "local"
   val localStorageDirectoryKey: String = "storageDirectory"
@@ -108,8 +119,24 @@ object DruidConfigurationKeys {
 
   // S3 SegmentWriter Configs
   val s3DeepStorageTypeKey: String = "s3"
+  val s3BaseKeyKey: String = "baseKey"
+  val s3DisableAclKey: String = "disableAcl"
   val s3UseS3ASchemaKey: String = "useS3aSchema"
-  val s3StorageConfigKey: String = "s3StorageConfig"
+  val s3AccessKeyKey: String = "accessKey"
+  val s3SecretKeyKey: String = "secretKey"
+  val s3FileSessionCredentialsKey: String = "fileSessionCredentials"
+  val s3ProxyPrefix: String = "proxy"
+  val s3ProxyHostKey: String = "host"
+  val s3ProxyPortKey: String = "port"
+  val s3ProxyUsernameKey: String = "username"
+  val s3ProxyPasswordKey: String = "password"
+  val s3EndpointPrefix: String = "endpoint"
+  val s3EndpointUrlKey: String = "url"
+  val s3EndpointSigningRegionKey: String = "signingRegion"
+  val s3ProtocolKey: String = "protocol"
+  val s3DisableChunkedEncodingKey: String = "disableChunkedEncoding"
+  val s3EnablePathStyleAccessKey: String = "enablePathStyleAccess"
+  val s3ForceGlobalBucketAccessEnabledKey: String = "forceGlobalBucketAccessEnabled"
   val s3ServerSideEncryptionPrefix: String = "sse"
   val s3ServerSideEncryptionTypeKey: String = "type"
   val s3ServerSideEncryptionKmsKeyIdKey: String = "keyId"
@@ -117,6 +144,7 @@ object DruidConfigurationKeys {
 
   // GCS SegmentWriter Configs
   val googleDeepStorageTypeKey: String = "google"
+  val gcsPrefixKey: String = "prefix"
 
   // Azure SegmentWriter Configs
   val azureDeepStorageKey: String = "azure"

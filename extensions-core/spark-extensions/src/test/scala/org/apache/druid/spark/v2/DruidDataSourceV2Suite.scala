@@ -20,12 +20,12 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.spark.configuration.DruidConfigurationKeys
+import org.apache.druid.spark.{DruidDataFrameReader, DruidDataFrameWriter}
 import org.apache.druid.spark.mixins.TryWithResources
+import org.apache.druid.spark.model.LocalDeepStorageConfig
 import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsJavaMapConverter,
@@ -50,10 +50,9 @@ class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
 
     val df = sparkSession
       .read
-      .format("druid")
+      .segments(segmentsString)
       .schema(schema)
-      .options(Map(s"${DruidConfigurationKeys.readerPrefix}.${DruidConfigurationKeys.segmentsKey}" -> segmentsString))
-      .load()
+      .druid()
 
     matchDfs(df, expected)
   }
@@ -73,10 +72,16 @@ class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
     registerEmbeddedDerbySQLConnector()
 
     sourceDf.write
-      .format(DruidDataSourceV2ShortName)
       .mode(SaveMode.Overwrite)
-      .options((writerProps ++ metadataClientProps(uri)).asJava)
-      .save()
+      .dataSource(dataSource)
+      .version(version)
+      .deepStorage(new LocalDeepStorageConfig().storageDirectory(testWorkingStorageDirectory))
+      .dimensions(dimensions.asScala.mkString(","))
+      .metrics(metricsSpec)
+      .timestampColumn(timestampColumn)
+      .segmentGranularity(segmentGranularity)
+      .options( metadataClientProps(uri).asJava)
+      .druid()
 
     tryWithResources(openDbiToTestDb(uri)) {
       handle =>
@@ -107,15 +112,12 @@ class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
         }
     }
 
-    val readerProps = Map[String, String](
-      DataSourceOptions.TABLE_KEY -> dataSource
-    )
     val readDf = sparkSession
       .read
-      .format(DruidDataSourceV2ShortName)
       .schema(schema)
-      .options((readerProps ++ metadataClientProps(uri)).asJava)
-      .load()
+      .dataSource(dataSource)
+      .options(metadataClientProps(uri).asJava)
+      .druid()
 
     matchDfs(readDf, sourceDf)
 

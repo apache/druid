@@ -20,7 +20,6 @@
 package org.apache.druid.spark.clients
 
 import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.net.HostAndPort
 import org.apache.druid.java.util.common.{ISE, Intervals, JodaUtils, StringUtils}
 import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler,
@@ -52,12 +51,12 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConv
   * @param hostAndPort
   */
 class DruidClient(
-                   val httpClient: HttpClient,
-                   val hostAndPort: HostAndPort
+                   httpClient: HttpClient,
+                   hostAndPort: HostAndPort,
+                   numRetries: Int,
+                   retryWaitSeconds: Int,
+                   timeoutWaitMilliseconds: Int
                  ) extends Logging {
-  private val RetryCount = 5
-  private val RetryWaitSeconds = 5
-  private val TimeoutMilliseconds = 300000
   private val druidBaseQueryURL: HostAndPort => String =
     (hostAndPort: HostAndPort) => s"http://$hostAndPort/druid/v2/"
 
@@ -80,17 +79,18 @@ class DruidClient(
     *         for the schema of DATASOURCE.
     */
   def getSchema(dataSource: String, intervals: Option[List[Interval]]): Map[String, (String, Boolean)] = {
+    val queryInterval = intervals.getOrElse(DefaultSegmentMetadataInterval)
     val body = Druids.newSegmentMetadataQueryBuilder()
       .dataSource(dataSource)
-      .intervals(intervals.getOrElse(DefaultSegmentMetadataInterval).asJava)
+      .intervals(queryInterval.asJava)
       .analysisTypes(SegmentMetadataQuery.AnalysisType.SIZE)
       .merge(true)
       .context(Map[String, AnyRef](
-        "timeout" -> Int.box(TimeoutMilliseconds)
+        "timeout" -> Int.box(timeoutWaitMilliseconds)
       ).asJava)
       .build()
     val response = sendRequestWithRetry(
-      druidBaseQueryURL(hostAndPort), RetryCount, Option(MAPPER.writeValueAsBytes(body))
+      druidBaseQueryURL(hostAndPort), numRetries, Option(MAPPER.writeValueAsBytes(body))
     )
     val segments =
       MAPPER.readValue[JList[SegmentAnalysis]](
@@ -110,9 +110,16 @@ class DruidClient(
      * analysis will have the type "STRING" and be an error message. We abuse that here to infer
      * a string type for the dimension and widen the type for the resulting DataFrame.
      */
-    segments.asScala.head.getColumns.asScala.map{ case (name: String, col: ColumnAnalysis) =>
+    val columns = segments.asScala.head.getColumns.asScala.toMap
+    columns.foreach{ case(key, column) =>
+      if (column.isError) {
+        log.warn(s"Multiple column types found for dimension $key in interval" +
+          s" ${queryInterval.mkString("[", ", ", "]")}! Falling back to STRING type")
+      }
+    }
+    columns.map{ case (name: String, col: ColumnAnalysis) =>
       name -> (col.getType, col.isHasMultipleValues)
-    }.toMap
+    }
   }
 
   private def sendRequestWithRetry(
@@ -126,7 +133,7 @@ class DruidClient(
       case e: Exception =>
         if (retryCount > 0) {
           logInfo(s"Got exception: ${e.getMessage}, retrying ...")
-          Thread.sleep(RetryWaitSeconds * 1000)
+          Thread.sleep(retryWaitSeconds * 1000)
           sendRequestWithRetry(url, retryCount - 1, content)
         } else {
           throw e
@@ -140,7 +147,7 @@ class DruidClient(
       var response = httpClient.go(
         request,
         new StringFullResponseHandler(StringUtils.UTF8_CHARSET),
-        Duration.millis(TimeoutMilliseconds)
+        Duration.millis(timeoutWaitMilliseconds)
       ).get
       if (response.getStatus == HttpResponseStatus.TEMPORARY_REDIRECT) {
         val newUrl = response.getResponse.headers().get("Location")
@@ -183,6 +190,10 @@ object DruidClient {
       HttpClientHolder.create.get,
       HostAndPort.fromParts(
         brokerConf.get(DruidConfigurationKeys.brokerHostDefaultKey),
-        brokerConf.getInt(DruidConfigurationKeys.brokerPortDefaultKey)))
+        brokerConf.getInt(DruidConfigurationKeys.brokerPortDefaultKey)),
+      brokerConf.getInt(DruidConfigurationKeys.numRetriesDefaultKey),
+      brokerConf.getInt(DruidConfigurationKeys.retryWaitSecondsDefaultKey),
+      brokerConf.getInt(DruidConfigurationKeys.timeoutMillisecondsDefaultKey)
+    )
   }
 }

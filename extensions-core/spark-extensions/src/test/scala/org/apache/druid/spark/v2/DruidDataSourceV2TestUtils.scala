@@ -31,6 +31,8 @@ import org.apache.druid.spark.registries.SQLConnectorRegistry
 import org.apache.druid.spark.utils.SchemaUtils
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
+import org.apache.spark.TaskContext
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -78,6 +80,9 @@ trait DruidDataSourceV2TestUtils {
       |  { "type": "thetaSketch", "name": "uniq_id1", "fieldName": "uniq_id1", "isInputThetaSketch": true }
       |]""".stripMargin
   val binaryVersion: Integer = 9
+  val timestampColumn: String = "__time"
+  val timestampFormat: String = "auto"
+  val segmentGranularity: String = GranularityType.DAY.name
 
   val firstSegment: DataSegment = new DataSegment(
     dataSource,
@@ -121,6 +126,9 @@ trait DruidDataSourceV2TestUtils {
   val idTwoSketch: Array[Byte] = StringUtils.decodeBase64String("AQMDAAA6zJNHlmybd5/laQ==")
   val idThreeSketch: Array[Byte] = StringUtils.decodeBase64String("AQMDAAA6zJOppPrHQT61Dw==")
 
+  val firstTimeBucket: Long = 1577836800000L
+  val secondTimeBucket: Long = 1577923200000L
+
   val schema: StructType = StructType(Seq[StructField](
     StructField("__time", LongType),
     StructField("dim1", ArrayType(StringType, false)),
@@ -156,14 +164,15 @@ trait DruidDataSourceV2TestUtils {
   lazy val writerProps: Map[String, String] = Map[String, String](
     DataSourceOptions.TABLE_KEY -> dataSource,
     s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.versionKey}" -> version,
-    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.localStorageDirectoryKey}" ->
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.storageDirectoryKey}" ->
       testWorkingStorageDirectory,
     s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.dimensionsKey}" ->
       dimensions.asScala.mkString(","),
     s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.metricsKey}" -> metricsSpec,
-    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.timestampColumnKey}" -> "__time",
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.timestampColumnKey}" ->
+      timestampColumn,
     s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.segmentGranularityKey}" ->
-      GranularityType.DAY.name
+      segmentGranularity
   )
 
   def createTestDb(uri: String): Unit = new DBI(s"$uri;create=true").open().close()
@@ -284,6 +293,24 @@ trait DruidDataSourceV2TestUtils {
         }
       }
     })
+  }
+
+  /**
+    * Given a DataFrame DF, return a collection of arrays of Rows where each array contains all rows for a
+    * partition in DF.
+    *
+    * @param df The dataframe to extract partitions from.
+    * @return A Seq[Array[Row]], where each Array[Row] contains all rows for a corresponding partition in DF.
+    */
+  def getDataFramePartitions(df: DataFrame): Seq[Array[Row]] = {
+    df
+      .rdd
+      .map(row => TaskContext.getPartitionId() -> row)
+      .collect()
+      .groupBy(_._1)
+      .values
+      .map(_.map(_._2))
+      .toSeq
   }
 
   def makePath(components: String*): String = {

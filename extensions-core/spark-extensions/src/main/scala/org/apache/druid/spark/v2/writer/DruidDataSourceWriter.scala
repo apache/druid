@@ -120,7 +120,7 @@ object DruidDataSourceWriter extends Logging {
     val metadataClient = DruidMetadataClient(conf)
     val dataSourceExists = metadataClient.checkIfDataSourceExists(dataSource)
     saveMode match {
-      case SaveMode.Append => if (dataSourceExists) {
+      case SaveMode.Append =>
         // In theory, if a caller provided an interval in the data source options, we could check
         // to see if the interval already existed or not, and only throw an error if the data source
         // already had data for the given interval. We'd want to also plumb that interval through to
@@ -128,9 +128,6 @@ object DruidDataSourceWriter extends Logging {
         throw new UnsupportedOperationException(
           "Druid does not support appending to existing dataSources, only reindexing!"
         )
-      } else {
-        createDataSourceWriterOptional(schema, conf, metadataClient)
-      }
       case SaveMode.ErrorIfExists => if (dataSourceExists) {
         throw new ISE(s"$dataSource already exists!")
       } else {

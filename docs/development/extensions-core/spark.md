@@ -1,3 +1,8 @@
+---
+id: spark
+title: "Apache Spark Reader and Writer"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -26,19 +31,36 @@ Druid cluster.
 
 Sample Code:
 ```scala
+import org.apache.druid.spark.DruidDataFrameReader
+
+sparkSession
+  .read
+  .brokerHost("localhost")
+  .brokerPort(8082)
+  .metadataDbType("mysql")
+  .metadataUri("jdbc:mysql://druid.metadata.server:3306/druid")
+  .metadataUser("druid")
+  .metadataPassword("diurd")
+  .dataSource("dataSource")
+  .druid()
+```
+
+Alternatively, the reader can be configured via a properties map with no additional import needed:
+```scala
 val properties = Map[String, String](
   "metadata.dbType" -> "mysql",
   "metadata.connectUri" -> "jdbc:mysql://druid.metadata.server:3306/druid",
   "metadata.user" -> "druid",
   "metadata.password" -> "diurd",
   "broker.host" -> "localhost",
-  "broker.port" -> 8082
+  "broker.port" -> 8082,
+  "table" -> "dataSource"
 )
 
 sparkSession
   .read
   .format("druid")
-  .options(Map[String, String]("table" -> "dataSource") ++ properties)
+  .options(properties)
   .load()
 ```
 
@@ -49,7 +71,7 @@ sparkSession
   .read
   .format("druid")
   .schema(schema)
-  .options(Map[String, String]("table" -> "dataSource") ++ properties)
+  .options(properties)
   .load()
 ```
 
@@ -60,7 +82,36 @@ are triggered, to allow predicates to be pushed down to the reader and avoid ful
 The writer writes Druid segments directly to deep storage and then updates the Druid cluster's metadata, bypassing the
 running cluster entirely.
 
+**Note**: SaveModes do not currently map cleanly to the writer's behavior because this connector does not provide Druid
+operational functionality. That work is left to the Druid coordinator.
+
+|SaveMode|Behavior|
+|--------|--------|
+|`SaveMode.Append`|Unsupported|
+|`SaveMode.ErrorIfExists`|Throws an error if the target datasource already exists|
+|`SaveMode.Ignore`|Does nothing if the target datasource already exists|
+|`SaveMode.Overwrite`|Writes all data to the target datasource. If segments already exist for the target intervals, they will be overshadowed if the new version is higher than the existing version. All other segments are unaffected (e.g. the target datasource will _not_ be truncated)|
+
 Sample Code:
+```scala
+import org.apache.druid.spark.DruidDataFrameWriter
+
+val deepStorageConfig = new LocalDeepStorageConfig().storageDirectory("/mnt/druid/druid-segments/")
+
+df
+  .write
+  .metadataDbType("mysql")
+  .metadataUri("jdbc:mysql://druid.metadata.server:3306/druid")
+  .metadataUser("druid")
+  .metadataPassword("diurd")
+  .version(1)
+  .deepStorage(deepStorageConfig)
+  .mode(SaveMode.Overwrite)
+  .dataSource("dataSource")
+  .druid()
+```
+
+Like the reader, you can also configure the writer via a properties map instead of using the semi-typed wrapper
 ```scala
 val metadataProperties = Map[String, String](
   "metadata.dbType" -> "mysql",
@@ -85,24 +136,37 @@ df
 ```
 
 ### Partitioning & `PartitionMap`s
-The segments written by this writer are controlled by the calling DataFrame's internal partitioning.
-If there are many small partitions, or the DataFrame's partitions span output intervals, then many
-small Druid segments will be written with poor overall roll-up. If the DataFrame's partitions are
+The segments written by this writer are controlled by the calling dataframe's internal partitioning.
+If there are many small partitions, or the dataframe's partitions span output intervals, then many
+small Druid segments will be written with poor overall roll-up. If the dataframe's partitions are
 skewed, then the Druid segments produced will also be skewed. To avoid this, users should take
-care to properly partition their DataFrames prior to calling `.write()`. Additionally, for some shard
+care to properly partition their dataframes prior to calling `.write()`. Additionally, for some shard
 specs such as `HashBasedNumberedShardSpec` or `SingleDimensionShardSpec` which require a higher-level
 view of the data than can be obtained from a partition, callers should pass along a `PartitionMap`
-containing metadata for each Spark partition. This partition map can be serialized using the
-`PartitionMapProvider.serializePartitionMap` and passed along with the writer options using the
-`partitionMap` key. The partitioners in `org.apache.druid.spark.partitioners` can be used to partition
-DataFrames and generate the corresponding `partitionMap` if necessary, but this is less efficient
-than partitioning the DataFrame in the desired manner in the course of preparing the data.
+containing metadata for each Spark partition. This map should have the signature `Map[Int, Map[String, String]]`,
+where the keys are a Spark partition id and the values are maps from property names to string values
+(see the provided partitioners for examples). This partition map can be serialized using the
+`PartitionMapProvider.serializePartitionMap` method and passed along with the writer options using the
+`partitionMap` key.
 
 If a "simpler" shard spec such as `NumberedShardSpec` or `LinearShardSpec` is used, a `partitionMap`
 can be provided but is unnecessary unless the name of a segment's directory on deep storage should
 match the segment's id exactly. The writer will rationalize shard specs within time chunks to
-ensure data is atomically loaded in Druid. Either way, callers should still take care when partitioning DataFrames to
-write to avoid ingesting skewed data or too many small segments.
+ensure data is atomically loaded in Druid. Either way, callers should still take care when partitioning
+dataframes to  write to avoid ingesting skewed data or too many small segments.
+
+For initial development work, sample `HashBasedNumbered`, `SingleDimension`, and `Numbered` partitioners
+are provided. These partitioners all implement the `PartitionMapProvider` interface, so once they've
+partitioned a dataframe the corresponding partition map can be retrieved via the `getPartitionMap`
+method. If calling code imports `org.apache.druid.spark.DruidDataFrame`, dataframes will
+have the additional methods `hashPartitionAndWrite`, `rangePartitionAndWrite`, and `partitionAndWrite`
+which will partition the dataframe using the respective partitioner, set the appropriate writer
+options including passing the partition map, and return a DataFrameWriter object for final configuration
+before writing. **Please note that these writers are significantly less efficient than partitioning a
+dataframe using your knowledge of the underlying data.** These partitioners use the column names
+`__timeBucket`, `__rank`, `__partitionNum`, and `__partitionKey` internally, so they will not work
+if a source dataframe uses those column names as well. If the source dataframe uses those column names,
+`HashedNumberedSegmentPartitioner` or a custom partitioner will need to be used.
 
 ## Plugin Registries and Druid Extension Support
 One of Druid's strengths is its extensibility. Since these Spark readers and writers will not execute on a Druid cluster
@@ -137,6 +201,9 @@ The configuration properties used to query the Druid cluster for segment metadat
 |---|-----------|--------|-------|
 |`broker.host`|The hostname of a broker in the Druid cluster to read from|No|`localhost`|
 |`broker.port`|The port of the broker in the Druid cluster to read from|No|8082|
+|`broker.numRetries`|The number of times to retry a timed-out segment metadata request|No|5|
+|`broker.retryWaitSeconds`|How long (in seconds) to wait before retrying a timed-out segment metadata request|No|5|
+|`broker.timeoutMilliseconds`|How long (in milliseconds) to wait before timing out a segment metadata request|No|300000|
 
 ### Reader Configs
 The properties used to configure the DataSourceReader when reading data from Druid in Spark.
