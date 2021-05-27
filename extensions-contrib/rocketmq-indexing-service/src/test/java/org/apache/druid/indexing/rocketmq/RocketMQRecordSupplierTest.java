@@ -51,12 +51,12 @@ public class RocketMQRecordSupplierTest
     return ImmutableList.of(
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2008", "a", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2011", "d", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2011", "e", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable2"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", null)),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2013", "f", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jb("2049", "f", "y", "10", "notanumber", "1.0"))),
@@ -225,7 +225,7 @@ public class RocketMQRecordSupplierTest
     // Insert data
     final DefaultMQProducer producer2 = rocketmqServer.newProducer();
     producer2.start();
-    for (Pair<MessageQueue, Message> record : records.subList(13, 15)) {
+    for (Pair<MessageQueue, Message> record : records.subList(13, 14)) {
       producer2.send(record.rhs, record.lhs).getMsgId();
     }
     producer2.shutdown();

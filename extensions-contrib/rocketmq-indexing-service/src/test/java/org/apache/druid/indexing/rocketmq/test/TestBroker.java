@@ -116,7 +116,7 @@ public class TestBroker implements Closeable
   public DefaultMQProducer newProducer()
   {
     DefaultMQProducer producer = new
-        DefaultMQProducer("test_producer");
+        DefaultMQProducer("test_producer" + ThreadLocalRandom.current().nextInt(99999));
     producer.setNamesrvAddr(StringUtils.format("127.0.0.1:%d", getPort()));
     producer.setSendMsgTimeout(10000);
     return producer;
