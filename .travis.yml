@@ -36,11 +36,12 @@ addons:
   apt:
     packages:
       - maven
-    
+      - python3
+
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+install: ./check_test_suite.py && travis_terminate 0  || echo 'Running maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -86,6 +87,7 @@ jobs:
       install: skip
       before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
         - pip3 install pyyaml
       script:
@@ -98,12 +100,16 @@ jobs:
         - mkdir -p target
         - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
         - distribution/bin/check-licenses.py licenses.yaml target/license-reports
+    - name: "script checks"
+      install: skip
+      # who watches the watchers?
+      script: ./check_test_suite_test.py
 
     - name: "(openjdk8) strict compilation"
       install: skip
       # Strict compilation requires more than 2 GB
       script: >
-        MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
+        ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
     - name: "analyze dependencies"
@@ -130,7 +136,7 @@ jobs:
 
     - name: "intellij inspections"
       script: >
-        docker run --rm
+        ./check_test_suite.py && travis_terminate 0 || docker run --rm
         -v $(pwd):/project
         -v ~/.m2:/home/inspect/.m2
         ccaominh/intellij-inspect:1.0.0
@@ -233,7 +239,7 @@ jobs:
       name: "(openjdk8) processing module test (SQL Compatibility)"
       stage: Tests - phase 1
       before_script: &setup_sqlcompat
-      - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=false
+        - export DRUID_USE_DEFAULT_VALUE_FOR_NULL=false
 
     - <<: *test_processing_module_sqlcompat
       name: "(openjdk11) processing module test (SQL Compatibility)"
@@ -249,7 +255,7 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) indexing modules test"
       env:
-      - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+        - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
     - <<: *test_indexing_module
       name: "(openjdk11) indexing modules test"
@@ -343,7 +349,7 @@ jobs:
       install: skip
       stage: Tests - phase 1
       script:
-        - ${MVN} test -pl 'web-console'
+        - ./check_test_suite.py && travis_terminate 0 || ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
@@ -351,13 +357,14 @@ jobs:
       before_install: *setup_generate_license
       install: web-console/script/druid build
       before_script:
+        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
         - nvm install 10.24.0
         - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
       after_script: web-console/script/druid stop
 
     - name: "docs"
-      install: (cd website && npm install)
+      install: ./check_test_suite.py && travis_terminate 0 || (cd website && npm install)
       script: |-
         (cd website && npm run lint && npm run spellcheck) || { echo "
 
