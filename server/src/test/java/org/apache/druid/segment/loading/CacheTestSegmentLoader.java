@@ -32,6 +32,7 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 /**
 */
@@ -92,6 +93,12 @@ public class CacheTestSegmentLoader implements SegmentLoader
   public void cleanup(DataSegment segment)
   {
     segmentsInTrash.add(segment);
+  }
+
+  @Override
+  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  {
+
   }
 
   public Set<DataSegment> getSegmentsInTrash()
