@@ -75,12 +75,12 @@ public class JacksonConfigManager
 
   public <T> T convertByteToConfig(byte[] configInByte, Class<? extends T> clazz, T defaultVal)
   {
-      if (configInByte == null) {
-        return defaultVal;
-      } else {
-        final ConfigSerde<T> serde = create(clazz, defaultVal);
-        return serde.deserialize(configInByte);
-      }
+    if (configInByte == null) {
+      return defaultVal;
+    } else {
+      final ConfigSerde<T> serde = create(clazz, defaultVal);
+      return serde.deserialize(configInByte);
+    }
   }
 
   /**
