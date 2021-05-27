@@ -27,13 +27,12 @@ import {
   SqlRef,
   trimString,
 } from 'druid-query-toolkit';
-import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
 import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql } from '../../../utils';
+import { copyAndAlert, deepSet, filterMap, prettyPrintSql, stringifyValue } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -42,18 +41,6 @@ import './query-output.scss';
 
 function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
-}
-
-function stringifyValue(value: unknown): string {
-  switch (typeof value) {
-    case 'object':
-      if (!value) return String(value);
-      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
-      return JSONBig.stringify(value);
-
-    default:
-      return String(value);
-  }
 }
 
 interface Pagination {
