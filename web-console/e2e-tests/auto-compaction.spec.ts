@@ -67,7 +67,7 @@ describe('Auto-compaction', () => {
       const compactionConfig = new CompactionConfig({
         skipOffsetFromLatest: 'PT0S',
         partitionsSpec: new HashedPartitionsSpec({
-          numShards: 2,
+          numShards: null,
         }),
       });
       await configureCompaction(page, datasourceName, compactionConfig);
