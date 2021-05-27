@@ -22,6 +22,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+@SuppressWarnings("ALL")
 public final class ProtoTestEventWrapper {
   private ProtoTestEventWrapper() {}
   public static void registerAllExtensions(
@@ -474,7 +475,7 @@ public final class ProtoTestEventWrapper {
 
       private final int value;
 
-      private EventCategory(int value) {
+      EventCategory(int value) {
         this.value = value;
       }
 
