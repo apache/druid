@@ -78,7 +78,7 @@ public class KillCompactionConfigTest
   private KillCompactionConfig killCompactionConfig;
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
   }

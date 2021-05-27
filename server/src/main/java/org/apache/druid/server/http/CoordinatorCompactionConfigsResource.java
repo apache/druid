@@ -28,6 +28,7 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -59,6 +60,7 @@ import java.util.stream.Collectors;
 @ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
+  private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
   static final int UPDATE_NUM_RETRY = 5;
 
@@ -97,8 +99,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final byte[] currenInByte = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
           current,
           compactionTaskSlotRatio,
@@ -107,7 +109,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          currenInByte,
+          currentBytes,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -125,8 +127,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final byte[] currenInByte = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final CoordinatorCompactionConfig newCompactionConfig;
       final Map<String, DataSourceCompactionConfig> newConfigs = current
           .getCompactionConfigs()
@@ -137,7 +139,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          currenInByte,
+          currentBytes,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -175,8 +177,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final byte[] currenInByte = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currenInByte);
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final Map<String, DataSourceCompactionConfig> configs = current
           .getCompactionConfigs()
           .stream()
@@ -189,7 +191,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          currenInByte,
+          currentBytes,
           CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -213,20 +215,21 @@ public class CoordinatorCompactionConfigsResource
       }
     }
     catch (Exception e) {
-      String errorMessage = e.getMessage();
+      LOG.warn(e, "Update compaction config failed");
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", errorMessage == null ? "Unknown Error" : errorMessage))
+                     .entity(ImmutableMap.of("error", createErrorMessage(e)))
                      .build();
     }
 
     if (setResult.isOk()) {
       return Response.ok().build();
     } else if (setResult.getException() instanceof NoSuchElementException) {
+      LOG.warn(setResult.getException(), "Update compaction config failed");
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
-      String errorMessage = setResult.getException().getMessage();
+      LOG.warn(setResult.getException(), "Update compaction config failed");
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", errorMessage == null ? "Unknown Error" : errorMessage))
+                     .entity(ImmutableMap.of("error", createErrorMessage(setResult.getException())))
                      .build();
     }
   }
@@ -244,6 +247,14 @@ public class CoordinatorCompactionConfigsResource
   private byte[] getCurrentConfigInByteFromDb()
   {
     return CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+  }
 
+  private String createErrorMessage(Exception e)
+  {
+    if (e.getMessage() == null) {
+      return "Unknown Error";
+    } else {
+      return e.getMessage();
+    }
   }
 }

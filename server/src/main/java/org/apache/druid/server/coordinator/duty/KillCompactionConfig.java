@@ -96,8 +96,8 @@ public class KillCompactionConfig implements CoordinatorDuty
       try {
         RetryUtils.retry(
             () -> {
-              final byte[] currenInByte = CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
-              final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(jacksonConfigManager, currenInByte);
+              final byte[] currentBytes = CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+              final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(jacksonConfigManager, currentBytes);
               // If current compaction config is empty then there is nothing to do
               if (CoordinatorCompactionConfig.empty().equals(current)) {
                 log.info(
@@ -121,7 +121,7 @@ public class KillCompactionConfig implements CoordinatorDuty
 
               ConfigManager.SetResult result = jacksonConfigManager.set(
                   CoordinatorCompactionConfig.CONFIG_KEY,
-                  currenInByte,
+                  currentBytes,
                   CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values())),
                   new AuditInfo(
                       "KillCompactionConfig",

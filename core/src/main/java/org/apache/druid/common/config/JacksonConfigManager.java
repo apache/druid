@@ -102,7 +102,10 @@ public class JacksonConfigManager
    * @param oldValue old config value. If not null, then the update will only succeed if the insert
    *                 happens when current database entry is the same as this value. Note that the current database
    *                 entry (in array of bytes) have to be exactly the same as the array of bytes of this value for
-   *                 update to succeed. If null, then the insert will not consider the current database entry.
+   *                 update to succeed. If null, then the insert will not consider the current database entry. Note
+   *                 that this field intentionally uses byte array to be resilient across serde of existing data
+   *                 retrieved from the database (instead of Java object which may have additional fields added
+   *                 as a result of serde)
    * @param newValue new config value to insert
    * @param auditInfo metadata regarding the change to config, for audit purposes
    */

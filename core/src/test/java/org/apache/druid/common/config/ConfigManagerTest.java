@@ -120,6 +120,7 @@ public class ConfigManagerTest
   @Test
   public void testSetOldObjectNotNullShouldSwap()
   {
+    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(true);
     when(mockDbConnector.compareAndSwap(any(List.class))).thenReturn(true);
     final ArgumentCaptor<List<MetadataCASUpdate>> updateCaptor = ArgumentCaptor.forClass(List.class);
     configManager.start();
@@ -136,6 +137,23 @@ public class ConfigManagerTest
     Assert.assertEquals(CONFIG_KEY, updateCaptor.getValue().get(0).getKey());
     Assert.assertArrayEquals(OLD_CONFIG, updateCaptor.getValue().get(0).getOldValue());
     Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), updateCaptor.getValue().get(0).getNewValue());
+  }
+
+  @Test
+  public void testSetOldObjectNotNullButCompareAndSwapDisabledShouldInsertWithoutSwap()
+  {
+    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(false);
+    configManager.start();
+    ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, OLD_CONFIG, NEW_CONFIG);
+    Assert.assertTrue(setResult.isOk());
+    Mockito.verify(mockDbConnector).insertOrUpdate(
+        ArgumentMatchers.eq(TABLE_NAME),
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq(CONFIG_KEY),
+        ArgumentMatchers.any(byte[].class)
+    );
+    Mockito.verifyNoMoreInteractions(mockDbConnector);
   }
 
   static class TestConfig

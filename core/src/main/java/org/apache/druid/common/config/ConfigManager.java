@@ -191,7 +191,7 @@ public class ConfigManager
     try {
       return exec.submit(
           () -> {
-            if (oldValue == null) {
+            if (oldValue == null || !config.get().isEnableCompareAndSwap()) {
               dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
             } else {
               MetadataCASUpdate metadataCASUpdate = createMetadataCASUpdate(key, oldValue, newBytes);
