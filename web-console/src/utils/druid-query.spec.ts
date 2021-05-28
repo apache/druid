@@ -94,6 +94,45 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for bad double quotes 1', () => {
+      const sql = sane`
+        SELECT * FROM “wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201c" (8220), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 2', () => {
+      const sql = sane`
+        SELECT * FROM ”wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201d" (8221), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 3', () => {
+      const sql = sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = ‘lol‘
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 1, column 45. Encountered: "\\u2018" (8216), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = 'lol'
+      `);
+    });
+
     it('works for incorrectly quoted literal', () => {
       const sql = sane`
         SELECT *
