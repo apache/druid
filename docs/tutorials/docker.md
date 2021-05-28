@@ -36,7 +36,11 @@ The Druid source code contains [an example `docker-compose.yml`](https://github.
 
 ### Compose file
 
-The example `docker-compose.yml` will create a container for each Druid service, as well as Zookeeper and a PostgreSQL container as the metadata store. Deep storage will be a local directory, by default configured as `./storage` relative to your `docker-compose.yml` file, and will be mounted as `/opt/data` and shared between Druid containers which require access to deep storage. The Druid containers are configured via an [environment file](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/environment).
+The example `docker-compose.yml` will create a container for each Druid service, as well as Zookeeper and a PostgreSQL container as the metadata store. 
+
+It will also create a named volumes `druid-data`, which is mounted as `opt/data` in container, as deep storage to keep and share segments and task logs among Druid services.
+
+The Druid containers are configured via an [environment file](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/environment).
 
 ### Configuration
 
@@ -79,31 +83,6 @@ It takes a few seconds for all the Druid processes to fully start up. If you ope
 
 From here you can follow along with the [Quickstart](./index.md#step-4-load-data), or elaborate on your `docker-compose.yml` to add any additional external service dependencies as necessary.
 
-> Note: The example docker-compose.yml mounts a local directory `distribution/docker/storage` for docker processes to keep Druid task logs and segments.
->
-> On some Linux platforms, ingestion tasks won't success due to a permission problem of this directory.
->
-> You could execute following command to set up permission correctly after launching the cluster
->
-> ```
-> sudo docker exec --user root middlemanager chown druid:druid /opt/data
-> ```
->
-> or use a named volume in the docker-compose.yml by replacing all lines
-> ```
-> ./storage:/opt/data
-> ```
-> to
-> ```
-> druid_data_storage:/opt/data
-> ```
-> and declare the named volume under the 'volumes' property as
-> ```
-> volumes:
->   ...
->   druid_data_storage: {}
-> ```
-> 
 
 ## Docker Memory Requirements
-If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker. 6 GB may be a good place to start. 
+If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker. 6 GB may be a good place to start.
