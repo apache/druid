@@ -36,9 +36,9 @@ The Druid source code contains [an example `docker-compose.yml`](https://github.
 
 ### Compose file
 
-The example `docker-compose.yml` will create a container for each Druid service, as well as Zookeeper and a PostgreSQL container as the metadata store. 
+The example `docker-compose.yml` will create a container for each Druid service, as well as ZooKeeper and a PostgreSQL container as the metadata store. 
 
-It will also create a named volumes `druid-data`, which is mounted as `opt/data` in container, as deep storage to keep and share segments and task logs among Druid services.
+It will also create a named volumes `druid_shared`, which is mounted as `opt/shared` in container, as deep storage to keep and share segments and task logs among Druid services.
 
 The Druid containers are configured via an [environment file](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/environment).
 
