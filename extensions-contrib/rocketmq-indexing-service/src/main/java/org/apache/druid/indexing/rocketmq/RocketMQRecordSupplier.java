@@ -230,6 +230,9 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   {
     final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
     DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
+    if (consumerProperties.get("pull.batch.size") != null) {
+      consumer.setPullBatchSize(Integer.parseInt(consumerProperties.get("pull.batch.size").toString()));
+    }
     consumer.setNamesrvAddr(consumerProperties.get("nameserver.url").toString());
     return consumer;
   }

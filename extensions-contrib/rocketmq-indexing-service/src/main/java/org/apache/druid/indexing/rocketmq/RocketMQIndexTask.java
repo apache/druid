@@ -73,11 +73,6 @@ public class RocketMQIndexTask extends SeekableStreamIndexTask<String, Long, Roc
     );
   }
 
-  long getPollRetryMs()
-  {
-    return pollRetryMs;
-  }
-
   @Override
   protected SeekableStreamIndexTaskRunner<String, Long, RocketMQRecordEntity> createTaskRunner()
   {
@@ -98,8 +93,6 @@ public class RocketMQIndexTask extends SeekableStreamIndexTask<String, Long, Roc
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
       final Map<String, Object> props = new HashMap<>(((RocketMQIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
-
-      props.put("auto.offset.reset", "none");
 
       return new RocketMQRecordSupplier(props, configMapper);
     }

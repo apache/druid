@@ -83,11 +83,8 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Strin
   protected List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> getRecords(
       RecordSupplier<String, Long, RocketMQRecordEntity> recordSupplier,
       TaskToolbox toolbox
-  ) throws Exception
+  )
   {
-    // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
-    // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
-    // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
     List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> records = new ArrayList<>();
     records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     return records;
