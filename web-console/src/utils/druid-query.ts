@@ -128,7 +128,7 @@ export class DruidError extends Error {
     );
     if (matchLexical) {
       return {
-        label: 'Replace funky quotes with ASCII quotes',
+        label: 'Replace fancy quotes with ASCII quotes',
         fn: str => {
           const newQuery = str
             .replace(/[\u2018-\u201b]/gim, `'`)

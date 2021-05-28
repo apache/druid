@@ -101,7 +101,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         'Lexical error at line 6, column 60.  Encountered: "\\u201c" (8220), after : ""',
       );
-      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
       expect(suggestion!.fn(sql)).toEqual(sane`
         SELECT * FROM "wikipedia"
       `);
@@ -114,7 +114,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         'Lexical error at line 6, column 60.  Encountered: "\\u201d" (8221), after : ""',
       );
-      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
       expect(suggestion!.fn(sql)).toEqual(sane`
         SELECT * FROM "wikipedia"
       `);
@@ -127,7 +127,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         'Lexical error at line 1, column 45. Encountered: "\\u2018" (8216), after : ""',
       );
-      expect(suggestion!.label).toEqual(`Replace funky quotes with ASCII quotes`);
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
       expect(suggestion!.fn(sql)).toEqual(sane`
         SELECT * FROM "wikipedia" WHERE "channel" = 'lol'
       `);
