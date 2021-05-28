@@ -55,6 +55,14 @@ public abstract class DruidCoordinatorConfig
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();
 
+  @Config("druid.coordinator.kill.supervisor.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorSupervisorKillPeriod();
+
+  @Config("druid.coordinator.kill.supervisor.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorSupervisorKillDurationToRetain();
+
   @Config("druid.coordinator.kill.audit.period")
   @Default("P1D")
   public abstract Duration getCoordinatorAuditKillPeriod();
@@ -62,6 +70,26 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.audit.durationToRetain")
   @Default("PT-1s")
   public abstract Duration getCoordinatorAuditKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.compaction.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorCompactionKillPeriod();
+
+  @Config("druid.coordinator.kill.rule.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorRuleKillPeriod();
+
+  @Config("druid.coordinator.kill.rule.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorRuleKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.datasource.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorDatasourceKillPeriod();
+
+  @Config("druid.coordinator.kill.datasource.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorDatasourceKillDurationToRetain();
 
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()

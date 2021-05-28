@@ -40,12 +40,13 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context);
+    super(toolbox, taskId, groupId, baseSubtaskSpecName, ingestionSchema, context);
     this.intervalToPartitions = intervalToPartitions;
   }
 
@@ -81,6 +82,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
             groupId,
             null,
             supervisorTaskId,
+            id,
             numAttempts,
             subTaskIngestionSpec,
             context,

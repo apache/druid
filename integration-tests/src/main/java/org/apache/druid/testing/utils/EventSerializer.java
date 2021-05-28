@@ -43,7 +43,9 @@ import java.util.List;
     @Type(name = CsvEventSerializer.TYPE, value = CsvEventSerializer.class),
     @Type(name = DelimitedEventSerializer.TYPE, value = DelimitedEventSerializer.class),
     @Type(name = AvroEventSerializer.TYPE, value = AvroEventSerializer.class),
-    @Type(name = AvroSchemaRegistryEventSerializer.TYPE, value = AvroSchemaRegistryEventSerializer.class)
+    @Type(name = AvroSchemaRegistryEventSerializer.TYPE, value = AvroSchemaRegistryEventSerializer.class),
+    @Type(name = ProtobufEventSerializer.TYPE, value = ProtobufEventSerializer.class),
+    @Type(name = ProtobufSchemaRegistryEventSerializer.TYPE, value = ProtobufSchemaRegistryEventSerializer.class)
 })
 public interface EventSerializer extends Closeable
 {

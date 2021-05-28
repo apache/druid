@@ -98,7 +98,8 @@ public interface AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean batchMemoryMappedIndex
   );
 
   /**

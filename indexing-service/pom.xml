@@ -138,6 +138,10 @@
             <artifactId>zookeeper</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper-jute</artifactId>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
         </dependency>
@@ -222,6 +226,11 @@
         <dependency>
             <groupId>net.thisptr</groupId>
             <artifactId>jackson-jq</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-core-asl</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->

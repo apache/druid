@@ -1,0 +1,12 @@
+{
+  "type": "protobuf",
+  "protoBytesDecoder": {
+    "type": "file",
+    "descriptor": "file:///shared/wikiticker-it/wikipedia.desc",
+    "protoMessageType": "Wikipedia"
+  },
+  "flattenSpec": {
+    "useFieldDiscovery": true
+  },
+  "binaryAsString": false
+}

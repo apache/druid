@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 
 import javax.annotation.Nullable;
 
@@ -27,17 +28,21 @@ public class ExpressionLambdaAggregator implements Aggregator
 {
   private final Expr lambda;
   private final ExpressionLambdaAggregatorInputBindings bindings;
+  private final int maxSizeBytes;
 
-  public ExpressionLambdaAggregator(Expr lambda, ExpressionLambdaAggregatorInputBindings bindings)
+  public ExpressionLambdaAggregator(Expr lambda, ExpressionLambdaAggregatorInputBindings bindings, int maxSizeBytes)
   {
     this.lambda = lambda;
     this.bindings = bindings;
+    this.maxSizeBytes = maxSizeBytes;
   }
 
   @Override
   public void aggregate()
   {
-    bindings.accumulate(lambda.eval(bindings));
+    final ExprEval<?> eval = lambda.eval(bindings);
+    ExprEval.estimateAndCheckMaxBytes(eval, maxSizeBytes);
+    bindings.accumulate(eval);
   }
 
   @Nullable
