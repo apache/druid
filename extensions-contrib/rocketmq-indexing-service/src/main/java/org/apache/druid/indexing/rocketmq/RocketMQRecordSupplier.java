@@ -31,13 +31,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
 import org.apache.rocketmq.client.consumer.store.ReadOffsetType;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.impl.MQAdminImpl;
 import org.apache.rocketmq.client.impl.MQClientManager;
+import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,6 +52,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   private static final EmittingLogger log = new EmittingLogger(RocketMQRecordSupplier.class);
   private final DefaultLitePullConsumer consumer;
   private boolean closed;
+  private MQClientInstance clientInstance;
   private Set<StreamPartition<String>> streamPartitions;
 
   public RocketMQRecordSupplier(
@@ -86,6 +88,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     try {
       if (!consumer.isRunning()) {
         consumer.start();
+        clientInstance = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer);
       }
     }
     catch (MQClientException e) {
@@ -97,18 +100,21 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public void seek(StreamPartition<String> partition, Long sequenceNumber)
   {
     MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
-    consumer.getOffsetStore().updateOffset(mq, sequenceNumber, false);
+    try {
+      consumer.seek(mq, sequenceNumber);
+    }
+    catch (MQClientException e) {
+      log.error(e.getErrorMessage());
+    }
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
-    MQAdminImpl mqAdmin = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer).getMQAdminImpl();
     for (StreamPartition<String> partition : partitions) {
       MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
       try {
-        long offset = mqAdmin.minOffset(mq);
-        consumer.getOffsetStore().updateOffset(mq, offset, false);
+        consumer.seekToBegin(mq);
       }
       catch (MQClientException e) {
         log.error(e.getErrorMessage());
@@ -119,12 +125,10 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
-    MQAdminImpl mqAdmin = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer).getMQAdminImpl();
     for (StreamPartition<String> partition : partitions) {
       MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
       try {
-        long offset = mqAdmin.maxOffset(mq);
-        consumer.getOffsetStore().updateOffset(mq, offset, false);
+        consumer.seekToEnd(mq);
       }
       catch (MQClientException e) {
         log.error(e.getErrorMessage());
@@ -161,10 +165,9 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public Long getLatestSequenceNumber(StreamPartition<String> partition)
   {
-    MQAdminImpl mqAdmin = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer).getMQAdminImpl();
     long offset = Long.MAX_VALUE;
     try {
-      offset = mqAdmin.maxOffset(PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId()));
+      offset = clientInstance.getMQAdminImpl().maxOffset(PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId()));
     }
     catch (MQClientException e) {
       log.error(e.getErrorMessage());
@@ -175,10 +178,9 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   @Override
   public Long getEarliestSequenceNumber(StreamPartition<String> partition)
   {
-    MQAdminImpl mqAdmin = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer).getMQAdminImpl();
     long offset = 0;
     try {
-      offset = mqAdmin.minOffset(PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId()));
+      offset = clientInstance.getMQAdminImpl().minOffset(PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId()));
     }
     catch (MQClientException e) {
       log.error(e.getErrorMessage());
@@ -186,6 +188,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     return offset;
   }
 
+  @Nullable
   @Override
   public Long getPosition(StreamPartition<String> partition)
   {

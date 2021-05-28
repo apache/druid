@@ -259,7 +259,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -294,7 +294,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
             .andReturn(HttpResponseStatus.OK).times(1);
     EasyMock.expect(responseHolder.getContent()).andReturn("").times(4)
-            .andReturn("{\"0\":1, \"1\":10}");
+            .andReturn("{\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}");
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).times(2);
     EasyMock.expect(response.headers()).andReturn(headers).times(2);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(TEST_ID).times(2);
@@ -359,7 +359,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -457,7 +457,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).times(2);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -493,7 +493,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(2)
             .andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(responseHolder.getContent()).andReturn("\"PAUSED\"").times(2)
-            .andReturn("{\"0\":1, \"1\":10}").anyTimes();
+            .andReturn("{\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -600,7 +600,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", StringUtils.fromUtf8(request.getContent().array()));
+    Assert.assertEquals("{\"broker-a-queueid-0\":15,\"broker-a-queueid-1\":120}", StringUtils.fromUtf8(request.getContent().array()));
   }
 
   @Test
@@ -629,7 +629,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", StringUtils.fromUtf8(request.getContent().array()));
+    Assert.assertEquals("{\"broker-a-queueid-0\":15,\"broker-a-queueid-1\":120}", StringUtils.fromUtf8(request.getContent().array()));
   }
 
   @Test
@@ -762,7 +762,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -789,7 +789,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
     }
   }
 
@@ -874,7 +874,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -901,7 +901,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
     }
   }
 
@@ -911,7 +911,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"broker-a-queueid-0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -938,7 +938,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
     }
   }
 

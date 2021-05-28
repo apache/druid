@@ -168,7 +168,6 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -178,7 +177,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -245,8 +243,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "e", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8(""))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", null)),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2013", "f", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "10", "notanumber", "1.0"))),
@@ -506,7 +502,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunAfterDataInsertedLiveReport() throws Exception
   {
     // Insert data

@@ -84,9 +84,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -117,9 +117,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -153,9 +153,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
@@ -349,8 +349,8 @@ public class RocketMQIOConfigTest
     final OldRocketMQIndexTaskIoConfig oldConfig = new OldRocketMQIndexTaskIoConfig(
         0,
         "baseSequenceNamee",
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(1, 10L, 2, 5L)),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(1, 20L, 2, 30L)),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 10L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L)),
         ImmutableMap.of("consumer", "properties"),
         100L,
         true,
@@ -375,8 +375,8 @@ public class RocketMQIOConfigTest
   {
     private final int taskGroupId;
     private final String baseSequenceName;
-    private final SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions;
-    private final SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions;
+    private final SeekableStreamEndSequenceNumbers<String, Long> startPartitions;
+    private final SeekableStreamEndSequenceNumbers<String, Long> endPartitions;
     private final Map<String, Object> consumerProperties;
     private final long pollTimeout;
     private final boolean useTransaction;
@@ -387,8 +387,8 @@ public class RocketMQIOConfigTest
     private OldRocketMQIndexTaskIoConfig(
         @JsonProperty("taskGroupId") int taskGroupId,
         @JsonProperty("baseSequenceName") String baseSequenceName,
-        @JsonProperty("startPartitions") @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
-        @JsonProperty("endPartitions") @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
+        @JsonProperty("startPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, Long> startPartitions,
+        @JsonProperty("endPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, Long> endPartitions,
         @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
         @JsonProperty("pollTimeout") Long pollTimeout,
         @JsonProperty("useTransaction") Boolean useTransaction,
@@ -420,13 +420,13 @@ public class RocketMQIOConfigTest
     }
 
     @JsonProperty
-    public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
+    public SeekableStreamEndSequenceNumbers<String, Long> getStartPartitions()
     {
       return startPartitions;
     }
 
     @JsonProperty
-    public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
+    public SeekableStreamEndSequenceNumbers<String, Long> getEndPartitions()
     {
       return endPartitions;
     }

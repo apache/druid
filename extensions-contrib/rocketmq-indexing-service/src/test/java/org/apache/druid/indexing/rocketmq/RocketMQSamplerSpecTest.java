@@ -97,8 +97,7 @@ public class RocketMQSamplerSpecTest extends InitializedNullHandlingTest
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
         new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", null))
+        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable")))
     );
   }
 
