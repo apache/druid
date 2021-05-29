@@ -587,15 +587,18 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null);
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+    Assert.assertEquals(2, ((BatchAppenderator) appenderator).getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "baz", 3), null);
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null);
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+    Assert.assertEquals(4, ((BatchAppenderator) appenderator).getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "bob", 5), null);
     Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
     appenderator.persistAll(null).get();
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+    Assert.assertEquals(5, ((BatchAppenderator) appenderator).getTotalRowCount());
 
     List<File> segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
     Assert.assertEquals(3, segmentPaths.size());
@@ -604,6 +607,9 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
     segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
     Assert.assertEquals(0, segmentPaths.size());
+
+    Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+    Assert.assertEquals(0, ((BatchAppenderator) appenderator).getTotalRowCount());
 
   }
 

@@ -218,10 +218,9 @@ public class BatchAppenderator implements Appenderator
   {
     tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
-    final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
     resetNextFlush();
-    return retVal;
+    return null;
   }
 
   private void throwPersistErrorIfExists()
@@ -497,7 +496,7 @@ public class BatchAppenderator implements Appenderator
       // Drop everything.
       final List<ListenableFuture<?>> futures = new ArrayList<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-        futures.add(abandonSegment(entry.getKey(), entry.getValue(), removeOnDiskData));
+        futures.add(removeSink(entry.getKey(), entry.getValue(), removeOnDiskData));
       }
       // Await dropping.
       Futures.allAsList(futures).get();
@@ -512,7 +511,7 @@ public class BatchAppenderator implements Appenderator
   {
     final Sink sink = sinks.get(identifier);
     if (sink != null) {
-      return abandonSegment(identifier, sink, true);
+      return removeSink(identifier, sink, true);
     } else {
       return Futures.immediateFuture(null);
     }
@@ -864,7 +863,7 @@ public class BatchAppenderator implements Appenderator
 
     final List<ListenableFuture<?>> futures = new ArrayList<>();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      futures.add(abandonSegment(entry.getKey(), entry.getValue(), false));
+      futures.add(removeSink(entry.getKey(), entry.getValue(), false));
     }
 
     try {
@@ -910,6 +909,8 @@ public class BatchAppenderator implements Appenderator
     for (File identifier : persistedIdentifiers) {
       removeDirectory(identifier);
     }
+
+    totalRows.set(0);
   }
 
   /**
@@ -1043,151 +1044,6 @@ public class BatchAppenderator implements Appenderator
     nextFlush = DateTimes.nowUtc().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
   }
 
-  /**
-   * Populate "sinks" and "sinkTimeline" with committed segments, and announce them with the segmentAnnouncer.
-   *
-   * @return persisted commit metadata
-   */
-  private Object bootstrapSinksFromDisk()
-  {
-    Preconditions.checkState(sinks.isEmpty(), "Already bootstrapped?!");
-
-    final File baseDir = tuningConfig.getBasePersistDirectory();
-    if (!baseDir.exists()) {
-      return null;
-    }
-
-    final File[] files = baseDir.listFiles();
-    if (files == null) {
-      return null;
-    }
-
-
-    final Committed committed;
-    File commitFile = null;
-    try {
-      commitLock.lock();
-      commitFile = computeCommitFile();
-      if (commitFile.exists()) {
-        committed = objectMapper.readValue(commitFile, Committed.class);
-      } else {
-        committed = Committed.nil();
-      }
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Failed to read commitFile: %s", commitFile);
-    }
-    finally {
-      commitLock.unlock();
-    }
-
-    int rowsSoFar = 0;
-
-    if (committed.equals(Committed.nil())) {
-      log.debug("No previously committed metadata.");
-    } else {
-      log.info(
-          "Loading partially-persisted segments[%s] from[%s] with commit metadata: %s",
-          String.join(", ", committed.getHydrants().keySet()),
-          baseDir,
-          committed.getMetadata()
-      );
-    }
-
-    for (File sinkDir : files) {
-      final File identifierFile = new File(sinkDir, IDENTIFIER_FILE_NAME);
-      if (!identifierFile.isFile()) {
-        // No identifier in this sinkDir; it must not actually be a sink directory. Skip it.
-        continue;
-      }
-
-      try {
-        final SegmentIdWithShardSpec identifier = objectMapper.readValue(
-            new File(sinkDir, "identifier.json"),
-            SegmentIdWithShardSpec.class
-        );
-
-        final int committedHydrants = committed.getCommittedHydrants(identifier.toString());
-
-        if (committedHydrants <= 0) {
-          log.info("Removing uncommitted segment at [%s].", sinkDir);
-          FileUtils.deleteDirectory(sinkDir);
-          continue;
-        }
-
-        // To avoid reading and listing of "merged" dir and other special files
-        final File[] sinkFiles = sinkDir.listFiles(
-            (dir, fileName) -> !(Ints.tryParse(fileName) == null)
-        );
-
-        Arrays.sort(
-            sinkFiles,
-            (o1, o2) -> Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()))
-        );
-
-        List<FireHydrant> hydrants = new ArrayList<>();
-        for (File hydrantDir : sinkFiles) {
-          final int hydrantNumber = Integer.parseInt(hydrantDir.getName());
-
-          if (hydrantNumber >= committedHydrants) {
-            log.info("Removing uncommitted partial segment at [%s]", hydrantDir);
-            FileUtils.deleteDirectory(hydrantDir);
-          } else {
-            log.debug("Loading previously persisted partial segment at [%s]", hydrantDir);
-            if (hydrantNumber != hydrants.size()) {
-              throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
-            }
-
-            hydrants.add(
-                new FireHydrant(
-                    new QueryableIndexSegment(indexIO.loadIndex(hydrantDir), identifier.asSegmentId()),
-                    hydrantNumber
-                )
-            );
-          }
-        }
-
-        // Make sure we loaded enough hydrants.
-        if (committedHydrants != hydrants.size()) {
-          throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
-        }
-
-        Sink currSink = new Sink(
-            identifier.getInterval(),
-            schema,
-            identifier.getShardSpec(),
-            identifier.getVersion(),
-            tuningConfig.getAppendableIndexSpec(),
-            tuningConfig.getMaxRowsInMemory(),
-            maxBytesTuningConfig,
-            null,
-            hydrants
-        );
-        rowsSoFar += currSink.getNumRows();
-        sinks.put(identifier, currSink);
-        segmentAnnouncer.announceSegment(currSink.getSegment());
-      }
-      catch (IOException e) {
-        log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
-           .addData("sinkDir", sinkDir)
-           .emit();
-      }
-    }
-
-    // Make sure we loaded all committed sinks.
-    final Set<String> loadedSinks = Sets.newHashSet(
-        Iterables.transform(sinks.keySet(), SegmentIdWithShardSpec::toString)
-    );
-    final Set<String> missingSinks = Sets.difference(committed.getHydrants().keySet(), loadedSinks);
-    if (!missingSinks.isEmpty()) {
-      throw new ISE("Missing committed sinks [%s]", Joiner.on(", ").join(missingSinks));
-    }
-
-    totalRows.set(rowsSoFar);
-    return committed.getMetadata();
-  }
-
-
   @VisibleForTesting
   public List<File> getPersistedidentifierPaths()
   {
@@ -1275,7 +1131,7 @@ public class BatchAppenderator implements Appenderator
     return null;
   }
 
-  private ListenableFuture<?> abandonSegment(
+  private ListenableFuture<?> removeSink(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean removeOnDiskData
@@ -1294,11 +1150,9 @@ public class BatchAppenderator implements Appenderator
           bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
         }
       }
-      totalRows.addAndGet(-sink.getNumRows());
+      // totalRows are not decremented when removing the sink from memory, sink was just persisted and it
+      // still "lives" but it is in hibernation. It will be revived later just before push.
     }
-
-    // Mark this identifier as dropping, so no future push tasks will pick it up.
-    //droppingSinks.add(identifier);
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -1316,38 +1170,6 @@ public class BatchAppenderator implements Appenderator
 
             metrics.setSinkCount(sinks.size());
 
-            if (removeOnDiskData) {
-              // Remove this segment from the committed list. This must be done from the persist thread.
-              log.debug("Removing commit metadata for segment[%s].", identifier);
-              try {
-                commitLock.lock();
-                final Committed oldCommit = readCommit();
-                if (oldCommit != null) {
-                  writeCommit(oldCommit.without(identifier.toString()));
-                }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
-                   .addData("identifier", identifier.toString())
-                   .emit();
-                throw new RuntimeException(e);
-              }
-              finally {
-                commitLock.unlock();
-              }
-            }
-
-            // Unannounce the segment.
-            try {
-              segmentAnnouncer.unannounceSegment(sink.getSegment());
-            }
-            catch (Exception e) {
-              log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
-                 .addData("identifier", identifier.toString())
-                 .emit();
-            }
-
-            //droppingSinks.remove(identifier);
             for (FireHydrant hydrant : sink) {
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
@@ -1368,28 +1190,6 @@ public class BatchAppenderator implements Appenderator
         // starting to abandon segments
         persistExecutor
     );
-  }
-
-  private Committed readCommit() throws IOException
-  {
-    final File commitFile = computeCommitFile();
-    if (commitFile.exists()) {
-      // merge current hydrants with existing hydrants
-      return objectMapper.readValue(commitFile, Committed.class);
-    } else {
-      return null;
-    }
-  }
-
-  private void writeCommit(Committed newCommit) throws IOException
-  {
-    final File commitFile = computeCommitFile();
-    objectMapper.writeValue(commitFile, newCommit);
-  }
-
-  private File computeCommitFile()
-  {
-    return new File(tuningConfig.getBasePersistDirectory(), "commit.json");
   }
 
   private File computeLockFile()
