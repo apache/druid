@@ -450,16 +450,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
         if (dataSegmentAndIndexZipFilePaths != null) {
           indexGeneratorJobSuccess = true;
-          try {
-            Thread.currentThread().setContextClassLoader(oldLoader);
-            renameSegmentIndexFilesJob(
-                toolbox.getJsonMapper().writeValueAsString(indexerSchema),
-                toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
-            );
-          }
-          finally {
-            Thread.currentThread().setContextClassLoader(loader);
-          }
+          renameSegmentIndexFilesJob(
+              toolbox.getJsonMapper().writeValueAsString(indexerSchema),
+              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
+          );
+
           ArrayList<DataSegment> segments = new ArrayList<>(dataSegmentAndIndexZipFilePaths.stream()
                                                                                            .map(
                                                                                                DataSegmentAndIndexZipFilePath::getSegment)
@@ -550,13 +545,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String dataSegmentAndIndexZipFilePathListStr
   )
   {
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     try {
-      ClassLoader loader = HadoopTask.buildClassLoader(
-          getHadoopDependencyCoordinates(),
-          taskConfig.getDefaultHadoopCoordinates()
-      );
-
       Object renameSegmentIndexFilesRunner = getForeignClassloaderObject(
           "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner",
           loader
@@ -573,7 +563,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           renameSegmentIndexFilesJobInput.getClass()
       );
 
-      Thread.currentThread().setContextClassLoader(loader);
       renameSegmentIndexFiles.invoke(
           renameSegmentIndexFilesRunner,
           new Object[]{renameSegmentIndexFilesJobInput}
@@ -581,9 +570,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
 
