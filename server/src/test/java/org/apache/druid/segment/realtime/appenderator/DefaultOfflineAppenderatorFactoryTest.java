@@ -171,13 +171,13 @@ public class DefaultOfflineAppenderatorFactoryTest
           "A",
           new LinearShardSpec(0)
       );
-      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
-      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
-      Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
-      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "baz", 1), Suppliers.ofInstance(Committers.nil()));
-      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "bar", 1),null);
+      Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "baz", 1), null);
+      Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.close();
-      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
     }
     finally {
       appenderator.close();
