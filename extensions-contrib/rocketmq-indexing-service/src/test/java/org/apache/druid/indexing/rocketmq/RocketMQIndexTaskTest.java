@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -46,11 +45,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.rocketmq.PartitionUtil;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.discovery.DataNodeService;
@@ -92,7 +86,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -111,9 +104,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
@@ -132,7 +122,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -195,7 +184,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static int topicPostfix;
   private static TestBroker rocketmqServer;
 
-
   static final Module TEST_MODULE = new SimpleModule("rocketmqTestModule").registerSubtypes(
       new NamedType(TestRocketMQInputFormat.class, "testRocketMQInputFormat")
   );
@@ -206,6 +194,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         Stream.of(TEST_MODULE)
     ).forEach(OBJECT_MAPPER::registerModule);
   }
+
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -352,6 +341,58 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     rocketmqServer = null;
 
     emitter.close();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunBeforeDataInserted() throws Exception
+  {
+    final RocketMQIndexTask task = createTask(
+        null,
+        new RocketMQIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            rocketmqServer.consumerProperties(),
+            RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for the task to start reading
+    while (task.getRunner().getStatus() != Status.READING) {
+      Thread.sleep(10);
+    }
+
+    // Insert data
+    insertData();
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertNotEquals(-1, task.getRunner().getFireDepartmentMetrics().processingCompletionTime());
+
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
+    Assert.assertEquals(
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        newDataSchemaMetadata()
+    );
   }
 
   @Test(timeout = 60_000L)
@@ -512,7 +553,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Insert data
     insertData();
     Map<String, Object> consumerProps = rocketmqServer.consumerProperties();
-    consumerProps.put("max.poll.records", "1");
+    consumerProps.put("pull.batch.size", "1");
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
@@ -584,7 +625,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             sdd("2011/P1D", 0, ImmutableList.of("d", "e"), ImmutableList.of("d", "h")),
             sdd("2011/P1D", 1, ImmutableList.of("h"), ImmutableList.of("e")),
             sdd("2012/P1D", 0, ImmutableList.of("g")),
-            sdd("2013/P1D", 0, ImmutableList.of("f"))
+            sdd("2013/P1D", 0, ImmutableList.of("f")),
+            sdd("2049/P1D", 0, ImmutableList.of("f", "f"))
         ),
         publishedDescriptors()
     );
@@ -748,8 +790,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     insertData();
     Map<String, Object> consumerProps = rocketmqServer.consumerProperties();
     consumerProps.put("pull.batch.size", "1");
-
-    consumerProps.put("max.poll.records", "1");
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
@@ -1093,87 +1133,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testRocketMQRecordEntityInputFormat() throws Exception
-  {
-    // Insert data
-    insertData(records.subList(0, 3));
-
-    final RocketMQIndexTask task = createTask(
-        null,
-        new DataSchema(
-            "test_ds",
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("rocketmq.topic"),
-                    new LongDimensionSchema("rocketmq.offset"),
-                    new StringDimensionSchema("rocketmq.header.encoding")
-                ),
-                null,
-                null
-            ),
-            new AggregatorFactory[] {
-                new DoubleSumAggregatorFactory("met1sum", "met1"),
-                new CountAggregatorFactory("rows")
-            },
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            null
-        ),
-        new RocketMQIndexTaskIOConfig(
-            0,
-            "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
-            rocketmqServer.consumerProperties(),
-            RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-            true,
-            null,
-            null,
-            new TestRocketMQInputFormat(INPUT_FORMAT)
-        )
-    );
-    Assert.assertTrue(task.supportsQueries());
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    while (countEvents(task) != 3) {
-      Thread.sleep(25);
-    }
-
-    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
-
-    final QuerySegmentSpec interval = OBJECT_MAPPER.readValue(
-        "\"2008/2012\"", QuerySegmentSpec.class
-    );
-    List<ScanResultValue> scanResultValues = scanData(task, interval);
-    //verify that there are no records indexed in the rollbacked time period
-    Assert.assertEquals(3, Iterables.size(scanResultValues));
-
-    int i = 0;
-    for (ScanResultValue result : scanResultValues) {
-      final Map<String, Object> event = ((List<Map<String, Object>>) result.getEvents()).get(0);
-      Assert.assertEquals((long) i++, event.get("rocketmq.offset"));
-      Assert.assertEquals(topic, event.get("rocketmq.topic"));
-      Assert.assertEquals("application/json", event.get("rocketmq.header.encoding"));
-    }
-    // insert remaining data
-    insertData(records.subList(3, records.size()));
-
-    // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-  }
-
-  @Test(timeout = 60_000L)
   public void testRunOnNothing() throws Exception
   {
     // Insert data
@@ -1367,7 +1326,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             0,
             "sequence0",
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 13L)),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 11L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1388,8 +1347,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Check metrics
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -1397,7 +1356,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 13L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 11L))),
         newDataSchemaMetadata()
     );
 
@@ -1408,8 +1367,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 4,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
-            RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1420,7 +1379,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1]]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
-            "Unable to parse [] as the intermediateRow resulted in empty input row",
             "Unable to parse row [unparseable]",
             "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
         )
@@ -1464,9 +1422,9 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
@@ -1478,9 +1436,9 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-            RowIngestionMeters.PROCESSED, 3,
-            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
-            RowIngestionMeters.UNPARSEABLE, 3,
+            RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
+            RowIngestionMeters.UNPARSEABLE, 2,
             RowIngestionMeters.THROWN_AWAY, 0
         )
     );
@@ -1489,7 +1447,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unable to parse [] as the intermediateRow resulted in empty input row",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
             "Unable to parse row [unparseable]"
         )
     );
@@ -1531,11 +1489,12 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
+    // Insert data
+    insertData();
+
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
-    // Insert data
-    insertData();
 
     // Wait for tasks to exit
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
@@ -1768,8 +1727,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    final ListenableFuture<TaskStatus> future1 = runTask(task1);
-
     // Insert some data, but not enough for the task to finish
     final DefaultMQProducer producer = rocketmqServer.newProducer();
     producer.start();
@@ -1777,6 +1734,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
       producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
     }
     producer.shutdown();
+
+    final ListenableFuture<TaskStatus> future1 = runTask(task1);
 
     while (countEvents(task1) != 2) {
       Thread.sleep(25);
@@ -1826,7 +1785,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
     Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
@@ -1857,7 +1816,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             0,
             "sequence0",
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L)),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L)),
             consumerProps,
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1874,7 +1833,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
-
     // Insert some data, but not enough for the task to finish
     final DefaultMQProducer producer = rocketmqServer.newProducer();
     producer.start();
@@ -1882,6 +1840,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
       producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
     }
     producer.shutdown();
+
 
     while (task1.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
@@ -1904,7 +1863,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             0,
             "sequence0",
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L)),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L)),
             consumerProps,
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1950,7 +1909,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L))),
         newDataSchemaMetadata()
     );
   }
@@ -2214,7 +2173,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     insertData();
 
     Map<String, Object> consumerProps = rocketmqServer.consumerProperties();
-    consumerProps.put("max.poll.records", "1");
+    consumerProps.put("pull.batch.size", "1");
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
@@ -2471,7 +2430,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     for (Module module : new RocketMQIndexTaskModule().getJacksonModules()) {
       objectMapper.registerModule(module);
     }
-    objectMapper.registerModule(TEST_MODULE);
 
     final TaskConfig taskConfig = new TaskConfig(
         new File(directory, "baseDir").getPath(),
@@ -2719,7 +2677,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
               r -> {
                 MapBasedInputRow row = (MapBasedInputRow) r;
                 final Map<String, Object> event = new HashMap<>(row.getEvent());
-
                 return new MapBasedInputRow(row.getTimestamp(), row.getDimensions(), event);
               }
           );

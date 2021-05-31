@@ -52,7 +52,7 @@ public class RocketMQSupervisorIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"topic\": \"my-topic\",\n"
-                     + "  \"consumerProperties\": {\"nameserver.url\":\"localhost:9876\"}\n"
+                     + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"}\n"
                      + "}";
 
     RocketMQSupervisorIOConfig config = mapper.readValue(
@@ -68,7 +68,7 @@ public class RocketMQSupervisorIOConfigTest
     Assert.assertEquals(1, (int) config.getReplicas());
     Assert.assertEquals(1, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
+    Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertEquals(100, config.getPollTimeout());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
@@ -88,7 +88,7 @@ public class RocketMQSupervisorIOConfigTest
         + "  \"replicas\": 3,\n"
         + "  \"taskCount\": 9,\n"
         + "  \"taskDuration\": \"PT30M\",\n"
-        + "  \"consumerProperties\": {\"nameserver.url\":\"localhost:9876\"},\n"
+        + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
         + "  \"pollTimeout\": 1000,\n"
         + "  \"startDelay\": \"PT1M\",\n"
         + "  \"period\": \"PT10S\",\n"
@@ -111,7 +111,7 @@ public class RocketMQSupervisorIOConfigTest
     Assert.assertEquals(3, (int) config.getReplicas());
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
+    Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
@@ -130,7 +130,7 @@ public class RocketMQSupervisorIOConfigTest
         + "  \"replicas\": 3,\n"
         + "  \"taskCount\": 9,\n"
         + "  \"taskDuration\": \"PT30M\",\n"
-        + "  \"consumerProperties\": {\"nameserver.url\":\"localhost:9876\"},\n"
+        + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
         + "  \"pollTimeout\": 1000,\n"
         + "  \"startDelay\": \"PT1M\",\n"
         + "  \"period\": \"PT10S\",\n"
@@ -153,7 +153,7 @@ public class RocketMQSupervisorIOConfigTest
     Assert.assertEquals(3, (int) config.getReplicas());
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("nameserver.url", "localhost:9876"), config.getConsumerProperties());
+    Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
@@ -167,7 +167,7 @@ public class RocketMQSupervisorIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"rocketmq\",\n"
-                     + "  \"consumerProperties\": {\"nameserver.url\":\"localhost:9876\"}\n"
+                     + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -214,7 +214,7 @@ public class RocketMQSupervisorIOConfigTest
         + "  \"replicas\": 3,\n"
         + "  \"taskCount\": 9,\n"
         + "  \"taskDuration\": \"PT30M\",\n"
-        + "  \"consumerProperties\": {\"nameserver.url\":\"localhost:9876\"},\n"
+        + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
         + "  \"pollTimeout\": 1000,\n"
         + "  \"startDelay\": \"PT1M\",\n"
         + "  \"period\": \"PT10S\",\n"

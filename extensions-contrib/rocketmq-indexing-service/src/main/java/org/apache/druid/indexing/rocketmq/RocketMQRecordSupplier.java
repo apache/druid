@@ -105,6 +105,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     }
     catch (MQClientException e) {
       log.error(e.getErrorMessage());
+      consumer.getOffsetStore().updateOffset(mq, sequenceNumber, false);
     }
   }
 

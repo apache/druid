@@ -183,7 +183,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     rocketmqServer = new TestBroker(
         null,
-        ImmutableMap.of("default.topic.queue.nums", 2)
+        ImmutableMap.of("default.topic.queue.nums", NUM_PARTITIONS)
     );
     rocketmqServer.start();
 
@@ -3420,7 +3420,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final DefaultMQProducer producer = rocketmqServer.newProducer();
     producer.start();
-    for (int i = NUM_PARTITIONS; i < numEventsPerPartition; i++) {
+    for (int i = 0; i < NUM_PARTITIONS; i++) {
       for (int j = 0; j < numEventsPerPartition; j++) {
         producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, brokerName, i)).getMsgId();
       }
@@ -3432,7 +3432,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final DefaultMQProducer producer = rocketmqServer.newProducer();
     producer.start();
-    for (int i = NUM_PARTITIONS; i < num_partitions; i++) {
+    for (int i = 0; i < NUM_PARTITIONS; i++) {
       for (int j = 0; j < numEventsPerPartition; j++) {
         producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, brokerName, i)).getMsgId();
       }
