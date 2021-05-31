@@ -22,11 +22,10 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -207,7 +206,7 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return MoreObjects.toStringHelper(this)
+    return Objects.toStringHelper(this)
                   .add("id", id)
                   .add("status", status)
                   .add("duration", duration)
@@ -226,14 +225,14 @@ public class TaskStatus
     }
     TaskStatus that = (TaskStatus) o;
     return getDuration() == that.getDuration() &&
-           Objects.equals(getId(), that.getId()) &&
+           java.util.Objects.equals(getId(), that.getId()) &&
            status == that.status &&
-           Objects.equals(getErrorMsg(), that.getErrorMsg());
+           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getId(), status, getDuration(), getErrorMsg());
+    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
   }
 }

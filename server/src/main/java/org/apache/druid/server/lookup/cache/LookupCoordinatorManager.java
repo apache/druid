@@ -435,8 +435,7 @@ public class LookupCoordinatorManager
                   LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
                 }
               }
-            },
-            MoreExecutors.directExecutor()
+            }
         );
 
         LOG.debug("Started");

@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -273,18 +273,17 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     final List<SegmentIdWithShardSpec> theSegments = getSegmentIdsWithShardSpecs(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transformAsync(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
-        sam -> publishInBackground(
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
             null,
             null,
             sam,
             publisher,
             java.util.function.Function.identity()
-        ),
-        MoreExecutors.directExecutor()
+        )
     );
     return Futures.transform(
         publishFuture,
@@ -293,8 +292,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             sequenceNames.forEach(segments::remove);
           }
           return sam;
-        },
-        MoreExecutors.directExecutor()
+        }
     );
   }
 
@@ -374,8 +372,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                       numRemainingHandoffSegments.decrementAndGet();
                       resultFuture.setException(e);
                     }
-                  },
-                  MoreExecutors.directExecutor()
+                  }
               );
             }
         );
@@ -391,10 +388,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return Futures.transformAsync(
+    return Futures.transform(
         publish(publisher, committer, sequenceNames),
-        this::registerHandoff,
-        MoreExecutors.directExecutor()
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff
     );
   }
 

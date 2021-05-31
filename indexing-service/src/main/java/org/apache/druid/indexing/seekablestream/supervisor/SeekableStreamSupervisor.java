@@ -1102,12 +1102,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futures.add(
             Futures.transform(
                 taskClient.getMovingAveragesAsync(taskId),
-                (currentStats) -> new StatsFromTaskResult(
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                     groupId,
                     taskId,
                     currentStats
-                ),
-                MoreExecutors.directExecutor()
+                )
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1121,12 +1120,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   taskClient.getMovingAveragesAsync(taskId),
-                  (currentStats) -> new StatsFromTaskResult(
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  ),
-                  MoreExecutors.directExecutor()
+                  )
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1965,8 +1963,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             return null;
           }
-        },
-        MoreExecutors.directExecutor()
+        }
     );
   }
 
@@ -2651,8 +2648,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   {
                     return null;
                   }
-                },
-                MoreExecutors.directExecutor()
+                }
             );
           }
 
@@ -3355,8 +3351,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               return null;
-            },
-            MoreExecutors.directExecutor()
+            }
         )
     ).collect(Collectors.toList());
 

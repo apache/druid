@@ -2441,13 +2441,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     ((TestableKinesisIndexTask) staleReplica).setLocalSupplier(recordSupplier2);
     final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
     // Simulating one replica is slower than the other
-    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transformAsync(
+    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transform(
         taskExec.submit(() -> {
           Thread.sleep(1000);
           return staleReplica;
         }),
-        (AsyncFunction<Task, TaskStatus>) this::runTask,
-        MoreExecutors.directExecutor()
+        (AsyncFunction<Task, TaskStatus>) this::runTask
     );
 
     while (normalReplica.getRunner().getStatus() != SeekableStreamIndexTaskRunner.Status.PAUSED) {

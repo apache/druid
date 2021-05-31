@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -455,11 +456,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       taskContainer.setStatusFuture(statusFuture);
       final ListenableFuture<TaskStatus> cleanupFuture = Futures.transform(
           statusFuture,
-          status -> {
+          (Function<TaskStatus, TaskStatus>) status -> {
             shutdownTask(task);
             return status;
-          },
-          MoreExecutors.directExecutor()
+          }
       );
       return cleanupFuture;
     }

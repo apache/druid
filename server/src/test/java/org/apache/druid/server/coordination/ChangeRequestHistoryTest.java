@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -147,8 +146,7 @@ public class ChangeRequestHistoryTest
           {
             callbackExcecuted.set(true);
           }
-        },
-        MoreExecutors.directExecutor()
+        }
     );
 
     future.cancel(true);
