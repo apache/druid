@@ -945,6 +945,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     totalRows.set(0);
+    sinksMetadata.clear();
   }
 
   /**
