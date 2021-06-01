@@ -41,6 +41,8 @@ import org.apache.druid.query.expression.TimestampFormatExprMacro;
 import org.apache.druid.query.expression.TimestampParseExprMacro;
 import org.apache.druid.query.expression.TimestampShiftExprMacro;
 import org.apache.druid.query.expression.TrimExprMacro;
+import org.apache.druid.query.expression.UrlDecodeExprMacro;
+import org.apache.druid.query.expression.UrlEncodeExprMacro;
 
 import java.util.List;
 
@@ -65,6 +67,8 @@ public class ExpressionModule implements DruidModule
           .add(TrimExprMacro.BothTrimExprMacro.class)
           .add(TrimExprMacro.LeftTrimExprMacro.class)
           .add(TrimExprMacro.RightTrimExprMacro.class)
+          .add(UrlEncodeExprMacro.class)
+          .add(UrlDecodeExprMacro.class)
           .build();
 
   @Override

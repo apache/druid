@@ -110,6 +110,8 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.UrlDecodeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.UrlEncodeOperatorConversion;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -250,6 +252,12 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new IPv4AddressStringifyOperatorConversion())
                    .build();
 
+  private static final List<SqlOperatorConversion> URL_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new UrlEncodeOperatorConversion())
+                   .add(new UrlDecodeOperatorConversion())
+                   .build();
+
   private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd"))
@@ -342,6 +350,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
                    .addAll(REDUCTION_OPERATOR_CONVERSIONS)
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
+                   .addAll(URL_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
                    .build();
 
