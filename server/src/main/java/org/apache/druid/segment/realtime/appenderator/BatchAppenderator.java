@@ -235,10 +235,17 @@ public class BatchAppenderator implements Appenderator
       final boolean allowIncrementalPersists
   ) throws IndexSizeExceededException, SegmentNotWritableException
   {
+
     throwPersistErrorIfExists();
+
     Preconditions.checkArgument(
         committerSupplier == null,
         "Batch appenderator does not need a committer!"
+    );
+
+    Preconditions.checkArgument(
+        allowIncrementalPersists,
+        "Batch appenderator should always allow incremental persists!"
     );
 
     if (!identifier.getDataSource().equals(schema.getDataSource())) {
@@ -371,7 +378,7 @@ public class BatchAppenderator implements Appenderator
         persistAllAndClear();
 
       } else {
-        isPersistRequired = true;
+        throw new ISE("Batch appenderator always persists as needed!");
       }
     }
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
@@ -1178,7 +1185,7 @@ public class BatchAppenderator implements Appenderator
               removeDirectory(computePersistDir(identifier));
             }
 
-            log.info("Dropped segment[%s].", identifier);
+            log.info("Removed sink for segment[%s].", identifier);
 
             return null;
           }
