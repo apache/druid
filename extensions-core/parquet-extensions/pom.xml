@@ -120,10 +120,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-api</artifactId>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>org.apache.hadoop</groupId>-->
-<!--      <artifactId>hadoop-client-runtime</artifactId>-->
-<!--    </dependency>-->
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
@@ -172,6 +168,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-runtime</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
