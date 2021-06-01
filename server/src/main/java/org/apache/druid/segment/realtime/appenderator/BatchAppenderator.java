@@ -121,9 +121,38 @@ public class BatchAppenderator implements Appenderator
    * of any thread from {@link #drop}.
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
-  //private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
+
+  /**
+   * The following sinks metadata map and associated class are the way to retain metadata now that sinks
+   * are being completely removed from memory after each incremental persist. For now, {@link SinkMetadata} only
+   * contains a single memeber {@link SinkMetadata#numRowsInSegment} but we can add more in the future as needed
+   */
+  private final ConcurrentMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
+  private static class SinkMetadata
+  {
+    private int numRowsInSegment;
+
+    public SinkMetadata()
+    {
+      this(0);
+    }
+
+    public SinkMetadata(int numRowsInSegment)
+    {
+      this.numRowsInSegment = numRowsInSegment;
+    }
+    public void addRows(int numRows) {
+      numRowsInSegment += numRows;
+    }
+
+    public int getNumRowsInSegment()
+    {
+      return numRowsInSegment;
+    }
+  }
+
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -291,6 +320,7 @@ public class BatchAppenderator implements Appenderator
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
     totalRows.addAndGet(numAddedRows);
+    sinksMetadata.computeIfAbsent(identifier,x -> new SinkMetadata()).addRows(numAddedRows);
 
     boolean isPersistRequired = false;
     boolean persist = false;
@@ -327,7 +357,7 @@ public class BatchAppenderator implements Appenderator
     if (persist) {
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
-        log.info("Flushing in-memory data to disk because %s.", String.join(",", persistReasons));
+        log.info("Incremental persist to disk because %s.", String.join(",", persistReasons));
 
         long bytesToBePersisted = 0L;
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
@@ -381,7 +411,7 @@ public class BatchAppenderator implements Appenderator
         throw new ISE("Batch appenderator always persists as needed!");
       }
     }
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
+    return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, isPersistRequired);
   }
 
   @Override

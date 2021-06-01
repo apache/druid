@@ -541,6 +541,66 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testTotalRowsPerSegment() throws Exception
+  {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.startJob();
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Appenderator.AppenderatorAddResult addResult0 =
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
+      Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(1,addResult0.getNumRowsInSegment());
+
+      Appenderator.AppenderatorAddResult addResult1 =
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 1), null);
+      Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(1,addResult1.getNumRowsInSegment());
+
+      addResult1 = // dup!
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 1), null);
+      Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(1,addResult1.getNumRowsInSegment()); // dup record does not count
+      // no persist since last add was for a dup record
+
+      addResult1 =
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bat", 1), null);
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(2,addResult1.getNumRowsInSegment());
+      // persist expected ^ (3) rows added
+
+      // total rows per segment ought to be preserved even when sinks are removed from memory:
+      addResult1 =
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bat", 1), null);
+      Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(3,addResult1.getNumRowsInSegment());
+
+      addResult0 =
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "baz", 1), null);
+      Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(2,addResult0.getNumRowsInSegment());
+
+      addResult1 =
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 1), null);
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(4,addResult1.getNumRowsInSegment());
+      // persist expected ^ (3) rows added
+
+      addResult0 =
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bob", 1), null);
+      Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(3,addResult0.getNumRowsInSegment());
+
+      appenderator.close();
+
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+    }
+  }
+
 
   @Test
   public void testRestoreFromDisk() throws Exception
