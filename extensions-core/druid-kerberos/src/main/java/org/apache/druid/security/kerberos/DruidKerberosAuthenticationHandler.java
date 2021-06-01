@@ -26,7 +26,6 @@ import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
-import org.apache.hadoop.shaded.javax.servlet.http.HttpServletRequest;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
@@ -36,6 +35,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
@@ -72,7 +72,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
   }
 
   @Override
-  public void init(Properties config) throws org.apache.hadoop.shaded.javax.servlet.ServletException
+  public void init(Properties config) throws ServletException
   {
     try {
       String principal = config.getProperty(PRINCIPAL);
@@ -135,15 +135,12 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       }
     }
     catch (Exception ex) {
-      throw new org.apache.hadoop.shaded.javax.servlet.ServletException(ex);
+      throw new ServletException(ex);
     }
   }
 
   @Override
-  public AuthenticationToken authenticate(
-      HttpServletRequest request,
-      final org.apache.hadoop.shaded.javax.servlet.http.HttpServletResponse response
-  )
+  public AuthenticationToken authenticate(HttpServletRequest request, final HttpServletResponse response)
       throws IOException, AuthenticationException
   {
     AuthenticationToken token;
