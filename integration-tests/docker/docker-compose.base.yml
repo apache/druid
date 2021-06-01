@@ -318,7 +318,7 @@ services:
 
 ### optional supporting infra
   druid-it-hadoop:
-    image: druid-it/hadoop:2.8.5
+    image: druid-it/hadoop:3.2.2
     container_name: druid-it-hadoop
     ports:
       - 2049:2049

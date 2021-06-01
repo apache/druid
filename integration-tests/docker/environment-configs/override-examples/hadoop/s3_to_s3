@@ -32,4 +32,4 @@ AWS_REGION=<OVERRIDE_THIS>
 
 druid_extensions_loadList=["druid-s3-extensions","druid-hdfs-storage"]
 
-druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-aws:2.8.5"]
+druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client-api:3.2.2", "org.apache.hadoop:hadoop-client-runtime:3.2.2", "org.apache.hadoop:hadoop-azure:3.2.2"]

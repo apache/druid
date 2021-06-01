@@ -1,6 +1,6 @@
 {
   "type": "index_hadoop",
-  "hadoopDependencyCoordinates" : ["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-azure:2.8.5"],
+  "hadoopDependencyCoordinates" : ["org.apache.hadoop:hadoop-client-api:3.2.2", "org.apache.hadoop:hadoop-client-runtime:3.2.2", "org.apache.hadoop:hadoop-client-minicluster:3.2.2", "org.apache.hadoop:hadoop-azure:3.2.2"],
   "spec": {
     "dataSchema": {
       "dataSource": "%%DATASOURCE%%",

@@ -81,9 +81,9 @@ public class QueryStatus
   public String toString()
   {
     return Objects.toStringHelper(this)
-                      .add("id", id)
-                      .add("status", status)
-                      .add("duration", duration)
-                      .toString();
+                  .add("id", id)
+                  .add("status", status)
+                  .add("duration", duration)
+                  .toString();
   }
 }

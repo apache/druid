@@ -2381,6 +2381,18 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
+version: 3.2.2
+libraries:
+  - org.apache.hadoop: hadoop-annotations
+  - org.apache.hadoop: hadoop-client-api
+  - org.apache.hadoop: hadoop-client-runtime
+
+---
+
+name: Apache Hadoop
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
 version: 2.8.5
 libraries:
   - org.apache.hadoop: hadoop-annotations
@@ -3469,6 +3481,16 @@ license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.annotation: jakarta.annotation-api
     
+---
+
+name: jakarta.activation
+version: 1.2.1
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Distribution License 1.0
+libraries:
+  - com.sun.activation: jakarta.activation
+
 ---
 
 name: javax.ws.rs-api

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Creates pseudo distributed hadoop 2.8.5 with java 8
+# Creates pseudo distributed hadoop 3.2.2 with java 8
 FROM centos:7
 
 USER root

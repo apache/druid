@@ -302,7 +302,7 @@
   </suppress>
   <suppress>
      <notes><![CDATA[
-     file name: hadoop-*-2.8.5.jar
+     file name: hadoop-*-3.2.2.jar
      ]]></notes>
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
