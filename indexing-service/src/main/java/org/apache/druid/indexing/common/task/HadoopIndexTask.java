@@ -540,6 +540,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
   }
 
+  /**
+   * Must be called only when the hadoopy classloader is the current classloader
+   */
   private void renameSegmentIndexFilesJob(
       String hadoopIngestionSpecStr,
       String dataSegmentAndIndexZipFilePathListStr
@@ -547,10 +550,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   {
     final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     try {
-      Object renameSegmentIndexFilesRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner",
-          loader
+      final Class<?> clazz = loader.loadClass(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner"
       );
+      Object renameSegmentIndexFilesRunner = clazz.newInstance();
 
       String[] renameSegmentIndexFilesJobInput = new String[]{
           hadoopIngestionSpecStr,
