@@ -130,6 +130,7 @@ public class BatchAppenderator implements Appenderator
    * contains a single memeber {@link SinkMetadata#numRowsInSegment} but we can add more in the future as needed
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
+
   private static class SinkMetadata
   {
     private int numRowsInSegment;
@@ -143,7 +144,9 @@ public class BatchAppenderator implements Appenderator
     {
       this.numRowsInSegment = numRowsInSegment;
     }
-    public void addRows(int numRows) {
+
+    public void addRows(int numRows)
+    {
       numRowsInSegment += numRows;
     }
 
@@ -320,7 +323,7 @@ public class BatchAppenderator implements Appenderator
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
     totalRows.addAndGet(numAddedRows);
-    sinksMetadata.computeIfAbsent(identifier,x -> new SinkMetadata()).addRows(numAddedRows);
+    sinksMetadata.computeIfAbsent(identifier, Void -> new SinkMetadata()).addRows(numAddedRows);
 
     boolean isPersistRequired = false;
     boolean persist = false;
@@ -611,6 +614,9 @@ public class BatchAppenderator implements Appenderator
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
+    if (indexesToPersist.isEmpty()) {
+      log.info("No indexes will be peristed");
+    }
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
@@ -626,7 +632,7 @@ public class BatchAppenderator implements Appenderator
               }
 
               log.info(
-                  "Flushed in-memory data for segments: %s",
+                  "Persisted in-memory data for segments: %s",
                   indexesToPersist.stream()
                                   .map(itp -> itp.rhs.asSegmentId().toString())
                                   .distinct()
@@ -1293,7 +1299,7 @@ public class BatchAppenderator implements Appenderator
         );
 
         log.info(
-            "Flushed in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+            "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
             indexToPersist.getSegmentId(),
             indexToPersist.getCount(),
             (System.nanoTime() - startTime) / 1000000,
