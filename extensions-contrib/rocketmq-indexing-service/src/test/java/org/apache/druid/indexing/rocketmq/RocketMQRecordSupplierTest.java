@@ -56,7 +56,7 @@ public class RocketMQRecordSupplierTest
   private static String topic = "topic";
   private static final String BROKER_NAME = "broker-a";
   private static long poll_timeout_millis = 1000;
-  private static int pollRetry = 5;
+  private static int pollRetry = 10;
   private static int topicPosFix = 0;
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
