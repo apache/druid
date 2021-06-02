@@ -35,7 +35,7 @@ RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluat
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
+ && mv /opt/apache-druid-${VERSION} /opt/druid
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
@@ -50,9 +50,13 @@ RUN addgroup -S -g 1000 druid \
 
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
-RUN mkdir /opt/druid/var \
- && chown druid:druid /opt/druid/var \
- && chmod 775 /opt/druid/var
+
+# create necessary directories which could be mounted as volume
+#   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
+#   /opt/shared is used to keep segments and task logs shared among Druid services
+RUN mkdir /opt/druid/var /opt/shared \
+ && chown druid:druid /opt/druid/var /opt/shared \
+ && chmod 775 /opt/druid/var /opt/shared
 
 USER druid
 VOLUME /opt/druid/var
