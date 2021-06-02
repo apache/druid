@@ -555,7 +555,7 @@ public class BatchAppenderator implements Appenderator
       if (totalRowsAfter < 0) {
         log.warn("Total rows[%d] after dropping segment[%s] rows [%d]", totalRowsAfter, identifier, rowsToDrop);
       }
-      totalRows.set(Math.max(originalTotalRows - rowsToDrop,0);
+      totalRows.set(Math.max(totalRowsAfter, 0));
     }
     if (sink != null) {
       return removeSink(identifier, sink, true);
