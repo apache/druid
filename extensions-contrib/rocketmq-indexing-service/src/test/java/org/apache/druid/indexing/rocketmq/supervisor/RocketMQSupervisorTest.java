@@ -67,13 +67,13 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.St
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -118,7 +118,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
@@ -138,8 +137,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
-  private static final String brokerName = "broker-a";
-
+  private static final String BROKER_NAME = "broker-a";
 
   private static TestBroker rocketmqServer;
   private static String rocketmqHost;
@@ -264,7 +262,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     final Map<String, Object> consumerProperties = RocketMQConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
-    consumerProperties.put("nameserver.url", "127.0.0.1:9876");
+    consumerProperties.put("nameserver.url", StringUtils.format(rocketmqHost));
 
     RocketMQSupervisorIOConfig rocketmqSupervisorIOConfig = new RocketMQSupervisorIOConfig(
         topic,
@@ -343,7 +341,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         (RocketMQSupervisorSpec) testableSupervisorSpec,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     SupervisorTaskAutoScaler autoscaler = testableSupervisorSpec.createAutoscaler(supervisor);
@@ -391,22 +390,22 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)));
 
     Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2))
     );
 
     autoscaler.reset();
@@ -416,7 +415,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testCreateBaseTaskContexts() throws JsonProcessingException
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     final Map<String, Object> contexts = supervisor.createIndexTasks(
         1,
         "seq",
@@ -466,7 +465,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testNoInitialState() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -500,29 +499,29 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)));
 
     Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2))
     );
   }
 
   @Test
   public void testSkipOffsetGaps() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance();
@@ -546,7 +545,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testMultiTask() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -570,19 +569,19 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(2, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
 
     RocketMQIndexTask task2 = captured.getValues().get(1);
@@ -590,18 +589,18 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
   }
 
   @Test
   public void testReplicas() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -625,15 +624,15 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(3, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
 
     RocketMQIndexTask task2 = captured.getValues().get(1);
@@ -641,22 +640,22 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(3, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
   }
 
   @Test
   public void testLateMessageRejectionPeriod() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null, null);
     addSomeEvents(1);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -695,7 +694,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testEarlyMessageRejectionPeriod() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"));
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"), null);
     addSomeEvents(1);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -732,52 +731,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   }
 
   /**
-   * Test generating the starting offsets from the partition high water marks in RocketMQ.
-   */
-  @Test
-  public void testLatestOffset() throws Exception
-  {
-    supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
-    addSomeEvents(1100);
-
-    Capture<RocketMQIndexTask> captured = Capture.newInstance();
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
-        new RocketMQDataSourceMetadata(
-            null
-        )
-    ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
-    replayAll();
-
-    supervisor.start();
-    supervisor.runInternal();
-    verifyAll();
-
-    RocketMQIndexTask task = captured.getValue();
-    Assert.assertEquals(
-        1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
-    );
-    Assert.assertEquals(
-        1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
-    );
-    Assert.assertEquals(
-        1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
-    );
-  }
-
-  /**
    * Test if partitionIds get updated
    */
   @Test
   public void testPartitionIdsUpdates() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null, null);
     addSomeEvents(1100);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance();
@@ -800,74 +759,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   }
 
 
-  @Test
-  public void testAlwaysUsesEarliestOffsetForNewlyDiscoveredPartitions() throws Exception
-  {
-    supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
-    addSomeEvents(9);
-
-    Capture<RocketMQIndexTask> captured = Capture.newInstance();
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
-        new RocketMQDataSourceMetadata(
-            null
-        )
-    ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
-    replayAll();
-    supervisor.start();
-    supervisor.runInternal();
-    verifyAll();
-
-    RocketMQIndexTask task = captured.getValue();
-    Assert.assertEquals(
-        10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
-    );
-    Assert.assertEquals(
-        10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
-    );
-    Assert.assertEquals(
-        10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
-    );
-
-    addMoreEvents(9, 6);
-    EasyMock.reset(taskQueue, taskStorage);
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    Capture<RocketMQIndexTask> tmp = Capture.newInstance();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(tmp))).andReturn(true);
-    EasyMock.replay(taskStorage, taskQueue);
-    supervisor.runInternal();
-    verifyAll();
-
-    EasyMock.reset(taskQueue, taskStorage);
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    Capture<RocketMQIndexTask> newcaptured = Capture.newInstance();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(newcaptured))).andReturn(true);
-    EasyMock.replay(taskStorage, taskQueue);
-    supervisor.runInternal();
-    verifyAll();
-
-    //check if start from earliest offset
-    task = newcaptured.getValue();
-    Assert.assertEquals(
-        0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 3)).longValue()
-    );
-    Assert.assertEquals(
-        0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 4)).longValue()
-    );
-    Assert.assertEquals(
-        0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 5)).longValue()
-    );
-  }
-
   /**
    * Test generating the starting offsets from the partition data stored in druid_dataSource which contains the
    * offsets of the last built segments.
@@ -875,7 +766,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testDatasourceMetadata() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     addSomeEvents(100);
 
     Capture<RocketMQIndexTask> captured = Capture.newInstance();
@@ -884,7 +775,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of())
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of())
         )
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
@@ -899,22 +790,22 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertEquals(
         10L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         20L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
   }
 
   @Test
   public void testBadMetadataOffsets() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
@@ -925,7 +816,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         new RocketMQDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
                 topic,
-                ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), -10L, PartitionUtil.genPartition(brokerName, 1), -20L, PartitionUtil.genPartition(brokerName, 2), -30L),
+                ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), -10L, PartitionUtil.genPartition(BROKER_NAME, 1), -20L, PartitionUtil.genPartition(BROKER_NAME, 2), -30L),
                 ImmutableSet.of()
             )
         )
@@ -944,7 +835,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testDontKillTasksWithMismatchedType() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     // non RocketMQIndexTask (don't kill)
@@ -991,7 +882,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testKillBadPartitionAssignment() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -999,8 +890,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)),
         null,
         null,
         tuningConfig
@@ -1009,8 +900,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         1,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE)),
         null,
         null,
         tuningConfig
@@ -1019,10 +910,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -1032,8 +923,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id4",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE)),
         null,
         null,
         tuningConfig
@@ -1042,8 +933,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id5",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)),
         null,
         null,
         tuningConfig
@@ -1081,9 +972,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.stopAsync("id5", false)).andReturn(Futures.immediateFuture(null));
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .times(1);
@@ -1105,7 +996,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueTaskWhenFailed() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1127,9 +1018,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .anyTimes();
@@ -1194,7 +1085,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     DateTime now = DateTimes.nowUtc();
@@ -1203,8 +1094,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)),
         now,
         maxi,
         supervisor.getTuningConfig()
@@ -1229,7 +1120,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     ).anyTimes();
 
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(2);
@@ -1298,7 +1189,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testQueueNextTasksOnSuccess() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1338,9 +1229,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .anyTimes();
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     // there would be 4 tasks, 2 for each task group
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
@@ -1400,7 +1291,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(100);
 
@@ -1448,21 +1339,21 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .times(2);
     EasyMock.expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 30L)))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 35L)));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 35L)));
     EasyMock.expect(
         taskClient.setEndOffsetsAsync(
             EasyMock.contains("sequenceName-0"),
-            EasyMock.eq(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 35L)),
+            EasyMock.eq(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 35L)),
             EasyMock.eq(true)
         )
     ).andReturn(Futures.immediateFuture(true)).times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .times(2);
@@ -1485,8 +1376,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
       Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-      Assert.assertEquals(10L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)));
-      Assert.assertEquals(35L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)));
+      Assert.assertEquals(10L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+      Assert.assertEquals(35L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)));
     }
   }
 
@@ -1495,7 +1386,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -1503,10 +1394,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -1530,12 +1421,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     ).anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     EasyMock.expect(taskClient.getCheckpoints(EasyMock.anyString(), EasyMock.anyBoolean()))
         .andReturn(checkpoints)
         .anyTimes();
@@ -1566,8 +1457,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
     Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), publishingReport.getCurrentOffsets());
 
     RocketMQIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
@@ -1583,29 +1474,29 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(topic, capturedTaskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         10L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         20L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
 
     Assert.assertEquals(topic, capturedTaskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
   }
 
@@ -1614,7 +1505,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -1622,8 +1513,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)),
         null,
         null,
         supervisor.getTuningConfig()
@@ -1646,8 +1537,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     ).anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 30L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 30L));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
@@ -1676,8 +1567,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
     Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 2), 30L), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), publishingReport.getCurrentOffsets());
 
     RocketMQIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
@@ -1693,29 +1584,29 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     Assert.assertEquals(topic, capturedTaskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         10L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
 
     Assert.assertEquals(topic, capturedTaskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)).longValue()
     );
   }
 
@@ -1726,7 +1617,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(6);
 
@@ -1734,10 +1625,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -1748,10 +1639,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -1781,16 +1672,16 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L)));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id2", false))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 4L, PartitionUtil.genPartition(brokerName, 1), 5L, PartitionUtil.genPartition(brokerName, 2), 6L)));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 4L, PartitionUtil.genPartition(BROKER_NAME, 1), 5L, PartitionUtil.genPartition(BROKER_NAME, 2), 6L)));
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
     // since id1 is publishing, so getCheckpoints wouldn't be called for it
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -1822,25 +1713,25 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     Assert.assertEquals("id2", activeReport.getId());
     Assert.assertEquals(startTime, activeReport.getStartTime());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L), activeReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 4L, PartitionUtil.genPartition(brokerName, 1), 5L, PartitionUtil.genPartition(brokerName, 2), 6L), activeReport.getCurrentOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 3L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 1L), activeReport.getLag());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L), activeReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 4L, PartitionUtil.genPartition(BROKER_NAME, 1), 5L, PartitionUtil.genPartition(BROKER_NAME, 2), 6L), activeReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 1L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), activeReport.getLag());
 
     Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 3L), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 3L), publishingReport.getCurrentOffsets());
     Assert.assertNull(publishingReport.getLag());
 
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 7L, PartitionUtil.genPartition(brokerName, 1), 7L, PartitionUtil.genPartition(brokerName, 2), 7L), payload.getLatestOffsets());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 3L, PartitionUtil.genPartition(brokerName, 1), 2L, PartitionUtil.genPartition(brokerName, 2), 1L), payload.getMinimumLag());
-    Assert.assertEquals(6L, (long) payload.getAggregateLag());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L, PartitionUtil.genPartition(BROKER_NAME, 1), 6L, PartitionUtil.genPartition(BROKER_NAME, 2), 6L), payload.getLatestOffsets());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 1L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), payload.getMinimumLag());
+    Assert.assertEquals(3L, (long) payload.getAggregateLag());
     Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
   }
 
   @Test
   public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
   {
-    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1866,9 +1757,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskStorage, taskClient, taskQueue);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .times(2);
@@ -1899,7 +1790,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null, null);
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1929,9 +1820,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskStorage, taskRunner, taskClient, taskQueue);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .times(2);
@@ -1975,8 +1866,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       RocketMQIndexTaskIOConfig taskConfig = ((RocketMQIndexTask) task).getIOConfig();
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)));
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)));
     }
   }
 
@@ -1985,7 +1876,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null, null);
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -2015,9 +1906,9 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskStorage, taskRunner, taskClient, taskQueue);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
     TreeMap<Integer, Map<String, Long>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L));
+    checkpoints2.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
         .times(2);
@@ -2044,12 +1935,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .times(2);
     EasyMock.expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L)))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 15L, PartitionUtil.genPartition(brokerName, 2), 35L)));
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 15L, PartitionUtil.genPartition(BROKER_NAME, 2), 35L)));
     EasyMock.expect(
         taskClient.setEndOffsetsAsync(
             EasyMock.contains("sequenceName-0"),
-            EasyMock.eq(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 35L)),
+            EasyMock.eq(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 35L)),
             EasyMock.eq(true)
         )
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
@@ -2068,15 +1959,15 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       RocketMQIndexTaskIOConfig taskConfig = ((RocketMQIndexTask) task).getIOConfig();
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)));
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(BROKER_NAME, 2)));
     }
   }
 
   @Test(expected = IllegalStateException.class)
   public void testStopNotStarted()
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     supervisor.stop(false);
   }
 
@@ -2088,7 +1979,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     taskRunner.unregisterListener(StringUtils.format("RocketMQSupervisor-%s", DATASOURCE));
     replayAll();
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     supervisor.start();
     supervisor.stop(false);
 
@@ -2102,7 +1993,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -2110,10 +2001,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2124,10 +2015,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2138,10 +2029,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2174,11 +2065,11 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
 
     // getCheckpoints will not be called for id1 as it is in publishing state
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -2196,8 +2087,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskRunner, taskClient, taskQueue);
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
     EasyMock.expect(taskClient.pauseAsync("id2"))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 25L, PartitionUtil.genPartition(brokerName, 2), 30L)));
-    EasyMock.expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 25L, PartitionUtil.genPartition(brokerName, 2), 30L), true))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 25L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)));
+    EasyMock.expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 25L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), true))
         .andReturn(Futures.immediateFuture(true));
     taskQueue.shutdown("id3", "Killing task for graceful shutdown");
     EasyMock.expectLastCall().times(1);
@@ -2220,7 +2111,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -2237,7 +2128,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testResetDataSourceMetadata() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -2255,17 +2146,17 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     RocketMQDataSourceMetadata rocketmqDataSourceMetadata = new RocketMQDataSourceMetadata(
         new SeekableStreamStartSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1000L, PartitionUtil.genPartition(brokerName, 1), 1000L, PartitionUtil.genPartition(brokerName, 2), 1000L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1000L, PartitionUtil.genPartition(BROKER_NAME, 1), 1000L, PartitionUtil.genPartition(BROKER_NAME, 2), 1000L),
             ImmutableSet.of()
         )
     );
 
     RocketMQDataSourceMetadata resetMetadata = new RocketMQDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 1000L, PartitionUtil.genPartition(brokerName, 2), 1000L), ImmutableSet.of())
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 1000L, PartitionUtil.genPartition(BROKER_NAME, 2), 1000L), ImmutableSet.of())
     );
 
     RocketMQDataSourceMetadata expectedMetadata = new RocketMQDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1000L), ImmutableSet.of()));
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1000L), ImmutableSet.of()));
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
@@ -2278,7 +2169,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     try {
       supervisor.resetInternal(resetMetadata);
-    } catch (NullPointerException npe) {
+    }
+    catch (NullPointerException npe) {
       // Expected as there will be an attempt to EasyMock.reset partitionGroups offsets to NOT_SET
       // however there would be no entries in the map as we have not put nay data in rocketmq
       Assert.assertNull(npe.getCause());
@@ -2292,7 +2184,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testResetNoDataSourceMetadata()
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -2307,7 +2199,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     RocketMQDataSourceMetadata resetMetadata = new RocketMQDataSourceMetadata(
         new SeekableStreamStartSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 1000L, PartitionUtil.genPartition(brokerName, 2), 1000L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 1000L, PartitionUtil.genPartition(BROKER_NAME, 2), 1000L),
             ImmutableSet.of()
         )
     );
@@ -2325,7 +2217,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
   {
     addSomeEvents(2);
-    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -2339,7 +2231,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
         .andReturn(
             new RocketMQDataSourceMetadata(
-                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), -100L, PartitionUtil.genPartition(brokerName, 2), 200L))
+                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), -100L, PartitionUtil.genPartition(BROKER_NAME, 2), 200L))
             )
         ).times(4);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
@@ -2350,7 +2242,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
             DATASOURCE,
             new RocketMQDataSourceMetadata(
                 // Only one partition is reset in a single supervisor run.
-                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 2), 200L))
+                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 2), 200L))
             )
         )
     ).andReturn(true);
@@ -2368,7 +2260,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -2376,10 +2268,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2390,10 +2282,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 0), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2404,10 +2296,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 0), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2440,10 +2332,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
 
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -2472,7 +2364,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   public void testNoDataIngestionTasks()
   {
     final DateTime startTime = DateTimes.nowUtc();
-    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     supervisor.getStateManager().markRunFinished();
 
@@ -2481,10 +2373,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2495,10 +2387,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2509,10 +2401,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2543,7 +2435,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
 
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -2576,7 +2468,24 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   public void testCheckpointForInactiveTaskGroup()
       throws InterruptedException
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    RocketMQRecordSupplier supervisorRecordSupplier = createMock(RocketMQRecordSupplier.class);
+    supervisorRecordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(topic))
+        .andReturn(ImmutableSet.of(PartitionUtil.genPartition(BROKER_NAME, 0), PartitionUtil.genPartition(BROKER_NAME, 1), PartitionUtil.genPartition(BROKER_NAME, 2)))
+        .anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getAssignment())
+        .andReturn(ImmutableSet.of(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)), StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1)), StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 2))))
+        .anyTimes();
+    supervisorRecordSupplier.seekToLatest(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn(0l).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)))).andReturn(10l).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1)))).andReturn(2l).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 2)))).andReturn(2l).anyTimes();
+    supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyLong());
+    EasyMock.expectLastCall().anyTimes();
+    supervisor = getTestableSupervisor(2, 1, true, "PT10S", null, null, supervisorRecordSupplier);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     supervisor.getStateManager().markRunFinished();
 
@@ -2585,10 +2494,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2599,10 +2508,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2613,10 +2522,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2655,7 +2564,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
 
     final TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -2695,17 +2604,17 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   public void testCheckpointForUnknownTaskGroup()
       throws InterruptedException
   {
-    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     //not adding any events
     final RocketMQIndexTask id1 = createRocketMQIndexTask(
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2716,10 +2625,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2730,10 +2639,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             topic,
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2789,7 +2698,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   @Test
   public void testSuspendedNoRunningTasks() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true, rocketmqHost);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true, rocketmqHost, null);
     addSomeEvents(1);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2822,7 +2731,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true, rocketmqHost);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true, rocketmqHost, null);
     final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
@@ -2830,10 +2739,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L, PartitionUtil.genPartition(brokerName, 2), 0L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2844,10 +2753,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2858,10 +2767,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         "id3",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 1), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 1), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -2897,11 +2806,11 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
 
     // getCheckpoints will not be called for id1 as it is in publishing state
     TreeMap<Integer, Map<String, Long>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L));
+    checkpoints.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints))
         .times(1);
@@ -2912,8 +2821,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
     EasyMock.expect(taskClient.pauseAsync("id2"))
-        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 25L, PartitionUtil.genPartition(brokerName, 2), 30L)));
-    EasyMock.expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 25L, PartitionUtil.genPartition(brokerName, 2), 30L), true))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 25L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)));
+    EasyMock.expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 25L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L), true))
         .andReturn(Futures.immediateFuture(true));
     taskQueue.shutdown("id3", "Killing task for graceful shutdown");
     EasyMock.expectLastCall().times(1);
@@ -2936,7 +2845,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true, rocketmqHost);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true, rocketmqHost, null);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -2950,120 +2859,15 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testFailedInitializationAndRecovery() throws Exception
-  {
-    // Block the supervisor initialization with a bad hostname config, make sure this doesn't block the lifecycle
-    supervisor = getTestableSupervisor(
-        1,
-        1,
-        true,
-        "PT1H",
-        null,
-        null,
-        false,
-        StringUtils.format("badhostname:%d", rocketmqServer.getPort())
-    );
-    final RocketMQSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
-    addSomeEvents(1);
-
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
-        new RocketMQDataSourceMetadata(
-            null
-        )
-    ).anyTimes();
-
-    replayAll();
-
-    supervisor.start();
-
-    Assert.assertTrue(supervisor.isLifecycleStarted());
-    Assert.assertFalse(supervisor.isStarted());
-
-    verifyAll();
-
-    while (supervisor.getInitRetryCounter() < 3) {
-      Thread.sleep(1000);
-    }
-
-    // Portion below is the same test as testNoInitialState(), testing the supervisor after the initialiation is fixed
-    resetAll();
-
-    Capture<RocketMQIndexTask> captured = Capture.newInstance();
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
-        new RocketMQDataSourceMetadata(
-            null
-        )
-    ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
-    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    replayAll();
-
-    // Fix the bad hostname during the initialization retries and finish the supervisor start.
-    // This is equivalent to supervisor.start() in testNoInitialState().
-    // The test supervisor has a P1D period, so we need to manually trigger the initialization retry.
-    supervisor.getIoConfig().getConsumerProperties().put("nameserver.url", rocketmqHost);
-    supervisor.tryInit();
-
-    Assert.assertTrue(supervisor.isLifecycleStarted());
-    Assert.assertTrue(supervisor.isStarted());
-
-    supervisor.runInternal();
-    verifyAll();
-
-    RocketMQIndexTask task = captured.getValue();
-    Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
-
-    RocketMQIndexTaskIOConfig taskConfig = task.getIOConfig();
-    Assert.assertEquals(rocketmqHost, taskConfig.getConsumerProperties().get("nameserver.url"));
-    Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
-    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
-    Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
-
-    Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
-        0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
-    );
-    Assert.assertEquals(
-        0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
-    );
-    Assert.assertEquals(
-        0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
-    );
-
-    Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
-        Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 0)).longValue()
-    );
-    Assert.assertEquals(
-        Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 1)).longValue()
-    );
-    Assert.assertEquals(
-        Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(PartitionUtil.genPartition(brokerName, 2)).longValue()
-    );
-  }
-
-  @Test
   public void testGetCurrentTotalStats()
   {
-    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, rocketmqHost);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, rocketmqHost, null);
+    supervisor.setPartitionIdsForTests(
+        ImmutableList.of(PartitionUtil.genPartition(BROKER_NAME, 0), PartitionUtil.genPartition(BROKER_NAME, 1))
+    );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(PartitionUtil.genPartition(brokerName, 0)),
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L),
+        supervisor.getTaskGroupIdForPartition(PartitionUtil.genPartition(BROKER_NAME, 0)),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L),
         Optional.absent(),
         Optional.absent(),
         ImmutableSet.of("task1"),
@@ -3071,8 +2875,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition(PartitionUtil.genPartition(brokerName, 1)),
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L),
+        supervisor.getTaskGroupIdForPartition(PartitionUtil.genPartition(BROKER_NAME, 1)),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L),
         Optional.absent(),
         Optional.absent(),
         ImmutableSet.of("task2"),
@@ -3115,7 +2919,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         new Period("P1D"),
         false,
-        true
+        true,
+        null
     );
 
     addSomeEvents(1);
@@ -3126,12 +2931,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
             ImmutableSet.of()
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         null,
         null,
@@ -3162,7 +2967,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true);
 
     TreeMap<Integer, Map<String, Long>> checkpoints1 = new TreeMap<>();
-    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L));
+    checkpoints1.put(0, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L));
 
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
         .andReturn(Futures.immediateFuture(checkpoints1))
@@ -3188,7 +2993,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         new Period("P1D"),
         false,
-        false
+        false,
+        null
     );
 
     addSomeEvents(1);
@@ -3199,10 +3005,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
             ImmutableSet.of()
         ),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)),
         null,
         null,
         supervisor.getTuningConfig()
@@ -3284,7 +3090,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         42,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
         Optional.of(minMessageTime),
         Optional.of(maxMessageTime),
         ImmutableSet.of("id1", "id2", "id3", "id4"),
@@ -3327,12 +3133,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
             ImmutableSet.of()
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         minMessageTime,
         maxMessageTime,
@@ -3345,12 +3151,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
             ImmutableSet.of()
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         minMessageTime,
         maxMessageTime,
@@ -3363,12 +3169,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 0L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 0L),
             ImmutableSet.of()
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         minMessageTime,
         maxMessageTime,
@@ -3381,12 +3187,12 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         0,
         new SeekableStreamStartSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 2), 6L),
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 2), 6L),
             ImmutableSet.of()
         ),
         new SeekableStreamEndSequenceNumbers<>(
             "topic",
-            ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE, PartitionUtil.genPartition(brokerName, 2), Long.MAX_VALUE)
+            ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE, PartitionUtil.genPartition(BROKER_NAME, 2), Long.MAX_VALUE)
         ),
         minMessageTime,
         maxMessageTime,
@@ -3422,7 +3228,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     producer.start();
     for (int i = 0; i < NUM_PARTITIONS; i++) {
       for (int j = 0; j < numEventsPerPartition; j++) {
-        producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, brokerName, i)).getMsgId();
+        producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, BROKER_NAME, i)).getMsgId();
       }
     }
     producer.shutdown();
@@ -3434,7 +3240,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     producer.start();
     for (int i = 0; i < NUM_PARTITIONS; i++) {
       for (int j = 0; j < numEventsPerPartition; j++) {
-        producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, brokerName, i)).getMsgId();
+        producer.send(new Message(topic, "TagA", StringUtils.toUtf8(StringUtils.format("event-%d", j))), new MessageQueue(topic, BROKER_NAME, i)).getMsgId();
       }
     }
     producer.shutdown();
@@ -3447,7 +3253,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       boolean useEarliestOffset,
       String duration,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod
+      Period earlyMessageRejectionPeriod,
+      RocketMQRecordSupplier supplier
   )
   {
     return getTestableSupervisor(
@@ -3457,7 +3264,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         false,
         duration,
         lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod
+        earlyMessageRejectionPeriod,
+        supplier
     );
   }
 
@@ -3468,7 +3276,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       boolean resetOffsetAutomatically,
       String duration,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod
+      Period earlyMessageRejectionPeriod,
+      RocketMQRecordSupplier supplier
   )
   {
     return getTestableSupervisor(
@@ -3480,7 +3289,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         false,
-        rocketmqHost
+        rocketmqHost,
+        supplier
     );
   }
 
@@ -3492,7 +3302,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      String rocketmqHost
+      String rocketmqHost,
+      RocketMQRecordSupplier supplier
   )
   {
     return getTestableSupervisor(
@@ -3504,7 +3315,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         suspended,
-        rocketmqHost
+        rocketmqHost,
+        supplier
     );
   }
 
@@ -3517,7 +3329,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      String rocketmqHost
+      String rocketmqHost,
+      RocketMQRecordSupplier supplier
   )
   {
     final Map<String, Object> consumerProperties = RocketMQConsumerConfigs.getConsumerProperties();
@@ -3614,7 +3427,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
             rowIngestionMetersFactory,
             new SupervisorStateManagerConfig()
         ),
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        supplier
     );
   }
 
@@ -3629,7 +3443,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      boolean isTaskCurrentReturn
+      boolean isTaskCurrentReturn,
+      RocketMQRecordSupplier supplier
   )
   {
     Map<String, Object> consumerProperties = new HashMap<>();
@@ -3728,7 +3543,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
             supervisorConfig
         ),
         rowIngestionMetersFactory,
-        isTaskCurrentReturn
+        isTaskCurrentReturn,
+        supplier
     );
   }
 
@@ -3958,6 +3774,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
   private static class TestableRocketMQSupervisor extends RocketMQSupervisor
   {
     private final Map<String, Object> consumerProperties;
+    private RocketMQRecordSupplier supplier;
 
     public TestableRocketMQSupervisor(
         TaskStorage taskStorage,
@@ -3966,7 +3783,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         RocketMQIndexTaskClientFactory taskClientFactory,
         ObjectMapper mapper,
         RocketMQSupervisorSpec spec,
-        RowIngestionMetersFactory rowIngestionMetersFactory
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        RocketMQRecordSupplier supplier
     )
     {
       super(
@@ -3979,18 +3797,22 @@ public class RocketMQSupervisorTest extends EasyMockSupport
           rowIngestionMetersFactory
       );
       this.consumerProperties = spec.getIoConfig().getConsumerProperties();
+      this.supplier = supplier;
     }
 
     @Override
     protected RecordSupplier<String, Long, RocketMQRecordEntity> setupRecordSupplier()
     {
-      final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
-      consumerConfigs.put("metadata.max.age.ms", "1");
-      DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
-      consumer.setNamesrvAddr(consumerProperties.get("nameserver.url").toString());
-      return new RocketMQRecordSupplier(
-          consumer
-      );
+      if (this.supplier == null) {
+        final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
+        consumerConfigs.put("metadata.max.age.ms", "1");
+        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
+        consumer.setNamesrvAddr(consumerProperties.get("nameserver.url").toString());
+        return new RocketMQRecordSupplier(
+            consumer
+        );
+      }
+      return this.supplier;
     }
 
     @Override
@@ -4024,7 +3846,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         ObjectMapper mapper,
         RocketMQSupervisorSpec spec,
         RowIngestionMetersFactory rowIngestionMetersFactory,
-        boolean isTaskCurrentReturn
+        boolean isTaskCurrentReturn,
+        RocketMQRecordSupplier supplier
     )
     {
       super(
@@ -4034,7 +3857,8 @@ public class RocketMQSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          supplier
       );
       this.isTaskCurrentReturn = isTaskCurrentReturn;
     }

@@ -65,7 +65,7 @@ public class RocketMQSamplerSpecTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
       new TimestampSpec("timestamp", "iso", null),
@@ -93,11 +93,11 @@ public class RocketMQSamplerSpecTest extends InitializedNullHandlingTest
   private static List<Pair<MessageQueue, Message>> generateRecords(String topic)
   {
     return ImmutableList.of(
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2008", "a", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable")))
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2008", "a", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable")))
     );
   }
 
@@ -284,7 +284,8 @@ public class RocketMQSamplerSpecTest extends InitializedNullHandlingTest
               .put("met1", met1)
               .build()
       );
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }

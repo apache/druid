@@ -83,7 +83,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   private static final Duration TEST_HTTP_TIMEOUT = new Duration(5000);
   private static final long TEST_NUM_RETRIES = 0;
   private static final String URL_FORMATTER = "http://%s:%d/druid/worker/v1/chat/%s/%s";
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
 
 
   private final int numThreads;
@@ -281,8 +281,8 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(brokerName, 1)));
+    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 1)));
   }
 
   @Test
@@ -323,8 +323,8 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     }
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(brokerName, 1)));
+    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 1)));
   }
 
   @Test
@@ -381,8 +381,8 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(brokerName, 1)));
+    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 1)));
   }
 
   @Test
@@ -479,8 +479,8 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(brokerName, 1)));
+    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 1)));
   }
 
   @Test
@@ -544,8 +544,8 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     );
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(brokerName, 0)));
-    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(brokerName, 1)));
+    Assert.assertEquals(1, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 0)));
+    Assert.assertEquals(10, (long) results.get(PartitionUtil.genPartition(BROKER_NAME, 1)));
   }
 
   @Test
@@ -577,7 +577,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsets() throws Exception
   {
-    Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 120L);
+    Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -606,7 +606,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAndResume() throws Exception
   {
-    Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 120L);
+    Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -789,7 +789,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L)), responses.get(i));
     }
   }
 
@@ -901,7 +901,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L)), responses.get(i));
     }
   }
 
@@ -938,14 +938,14 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L)), responses.get(i));
     }
   }
 
   @Test
   public void testSetEndOffsetsAsync() throws Exception
   {
-    final Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 120L);
+    final Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -988,7 +988,7 @@ public class RocketMQIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAsyncWithResume() throws Exception
   {
-    final Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 120L);
+    final Map<String, Long> endOffsets = ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();

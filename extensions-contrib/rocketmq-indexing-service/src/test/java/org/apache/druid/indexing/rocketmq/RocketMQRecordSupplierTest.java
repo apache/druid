@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.indexing.rocketmq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +54,7 @@ import java.util.stream.Collectors;
 public class RocketMQRecordSupplierTest
 {
   private static String topic = "topic";
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
   private static int topicPosFix = 0;
@@ -49,20 +68,20 @@ public class RocketMQRecordSupplierTest
   private static List<Pair<MessageQueue, Message>> generateRecords(String topic)
   {
     return ImmutableList.of(
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2008", "a", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2011", "d", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2011", "e", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable2"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2013", "f", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jb("2049", "f", "y", "10", "notanumber", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jb("2049", "f", "y", "10", "20.0", "notanumber"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jb("2012", "g", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jb("2011", "h", "y", "10", "20.0", "1.0")))
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2008", "a", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2009", "b", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2010", "c", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2011", "d", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2011", "e", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable2"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2013", "f", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jb("2049", "f", "y", "10", "notanumber", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jb("2049", "f", "y", "10", "20.0", "notanumber"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jb("2012", "g", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jb("2011", "h", "y", "10", "20.0", "1.0")))
     );
   }
 
@@ -79,7 +98,8 @@ public class RocketMQRecordSupplierTest
               .put("met1", met1)
               .build()
       );
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
@@ -143,8 +163,8 @@ public class RocketMQRecordSupplierTest
     insertData();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0)),
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1))
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1))
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
@@ -155,7 +175,7 @@ public class RocketMQRecordSupplierTest
     recordSupplier.assign(partitions);
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(PartitionUtil.genPartition(brokerName, 0), PartitionUtil.genPartition(brokerName, 1)), recordSupplier.getPartitionIds(topic));
+    Assert.assertEquals(ImmutableSet.of(PartitionUtil.genPartition(BROKER_NAME, 0), PartitionUtil.genPartition(BROKER_NAME, 1)), recordSupplier.getPartitionIds(topic));
 
     recordSupplier.close();
   }
@@ -168,8 +188,8 @@ public class RocketMQRecordSupplierTest
     insertData();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0)),
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1))
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1))
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
@@ -207,8 +227,8 @@ public class RocketMQRecordSupplierTest
     producer.shutdown();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0)),
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1))
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1))
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
@@ -243,20 +263,20 @@ public class RocketMQRecordSupplierTest
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
 
     final int initialRecordsPartition0Size = initialRecords.stream()
-        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(brokerName, 0)))
+        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(BROKER_NAME, 0)))
         .collect(Collectors.toSet())
         .size();
     final int initialRecordsPartition1Size = initialRecords.stream()
-        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(brokerName, 1)))
+        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(BROKER_NAME, 1)))
         .collect(Collectors.toSet())
         .size();
 
     final int polledRecordsPartition0Size = polledRecords.stream()
-        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(brokerName, 0)))
+        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(BROKER_NAME, 0)))
         .collect(Collectors.toSet())
         .size();
     final int polledRecordsPartition1Size = polledRecords.stream()
-        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(brokerName, 1)))
+        .filter(r -> r.getPartitionId().equals(PartitionUtil.genPartition(BROKER_NAME, 1)))
         .collect(Collectors.toSet())
         .size();
 
@@ -272,22 +292,22 @@ public class RocketMQRecordSupplierTest
     // Insert data
     insertData();
 
-    StreamPartition<String> partition0 = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
-    StreamPartition<String> partition1 = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1));
+    StreamPartition<String> partition0 = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
+    StreamPartition<String> partition1 = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1));
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0)),
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1))
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1))
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
-//    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.seekToEarliest(partitions);
 
-//    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
-//    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
+    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
+    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
 
     recordSupplier.seek(partition0, 2L);
     recordSupplier.seek(partition1, 2L);
@@ -315,22 +335,22 @@ public class RocketMQRecordSupplierTest
     // Insert data
     insertData();
 
-    StreamPartition<String> partition0 = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
-    StreamPartition<String> partition1 = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1));
+    StreamPartition<String> partition0 = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
+    StreamPartition<String> partition1 = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1));
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0)),
-        StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 1))
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
+        StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1))
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
-//    recordSupplier.seekToEarliest(partitions);
-//
-//    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
-//    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
+    recordSupplier.seekToEarliest(partitions);
+
+    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
+    Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
 
     recordSupplier.seekToLatest(partitions);
     List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> polledRecords = recordSupplier.poll(poll_timeout_millis);
@@ -344,7 +364,7 @@ public class RocketMQRecordSupplierTest
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
-    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
+    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -356,7 +376,7 @@ public class RocketMQRecordSupplierTest
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
-    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
+    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -368,7 +388,7 @@ public class RocketMQRecordSupplierTest
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
-    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
+    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
@@ -380,7 +400,7 @@ public class RocketMQRecordSupplierTest
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
         rocketmqServer.consumerProperties(), OBJECT_MAPPER);
-    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(brokerName, 0));
+    StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);

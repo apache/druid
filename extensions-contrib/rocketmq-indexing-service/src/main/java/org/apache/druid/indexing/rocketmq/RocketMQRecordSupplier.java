@@ -88,12 +88,12 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     try {
       if (!consumer.isRunning()) {
         consumer.start();
-        clientInstance = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer);
       }
     }
     catch (MQClientException e) {
       log.error(e.getErrorMessage());
     }
+    clientInstance = MQClientManager.getInstance().getOrCreateMQClientInstance(consumer);
   }
 
   @Override
@@ -194,7 +194,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public Long getPosition(StreamPartition<String> partition)
   {
     MessageQueue mq = PartitionUtil.genMessageQueue(partition.getStream(), partition.getPartitionId());
-    return consumer.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
+    return consumer.getOffsetStore().readOffset(mq, ReadOffsetType.READ_FROM_STORE);
   }
 
   @Override
@@ -211,8 +211,10 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     catch (MQClientException e) {
       log.error(e.getErrorMessage());
     }
-    for (MessageQueue messageQueue : messageQueues) {
-      partitionIds.add(PartitionUtil.genPartition(messageQueue));
+    if (messageQueues != null) {
+      for (MessageQueue messageQueue : messageQueues) {
+        partitionIds.add(PartitionUtil.genPartition(messageQueue));
+      }
     }
     return partitionIds;
   }

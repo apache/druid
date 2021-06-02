@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorIOConfig;
-import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
+import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorIOConfig;
+import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
 
 import javax.annotation.Nullable;

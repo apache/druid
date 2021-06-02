@@ -31,14 +31,14 @@ import java.util.Map;
 
 public class RocketMQDataSourceMetadataTest
 {
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
   private static final RocketMQDataSourceMetadata START0 = startMetadata(ImmutableMap.of());
-  private static final RocketMQDataSourceMetadata START1 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 3L));
-  private static final RocketMQDataSourceMetadata START2 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L));
-  private static final RocketMQDataSourceMetadata START3 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 2), 5L));
+  private static final RocketMQDataSourceMetadata START1 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 3L));
+  private static final RocketMQDataSourceMetadata START2 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L));
+  private static final RocketMQDataSourceMetadata START3 = startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L));
   private static final RocketMQDataSourceMetadata END0 = endMetadata(ImmutableMap.of());
-  private static final RocketMQDataSourceMetadata END1 = endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 2), 5L));
-  private static final RocketMQDataSourceMetadata END2 = endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L));
+  private static final RocketMQDataSourceMetadata END1 = endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L));
+  private static final RocketMQDataSourceMetadata END2 = endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L));
 
   @Test
   public void testMatches()
@@ -89,37 +89,37 @@ public class RocketMQDataSourceMetadataTest
   public void testPlus()
   {
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 3L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 3L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START1.plus(START3)
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START0.plus(START2)
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START1.plus(START2)
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 3L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 3L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START2.plus(START1)
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START2.plus(START2)
     );
 
     Assert.assertEquals(
-        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         END0.plus(END1)
     );
 
     Assert.assertEquals(
-        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 4L, PartitionUtil.genPartition(brokerName, 2), 5L)),
+        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 4L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         END1.plus(END2)
     );
   }
@@ -128,7 +128,7 @@ public class RocketMQDataSourceMetadataTest
   public void testMinus()
   {
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 3L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 3L)),
         START1.minus(START3)
     );
 
@@ -143,7 +143,7 @@ public class RocketMQDataSourceMetadataTest
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 2), 5L)),
+        startMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         START2.minus(START1)
     );
 
@@ -153,12 +153,12 @@ public class RocketMQDataSourceMetadataTest
     );
 
     Assert.assertEquals(
-        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 4L)),
+        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 4L)),
         END2.minus(END1)
     );
 
     Assert.assertEquals(
-        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 2), 5L)),
+        endMetadata(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
         END1.minus(END2)
     );
   }

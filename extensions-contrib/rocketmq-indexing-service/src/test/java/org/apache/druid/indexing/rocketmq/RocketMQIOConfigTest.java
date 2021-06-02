@@ -49,7 +49,7 @@ import java.util.Map;
 public class RocketMQIOConfigTest
 {
   private final ObjectMapper mapper;
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
 
 
   public RocketMQIOConfigTest()
@@ -84,9 +84,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -117,9 +117,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -153,9 +153,9 @@ public class RocketMQIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 15L, PartitionUtil.genPartition(brokerName, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
@@ -314,8 +314,8 @@ public class RocketMQIOConfigTest
         "baseSequenceNamee",
         null,
         null,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 10L, PartitionUtil.genPartition(brokerName, 2), 5L), null),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L)),
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L), null),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)),
         ImmutableMap.of("consumer", "properties"),
         100L,
         true,
@@ -349,8 +349,8 @@ public class RocketMQIOConfigTest
     final OldRocketMQIndexTaskIoConfig oldConfig = new OldRocketMQIndexTaskIoConfig(
         0,
         "baseSequenceNamee",
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 10L, PartitionUtil.genPartition(brokerName, 2), 5L)),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L)),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)),
         ImmutableMap.of("consumer", "properties"),
         100L,
         true,

@@ -33,7 +33,7 @@ import java.io.IOException;
 
 public class RocketMQCheckpointDataSourceMetadataSerdeTest
 {
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   @Test
@@ -45,7 +45,7 @@ public class RocketMQCheckpointDataSourceMetadataSerdeTest
         new RocketMQDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
-                ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L),
+                ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L),
                 ImmutableSet.of()
             )
         );
@@ -141,7 +141,7 @@ public class RocketMQCheckpointDataSourceMetadataSerdeTest
         new RocketMQDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
-                ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 20L, PartitionUtil.genPartition(brokerName, 2), 30L),
+                ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L),
                 ImmutableSet.of()
             )
         );

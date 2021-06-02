@@ -27,6 +27,11 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.rocketmq.RocketMQDataSourceMetadata;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTask;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTaskClientFactory;
@@ -34,11 +39,6 @@ import org.apache.druid.indexing.rocketmq.RocketMQIndexTaskIOConfig;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTaskTuningConfig;
 import org.apache.druid.indexing.rocketmq.RocketMQRecordSupplier;
 import org.apache.druid.indexing.rocketmq.RocketMQSequenceNumber;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -371,16 +371,11 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, R
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());
 
-      recordSupplier.seekToLatest(partitions);
-
       // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
       // because we currently only have record lag for rocketmq, which can be lazily computed by subtracting the highest
       // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream =
-          partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
-    }
-    catch (InterruptedException e) {
-      throw new StreamException(e);
+          partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getLatestSequenceNumber));
     }
     finally {
       getRecordSupplierLock().unlock();

@@ -178,7 +178,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
   private static final Logger log = new Logger(RocketMQIndexTaskTest.class);
   private static final long POLL_RETRY_MS = 100;
-  private static final String brokerName = "broker-a";
+  private static final String BROKER_NAME = "broker-a";
 
   private static ServiceEmitter emitter;
   private static int topicPostfix;
@@ -225,39 +225,39 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static List<Pair<MessageQueue, Message>> generateRecords(String topic)
   {
     return ImmutableList.of(
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2008", "a", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2009", "b", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2010", "c", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "d", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "e", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2013", "f", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "10", "notanumber", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "10", "20.0", "notanumber"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jbb("2012", "g", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 1), new Message(topic, "TagA", jbb("2011", "h", "y", "10", "20.0", "1.0")))
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2008", "a", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2009", "b", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2010", "c", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "d", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "e", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8("unparseable"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2013", "f", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "notanumber", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "10", "notanumber", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2049", "f", "y", "10", "20.0", "notanumber"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jbb("2012", "g", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 1), new Message(topic, "TagA", jbb("2011", "h", "y", "10", "20.0", "1.0")))
     );
   }
 
   private static List<Pair<MessageQueue, Message>> generateSinglePartitionRecords(String topic)
   {
     return ImmutableList.of(
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2008", "a", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2009", "b", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2010", "c", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "d", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "D", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2012", "e", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2009", "B", "y", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2008", "A", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2009", "B", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2010", "C", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "D", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2011", "d", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2012", "E", "x", "10", "20.0", "1.0"))),
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb("2009", "b", "x", "10", "20.0", "1.0")))
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2008", "a", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2009", "b", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2010", "c", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "d", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "D", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2012", "e", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2009", "B", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2008", "A", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2009", "B", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2010", "C", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "D", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2011", "d", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2012", "E", "x", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb("2009", "b", "x", "10", "20.0", "1.0")))
     );
   }
 
@@ -351,8 +351,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -390,7 +390,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -406,8 +406,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -438,7 +438,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -455,8 +455,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -486,7 +486,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -501,8 +501,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 11L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 11L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -557,22 +557,22 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L),
         ImmutableSet.of()
     );
     // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
     // of events fetched across two partitions from RocketMQ
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint1 = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L, PartitionUtil.genPartition(brokerName, 1), 0L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L)
     );
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint2 = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 4L, PartitionUtil.genPartition(brokerName, 1), 2L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 4L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L)
     );
     final SeekableStreamEndSequenceNumbers<String, Long> endPartitions = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 2L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L)
     );
     final RocketMQIndexTask task = createTask(
         null,
@@ -632,7 +632,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 2L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L))
         ),
         newDataSchemaMetadata()
     );
@@ -662,21 +662,21 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L),
         ImmutableSet.of()
     );
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint1 = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 3L, PartitionUtil.genPartition(brokerName, 1), 0L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 3L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L)
     );
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint2 = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 8L, PartitionUtil.genPartition(brokerName, 1), 0L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 8L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L)
     );
 
     final SeekableStreamEndSequenceNumbers<String, Long> endPartitions = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 8L, PartitionUtil.genPartition(brokerName, 1), 2L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 8L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L)
     );
     final RocketMQIndexTask task = createTask(
         null,
@@ -765,14 +765,14 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 8L, PartitionUtil.genPartition(brokerName, 1), 2L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 8L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L))
         ),
         newDataSchemaMetadata()
     );
 
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 8L, PartitionUtil.genPartition(brokerName, 1), 2L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 8L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L))
         ),
         newDataSchemaMetadata()
     );
@@ -793,17 +793,17 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 0L),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L),
         ImmutableSet.of()
     );
     // Checkpointing will happen at checkpoint
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 1L, PartitionUtil.genPartition(brokerName, 1), 0L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L)
     );
     final SeekableStreamEndSequenceNumbers<String, Long> endPartitions = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 0L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L)
     );
     final RocketMQIndexTask task = createTask(
         null,
@@ -857,7 +857,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 0L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L))
         ),
         newDataSchemaMetadata()
     );
@@ -883,13 +883,13 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     consumerProps.put("pull.batch.size", "1");
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions =
-        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of());
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of());
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint1 =
-        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L));
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L));
     final SeekableStreamEndSequenceNumbers<String, Long> checkpoint2 =
-        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L));
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 9L));
     final SeekableStreamEndSequenceNumbers<String, Long> endPartitions =
-        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), Long.MAX_VALUE));
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), Long.MAX_VALUE));
 
     final RocketMQIndexTask normalReplica = createTask(
         null,
@@ -979,8 +979,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1017,7 +1017,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -1030,8 +1030,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1069,7 +1069,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -1090,8 +1090,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1123,7 +1123,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors);
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
 
@@ -1143,8 +1143,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1181,8 +1181,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1211,7 +1211,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -1230,8 +1230,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1261,7 +1261,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))
         ),
         newDataSchemaMetadata()
     );
@@ -1284,8 +1284,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 7L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 7L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1325,8 +1325,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 11L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 11L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1356,7 +1356,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 11L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 11L))),
         newDataSchemaMetadata()
     );
 
@@ -1402,8 +1402,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1463,8 +1463,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1478,8 +1478,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1517,7 +1517,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -1530,8 +1530,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1545,8 +1545,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             1,
             "sequence1",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 3L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 3L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1585,7 +1585,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -1598,8 +1598,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L, PartitionUtil.genPartition(brokerName, 1), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L, PartitionUtil.genPartition(brokerName, 1), 2L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L, PartitionUtil.genPartition(BROKER_NAME, 1), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1633,7 +1633,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L, PartitionUtil.genPartition(brokerName, 1), 2L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L))
         ),
         newDataSchemaMetadata()
     );
@@ -1647,8 +1647,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1662,8 +1662,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             1,
             "sequence1",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 1), 1L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 1L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1702,7 +1702,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new RocketMQDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L, PartitionUtil.genPartition(brokerName, 1), 1L))
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L, PartitionUtil.genPartition(BROKER_NAME, 1), 1L))
         ),
         newDataSchemaMetadata()
     );
@@ -1716,8 +1716,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 6L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1755,8 +1755,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 6L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1797,7 +1797,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 6L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L))),
         newDataSchemaMetadata()
     );
   }
@@ -1815,8 +1815,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 9L)),
             consumerProps,
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1828,8 +1828,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SeekableStreamStartSequenceNumbers<String, Long> checkpoint = new SeekableStreamStartSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L),
-        ImmutableSet.of(PartitionUtil.genPartition(brokerName, 0))
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L),
+        ImmutableSet.of(PartitionUtil.genPartition(BROKER_NAME, 0))
     );
 
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
@@ -1848,7 +1848,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final Map<String, Long> currentOffsets = ImmutableMap.copyOf(task1.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
     // Set endOffsets to persist sequences
-    task1.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L), false);
+    task1.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L), false);
 
     // Stop without publishing segment
     task1.stopGracefully(toolboxFactory.build(task1).getConfig());
@@ -1862,8 +1862,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 9L)),
             consumerProps,
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1909,7 +1909,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 9L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 9L))),
         newDataSchemaMetadata()
     );
   }
@@ -1922,8 +1922,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 6L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -1968,7 +1968,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     try {
       future.get(10, TimeUnit.SECONDS);
       Assert.fail("Task completed when it should have been paused");
-    } catch (TimeoutException e) {
+    }
+    catch (TimeoutException e) {
       // carry on..
     }
 
@@ -1993,7 +1994,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 6L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 6L))),
         newDataSchemaMetadata()
     );
   }
@@ -2006,8 +2007,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2042,8 +2043,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 200L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 500L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 200L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 500L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2062,7 +2063,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     for (int i = 0; i < 5; i++) {
       Assert.assertEquals(Status.READING, task.getRunner().getStatus());
       // Offset should not be reset
-      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(PartitionUtil.genPartition(brokerName, 0)));
+      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
     }
   }
 
@@ -2075,7 +2076,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final TreeMap<Integer, Map<String, Long>> sequences = new TreeMap<>();
     // Here the sequence number is 1 meaning that one incremental handoff was done by the failed task
     // and this task should start reading from offset 2 for partition 0
-    sequences.put(1, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L));
+    sequences.put(1, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L));
     final Map<String, Object> context = new HashMap<>();
     context.put(
         SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY,
@@ -2088,8 +2089,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
             0,
             "sequence0",
             // task should ignore these and use sequence info sent in the context
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2119,7 +2120,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L))),
         newDataSchemaMetadata()
     );
   }
@@ -2135,8 +2136,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 200L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 500L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 200L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 500L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2154,12 +2155,12 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // first setEndOffsets request
     task.getRunner().pause();
-    task.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 500L), true);
+    task.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 500L), true);
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
     // duplicate setEndOffsets request
     task.getRunner().pause();
-    task.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 500L), true);
+    task.getRunner().setEndOffsets(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 500L), true);
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
   }
 
@@ -2177,13 +2178,13 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final SeekableStreamStartSequenceNumbers<String, Long> startPartitions = new SeekableStreamStartSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L, PartitionUtil.genPartition(brokerName, 1), 1L),
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L, PartitionUtil.genPartition(BROKER_NAME, 1), 1L),
         ImmutableSet.of()
     );
 
     final SeekableStreamEndSequenceNumbers<String, Long> endPartitions = new SeekableStreamEndSequenceNumbers<>(
         topic,
-        ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 10L, PartitionUtil.genPartition(brokerName, 1), 2L)
+        ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 10L, PartitionUtil.genPartition(BROKER_NAME, 1), 2L)
     );
 
     final RocketMQIndexTask task = createTask(
@@ -2213,8 +2214,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 5L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 5L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2591,13 +2592,13 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     List<Pair<MessageQueue, Message>> producerRecords = ImmutableList.of(
         // pretty formatted
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb(true, "2049", "d1", "y", "10", "20.0", "1.0"))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb(true, "2049", "d1", "y", "10", "20.0", "1.0"))),
         //well-formed
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8(wellformed))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8(wellformed))),
         //ill-formed
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", StringUtils.toUtf8(illformed))),
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", StringUtils.toUtf8(illformed))),
         //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
-        new Pair<>(new MessageQueue(topic, brokerName, 0), new Message(topic, "TagA", jbb(true, "2049", "d7", "y", "10", "20.0", "1.0")))
+        new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb(true, "2049", "d7", "y", "10", "20.0", "1.0")))
     );
 
     producer.start();
@@ -2611,8 +2612,8 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new RocketMQIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 0L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 4L)),
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 4L)),
             rocketmqServer.consumerProperties(),
             RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -2642,7 +2643,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         publishedDescriptors()
     );
     Assert.assertEquals(
-        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(brokerName, 0), 4L))),
+        new RocketMQDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 4L))),
         newDataSchemaMetadata()
     );
   }
