@@ -547,6 +547,16 @@ public class BatchAppenderator implements Appenderator
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
     final Sink sink = sinks.get(identifier);
+    SinkMetadata sm = sinksMetadata.remove(identifier);
+    if (sm != null) {
+      int originalTotalRows = getTotalRowCount();
+      int rowsToDrop = sm.getNumRowsInSegment();
+      int totalRowsAfter = originalTotalRows - rowsToDrop;
+      if (totalRowsAfter < 0) {
+        log.warn("Total rows[%d] after dropping segment[%s] rows [%d]", totalRowsAfter, identifier, rowsToDrop);
+      }
+      totalRows.set(Math.max(originalTotalRows - rowsToDrop,0);
+    }
     if (sink != null) {
       return removeSink(identifier, sink, true);
     } else {
