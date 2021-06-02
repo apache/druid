@@ -22,6 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -30,9 +31,11 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
 {
+  private static final Logger log = new Logger(CustomExceptionMapper.class);
   @Override
   public Response toResponse(JsonMappingException exception)
   {
+    log.debug(exception, "Mapping failure");
     return Response.status(Response.Status.BAD_REQUEST)
                    .entity(ImmutableMap.of(
                        "error",
