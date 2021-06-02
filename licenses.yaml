@@ -603,6 +603,26 @@ libraries:
 
 ---
 
+name: Apache Commons Configuration
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.1.1
+libraries:
+  - org.apache.commons: commons-configuration2
+
+---
+
+name: Apache Commons Text
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.4
+libraries:
+  - org.apache.commons: commons-text
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -1979,6 +1999,17 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
+version: 9.4.20.v20190813
+libraries:
+  - org.eclipse.jetty: jetty-xml
+  - org.eclipse.jetty: jetty-webapp
+
+---
+
+name: Jetty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
 version: 9.4.40.v20210413
 libraries:
   - org.eclipse.jetty: jetty-client
@@ -2112,6 +2143,30 @@ notice: |
   Permission to use, copy, modify and distribute UnixCrypt
   for non-commercial or commercial purposes and without fee is
   granted provided that the copyright notice appears in all copies.
+
+---
+
+name: Kerby
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - org.apache.kerby: kerb-admin
+  - org.apache.kerby: kerb-client
+  - org.apache.kerby: kerb-common
+  - org.apache.kerby: kerb-core
+  - org.apache.kerby: kerb-crypto
+  - org.apache.kerby: kerb-identity
+  - org.apache.kerby: kerb-server
+  - org.apache.kerby: kerb-simplekdc
+  - org.apache.kerby: kerb-util
+  - org.apache.kerby: kerby-asn1
+  - org.apache.kerby: kerby-config
+  - org.apache.kerby: kerby-pkix
+  - org.apache.kerby: kerby-util
+  - org.apache.kerby: kerby-xdr
+  - org.apache.kerby: token-provider
 
 ---
 
@@ -2386,6 +2441,8 @@ libraries:
   - org.apache.hadoop: hadoop-annotations
   - org.apache.hadoop: hadoop-client-api
   - org.apache.hadoop: hadoop-client-runtime
+  - org.apache.hadoop: hadoop-auth
+  - org.apache.hadoop: hadoop-common
 
 ---
 
@@ -4910,6 +4967,36 @@ notices:
           * Providing benchmark suite
         * Alec Wysoker
           * Performance and memory usage improvement
+
+---
+
+name: Woodstox
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.0.3
+libraries:
+  - com.fasterxml.woodstox: woodstox-core
+
+---
+
+name: Google Re2j
+license_category: binary
+module: java-core
+license_name: The Go license
+version: 1.1
+libraries:
+  - com.google.re2j: re2j
+
+---
+
+name: DNS Java
+license_category: binary
+module: java-core
+license_name: BSD 2-Clause license
+version: 2.1.7
+libraries:
+  - dnsjava: dnsjava
 
 ---
 
