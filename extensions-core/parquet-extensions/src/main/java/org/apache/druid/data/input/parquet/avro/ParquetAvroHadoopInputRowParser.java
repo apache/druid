@@ -51,7 +51,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
 {
   private final ParseSpec parseSpec;
   private final boolean binaryAsString;
-  private final boolean explodeUnions;
+  private final boolean extractUnions;
   private final TimestampSpec timestampSpec;
   private final ObjectFlattener<GenericRecord> recordFlattener;
   private final List<String> dimensions;
@@ -60,14 +60,14 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   public ParquetAvroHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
       @JsonProperty("binaryAsString") Boolean binaryAsString,
-      @JsonProperty("explodeUnions") Boolean explodeUnions
+      @JsonProperty("extractUnions") Boolean extractUnions
   )
   {
     this.parseSpec = parseSpec;
     this.timestampSpec = parseSpec.getTimestampSpec();
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.binaryAsString = binaryAsString != null && binaryAsString;
-    this.explodeUnions = explodeUnions != null && explodeUnions;
+    this.extractUnions = extractUnions != null && extractUnions;
 
     final JSONPathSpec flattenSpec;
     if (parseSpec instanceof AvroParseSpec) {
@@ -78,7 +78,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
 
     this.recordFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(false, this.binaryAsString, this.explodeUnions)
+        new AvroFlattenerMaker(false, this.binaryAsString, this.extractUnions)
     );
   }
 
@@ -134,6 +134,6 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ParquetAvroHadoopInputRowParser(parseSpec, binaryAsString, explodeUnions);
+    return new ParquetAvroHadoopInputRowParser(parseSpec, binaryAsString, extractUnions);
   }
 }

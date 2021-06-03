@@ -35,7 +35,7 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   private final ParseSpec parseSpec;
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
-  private final boolean explodeUnions;
+  private final boolean extractUnions;
   private final ObjectFlattener<GenericRecord> avroFlattener;
   private final MapInputRowParser mapParser;
 
@@ -44,14 +44,14 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
       @JsonProperty("parseSpec") ParseSpec parseSpec,
       @JsonProperty("fromPigAvroStorage") Boolean fromPigAvroStorage,
       @JsonProperty("binaryAsString") Boolean binaryAsString,
-      @JsonProperty("explodeUnions") Boolean explodeUnions
+      @JsonProperty("extractUnions") Boolean extractUnions
   )
   {
     this.parseSpec = parseSpec;
     this.fromPigAvroStorage = fromPigAvroStorage != null && fromPigAvroStorage;
     this.binaryAsString = binaryAsString != null && binaryAsString;
-    this.explodeUnions = explodeUnions != null && explodeUnions;
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, this.fromPigAvroStorage, this.binaryAsString, this.explodeUnions);
+    this.extractUnions = extractUnions != null && extractUnions;
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, this.fromPigAvroStorage, this.binaryAsString, this.extractUnions);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 
@@ -77,6 +77,6 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage, binaryAsString, explodeUnions);
+    return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage, binaryAsString, extractUnions);
   }
 }

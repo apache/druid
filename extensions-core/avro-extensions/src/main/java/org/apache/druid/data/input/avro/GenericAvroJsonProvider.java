@@ -45,11 +45,11 @@ import java.util.stream.Collectors;
  */
 public class GenericAvroJsonProvider implements JsonProvider
 {
-  private final boolean explodeUnions;
+  private final boolean extractUnions;
 
-  GenericAvroJsonProvider(final boolean explodeUnions)
+  GenericAvroJsonProvider(final boolean extractUnions)
   {
-    this.explodeUnions = explodeUnions;
+    this.extractUnions = extractUnions;
   }
 
   @Override
@@ -160,7 +160,7 @@ public class GenericAvroJsonProvider implements JsonProvider
       return null;
     } else if (o instanceof GenericRecord) {
       final GenericRecord record = (GenericRecord) o;
-      if (explodeUnions && isExplodableUnion(record.getSchema().getField(s))) {
+      if (extractUnions && isExplodableUnion(record.getSchema().getField(s))) {
         return explodeUnion(record.get(s));
       }
       return record.get(s);

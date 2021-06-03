@@ -232,7 +232,7 @@ public class AvroFlattenerMakerTest
   }
 
   @Test
-  public void jsonPathExtractorExplodeUnions()
+  public void jsonPathExtractorextractUnions()
   {
     final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
 

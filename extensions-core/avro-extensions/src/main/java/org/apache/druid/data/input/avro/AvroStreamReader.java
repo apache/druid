@@ -53,13 +53,13 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
       AvroBytesDecoder avroBytesDecoder,
       JSONPathSpec flattenSpec,
       boolean binaryAsString,
-      boolean explodeUnions
+      boolean extractUnions
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.avroBytesDecoder = avroBytesDecoder;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, explodeUnions));
+    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, extractUnions));
   }
 
   @Override
