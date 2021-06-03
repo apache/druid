@@ -33,7 +33,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -134,25 +134,37 @@ public class BatchAppenderator implements Appenderator
   private static class SinkMetadata
   {
     private int numRowsInSegment;
+    private int numHydrants;
 
     public SinkMetadata()
     {
-      this(0);
+      this(0,0);
     }
 
-    public SinkMetadata(int numRowsInSegment)
+    public SinkMetadata(int numRowsInSegment, int numHydrants)
     {
       this.numRowsInSegment = numRowsInSegment;
+      this.numHydrants = numHydrants;
     }
 
-    public void addRows(int numRows)
+    public void addRows(int num)
     {
-      numRowsInSegment += numRows;
+      numRowsInSegment += num;
+    }
+
+    public void addHydrants(int num)
+    {
+      numHydrants += num;
     }
 
     public int getNumRowsInSegment()
     {
       return numRowsInSegment;
+    }
+
+    public int getNumHydrants()
+    {
+      return numHydrants;
     }
   }
 
@@ -368,10 +380,8 @@ public class BatchAppenderator implements Appenderator
           if (sinkEntry != null) {
             bytesToBePersisted += sinkEntry.getBytesInMemory();
             if (sinkEntry.swappable()) {
-              // After swapping the sink, we use memory mapped segment instead (but only for real time appenderators!).
-              // However, the memory mapped segment still consumes memory.
-              // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
-              int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
+              // Code for batch no longer memory maps hydrants but they still take memory...
+              int memoryStillInUse = calculateMemoryUsedByHydrants(sink.getCurrHydrant());
               bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
             }
           }
@@ -591,8 +601,9 @@ public class BatchAppenderator implements Appenderator
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    MutableLong totalHydrantsCount = new MutableLong();
-    MutableLong totalHydrantsPersisted = new MutableLong();
+    MutableInt totalHydrantsCount = new MutableInt();
+    MutableInt totalHydrantsPersistedAcrossSinks = new MutableInt();
+    SegmentIdWithShardSpec startIdentifier = null;
     final long totalSinks = sinks.size();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
@@ -600,6 +611,9 @@ public class BatchAppenderator implements Appenderator
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
       }
+
+      int previousHydrantCount = totalHydrantsPersistedAcrossSinks.intValue();
+
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       totalHydrantsCount.add(hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
@@ -612,15 +626,22 @@ public class BatchAppenderator implements Appenderator
         if (!hydrant.hasSwapped()) {
           log.debug("Hydrant[%s] hasn't persisted yet, persisting. Segment[%s]", hydrant, identifier);
           indexesToPersist.add(Pair.of(hydrant, identifier));
-          totalHydrantsPersisted.add(1);
+          totalHydrantsPersistedAcrossSinks.add(1);
         }
       }
 
       if (sink.swappable()) {
         // It is swappable. Get the old one to persist it and create a new one:
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
-        totalHydrantsPersisted.add(1);
+        totalHydrantsPersistedAcrossSinks.add(1);
       }
+
+      // keep track of hydrants for sanity when resurrecting before push
+      sinksMetadata.computeIfAbsent(
+          identifier,
+          Void -> new SinkMetadata()
+      ).addHydrants(totalHydrantsPersistedAcrossSinks.intValue() - previousHydrantCount);
+
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
@@ -654,7 +675,7 @@ public class BatchAppenderator implements Appenderator
                   totalPersistedRows.get(),
                   totalSinks,
                   totalHydrantsCount.longValue(),
-                  totalHydrantsPersisted.longValue()
+                  totalHydrantsPersistedAcrossSinks.longValue()
               );
 
               // return null if committer is null
@@ -716,16 +737,16 @@ public class BatchAppenderator implements Appenderator
             final List<DataSegment> dataSegments = new ArrayList<>();
             List<File> persistedIdentifiers = getPersistedidentifierPaths();
             for (File identifier : persistedIdentifiers) {
-              Pair<SegmentIdWithShardSpec, Sink> sinkAndHydrants = getIdentifierAndSinkForPersistedFile(identifier);
+              Pair<SegmentIdWithShardSpec, Sink> identifiersAndSinks = getIdentifierAndSinkForPersistedFile(identifier);
               final DataSegment dataSegment = mergeAndPush(
-                  sinkAndHydrants.lhs,
-                  sinkAndHydrants.rhs,
+                  identifiersAndSinks.lhs,
+                  identifiersAndSinks.rhs,
                   useUniquePath
               );
               if (dataSegment != null) {
                 dataSegments.add(dataSegment);
               } else {
-                log.warn("mergeAndPush[%s] returned null, skipping.", sinkAndHydrants.lhs);
+                log.warn("mergeAndPush[%s] returned null, skipping.", identifiersAndSinks.lhs);
               }
             }
 
@@ -774,6 +795,7 @@ public class BatchAppenderator implements Appenderator
     final File descriptorFile = computeDescriptorFile(identifier);
 
     // Sanity checks
+    int numHydrants = 0;
     for (FireHydrant hydrant : sink) {
       if (sink.isWritable()) {
         throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
@@ -784,6 +806,15 @@ public class BatchAppenderator implements Appenderator
           throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
         }
       }
+      numHydrants++;
+    }
+
+    SinkMetadata sm = sinksMetadata.get(identifier);
+    if (sm == null) {
+      log.warn("Sink metadata not found just before merge for identifier [%s]", identifier);
+    } else if (numHydrants != sinksMetadata.get(identifier).getNumHydrants()) {
+      throw new ISE("Number of restored hydrants[%d] for identifier[%s] does not match expected value[%d]",
+                    numHydrants, identifier, sinksMetadata.get(identifier).getNumHydrants());
     }
 
     try {
@@ -1198,7 +1229,7 @@ public class BatchAppenderator implements Appenderator
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
-          bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+          bytesCurrentlyInMemory.addAndGet(-calculateMemoryUsedByHydrants(hydrant));
         }
       }
       // totalRows are not decremented when removing the sink from memory, sink was just persisted and it
@@ -1347,7 +1378,7 @@ public class BatchAppenderator implements Appenderator
     }
   }
 
-  private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
+  private int calculateMemoryUsedByHydrants(FireHydrant hydrant)
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;

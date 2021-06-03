@@ -50,9 +50,9 @@ import java.util.stream.Collectors;
 public class BatchAppenderatorTest extends InitializedNullHandlingTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
-      createSegmentId("2000/2001", "A", 0),
-      createSegmentId("2000/2001", "A", 1),
-      createSegmentId("2001/2002", "A", 0)
+      createSegmentId("2000/2001", "A", 0), // should be in seg_0
+      createSegmentId("2000/2001", "A", 1), // seg_1
+      createSegmentId("2001/2002", "A", 0) // seg 2
   );
 
   @Test
@@ -68,13 +68,14 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // getDataSource
       Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
-      // add
+      // add #1
       Assert.assertEquals(
           1,
           appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
                       .getNumRowsInSegment()
       );
 
+      // add #2
       Assert.assertEquals(
           1,
           appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 2), null)
@@ -87,7 +88,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           appenderator.getSegments().stream().sorted().collect(Collectors.toList())
       );
 
-      // add one more to hit max rows in memory:
+
+      // add #3, this hits max rows in memory:
       Assert.assertEquals(
           2,
           appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "sux", 1), null)
@@ -101,7 +103,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           appenderator.getSegments().stream().sorted().collect(Collectors.toList())
       );
 
-      // add one more:
+      // add #4, this will add one more temporary segment:
       Assert.assertEquals(
           1,
           appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
@@ -134,7 +136,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
       );
 
-      appenderator.clear();
+      appenderator.close();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
     }
   }
