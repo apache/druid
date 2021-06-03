@@ -596,6 +596,16 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseConvertDoubleToLongBits(null)", null);
   }
 
+  @Test
+  public void testRepeat()
+  {
+    assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat(null, 10)", null);
+    assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
