@@ -129,7 +129,7 @@ public class BatchAppenderator implements Appenderator
    * are being completely removed from memory after each incremental persist. For now, {@link SinkMetadata} only
    * contains a single memeber {@link SinkMetadata#numRowsInSegment} but we can add more in the future as needed
    */
-  private final ConcurrentMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
   private static class SinkMetadata
   {
