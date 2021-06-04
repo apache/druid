@@ -1,6 +1,6 @@
 ---
 id: cluster
-title: "Clustered deployment"
+title: "Clustered deployment yy"
 ---
 
 <!--
