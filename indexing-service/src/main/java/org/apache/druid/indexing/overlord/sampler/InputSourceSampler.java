@@ -37,6 +37,7 @@ import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -60,6 +61,7 @@ import java.util.stream.Collectors;
 
 public class InputSourceSampler
 {
+  private static final Logger log = new Logger(InputSourceSampler.class);
   private static final String SAMPLER_DATA_SOURCE = "sampler";
 
   private static final DataSchema DEFAULT_DATA_SCHEMA = new DataSchema(
@@ -203,6 +205,7 @@ public class InputSourceSampler
       }
     }
     catch (Exception e) {
+      log.error(e, "Cannot sample");
       throw new SamplerException(e, "Failed to sample data: %s", e.getMessage());
     }
   }
