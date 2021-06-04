@@ -795,12 +795,12 @@ public class BatchAppenderator implements Appenderator
     final File descriptorFile = computeDescriptorFile(identifier);
 
     // Sanity checks
+    if (sink.isWritable()) {
+      throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
+    }
+
     int numHydrants = 0;
     for (FireHydrant hydrant : sink) {
-      if (sink.isWritable()) {
-        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
-      }
-
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
           throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
