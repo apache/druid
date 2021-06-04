@@ -419,8 +419,6 @@ public class BatchAppenderator implements Appenderator
 
       persistAllAndClear();
 
-    } else {
-      throw new ISE("Batch appenderator always persists as needed!");
     }
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, isPersistRequired);
   }
