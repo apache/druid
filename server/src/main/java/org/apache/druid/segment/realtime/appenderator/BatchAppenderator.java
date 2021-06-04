@@ -370,59 +370,57 @@ public class BatchAppenderator implements Appenderator
       ));
     }
     if (persist) {
-      if (allowIncrementalPersists) {
-        // persistAll clears rowsCurrentlyInMemory, no need to update it.
-        log.info("Incremental persist to disk because %s.", String.join(",", persistReasons));
+      // persistAll clears rowsCurrentlyInMemory, no need to update it.
+      log.info("Incremental persist to disk because %s.", String.join(",", persistReasons));
 
-        long bytesToBePersisted = 0L;
-        for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-          final Sink sinkEntry = entry.getValue();
-          if (sinkEntry != null) {
-            bytesToBePersisted += sinkEntry.getBytesInMemory();
-            if (sinkEntry.swappable()) {
-              // Code for batch no longer memory maps hydrants but they still take memory...
-              int memoryStillInUse = calculateMemoryUsedByHydrants(sink.getCurrHydrant());
-              bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
-            }
+      long bytesToBePersisted = 0L;
+      for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+        final Sink sinkEntry = entry.getValue();
+        if (sinkEntry != null) {
+          bytesToBePersisted += sinkEntry.getBytesInMemory();
+          if (sinkEntry.swappable()) {
+            // Code for batch no longer memory maps hydrants but they still take memory...
+            int memoryStillInUse = calculateMemoryUsedByHydrants(sink.getCurrHydrant());
+            bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
           }
         }
-
-        if (!skipBytesInMemoryOverheadCheck
-            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
-          // We are still over maxBytesTuningConfig even after persisting.
-          // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
-          final String alertMessage = StringUtils.format(
-              "Task has exceeded safe estimated heap usage limits, failing "
-              + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])"
-              + "(bytesCurrentlyInMemory: [%d] - bytesToBePersisted: [%d] > maxBytesTuningConfig: [%d])",
-              sinks.size(),
-              sinks.values().stream().mapToInt(Iterables::size).sum(),
-              getTotalRowCount(),
-              bytesCurrentlyInMemory.get(),
-              bytesToBePersisted,
-              maxBytesTuningConfig
-          );
-          final String errorMessage = StringUtils.format(
-              "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
-              + "great to have enough space to process additional input rows. This check, along with metering the overhead "
-              + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
-              + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
-              + "a 'java.lang.OutOfMemoryError'). Alternatively, 'maxBytesInMemory' can be increased which will cause an "
-              + "increase in heap footprint, but will allow for more intermediary segment persists to occur before "
-              + "reaching this condition.",
-              alertMessage
-          );
-          log.makeAlert(alertMessage)
-             .addData("dataSource", schema.getDataSource())
-             .emit();
-          throw new RuntimeException(errorMessage);
-        }
-
-        persistAllAndClear();
-
-      } else {
-        throw new ISE("Batch appenderator always persists as needed!");
       }
+
+      if (!skipBytesInMemoryOverheadCheck
+          && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        // We are still over maxBytesTuningConfig even after persisting.
+        // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
+        final String alertMessage = StringUtils.format(
+            "Task has exceeded safe estimated heap usage limits, failing "
+            + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])"
+            + "(bytesCurrentlyInMemory: [%d] - bytesToBePersisted: [%d] > maxBytesTuningConfig: [%d])",
+            sinks.size(),
+            sinks.values().stream().mapToInt(Iterables::size).sum(),
+            getTotalRowCount(),
+            bytesCurrentlyInMemory.get(),
+            bytesToBePersisted,
+            maxBytesTuningConfig
+        );
+        final String errorMessage = StringUtils.format(
+            "%s.\nThis can occur when the overhead from too many intermediary segment persists becomes to "
+            + "great to have enough space to process additional input rows. This check, along with metering the overhead "
+            + "of these objects to factor into the 'maxBytesInMemory' computation, can be disabled by setting "
+            + "'skipBytesInMemoryOverheadCheck' to 'true' (note that doing so might allow the task to naturally encounter "
+            + "a 'java.lang.OutOfMemoryError'). Alternatively, 'maxBytesInMemory' can be increased which will cause an "
+            + "increase in heap footprint, but will allow for more intermediary segment persists to occur before "
+            + "reaching this condition.",
+            alertMessage
+        );
+        log.makeAlert(alertMessage)
+           .addData("dataSource", schema.getDataSource())
+           .emit();
+        throw new RuntimeException(errorMessage);
+      }
+
+      persistAllAndClear();
+
+    } else {
+      throw new ISE("Batch appenderator always persists as needed!");
     }
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, isPersistRequired);
   }
@@ -436,13 +434,7 @@ public class BatchAppenderator implements Appenderator
   @Override
   public int getRowCount(final SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
-
-    if (sink == null) {
-      throw new ISE("No such sink: %s", identifier);
-    } else {
-      return sink.getNumRows();
-    }
+    return sinksMetadata.get(identifier).getNumRowsInSegment();
   }
 
   @Override
@@ -603,8 +595,6 @@ public class BatchAppenderator implements Appenderator
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
       }
-
-      int previousHydrantCount = totalHydrantsPersistedAcrossSinks.intValue();
 
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       totalHydrantsCount.add(hydrants.size());
