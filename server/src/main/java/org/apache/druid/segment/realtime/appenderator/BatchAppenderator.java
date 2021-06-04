@@ -37,7 +37,6 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -50,7 +49,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -90,8 +88,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class BatchAppenderator implements Appenderator
@@ -188,17 +184,12 @@ public class BatchAppenderator implements Appenderator
 
   }
 
-
-  private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
   private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
-  // Synchronize persisting commitMetadata so that multiple persist threads (if present)
-  // and abandon threads do not step over each other
-  private final Lock commitLock = new ReentrantLock();
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -208,7 +199,6 @@ public class BatchAppenderator implements Appenderator
   // where persist and push Executor try to put tasks in each other queues
   // thus creating circular dependency
   private volatile ListeningExecutorService intermediateTempExecutor = null;
-  private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
 
@@ -254,7 +244,6 @@ public class BatchAppenderator implements Appenderator
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
-    this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
@@ -280,7 +269,6 @@ public class BatchAppenderator implements Appenderator
     tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
     initializeExecutors();
-    resetNextFlush();
     return null;
   }
 
@@ -329,7 +317,7 @@ public class BatchAppenderator implements Appenderator
     final IncrementalIndexAddResult addResult;
 
     try {
-      addResult = sink.add(row, !allowIncrementalPersists);
+      addResult = sink.add(row, false); // allow incrememtal persis is always true for batch
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }
@@ -364,14 +352,6 @@ public class BatchAppenderator implements Appenderator
     if (!sink.canAppendRow()) {
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
-    }
-    if (System.currentTimeMillis() > nextFlush) {
-      persist = true;
-      persistReasons.add(StringUtils.format(
-          "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
-          nextFlush
-      ));
     }
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
@@ -531,21 +511,13 @@ public class BatchAppenderator implements Appenderator
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    if (texasRanger == null) {
-      throw new IllegalStateException("Don't query me, bro.");
-    }
-
-    return texasRanger.getQueryRunnerForIntervals(query, intervals);
+    throw new UnsupportedOperationException("No query runner for batch appenderator");
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    if (texasRanger == null) {
-      throw new IllegalStateException("Don't query me, bro.");
-    }
-
-    return texasRanger.getQueryRunnerForSegments(query, specs);
+    throw new UnsupportedOperationException("No query runner for batch appenderator");
   }
 
   @Override
@@ -714,7 +686,6 @@ public class BatchAppenderator implements Appenderator
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
     }
     runExecStopwatch.stop();
-    resetNextFlush();
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
@@ -1133,11 +1104,6 @@ public class BatchAppenderator implements Appenderator
     if (intermediateTempExecutor != null) {
       intermediateTempExecutor.shutdownNow();
     }
-  }
-
-  private void resetNextFlush()
-  {
-    nextFlush = DateTimes.nowUtc().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
   }
 
   @VisibleForTesting
