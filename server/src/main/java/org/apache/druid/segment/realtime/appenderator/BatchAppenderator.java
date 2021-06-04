@@ -131,20 +131,41 @@ public class BatchAppenderator implements Appenderator
    */
   private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
+  /**
+   * This class is used for information that needs to be kept related to Sinks as
+   * they are persisted and removed from memory at every incremental persist.
+   * The information is used for sanity checks and as information required
+   * for functionality, depending in the field that is used. More info about the
+   * fields is annotated as comments in the class
+   */
   private static class SinkMetadata
   {
+    /** This is used to maintain the rows in the sink accross persists of the sink
+    // used for functionality (i.e. to detect whether an incremental push
+    // is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)} 
+    **/
     private int numRowsInSegment;
+    /** For sanity check to make sure that all hydrants for a sink are restored from disk at
+     * push time
+     */
     private int numHydrants;
+    /** Sinks when they are persisted lose information about the previous hydrant count,
+     * this variable remembers that so the proper directory can be created when persisting
+     * hydrants
+     */
+    private int previousHydrantCount;
 
     public SinkMetadata()
     {
-      this(0,0);
+      this(0,0,0);
     }
 
-    public SinkMetadata(int numRowsInSegment, int numHydrants)
+    public SinkMetadata(int numRowsInSegment, int numHydrants, int previousHydrantCount)
     {
       this.numRowsInSegment = numRowsInSegment;
       this.numHydrants = numHydrants;
+      this.previousHydrantCount = previousHydrantCount;
+
     }
 
     public void addRows(int num)
@@ -165,6 +186,13 @@ public class BatchAppenderator implements Appenderator
     public int getNumHydrants()
     {
       return numHydrants;
+    }
+
+    public void addHydrantCount(int num) {
+      previousHydrantCount += num;
+    }
+    public int getHydrantCount() {
+      return previousHydrantCount;
     }
   }
 
@@ -1330,11 +1358,15 @@ public class BatchAppenderator implements Appenderator
         final long startTime = System.nanoTime();
         int numRows = indexToPersist.getIndex().size();
 
+        // since the sink may have been persisted before it may have lost its
+        // hydrant count, we remember that value in the sinks metadata so we have
+        // to pull it from there....
+        SinkMetadata sm = sinksMetadata.get(identifier);
         final File persistDir = createPersistDirIfNeeded(identifier);
         indexMerger.persist(
             indexToPersist.getIndex(),
             identifier.getInterval(),
-            new File(persistDir, String.valueOf(indexToPersist.getCount())),
+            new File(persistDir, String.valueOf(sm.getHydrantCount())),
             tuningConfig.getIndexSpecForIntermediatePersists(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
@@ -1348,6 +1380,8 @@ public class BatchAppenderator implements Appenderator
         );
 
         indexToPersist.swapSegment(null);
+        // remember hydrant count:
+        sinksMetadata.get(identifier).addHydrantCount(1);
 
         return numRows;
       }

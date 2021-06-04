@@ -544,6 +544,47 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testAllHydrantsAreRecovered() throws Exception
+  {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(1, false)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.startJob();
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo2", 1), null);
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo3", 1), null);
+
+      // Since maxRowsInMemory is one there ought to be three hydrants stored and recovered
+      // just before push, internally the code has a sanity check to make sure that this works..if it does not it throws
+      // an exception
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          null,
+          false
+      ).get();
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 1),
+          Lists.transform(
+              segmentsAndCommitMetadata.getSegments(),
+              new Function<DataSegment, SegmentIdWithShardSpec>()
+              {
+                @Override
+                public SegmentIdWithShardSpec apply(DataSegment input)
+                {
+                  return SegmentIdWithShardSpec.fromDataSegment(input);
+                }
+              }
+          ).stream().sorted().collect(Collectors.toList())
+      );
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.close();
+    }
+  }
+
+  @Test
   public void testTotalRowsPerSegment() throws Exception
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
