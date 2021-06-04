@@ -157,15 +157,13 @@ public class BatchAppenderator implements Appenderator
 
     public SinkMetadata()
     {
-      this(0,0,0);
+      this(0, 0, 0);
     }
 
     public SinkMetadata(int numRowsInSegment, int numHydrants, int previousHydrantCount)
     {
       this.numRowsInSegment = numRowsInSegment;
       this.numHydrants = numHydrants;
-      this.previousHydrantCount = previousHydrantCount;
-
     }
 
     public void addRows(int num)
@@ -188,12 +186,6 @@ public class BatchAppenderator implements Appenderator
       return numHydrants;
     }
 
-    public void addHydrantCount(int num) {
-      previousHydrantCount += num;
-    }
-    public int getHydrantCount() {
-      return previousHydrantCount;
-    }
   }
 
 
@@ -663,12 +655,6 @@ public class BatchAppenderator implements Appenderator
         indexesToPersist.add(Pair.of(sink.swap(), identifier));
         totalHydrantsPersistedAcrossSinks.add(1);
       }
-
-      // keep track of hydrants for sanity when resurrecting before push
-      sinksMetadata.computeIfAbsent(
-          identifier,
-          Void -> new SinkMetadata()
-      ).addHydrants(totalHydrantsPersistedAcrossSinks.intValue() - previousHydrantCount);
 
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
@@ -1366,7 +1352,7 @@ public class BatchAppenderator implements Appenderator
         indexMerger.persist(
             indexToPersist.getIndex(),
             identifier.getInterval(),
-            new File(persistDir, String.valueOf(sm.getHydrantCount())),
+            new File(persistDir, String.valueOf(sm.getNumHydrants())),
             tuningConfig.getIndexSpecForIntermediatePersists(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
@@ -1381,7 +1367,7 @@ public class BatchAppenderator implements Appenderator
 
         indexToPersist.swapSegment(null);
         // remember hydrant count:
-        sinksMetadata.get(identifier).addHydrantCount(1);
+        sinksMetadata.get(identifier).addHydrants(1);
 
         return numRows;
       }
