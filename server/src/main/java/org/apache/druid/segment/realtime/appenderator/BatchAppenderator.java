@@ -145,11 +145,6 @@ public class BatchAppenderator implements Appenderator
      * push time
      */
     private int numHydrants;
-    /** Sinks when they are persisted lose information about the previous hydrant count,
-     * this variable remembers that so the proper directory can be created when persisting
-     * hydrants
-     */
-    private int previousHydrantCount;
 
     public SinkMetadata()
     {
