@@ -111,17 +111,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()
   {
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
-        .setDescription("description")
-        .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
-        .setId(4711L)
-        .setIsValid(true)
-        .setSomeOtherId(4712)
-        .setTimestamp(dateTime.toString())
-        .setSomeFloatColumn(47.11F)
-        .setSomeIntColumn(815)
-        .setSomeLongColumn(816L)
-        .build();
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatData(dateTime);
     return event;
   }
 

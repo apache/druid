@@ -43,7 +43,7 @@ public class ProtobufInputRowSchema extends InputRowSchema
     super(new ProtobufTimestampSpec(inputRowSchema.getTimestampSpec()), inputRowSchema.getDimensionsSpec(), inputRowSchema.getColumnsFilter());
   }
 
-  public static class ProtobufTimestampSpec extends TimestampSpec
+  static class ProtobufTimestampSpec extends TimestampSpec
   {
     public ProtobufTimestampSpec(TimestampSpec timestampSpec)
     {
