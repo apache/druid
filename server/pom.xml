@@ -470,6 +470,7 @@
                     <excludes>
                         <!-- There are UTs for this class but it is very difficult to get required branch coverage -->
                         <exclude>org/apache/druid/metadata/BasicDataSourceExt.class</exclude>
+                        <exclude>org/apache/druid/segment/realtime/appenderator/BatchAppenderator.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>
