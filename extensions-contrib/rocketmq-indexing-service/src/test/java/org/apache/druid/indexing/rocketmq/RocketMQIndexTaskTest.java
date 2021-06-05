@@ -74,6 +74,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisor;
 import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorIOConfig;
 import org.apache.druid.indexing.rocketmq.test.TestBroker;
+import org.apache.druid.indexing.rocketmq.test.TestProducer;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
@@ -136,7 +137,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -649,13 +649,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Insert data
     int numToAdd = records.size() - 2;
 
-
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (int i = 0; i < numToAdd; i++) {
-      producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(0, numToAdd));
 
     Map<String, Object> consumerProps = rocketmqServer.consumerProperties();
     consumerProps.put("pull.batch.size", "1");
@@ -707,12 +701,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     // add remaining records
-    final DefaultMQProducer producer2 = rocketmqServer.newProducer();
-    producer2.start();
-    for (int i = numToAdd; i < records.size(); i++) {
-      producer2.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer2.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(numToAdd, records.size()));
 
 
     final Map<String, Long> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
@@ -1728,12 +1717,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     // Insert some data, but not enough for the task to finish
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (int i = 0; i < 4; i++) {
-      producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(0, 4));
 
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
 
@@ -1769,12 +1753,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
     // Insert remaining data
-    final DefaultMQProducer producer2 = rocketmqServer.newProducer();
-    producer2.start();
-    for (int i = 4; i < records.size(); i++) {
-      producer2.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer2.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(4, records.size()));
 
     // Wait for task to exit
 
@@ -1834,12 +1813,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
     // Insert some data, but not enough for the task to finish
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (int i = 0; i < 5; i++) {
-      producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(0, 5));
 
 
     while (task1.getRunner().getStatus() != Status.PAUSED) {
@@ -1877,12 +1851,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for the task to start reading
 
     // Insert remaining data
-    final DefaultMQProducer producer2 = rocketmqServer.newProducer();
-    producer2.start();
-    for (int i = 5; i < records.size(); i++) {
-      producer2.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer2.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(5, records.size()));
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
@@ -1934,12 +1903,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     // Insert some data, but not enough for the task to finish
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (int i = 0; i < 4; i++) {
-      producer.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(0, 4));
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -1958,12 +1922,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
     // Insert remaining data
-    final DefaultMQProducer producer2 = rocketmqServer.newProducer();
-    producer2.start();
-    for (int i = 4; i < records.size(); i++) {
-      producer2.send(records.get(i).rhs, records.get(i).lhs).getMsgId();
-    }
-    producer2.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(4, records.size()));
 
     try {
       future.get(10, TimeUnit.SECONDS);
@@ -2290,14 +2249,9 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
     insertData(records);
   }
 
-  private void insertData(List<Pair<MessageQueue, Message>> data) throws MQClientException, RemotingException, InterruptedException, MQBrokerException
+  private void insertData(List<Pair<MessageQueue, Message>> data) throws InterruptedException, RemotingException, MQClientException, MQBrokerException
   {
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (Pair<MessageQueue, Message> record : data) {
-      producer.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, data);
   }
 
   private RocketMQIndexTask createTask(
@@ -2579,7 +2533,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Insert data
 
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
     //multiple objects in one RocketMQ record will yield 2 rows in druid
     String wellformed = toJsonString(true, "2049", "d2", "y", "10", "22.0", "2.0") +
         toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
@@ -2601,11 +2554,7 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new Pair<>(new MessageQueue(topic, BROKER_NAME, 0), new Message(topic, "TagA", jbb(true, "2049", "d7", "y", "10", "20.0", "1.0")))
     );
 
-    producer.start();
-    for (Pair<MessageQueue, Message> record : producerRecords) {
-      producer.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, producerRecords);
 
     final RocketMQIndexTask task = createTask(
         null,

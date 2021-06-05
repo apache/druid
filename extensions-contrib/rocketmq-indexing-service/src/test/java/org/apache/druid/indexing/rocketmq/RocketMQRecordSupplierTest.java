@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.rocketmq.PartitionUtil;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.rocketmq.test.TestBroker;
+import org.apache.druid.indexing.rocketmq.test.TestProducer;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.Pair;
@@ -33,7 +34,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -219,12 +219,7 @@ public class RocketMQRecordSupplierTest
   {
 
     // Insert data
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (Pair<MessageQueue, Message> record : records.subList(0, 13)) {
-      producer.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(0, 13));
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)),
@@ -244,12 +239,7 @@ public class RocketMQRecordSupplierTest
     }
 
     // Insert data
-    final DefaultMQProducer producer2 = rocketmqServer.newProducer();
-    producer2.start();
-    for (Pair<MessageQueue, Message> record : records.subList(13, 14)) {
-      producer2.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer2.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records.subList(13, 14));
 
 
     for (int i = 0; polledRecords.size() != records.size() && i < pollRetry; i++) {
@@ -317,7 +307,7 @@ public class RocketMQRecordSupplierTest
     List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> polledRecords = recordSupplier.poll(poll_timeout_millis);
     for (int i = 0; polledRecords.size() != 10 && i < pollRetry; i++) {
       polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(5000);
+      Thread.sleep(3000);
     }
 
 
@@ -354,7 +344,6 @@ public class RocketMQRecordSupplierTest
 
     recordSupplier.seekToLatest(partitions);
     List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-
     Assert.assertEquals(Collections.emptyList(), polledRecords);
     recordSupplier.close();
   }
@@ -409,11 +398,6 @@ public class RocketMQRecordSupplierTest
 
   private void insertData() throws MQClientException, RemotingException, InterruptedException, MQBrokerException
   {
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (Pair<MessageQueue, Message> record : records) {
-      producer.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, records);
   }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorIOConfig;
 import org.apache.druid.indexing.rocketmq.supervisor.RocketMQSupervisorSpec;
 import org.apache.druid.indexing.rocketmq.test.TestBroker;
+import org.apache.druid.indexing.rocketmq.test.TestProducer;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -48,7 +49,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -263,12 +263,7 @@ public class RocketMQSamplerSpecTest extends InitializedNullHandlingTest
 
   private void insertData(List<Pair<MessageQueue, Message>> data) throws MQClientException, RemotingException, InterruptedException, MQBrokerException
   {
-    final DefaultMQProducer producer = rocketmqServer.newProducer();
-    producer.start();
-    for (Pair<MessageQueue, Message> record : data) {
-      producer.send(record.rhs, record.lhs).getMsgId();
-    }
-    producer.shutdown();
+    TestProducer.produceAndConfirm(rocketmqServer, data);
   }
 
   private static byte[] jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)

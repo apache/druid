@@ -99,10 +99,12 @@ public class TestBroker implements Closeable
     NettyClientConfig brokerNettyClientConfig = new NettyClientConfig();
     brokerNettyServerConfig.setListenPort(ThreadLocalRandom.current().nextInt(9999) + 10000);
     MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+    messageStoreConfig.setUseReentrantLockWhenPutMessage(true);
     messageStoreConfig.setBrokerRole("ASYNC_MASTER");
     messageStoreConfig.setFlushDiskType("ASYNC_FLUSH");
     messageStoreConfig.setStorePathRootDir(directory.toString());
     messageStoreConfig.setStorePathCommitLog(commitlogDirectory.toString());
+    messageStoreConfig.setDiskMaxUsedSpaceRatio(90);
     messageStoreConfig.setHaListenPort(ThreadLocalRandom.current().nextInt(9999) + 10000);
 
     this.brokerServer = new BrokerController(brokerConfig, brokerNettyServerConfig, brokerNettyClientConfig, messageStoreConfig);
@@ -122,7 +124,7 @@ public class TestBroker implements Closeable
     DefaultMQProducer producer = new
         DefaultMQProducer("test_producer" + ThreadLocalRandom.current().nextInt(99999));
     producer.setNamesrvAddr(StringUtils.format("127.0.0.1:%d", getPort()));
-    producer.setSendMsgTimeout(10000);
+    producer.setSendMsgTimeout(1000);
     return producer;
   }
 
