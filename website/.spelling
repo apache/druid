@@ -701,7 +701,7 @@ initialAdminRole
 adminGroupMapping
 groupMappingName
  - ../docs/development/extensions-core/druid-kerberos.md
-8Kb
+8KiB
 HttpComponents
 MyKerberosAuthenticator
 RFC-4559
@@ -1210,17 +1210,16 @@ taskId
 taskid
 un
  - ../docs/operations/basic-cluster-tuning.md
-100MB
-128MB
+100MiB
+128MiB
 15ms
-2.5MB
+2.5MiB
 24GiB
-256MB
+256MiB
 30GiB-60GiB
 4GiB
 5MB
-64KB
-7KB
+64KiB
 8GiB
 G1GC
 GroupBys
@@ -1451,6 +1450,7 @@ useResultLevelCache
 vectorSize
 enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
+7KiB
 DatasourceMetadata
 TimeBoundary
 errorClass
@@ -1654,7 +1654,7 @@ GiB
 2GB
 30_000
 524288000L
-5MB
+5MiB
 8u60
 Autoscaler
 AvaticaConnectionBalancer

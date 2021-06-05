@@ -65,7 +65,7 @@ Please see the [General Guidelines for Processing Threads and Buffers](#processi
 On Historicals:
 
 - `druid.processing.numThreads` should generally be set to `(number of cores - 1)`: a smaller value can result in CPU underutilization, while going over the number of cores can result in unnecessary CPU contention.
-- `druid.processing.buffer.sizeBytes` can be set to 500MB.
+- `druid.processing.buffer.sizeBytes` can be set to 500MiB.
 - `druid.processing.numMergeBuffers`, a 1:4 ratio of  merge buffers to processing threads is a reasonable choice for general use.
 
 #### Direct Memory Sizing
@@ -138,7 +138,7 @@ If caching is enabled on the Broker, the cache is stored on heap, sized by `drui
 
 On the Broker, the amount of direct memory needed depends on how many merge buffers (used for merging GroupBys) are configured. The Broker does not generally need processing threads or processing buffers, as query results are merged on-heap in the HTTP connection threads instead.
 
-- `druid.processing.buffer.sizeBytes` can be set to 500MB.
+- `druid.processing.buffer.sizeBytes` can be set to 500MiB.
 - `druid.processing.numThreads`: set this to 1 (the minimum allowed)
 - `druid.processing.numMergeBuffers`: set this to the same value as on Historicals or a bit higher
 
@@ -158,9 +158,9 @@ When retrieving query results from Historical processes or Tasks, the Broker can
 
 This buffer size is controlled by the `druid.broker.http.maxQueuedBytes` setting.
 
-The limit is divided across the number of Historicals/Tasks that a query would hit: suppose I have `druid.broker.http.maxQueuedBytes` set to 5MB, and the Broker receives a query that needs to be fanned out to 2 Historicals. Each per-historical channel would get a 2.5MB buffer in this case.
+The limit is divided across the number of Historicals/Tasks that a query would hit: suppose I have `druid.broker.http.maxQueuedBytes` set to 5MiB, and the Broker receives a query that needs to be fanned out to 2 Historicals. Each per-historical channel would get a 2.5MiB buffer in this case.
 
-You can generally set this to a value of approximately `2MB * number of Historicals`. As your cluster scales up with more Historicals and Tasks, consider increasing this buffer size and increasing the Broker heap accordingly.
+You can generally set this to a value of approximately `2MiB * number of Historicals`. As your cluster scales up with more Historicals and Tasks, consider increasing this buffer size and increasing the Broker heap accordingly.
 
 - If the buffer is too small, this can lead to inefficient queries due to the buffer filling up rapidly and stalling the channel
 - If the buffer is too large, this puts more memory pressure on the Broker due to more queued result data in the HTTP channels.
@@ -184,7 +184,7 @@ The MiddleManager is a lightweight task controller/manager that launches Task pr
 
 #### MiddleManager heap sizing
 
-The MiddleManager itself does not require much resources, you can set the heap to ~128MB generally.
+The MiddleManager itself does not require much resources, you can set the heap to ~128MiB generally.
 
 #### SSD storage
 
@@ -220,7 +220,7 @@ For Tasks, 1 or 2 processing threads are often enough, as the Tasks tend to hold
 
 - `druid.indexer.fork.property.druid.processing.numThreads`: set this to 1 or 2
 - `druid.indexer.fork.property.druid.processing.numMergeBuffers`: set this to 2
-- `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MB
+- `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MiB
 
 ##### Direct memory sizing
 
@@ -309,7 +309,7 @@ The Overlord tends to require less resources than the Coordinator or Broker. You
 
 The Router has light resource requirements, as it proxies requests to Brokers without performing much computational work itself.
 
-You can assign it 256MB heap as a starting point, growing it if needed.
+You can assign it 256MiB heap as a starting point, growing it if needed.
 
 <a name="processing-threads-buffers"></a>
 
@@ -371,9 +371,9 @@ As a starting point, allowing for 50 concurrent queries (requests that read segm
 
 ### Segment decompression
 
-When opening a segment for reading during segment merging or query processing, Druid allocates a 64KB off-heap decompression buffer for each column being read.
+When opening a segment for reading during segment merging or query processing, Druid allocates a 64KiB off-heap decompression buffer for each column being read.
 
-Thus, there is additional direct memory overhead of (64KB * number of columns read per segment * number of segments read) when reading segments.
+Thus, there is additional direct memory overhead of (64KiB * number of columns read per segment * number of segments read) when reading segments.
 
 ### Segment merging
 
