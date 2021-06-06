@@ -327,7 +327,7 @@ Suppose we are migrating from a single-server deployment that had 32 CPU and 256
 Historical (Single-server)
 
 ```
-druid.processing.buffer.sizeBytes=500000000
+druid.processing.buffer.sizeBytes=500MiB
 druid.processing.numMergeBuffers=8
 druid.processing.numThreads=31
 ```
@@ -337,7 +337,7 @@ MiddleManager (Single-server)
 ```
 druid.worker.capacity=8
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 
@@ -361,7 +361,7 @@ The resulting configs after the split:
 New Historical (on 2 Data servers)
 
 ```
-druid.processing.buffer.sizeBytes=500000000
+druid.processing.buffer.sizeBytes=500MiB
 druid.processing.numMergeBuffers=8
 druid.processing.numThreads=31
 ```
@@ -371,7 +371,7 @@ New MiddleManager (on 2 Data servers)
 ```
 druid.worker.capacity=4
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 

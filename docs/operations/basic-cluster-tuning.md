@@ -323,7 +323,7 @@ The `druid.processing.numThreads` configuration controls the size of the process
 
 `druid.processing.buffer.sizeBytes` is a closely related property that controls the size of the off-heap buffers allocated to the processing threads.
 
-One buffer is allocated for each processing thread. A size between 500MB and 1GB is a reasonable choice for general use.
+One buffer is allocated for each processing thread. A size between 500MiB and 1GiB is a reasonable choice for general use.
 
 The TopN and GroupBy queries use these buffers to store intermediate computed results. As the buffer size increases, more data can be processed in a single pass.
 
