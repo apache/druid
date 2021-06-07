@@ -111,6 +111,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         basePersistDirectory,
         enablePushFailure,
         new SimpleRowIngestionMeters(),
+        false,
         false
     );
   }
@@ -121,7 +122,8 @@ public class BatchAppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck
+      final boolean skipBytesInMemoryOverheadCheck,
+      final boolean batchMemoryMappedIndex
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -246,7 +248,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexMerger,
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        false
+        batchMemoryMappedIndex
     );
   }
 

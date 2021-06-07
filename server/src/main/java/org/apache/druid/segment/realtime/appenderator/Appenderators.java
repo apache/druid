@@ -108,6 +108,27 @@ public class Appenderators
       boolean batchMemoryMappedIndex
   )
   {
+    if (batchMemoryMappedIndex) {
+      // fallback to code know to be working, this is just a fallback option in case new
+      // batch appenderator has some early bugs but we will remove this fallback as soon as
+      // we determine that batch appenderator code is stable
+      return new StreamAppenderator(
+          id,
+          schema,
+          config,
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          new NoopDataSegmentAnnouncer(),
+          null,
+          indexIO,
+          indexMerger,
+          null,
+          rowIngestionMeters,
+          parseExceptionHandler,
+          false
+      );
+    }
     return new BatchAppenderator(
         id,
         schema,

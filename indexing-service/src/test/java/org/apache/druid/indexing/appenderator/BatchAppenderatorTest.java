@@ -142,6 +142,99 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSimpleIngestionWithFallbackCodePath() throws Exception
+  {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(
+        3,
+        -1,
+        null,
+        true,
+        new SimpleRowIngestionMeters(),
+        true,
+        true
+    )) {
+      final Appenderator appenderator = tester.getAppenderator();
+      boolean thrown;
+
+      // startJob
+      Assert.assertEquals(null, appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add #1
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // add #2
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 2), null)
+                      .getNumRowsInSegment()
+      );
+
+      // getSegments
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 2),
+          appenderator.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+
+
+      // add #3, this hits max rows in memory:
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "sux", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // since we just added three rows and the max rows in memory is three BUT we are using
+      // the old, fallback, code path that does not remove sinks, the segments should still be there
+      Assert.assertEquals(
+          2,
+          appenderator.getSegments().size()
+      );
+
+      // add #4, this will add one more temporary segment:
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
+
+      // push all
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          null,
+          false
+      ).get();
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 3),
+          Lists.transform(
+              segmentsAndCommitMetadata.getSegments(),
+              new Function<DataSegment, SegmentIdWithShardSpec>()
+              {
+                @Override
+                public SegmentIdWithShardSpec apply(DataSegment input)
+                {
+                  return SegmentIdWithShardSpec.fromDataSegment(input);
+                }
+              }
+          ).stream().sorted().collect(Collectors.toList())
+      );
+      Assert.assertEquals(
+          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
+          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+
+      appenderator.close();
+      Assert.assertTrue(appenderator.getSegments().isEmpty());
+    }
+  }
+  @Test
   public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
@@ -151,7 +244,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
             null,
             true,
             new SimpleRowIngestionMeters(),
-            true
+            true,
+            false
         )
     ) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -184,7 +278,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
             null,
             true,
             new SimpleRowIngestionMeters(),
-            true
+            true,
+            false
         )
     ) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -306,7 +401,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
             null,
             true,
             new SimpleRowIngestionMeters(),
-            true
+            true,
+            false
         )
     ) {
       final Appenderator appenderator = tester.getAppenderator();
