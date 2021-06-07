@@ -21,7 +21,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.apache.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-rocketmq-indexing-service</artifactId>
   <name>druid-rocketmq-indexing-service</name>
   <description>druid-rocketmq-indexing-service</description>
@@ -32,12 +32,15 @@
     <version>0.22.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
+  <properties>
+    <rocketmq.version>4.8.0</rocketmq.version>
+  </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.rocketmq</groupId>
       <artifactId>rocketmq-client</artifactId>
-      <version>4.8.0</version>
+      <version>${rocketmq.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -134,7 +137,7 @@
     <dependency>
       <groupId>org.apache.rocketmq</groupId>
       <artifactId>rocketmq-broker</artifactId>
-      <version>4.7.0</version>
+      <version>${rocketmq.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -146,7 +149,7 @@
     <dependency>
       <groupId>org.apache.rocketmq</groupId>
       <artifactId>rocketmq-namesrv</artifactId>
-      <version>4.7.0</version>
+      <version>${rocketmq.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -178,19 +181,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>2.13.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>

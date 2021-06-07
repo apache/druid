@@ -76,7 +76,6 @@ public class RocketMQIndexTask extends SeekableStreamIndexTask<String, Long, Roc
   @Override
   protected SeekableStreamIndexTaskRunner<String, Long, RocketMQRecordEntity> createTaskRunner()
   {
-    //noinspection unchecked
     return new RocketMQIndexTaskRunner(
         this,
         dataSchema.getParser(),

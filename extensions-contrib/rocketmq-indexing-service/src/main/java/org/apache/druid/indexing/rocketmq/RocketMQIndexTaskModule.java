@@ -44,8 +44,6 @@ public class RocketMQIndexTaskModule implements DruidModule
                 new NamedType(RocketMQIndexTask.class, "index_rocketmq"),
                 new NamedType(RocketMQDataSourceMetadata.class, "rocketmq"),
                 new NamedType(RocketMQIndexTaskIOConfig.class, "rocketmq"),
-                // "RocketMQTuningConfig" is not the ideal name, but is needed for backwards compatibility.
-                // (Older versions of Druid didn't specify a type name and got this one by default.)
                 new NamedType(RocketMQIndexTaskTuningConfig.class, "RocketMQTuningConfig"),
                 new NamedType(RocketMQSupervisorTuningConfig.class, "rocketmq"),
                 new NamedType(RocketMQSupervisorSpec.class, "rocketmq"),

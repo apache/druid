@@ -224,9 +224,6 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, R
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
-    // RocketMQ index task always uses incremental handoff since 0.16.0.
-    // The below is for the compatibility when you want to downgrade your cluster to something earlier than 0.16.0.
-    // RocketMQ index task will pick up LegacyRocketMQIndexTaskRunner without the below configuration.
     context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
     List<SeekableStreamIndexTask<String, Long, RocketMQRecordEntity>> taskList = new ArrayList<>();
@@ -274,7 +271,6 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, R
   }
 
   @Override
-  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
   protected Map<String, Long> getRecordLagPerPartition(Map<String, Long> currentOffsets)
   {
@@ -371,9 +367,6 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, R
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());
 
-      // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
-      // because we currently only have record lag for rocketmq, which can be lazily computed by subtracting the highest
-      // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream =
           partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getLatestSequenceNumber));
     }

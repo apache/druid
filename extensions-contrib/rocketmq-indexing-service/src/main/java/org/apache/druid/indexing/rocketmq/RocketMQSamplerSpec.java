@@ -58,11 +58,6 @@ public class RocketMQSamplerSpec extends SeekableStreamSamplerSpec
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
       final Map<String, Object> props = new HashMap<>(((RocketMQSupervisorIOConfig) ioConfig).getConsumerProperties());
-
-      props.put("enable.auto.commit", "false");
-      props.put("auto.offset.reset", "none");
-      props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
-
       return new RocketMQRecordSupplier(props, objectMapper);
     }
     finally {

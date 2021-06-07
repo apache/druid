@@ -23,8 +23,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
 
-// OrderedSequenceNumber.equals() should be used instead.
-@SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 public class RocketMQSequenceNumber extends OrderedSequenceNumber<Long>
 {
   private RocketMQSequenceNumber(Long sequenceNumber)
