@@ -32,10 +32,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -43,9 +44,11 @@ import java.util.Map;
 
 public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
-  private static final Logger LOG = new Logger(ByteBufferInputRowParser.class);
-
   private final ParseSpec parseSpec;
+  // timestamp spec to be used for parsing timestamp
+  private final TimestampSpec timestampSpec;
+  // whether the spec has any fields to flat
+  private final boolean isFlatSpec;
   private final ProtobufBytesDecoder protobufBytesDecoder;
   private Parser<String, Object> parser;
   private final List<String> dimensions;
@@ -62,12 +65,18 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = parseSpec;
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
-
+    this.isFlatSpec = parseSpec instanceof JSONParseSpec && ((JSONParseSpec) parseSpec).getFlattenSpec().getFields().isEmpty();
     if (descriptorFilePath != null || protoMessageType != null) {
       this.protobufBytesDecoder = new FileBasedProtobufBytesDecoder(descriptorFilePath, protoMessageType);
     } else {
       this.protobufBytesDecoder = protobufBytesDecoder;
     }
+    if (isFlatSpec) {
+      this.timestampSpec = new ProtobufInputRowSchema.ProtobufTimestampSpec(parseSpec.getTimestampSpec());
+    } else {
+      this.timestampSpec = parseSpec.getTimestampSpec();
+    }
+
   }
 
   @Override
@@ -89,11 +98,13 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       parser = parseSpec.makeParser();
     }
     Map<String, Object> record;
+    DateTime timestamp;
 
-    if (parseSpec instanceof JSONParseSpec && ((JSONParseSpec) parseSpec).getFlattenSpec().getFields().isEmpty()) {
+    if (isFlatSpec) {
       try {
         DynamicMessage message = protobufBytesDecoder.parse(input);
         record = CollectionUtils.mapKeys(message.getAllFields(), k -> k.getJsonName());
+        timestamp = this.timestampSpec.extractTimestamp(record);
       }
       catch (Exception ex) {
         throw new ParseException(ex, "Protobuf message could not be parsed");
@@ -103,6 +114,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         DynamicMessage message = protobufBytesDecoder.parse(input);
         String json = JsonFormat.printer().print(message);
         record = parser.parseToMap(json);
+        timestamp = this.timestampSpec.extractTimestamp(record);
       }
       catch (InvalidProtocolBufferException e) {
         throw new ParseException(e, "Protobuf message could not be parsed");
@@ -117,10 +129,6 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
           Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
       );
     }
-    return ImmutableList.of(new MapBasedInputRow(
-        parseSpec.getTimestampSpec().extractTimestamp(record),
-        dimensions,
-        record
-    ));
+    return ImmutableList.of(new MapBasedInputRow(timestamp, dimensions, record));
   }
 }
