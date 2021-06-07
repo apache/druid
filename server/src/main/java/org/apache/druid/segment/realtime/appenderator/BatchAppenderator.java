@@ -106,7 +106,6 @@ public class BatchAppenderator implements Appenderator
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
-  private final DataSegmentAnnouncer segmentAnnouncer;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
@@ -137,21 +136,21 @@ public class BatchAppenderator implements Appenderator
   private static class SinkMetadata
   {
     /** This is used to maintain the rows in the sink accross persists of the sink
-    // used for functionality (i.e. to detect whether an incremental push
-    // is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)} 
+    * used for functionality (i.e. to detect whether an incremental push
+    * is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)}
     **/
     private int numRowsInSegment;
-    /** For sanity check to make sure that all hydrants for a sink are restored from disk at
-     * push time
+    /** For sanity check as well as functionality: to make sure that all hydrants for a sink are restored from disk at
+     * push time and also to remember the fire hydrant "count" when persisting it.
      */
     private int numHydrants;
 
     public SinkMetadata()
     {
-      this(0, 0, 0);
+      this(0, 0);
     }
 
-    public SinkMetadata(int numRowsInSegment, int numHydrants, int previousHydrantCount)
+    public SinkMetadata(int numRowsInSegment, int numHydrants)
     {
       this.numRowsInSegment = numRowsInSegment;
       this.numHydrants = numHydrants;
@@ -235,7 +234,6 @@ public class BatchAppenderator implements Appenderator
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
-    this.segmentAnnouncer = Preconditions.checkNotNull(segmentAnnouncer, "segmentAnnouncer");
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
@@ -476,15 +474,6 @@ public class BatchAppenderator implements Appenderator
           null
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
-
-      try {
-        segmentAnnouncer.announceSegment(retVal.getSegment());
-      }
-      catch (IOException e) {
-        log.makeAlert(e, "Failed to announce new segment[%s]", schema.getDataSource())
-           .addData("interval", retVal.getInterval())
-           .emit();
-      }
 
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
@@ -980,16 +969,6 @@ public class BatchAppenderator implements Appenderator
     }
 
     log.debug("Shutting down immediately...");
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      try {
-        segmentAnnouncer.unannounceSegment(entry.getValue().getSegment());
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
-           .addData("identifier", entry.getKey().toString())
-           .emit();
-      }
-    }
     try {
       shutdownExecutors();
       // We don't wait for pushExecutor to be terminated. See Javadoc for more details.
