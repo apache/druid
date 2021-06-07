@@ -382,7 +382,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     RocketMQIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(rocketmqHost, taskConfig.getConsumerProperties().get("nameserver.url"));
-    Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
@@ -491,7 +490,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     RocketMQIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(rocketmqHost, taskConfig.getConsumerProperties().get("nameserver.url"));
-    Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
@@ -1465,7 +1463,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     RocketMQIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(rocketmqHost, capturedTaskConfig.getConsumerProperties().get("nameserver.url"));
-    Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
@@ -1575,7 +1572,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
 
     RocketMQIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(rocketmqHost, capturedTaskConfig.getConsumerProperties().get("nameserver.url"));
-    Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
