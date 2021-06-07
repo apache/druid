@@ -183,7 +183,7 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = "--no-default-hadoop",
-      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:3.2.2. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
+      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client-runtime:3.3.0. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
   )
   public boolean noDefaultHadoop = false;
 

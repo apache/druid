@@ -75,5 +75,5 @@
       }
     }
   },
-  "hadoopDependencyCoordinates": ["org.apache.hadoop:hadoop-client-api:3.2.2","org.apache.hadoop:hadoop-client-runtime:3.2.2"]
+  "hadoopDependencyCoordinates": ["org.apache.hadoop:hadoop-client-api:3.3.0","org.apache.hadoop:hadoop-client-runtime:3.3.0"]
 }

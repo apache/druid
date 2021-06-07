@@ -46,8 +46,8 @@ ENV PATH $PATH:$JAVA_HOME/bin
 
 # hadoop
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
-RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/dist/hadoop/core/hadoop-3.2.2/hadoop-3.2.2.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hadoop-3.2.2 hadoop
+RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/dist/hadoop/core/hadoop-3.3.0/hadoop-3.3.0.tar.gz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s ./hadoop-3.3.0 hadoop
 
 ENV HADOOP_HOME /usr/local/hadoop
 ENV HADOOP_COMMON_HOME /usr/local/hadoop
@@ -112,7 +112,7 @@ RUN cp /usr/local/hadoop/share/hadoop/tools/lib/*.jar /usr/local/hadoop/share/ha
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN echo "Port 2122" >> /etc/ssh/sshd_config
-RUN grep JAVA  $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
 # script for plain sshd start
 RUN echo -e \
 	'#!/bin/bash\n/usr/sbin/sshd\ntimeout 10 bash -c "until printf \"\" 2>>/dev/null >>/dev/tcp/127.0.0.1/2122; do sleep 0.5; done"' > \
@@ -125,10 +125,10 @@ RUN start_sshd && $HADOOP_HOME/etc/hadoop/hadoop-env.sh && $HADOOP_HOME/sbin/sta
 CMD ["/etc/bootstrap.sh", "-d"]
 
 # Hdfs ports
-EXPOSE 50010 50020 50070 50075 50090 8020 9000
+EXPOSE 8020 9000 9820 9864 9865 9866 9867 9868 9869 9870 9871 50010 50020 50070 50075 50090
 # Mapred ports
 EXPOSE 10020 19888
 #Yarn ports
 EXPOSE 8030 8031 8032 8033 8040 8042 8088
 #Other ports
-EXPOSE 49707 2122
+EXPOSE 2122 49707
