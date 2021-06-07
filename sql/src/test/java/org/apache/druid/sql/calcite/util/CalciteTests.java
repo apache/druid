@@ -118,6 +118,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
+import org.apache.druid.sql.calcite.schema.SchemaConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -1117,7 +1118,8 @@ public class CalciteTests
         druidLeaderClient,
         overlordLeaderClient,
         provider,
-        getJsonMapper()
+        getJsonMapper(),
+        new SchemaConfig(0)
     );
   }
 

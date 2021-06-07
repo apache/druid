@@ -211,7 +211,8 @@ public class SystemSchema extends AbstractSchema
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final SchemaConfig schemaConfig
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
@@ -219,7 +220,7 @@ public class SystemSchema extends AbstractSchema
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper, schemaConfig),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
     );
   }
@@ -748,16 +749,19 @@ public class SystemSchema extends AbstractSchema
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
+    private final SchemaConfig schemaConfig;
 
     public TasksTable(
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        SchemaConfig schemaConfig
     )
     {
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
+      this.schemaConfig = schemaConfig;
     }
 
     @Override
@@ -778,6 +782,7 @@ public class SystemSchema extends AbstractSchema
       class TasksEnumerable extends DefaultEnumerable<Object[]>
       {
         private final CloseableIterator<TaskStatusPlus> it;
+        private int count;
 
         public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
         {
@@ -798,6 +803,7 @@ public class SystemSchema extends AbstractSchema
             @Override
             public Object[] current()
             {
+              count++;
               final TaskStatusPlus task = it.next();
               @Nullable final String host = task.getLocation().getHost();
               @Nullable final String hostAndPort;
@@ -835,7 +841,7 @@ public class SystemSchema extends AbstractSchema
             @Override
             public boolean moveNext()
             {
-              return it.hasNext();
+              return count < schemaConfig.getTasksLimit() && it.hasNext();
             }
 
             @Override

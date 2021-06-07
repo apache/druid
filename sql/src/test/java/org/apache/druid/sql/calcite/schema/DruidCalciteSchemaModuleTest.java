@@ -56,6 +56,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -122,6 +124,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ObjectMapper.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
         },
         new LifecycleModule(),
         target);
