@@ -22,11 +22,13 @@ package org.apache.druid.indexing.rocketmq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.rocketmq.PartitionUtil;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
 import org.apache.rocketmq.client.consumer.store.ReadOffsetType;
@@ -231,8 +233,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
 
   private static DefaultLitePullConsumer getRocketMQConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
-    final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
-    DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
+    DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(StringUtils.format("rocketmq-supervisor-%s", IdUtils.getRandomId()));
     if (consumerProperties.get("pull.batch.size") != null) {
       consumer.setPullBatchSize(Integer.parseInt(consumerProperties.get("pull.batch.size").toString()));
     }

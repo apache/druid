@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -53,7 +54,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
-import org.apache.druid.indexing.rocketmq.RocketMQConsumerConfigs;
 import org.apache.druid.indexing.rocketmq.RocketMQDataSourceMetadata;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTask;
 import org.apache.druid.indexing.rocketmq.RocketMQIndexTaskClient;
@@ -260,8 +260,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
 
-    final Map<String, Object> consumerProperties = RocketMQConsumerConfigs.getConsumerProperties();
-    consumerProperties.put("myCustomKey", "myCustomValue");
+    final Map<String, Object> consumerProperties = new HashMap<>();
     consumerProperties.put("nameserver.url", StringUtils.format(rocketmqHost));
 
     RocketMQSupervisorIOConfig rocketmqSupervisorIOConfig = new RocketMQSupervisorIOConfig(
@@ -3333,8 +3332,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
       RocketMQRecordSupplier supplier
   )
   {
-    final Map<String, Object> consumerProperties = RocketMQConsumerConfigs.getConsumerProperties();
-    consumerProperties.put("myCustomKey", "myCustomValue");
+    final Map<String, Object> consumerProperties = new HashMap<>();
     consumerProperties.put("nameserver.url", rocketmqHost);
     RocketMQSupervisorIOConfig rocketmqSupervisorIOConfig = new RocketMQSupervisorIOConfig(
         topic,
@@ -3804,9 +3802,7 @@ public class RocketMQSupervisorTest extends EasyMockSupport
     protected RecordSupplier<String, Long, RocketMQRecordEntity> setupRecordSupplier()
     {
       if (this.supplier == null) {
-        final Map<String, Object> consumerConfigs = RocketMQConsumerConfigs.getConsumerProperties();
-        consumerConfigs.put("metadata.max.age.ms", "1");
-        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(consumerConfigs.get("consumer.group").toString());
+        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(StringUtils.format("rocketmq-supervisor-%s", IdUtils.getRandomId()));
         consumer.setNamesrvAddr(consumerProperties.get("nameserver.url").toString());
         return new RocketMQRecordSupplier(
             consumer
