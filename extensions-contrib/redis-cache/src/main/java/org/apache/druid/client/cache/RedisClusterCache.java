@@ -20,13 +20,18 @@
 package org.apache.druid.client.cache;
 
 import redis.clients.jedis.JedisCluster;
+import redis.clients.util.JedisClusterCRC16;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RedisClusterCache extends AbstractRedisCache
 {
-  private JedisCluster cluster;
+  private final JedisCluster cluster;
 
   RedisClusterCache(JedisCluster cluster, RedisCacheConfig config)
   {
@@ -46,10 +51,40 @@ public class RedisClusterCache extends AbstractRedisCache
     cluster.setex(key, (int) expiration.getSeconds(), value);
   }
 
+  static class Key {
+    byte[] key;
+    int index;
+
+    public Key(byte[] key, int index) {
+      this.key = key;
+      this.index = index;
+    }
+  }
   @Override
   protected List<byte[]> mgetFromRedis(byte[]... keys)
   {
-    return cluster.mget(keys);
+    if ( keys.length <= 1 ) {
+      return cluster.mget(keys);
+    }
+    Map<Integer, List<Key>> keyGroup = new HashMap<>();
+    for(int i = 0; i < keys.length; i++) {
+      int slot = JedisClusterCRC16.getSlot(keys[i]);
+      keyGroup.computeIfAbsent(slot, val->new ArrayList<>()).add(new Key(keys[i], i));
+    }
+
+    byte[][] returns = new byte[keys.length][];
+    keyGroup.keySet().parallelStream()
+            .forEach( slot-> {
+                        List<Key> keyList = keyGroup.get(slot);
+
+              List<byte[]> ret = cluster.mget(keyList.stream()
+                                                     .map(key -> key.key).toArray(byte[][]::new));
+              for(int i = 0; i < keyList.size(); i++) {
+                returns[keyList.get(i).index] = ret.get(i);
+              }
+            }
+            );
+    return Arrays.asList(returns);
   }
 
   @Override
