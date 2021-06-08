@@ -354,7 +354,7 @@ ORDER BY 1`;
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
-      showSegmentTimeline: true,
+      showSegmentTimeline: false,
 
       actions: [],
     };
