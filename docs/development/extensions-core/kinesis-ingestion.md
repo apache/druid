@@ -149,10 +149,8 @@ but unfortunately, it doesn't support all data formats supported by the legacy `
 (They will be supported in the future.)
 
 The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
-[`delimited`](../../ingestion/data-formats.md#tsv-delimited), and [`json`](../../ingestion/data-formats.md#json).
-You can also read [`avro_stream`](../../ingestion/data-formats.md#avro-stream-parser),
-[`protobuf`](../../ingestion/data-formats.md#protobuf-parser),
-and [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
+[`delimited`](../../ingestion/data-formats.md#tsv-delimited), [`json`](../../ingestion/data-formats.md#json), [`avro_stream`](../../ingestion/data-formats.md#avro-stream), [`protobuf`](../../ingestion/data-formats.md#protobuf).
+You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
 
