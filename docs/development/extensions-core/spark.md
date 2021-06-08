@@ -175,6 +175,14 @@ be used directly. Instead, these connectors use a plugin registry architecture, 
 most functionality in `extensions-core`. Custom plugins consisting of a string name and one or more serializable
 generator functions must be registered before the first Spark action which would depend on them is called.
 
+## Deploying to a Spark cluster
+This extension can be run on a Spark cluster in one of two ways: bundled as part of an application jar or uploaded as
+a library jar to a Spark cluster and included in the classpath provided to Spark applications by the application
+manager. If the second approach is used, this extension should be built with
+`mvn clean package -pl extensions-core/spark-extensions` and the resulting jar `druid-spark-extensions-<VERSION>.jar`
+uploaded to the Spark cluster. Application jars should then be built with a compile-time dependency on
+`org.apache.druid.extensions:druid-spark-extensions` (e.g. marked as `provided` in Maven or with `compile` in Gradle).
+
 ## Configuration Reference
 
 ### Metadata Client Configs
