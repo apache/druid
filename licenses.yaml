@@ -5000,6 +5000,16 @@ libraries:
 
 ---
 
+name: DNS Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.0
+libraries:
+  - org.apache.hadoop.thirdparty: hadoop-shaded-protobuf_3_7
+
+---
+
 # Web console modules start
 name: "@babel/runtime"
 license_category: binary

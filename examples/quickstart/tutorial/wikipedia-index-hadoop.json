@@ -71,7 +71,8 @@
         "mapreduce.job.user.classpath.first" : "true",
         "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
         "mapreduce.map.memory.mb" : 1024,
-        "mapreduce.reduce.memory.mb" : 1024
+        "mapreduce.reduce.memory.mb" : 1024,
+        "mapreduce.job.classloader" : "true"
       }
     }
   },
