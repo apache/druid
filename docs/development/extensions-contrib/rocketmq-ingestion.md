@@ -26,7 +26,8 @@ sidebar_label: "Apache RocketMQ"
 
 The `RocketMQ` indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
 `RocketMQ` by managing the creation and lifetime of `RocketMQ` indexing tasks. These indexing tasks read events using `RocketMQ's` own
-message queue and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion.
+message queue and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. Message queue is defined unique by 
+broker name and `queueID`, and message is in ordered stored in one message queue.
 The supervisor oversees the state of the indexing tasks to coordinate handoffs,
 manage failures, and ensure that the scalability and replication requirements are maintained.
 
