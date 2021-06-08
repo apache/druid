@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
+import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;

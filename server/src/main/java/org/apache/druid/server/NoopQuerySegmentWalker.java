@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.server;
 
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -25,6 +25,14 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+/**
+ * An empty implementation of {@link QuerySegmentWalker}.
+ *
+ * Some extentions need implementation of QuerySegmentWalker, but this class will not be used in
+ * router. Bind {@link NoopQuerySegmentWalker} in router to allow router load some extentions, which
+ * makes query can run
+ * through router.
+ */
 public class NoopQuerySegmentWalker implements QuerySegmentWalker
 {
   @Override
