@@ -21,7 +21,7 @@ import { DateRange, DateRangePicker, TimePrecision } from '@blueprintjs/datetime
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { intervalToLocalDateRange, localDateRangeToInterval } from '../../utils/date';
+import { intervalToLocalDateRange, localDateRangeToInterval } from '../../utils';
 
 import './interval-input.scss';
 

@@ -29,8 +29,14 @@ import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
 import { Api } from '../../singletons';
-import { Capabilities, formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils';
-import { ceilToUtcDay } from '../../utils/date';
+import {
+  Capabilities,
+  ceilToUtcDay,
+  formatBytes,
+  queryDruidSql,
+  QueryManager,
+  uniq,
+} from '../../utils';
 import { DateRangeSelector } from '../date-range-selector/date-range-selector';
 import { Loader } from '../loader/loader';
 

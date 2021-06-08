@@ -21,7 +21,7 @@ import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { dateToIsoDateString, localToUtcDate, utcToLocalDate } from '../../utils/date';
+import { dateToIsoDateString, localToUtcDate, utcToLocalDate } from '../../utils';
 
 import './date-range-selector.scss';
 
