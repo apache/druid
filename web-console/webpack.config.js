@@ -119,7 +119,6 @@ module.exports = env => {
                   plugins: {
                     'postcss-preset-env': {
                       autoprefixer: { grid: 'no-autoplace' },
-                      browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
                     },
                   },
                 },

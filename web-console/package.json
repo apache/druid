@@ -58,6 +58,13 @@
     "node": "14.16.1",
     "npm": "6.14.12"
   },
+  "browserslist": [
+    "> 1% and supports es6",
+    "last 3 versions and supports es6",
+    "Firefox ESR",
+    "not dead",
+    "not ie 11"
+  ],
   "dependencies": {
     "@blueprintjs/core": "^3.33.0",
     "@blueprintjs/datetime": "^3.19.2",
