@@ -16,18 +16,22 @@
  * limitations under the License.
  */
 
-.bar-chart {
-  .hovered-bar {
-    fill: transparent;
-    stroke: #ffffff;
-    stroke-width: 1.5px;
-    transform: translateX(65px);
-  }
+import { select } from 'd3-selection';
+import React from 'react';
 
-  .gridline-x {
-    line {
-      stroke-dasharray: 5, 5;
-      opacity: 0.5;
-    }
-  }
+interface ChartAxisProps {
+  transform?: string;
+  scale: any;
+  className?: string;
 }
+
+export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
+  const { transform, scale, className } = props;
+  return (
+    <g
+      className={`chart-axis ${className}`}
+      transform={transform}
+      ref={node => select(node).call(scale)}
+    />
+  );
+});

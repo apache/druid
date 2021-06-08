@@ -16,37 +16,19 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-.datasource-view {
-  height: 100%;
-  width: 100%;
-  overflow: auto;
+import { BarUnit } from './bar-unit';
 
-  .clickable-cell {
-    cursor: pointer;
-  }
-
-  .ReactTable {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-  }
-
-  &.show-chart {
-    .segment-timeline {
-      height: calc(50% - 55px);
-      margin-top: 10px;
-    }
-
-    .ReactTable {
-      top: 50%;
-    }
-  }
-
-  &.no-chart {
-    .ReactTable {
-      top: $view-control-bar-height + $standard-padding;
-    }
-  }
-}
+describe('BarUnit', () => {
+  it('matches snapshot', () => {
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
+    );
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

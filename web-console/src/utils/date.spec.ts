@@ -16,22 +16,10 @@
  * limitations under the License.
  */
 
-import { select } from 'd3-selection';
-import React from 'react';
+import { dateToIsoDateString } from './date';
 
-interface ChartAxisProps {
-  transform: string;
-  scale: any;
-  className?: string;
-}
-
-export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
-  const { transform, scale, className } = props;
-  return (
-    <g
-      className={`chart-axis ${className}`}
-      transform={transform}
-      ref={node => select(node).call(scale)}
-    />
-  );
+describe('date', () => {
+  describe('dateToIsoDateString', () => {
+    expect(dateToIsoDateString(new Date('2021-02-03T12:00:00Z'))).toEqual('2021-02-03');
+  });
 });
