@@ -16,10 +16,56 @@
  * limitations under the License.
  */
 
-import { dateToIsoDateString } from './date';
+import {
+  ceilToUtcDay,
+  dateToIsoDateString,
+  intervalToLocalDateRange,
+  localDateRangeToInterval,
+  localToUtcDate,
+  utcToLocalDate,
+} from './date';
 
 describe('date', () => {
   describe('dateToIsoDateString', () => {
-    expect(dateToIsoDateString(new Date('2021-02-03T12:00:00Z'))).toEqual('2021-02-03');
+    it('works', () => {
+      expect(dateToIsoDateString(new Date('2021-02-03T12:00:00Z'))).toEqual('2021-02-03');
+    });
+  });
+
+  describe('utcToLocalDate / localToUtcDate', () => {
+    it('works', () => {
+      const date = new Date('2021-02-03T12:00:00Z');
+
+      expect(localToUtcDate(utcToLocalDate(date))).toEqual(date);
+      expect(utcToLocalDate(localToUtcDate(date))).toEqual(date);
+    });
+  });
+
+  describe('intervalToLocalDateRange / localDateRangeToInterval', () => {
+    it('works with full interval', () => {
+      const interval = '2021-02-03T12:00:00/2021-03-03T12:00:00';
+
+      expect(localDateRangeToInterval(intervalToLocalDateRange(interval))).toEqual(interval);
+    });
+
+    it('works with start only', () => {
+      const interval = '2021-02-03T12:00:00/';
+
+      expect(localDateRangeToInterval(intervalToLocalDateRange(interval))).toEqual(interval);
+    });
+
+    it('works with end only', () => {
+      const interval = '/2021-02-03T12:00:00';
+
+      expect(localDateRangeToInterval(intervalToLocalDateRange(interval))).toEqual(interval);
+    });
+  });
+
+  describe('ceilToUtcDay', () => {
+    it('works', () => {
+      expect(ceilToUtcDay(new Date('2021-02-03T12:03:02.001Z'))).toEqual(
+        new Date('2021-02-04T00:00:00Z'),
+      );
+    });
   });
 });

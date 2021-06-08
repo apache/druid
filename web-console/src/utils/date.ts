@@ -34,15 +34,6 @@ export function localToUtcDate(localDate: Date): Date {
   return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
 }
 
-export function localDateRangeToInterval(localRange: DateRange): string {
-  // This function takes in the dates selected from datepicker in local time, and displays them in UTC
-  // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
-  const [localStartDate, localEndDate] = localRange;
-  return `${localStartDate ? localToUtcDate(localStartDate).toISOString().substring(0, 19) : ''}/${
-    localEndDate ? localToUtcDate(localEndDate).toISOString().substring(0, 19) : ''
-  }`;
-}
-
 export function intervalToLocalDateRange(interval: string): DateRange {
   const dates = interval.split('/');
   if (dates.length !== 2) return [null, null];
@@ -55,6 +46,15 @@ export function intervalToLocalDateRange(interval: string): DateRange {
     startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? null : startDate,
     endDate && endDate.getFullYear() > CURRENT_YEAR ? null : endDate,
   ];
+}
+
+export function localDateRangeToInterval(localRange: DateRange): string {
+  // This function takes in the dates selected from datepicker in local time, and displays them in UTC
+  // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
+  const [localStartDate, localEndDate] = localRange;
+  return `${localStartDate ? localToUtcDate(localStartDate).toISOString().substring(0, 19) : ''}/${
+    localEndDate ? localToUtcDate(localEndDate).toISOString().substring(0, 19) : ''
+  }`;
 }
 
 export function ceilToUtcDay(date: Date): Date {
