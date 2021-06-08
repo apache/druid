@@ -1394,10 +1394,9 @@ ORDER BY 1`;
 
     return (
       <div
-        className={classNames(
-          'datasource-view app-view',
-          showSegmentTimeline ? 'show-chart' : 'no-chart',
-        )}
+        className={classNames('datasource-view app-view', {
+          'show-segment-timeline': showSegmentTimeline,
+        })}
       >
         <ViewControlBar label="Datasources">
           <RefreshButton
