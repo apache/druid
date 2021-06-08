@@ -17491,4 +17491,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
+
+  @Test
+  public void testJoinWithTimeDimension() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT count(*) FROM druid.foo t1 inner join druid.foo t2 on t1.__time = t2.__time",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(JoinDataSource.create(new TableDataSource(CalciteTests.DATASOURCE1),
+                                                                 new QueryDataSource(
+                                                                     Druids.newScanQueryBuilder()
+                                                                           .dataSource(CalciteTests.DATASOURCE1)
+                                                                           .intervals(querySegmentSpec(Filtration.eternity()))
+                                                                           .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                           .columns("__time")
+                                                                           .legacy(false)
+                                                                           .context(QUERY_CONTEXT_DEFAULT)
+                                                                           .build()),
+                                                                 "j0.",
+                                                                 "(\"__time\" == \"j0.__time\")",
+                                                                 JoinType.INNER,
+                                                                 null,
+                                                                 ExprMacroTable.nil()))
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                               .context(QUERY_CONTEXT_DEFAULT)
+                               .build()),
+        ImmutableList.of(new Object[]{6L}));
+  }
 }
