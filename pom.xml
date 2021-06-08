@@ -111,7 +111,7 @@
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.6</jacoco.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.9</zookeeper.version>
+        <zookeeper.version>3.7.0</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
