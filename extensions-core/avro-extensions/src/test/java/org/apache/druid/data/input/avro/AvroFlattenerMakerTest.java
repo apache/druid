@@ -23,6 +23,7 @@ import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -147,6 +148,37 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someIntArray").apply(record)
     );
     Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).min().getAsInt(),
+
+        //return type of min is double
+        flattener.makeJsonPathExtractor("$.someIntArray.min()").apply(record)
+    );
+    Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).max().getAsInt(),
+
+        //return type of max is double
+        flattener.makeJsonPathExtractor("$.someIntArray.max()").apply(record)
+    );
+    Assert.assertEquals(
+        record.getSomeIntArray().stream().mapToInt(Integer::intValue).average().getAsDouble(),
+        flattener.makeJsonPathExtractor("$.someIntArray.avg()").apply(record)
+    );
+    Assert.assertEquals(
+        record.getSomeIntArray().size(),
+        flattener.makeJsonPathExtractor("$.someIntArray.length()").apply(record)
+    );
+    Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).sum(),
+
+        //return type of sum is double
+        flattener.makeJsonPathExtractor("$.someIntArray.sum()").apply(record)
+    );
+    Assert.assertEquals(
+        2.681,
+        (double) flattener.makeJsonPathExtractor("$.someIntArray.stddev()").apply(record),
+        0.0001
+    );
+    Assert.assertEquals(
         record.getSomeStringArray(),
         flattener.makeJsonPathExtractor("$.someStringArray").apply(record)
     );
@@ -212,10 +244,14 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString)]").apply(record)
     );
 
-    List<String> nestedStringArray = Collections.singletonList(record.getSomeRecordArray().get(0).getNestedString().toString());
+    List<String> nestedStringArray = Collections.singletonList(record.getSomeRecordArray()
+                                                                     .get(0)
+                                                                     .getNestedString()
+                                                                     .toString());
     Assert.assertEquals(
         nestedStringArray,
-        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString=='string in record')].nestedString").apply(record)
+        flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString=='string in record')].nestedString")
+                 .apply(record)
     );
   }
 

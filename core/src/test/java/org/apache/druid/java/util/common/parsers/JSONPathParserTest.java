@@ -266,7 +266,7 @@ public class JSONPathParserTest
     Assert.assertEquals(24.0, jsonMap.get("met-array-sum"));
 
     //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
-    Assert.assertEquals(0.8165, (double)jsonMap.get("met-array-stddev"), 0.00001);
+    Assert.assertEquals(0.8165, (double) jsonMap.get("met-array-stddev"), 0.00001);
 
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L, 10L), jsonMap.get("met-array-append"));
     Assert.assertEquals("aaabbb", jsonMap.get("concat"));
