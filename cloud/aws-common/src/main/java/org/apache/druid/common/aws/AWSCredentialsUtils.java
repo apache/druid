@@ -24,7 +24,6 @@ import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
-import com.amazonaws.auth.WebIdentityTokenCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 
 public class AWSCredentialsUtils
@@ -36,7 +35,6 @@ public class AWSCredentialsUtils
         new LazyFileSessionCredentialsProvider(config),
         new EnvironmentVariableCredentialsProvider(),
         new SystemPropertiesCredentialsProvider(),
-        WebIdentityTokenCredentialsProvider.create(),        
         new ProfileCredentialsProvider(),
         new EC2ContainerCredentialsProviderWrapper(),
         InstanceProfileCredentialsProvider.getInstance());
