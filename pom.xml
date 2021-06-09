@@ -87,6 +87,7 @@
         <datasketches.memory.version>1.3.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
+        <fastutil.version>8.5.4</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
@@ -897,7 +898,17 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>8.5.4</version>
+                <version>${fastutil.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-core</artifactId>
+                <version>${fastutil.version}</version>
+            </dependency>
+             <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-extra</artifactId>
+                <version>${fastutil.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.opencsv</groupId>
