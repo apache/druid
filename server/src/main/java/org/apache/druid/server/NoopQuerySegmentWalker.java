@@ -30,8 +30,7 @@ import org.joda.time.Interval;
  *
  * Some extentions need implementation of QuerySegmentWalker, but this class will not be used in
  * router. Bind {@link NoopQuerySegmentWalker} in router to allow router load some extentions, which
- * makes query can run
- * through router.
+ * makes query can run through router.
  */
 public class NoopQuerySegmentWalker implements QuerySegmentWalker
 {
