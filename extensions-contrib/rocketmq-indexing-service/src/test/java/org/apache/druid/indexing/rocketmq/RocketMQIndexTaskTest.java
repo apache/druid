@@ -2300,7 +2300,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,

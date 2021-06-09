@@ -68,7 +68,6 @@ public class RocketMQSupervisorTuningConfig extends RocketMQIndexTaskTuningConfi
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -85,8 +84,6 @@ public class RocketMQSupervisorTuningConfig extends RocketMQIndexTaskTuningConfi
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,

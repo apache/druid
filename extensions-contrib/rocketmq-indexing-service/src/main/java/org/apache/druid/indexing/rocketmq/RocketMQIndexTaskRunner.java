@@ -85,7 +85,7 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Strin
       TaskToolbox toolbox
   )
   {
-    List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> records = new ArrayList<>();
+    List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> records;
     records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     return records;
   }

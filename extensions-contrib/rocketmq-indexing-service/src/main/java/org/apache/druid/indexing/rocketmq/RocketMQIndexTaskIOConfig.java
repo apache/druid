@@ -116,34 +116,6 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<S
     );
   }
 
-  /**
-   * This method is for compatibilty so that newer version of RocketMQIndexTaskIOConfig can be read by
-   * old version of Druid. Note that this method returns end sequence numbers instead of start. This is because
-   * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
-   */
-  @JsonProperty
-  @Deprecated
-  public SeekableStreamEndSequenceNumbers<String, Long> getStartPartitions()
-  {
-    // Converting to start sequence numbers. This is allowed for RocketMQ because the start offset is always inclusive.
-    final SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers = getStartSequenceNumbers();
-    return new SeekableStreamEndSequenceNumbers<>(
-        startSequenceNumbers.getStream(),
-        startSequenceNumbers.getPartitionSequenceNumberMap()
-    );
-  }
-
-  /**
-   * This method is for compatibilty so that newer version of RocketMQIndexTaskIOConfig can be read by
-   * old version of Druid.
-   */
-  @JsonProperty
-  @Deprecated
-  public SeekableStreamEndSequenceNumbers<String, Long> getEndPartitions()
-  {
-    return getEndSequenceNumbers();
-  }
-
   @JsonProperty
   public Map<String, Object> getConsumerProperties()
   {
