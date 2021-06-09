@@ -117,6 +117,7 @@ public class PlannerContext
     final boolean stringifyArrays;
 
     if (queryContext != null) {
+
       final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
       final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
       final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
