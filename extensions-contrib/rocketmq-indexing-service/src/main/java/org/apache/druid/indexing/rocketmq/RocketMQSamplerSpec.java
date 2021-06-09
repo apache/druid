@@ -58,7 +58,7 @@ public class RocketMQSamplerSpec extends SeekableStreamSamplerSpec
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
       final Map<String, Object> props = new HashMap<>(((RocketMQSupervisorIOConfig) ioConfig).getConsumerProperties());
-      return new RocketMQRecordSupplier(props, objectMapper);
+      return new RocketMQRecordSupplier(props);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

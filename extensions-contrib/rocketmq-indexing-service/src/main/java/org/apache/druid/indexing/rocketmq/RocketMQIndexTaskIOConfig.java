@@ -39,14 +39,8 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<S
 
   @JsonCreator
   public RocketMQIndexTaskIOConfig(
-      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
+      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
-      @JsonProperty("startPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<String, Long> startPartitions,
-      @JsonProperty("endPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<String, Long> endPartitions,
-      // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers")
       @Nullable SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers,
       @JsonProperty("endSequenceNumbers")
@@ -62,10 +56,8 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<S
     super(
         taskGroupId,
         baseSequenceName,
-        startSequenceNumbers == null
-        ? Preconditions.checkNotNull(startPartitions, "startPartitions").asStartPartitions(true)
-        : startSequenceNumbers,
-        endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
+        startSequenceNumbers,
+        endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
@@ -85,35 +77,6 @@ public class RocketMQIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<S
           partition
       );
     }
-  }
-
-  public RocketMQIndexTaskIOConfig(
-      int taskGroupId,
-      String baseSequenceName,
-      SeekableStreamStartSequenceNumbers<String, Long> startSequenceNumbers,
-      SeekableStreamEndSequenceNumbers<String, Long> endSequenceNumbers,
-      Map<String, Object> consumerProperties,
-      Long pollTimeout,
-      Boolean useTransaction,
-      DateTime minimumMessageTime,
-      DateTime maximumMessageTime,
-      InputFormat inputFormat
-  )
-  {
-    this(
-        taskGroupId,
-        baseSequenceName,
-        null,
-        null,
-        startSequenceNumbers,
-        endSequenceNumbers,
-        consumerProperties,
-        pollTimeout,
-        useTransaction,
-        minimumMessageTime,
-        maximumMessageTime,
-        inputFormat
-    );
   }
 
   @JsonProperty

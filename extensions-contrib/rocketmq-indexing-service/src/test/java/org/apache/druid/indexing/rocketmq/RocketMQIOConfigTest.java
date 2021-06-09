@@ -57,39 +57,6 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
-                     + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"}\n"
-                     + "}";
-
-    RocketMQIndexTaskIOConfig config = (RocketMQIndexTaskIOConfig) mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                IOConfig.class
-            )
-        ), IOConfig.class
-    );
-
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 1L, PartitionUtil.genPartition(BROKER_NAME, 1), 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 15L, PartitionUtil.genPartition(BROKER_NAME, 1), 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals(ImmutableMap.of("nameserver.url", "127.0.0.1:9876"), config.getConsumerProperties());
-    Assert.assertTrue(config.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", config.getMaximumMessageTime().isPresent());
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
-  }
-
-  @Test
-  public void testSerdeWithDefaultsAndSequenceNumbers() throws Exception
-  {
-    String jsonStr = "{\n"
-                     + "  \"type\": \"rocketmq\",\n"
-                     + "  \"taskGroupId\": 0,\n"
-                     + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"}\n"
@@ -123,8 +90,8 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -158,8 +125,8 @@ public class RocketMQIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -179,7 +146,7 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -188,7 +155,7 @@ public class RocketMQIOConfigTest
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("startPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("startSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
@@ -199,8 +166,7 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
@@ -219,8 +185,8 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
@@ -239,8 +205,8 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"other\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"other\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":200}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -260,8 +226,8 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -281,8 +247,8 @@ public class RocketMQIOConfigTest
                      + "  \"type\": \"rocketmq\",\n"
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
-                     + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":2}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":1, \"broker-a-queueid-1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"broker-a-queueid-0\":15, \"broker-a-queueid-1\":2}},\n"
                      + "  \"consumerProperties\": {\"nameserver.url\":\"127.0.0.1:9876\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"

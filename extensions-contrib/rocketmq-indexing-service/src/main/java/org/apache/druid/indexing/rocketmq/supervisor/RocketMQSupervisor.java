@@ -126,7 +126,7 @@ public class RocketMQSupervisor extends SeekableStreamSupervisor<String, Long, R
   @Override
   protected RecordSupplier<String, Long, RocketMQRecordEntity> setupRecordSupplier()
   {
-    return new RocketMQRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
+    return new RocketMQRecordSupplier(spec.getIoConfig().getConsumerProperties());
   }
 
   @Override

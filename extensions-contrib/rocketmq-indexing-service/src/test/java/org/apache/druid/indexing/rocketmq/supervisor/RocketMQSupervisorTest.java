@@ -2472,10 +2472,10 @@ public class RocketMQSupervisorTest extends EasyMockSupport
         .anyTimes();
     supervisorRecordSupplier.seekToLatest(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn(0l).anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)))).andReturn(10l).anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1)))).andReturn(2l).anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 2)))).andReturn(2l).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn(0L).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0)))).andReturn(10L).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 1)))).andReturn(2L).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 2)))).andReturn(2L).anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyLong());
     EasyMock.expectLastCall().anyTimes();
     supervisor = getTestableSupervisor(2, 1, true, "PT10S", null, null, supervisorRecordSupplier);

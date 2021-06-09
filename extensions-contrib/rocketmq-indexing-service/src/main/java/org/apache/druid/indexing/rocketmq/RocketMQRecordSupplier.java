@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.rocketmq;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
@@ -44,6 +43,7 @@ import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,11 +58,10 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   private Set<StreamPartition<String>> streamPartitions;
 
   public RocketMQRecordSupplier(
-      Map<String, Object> consumerProperties,
-      ObjectMapper sortingMapper
+      Map<String, Object> consumerProperties
   )
   {
-    this(getRocketMQConsumer(sortingMapper, consumerProperties));
+    this(getRocketMQConsumer(consumerProperties));
   }
 
   @VisibleForTesting
@@ -143,7 +142,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
   public Set<StreamPartition<String>> getAssignment()
   {
     if (this.streamPartitions == null) {
-      return new HashSet<StreamPartition<String>>();
+      return Collections.emptySet();
     }
     return this.streamPartitions;
   }
@@ -231,7 +230,7 @@ public class RocketMQRecordSupplier implements RecordSupplier<String, Long, Rock
     consumer.shutdown();
   }
 
-  private static DefaultLitePullConsumer getRocketMQConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
+  private static DefaultLitePullConsumer getRocketMQConsumer(Map<String, Object> consumerProperties)
   {
     DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(StringUtils.format("rocketmq-supervisor-%s", IdUtils.getRandomId()));
     if (consumerProperties.get("pull.batch.size") != null) {

@@ -43,6 +43,16 @@
       <version>${rocketmq.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.rocketmq</groupId>
+      <artifactId>rocketmq-common</artifactId>
+      <version>${rocketmq.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.rocketmq</groupId>
+      <artifactId>rocketmq-remoting</artifactId>
+      <version>${rocketmq.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
@@ -139,12 +149,12 @@
       <artifactId>rocketmq-broker</artifactId>
       <version>${rocketmq.version}</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>rocketmq-remoting</artifactId>
-          <groupId>org.apache.rocketmq</groupId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.rocketmq</groupId>
+      <artifactId>rocketmq-store</artifactId>
+      <version>${rocketmq.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.rocketmq</groupId>

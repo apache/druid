@@ -168,7 +168,7 @@ public class RocketMQRecordSupplierTest
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -193,7 +193,7 @@ public class RocketMQRecordSupplierTest
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -227,7 +227,7 @@ public class RocketMQRecordSupplierTest
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -291,7 +291,7 @@ public class RocketMQRecordSupplierTest
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -337,7 +337,7 @@ public class RocketMQRecordSupplierTest
     );
 
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -355,7 +355,7 @@ public class RocketMQRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
     StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -367,7 +367,7 @@ public class RocketMQRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
     StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -379,7 +379,7 @@ public class RocketMQRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
     StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -391,7 +391,7 @@ public class RocketMQRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     RocketMQRecordSupplier recordSupplier = new RocketMQRecordSupplier(
-        rocketmqServer.consumerProperties(), OBJECT_MAPPER);
+        rocketmqServer.consumerProperties());
     StreamPartition<String> streamPartition = StreamPartition.of(topic, PartitionUtil.genPartition(BROKER_NAME, 0));
     Set<StreamPartition<String>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);

@@ -51,13 +51,13 @@ public class TestProducer
     HashMap<MessageQueue, Long> messageQueueHashMap = new HashMap<>();
     for (Pair<MessageQueue, Message> record : records) {
       if (messageQueueHashMap.containsKey(record.lhs)) {
-        messageQueueHashMap.put(record.lhs, messageQueueHashMap.get(record.lhs) + 1l);
+        messageQueueHashMap.put(record.lhs, messageQueueHashMap.get(record.lhs) + 1L);
       } else {
-        messageQueueHashMap.put(record.lhs, 1l);
+        messageQueueHashMap.put(record.lhs, 1L);
       }
     }
     for (MessageQueue mq : messageQueueHashMap.keySet()) {
-      long offset = 0l;
+      long offset = 0L;
       try {
         offset = clientInstance.getMQAdminImpl().maxOffset(mq);
       }

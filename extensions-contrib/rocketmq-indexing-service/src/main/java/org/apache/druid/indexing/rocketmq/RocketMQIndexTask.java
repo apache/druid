@@ -93,7 +93,7 @@ public class RocketMQIndexTask extends SeekableStreamIndexTask<String, Long, Roc
 
       final Map<String, Object> props = new HashMap<>(((RocketMQIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
 
-      return new RocketMQRecordSupplier(props, configMapper);
+      return new RocketMQRecordSupplier(props);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
