@@ -96,7 +96,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"maxRowsPerSegment\": 100,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
-                     + "  \"buildV9Directly\": true,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
                      + "  \"recordBufferSize\": 1000,\n"
@@ -152,7 +151,6 @@ public class KinesisIndexTaskTuningConfigTest
         4,
         new IndexSpec(),
         new IndexSpec(),
-        true,
         true,
         5L,
         true,
@@ -215,7 +213,6 @@ public class KinesisIndexTaskTuningConfigTest
         new IndexSpec(),
         new IndexSpec(),
         true,
-        true,
         5L,
         true,
         false,
@@ -270,7 +267,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"maxRowsPerSegment\": 100,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
-                     + "  \"buildV9Directly\": true,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
                      + "  \"recordBufferSize\": 1000,\n"
@@ -304,7 +300,6 @@ public class KinesisIndexTaskTuningConfigTest
         4,
         new IndexSpec(),
         new IndexSpec(),
-        true,
         true,
         5L,
         true,
