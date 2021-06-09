@@ -307,7 +307,7 @@ public class RocketMQRecordSupplierTest
     List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> polledRecords = recordSupplier.poll(poll_timeout_millis);
     for (int i = 0; polledRecords.size() != 10 && i < pollRetry; i++) {
       List<OrderedPartitionableRecord<String, Long, RocketMQRecordEntity>> list = recordSupplier.poll(poll_timeout_millis);
-      if (list.size()>0) {
+      if (list.size() > 0) {
         polledRecords.addAll(list);
       }
       Thread.sleep(3000);

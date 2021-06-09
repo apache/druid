@@ -449,7 +449,6 @@ public class RocketMQSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             null
         ),
         null

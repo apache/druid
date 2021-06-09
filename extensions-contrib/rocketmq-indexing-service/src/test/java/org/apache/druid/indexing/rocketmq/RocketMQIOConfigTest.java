@@ -19,32 +19,21 @@
 
 package org.apache.druid.indexing.rocketmq;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.rocketmq.PartitionUtil;
-import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
-import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nullable;
-
-import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 
 public class RocketMQIOConfigTest
 {
@@ -304,161 +293,5 @@ public class RocketMQIOConfigTest
     exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
     exception.expectMessage(CoreMatchers.containsString("end offset must be >= start offset"));
     mapper.readValue(jsonStr, IOConfig.class);
-  }
-
-  @Test
-  public void testDeserializeToOldIoConfig() throws IOException
-  {
-    final RocketMQIndexTaskIOConfig currentConfig = new RocketMQIndexTaskIOConfig(
-        0,
-        "baseSequenceNamee",
-        null,
-        null,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L), null),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)),
-        ImmutableMap.of("consumer", "properties"),
-        100L,
-        true,
-        DateTimes.nowUtc(),
-        DateTimes.nowUtc(),
-        null
-    );
-    final byte[] json = mapper.writeValueAsBytes(currentConfig);
-
-    final ObjectMapper oldMapper = new DefaultObjectMapper();
-    oldMapper.registerSubtypes(new NamedType(OldRocketMQIndexTaskIoConfig.class, "rocketmq"));
-    final OldRocketMQIndexTaskIoConfig oldConfig = (OldRocketMQIndexTaskIoConfig) oldMapper.readValue(json, IOConfig.class);
-
-    Assert.assertEquals(currentConfig.getTaskGroupId().intValue(), oldConfig.taskGroupId);
-    Assert.assertEquals(currentConfig.getBaseSequenceName(), oldConfig.baseSequenceName);
-    Assert.assertEquals(currentConfig.getStartSequenceNumbers(), oldConfig.startPartitions.asStartPartitions(true));
-    Assert.assertEquals(currentConfig.getEndSequenceNumbers(), oldConfig.getEndPartitions());
-    Assert.assertEquals(currentConfig.getConsumerProperties(), oldConfig.getConsumerProperties());
-    Assert.assertEquals(currentConfig.getPollTimeout(), oldConfig.getPollTimeout());
-    Assert.assertEquals(currentConfig.isUseTransaction(), oldConfig.isUseTransaction());
-    Assert.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
-    Assert.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
-  }
-
-  @Test
-  public void testDeserializeFromOldIoConfig() throws IOException
-  {
-    final ObjectMapper oldMapper = new DefaultObjectMapper();
-    oldMapper.registerSubtypes(new NamedType(OldRocketMQIndexTaskIoConfig.class, "rocketmq"));
-
-    final OldRocketMQIndexTaskIoConfig oldConfig = new OldRocketMQIndexTaskIoConfig(
-        0,
-        "baseSequenceNamee",
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 10L, PartitionUtil.genPartition(BROKER_NAME, 2), 5L)),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 1), 20L, PartitionUtil.genPartition(BROKER_NAME, 2), 30L)),
-        ImmutableMap.of("consumer", "properties"),
-        100L,
-        true,
-        DateTimes.nowUtc(),
-        DateTimes.nowUtc()
-    );
-    final byte[] json = oldMapper.writeValueAsBytes(oldConfig);
-
-    final RocketMQIndexTaskIOConfig currentConfig = (RocketMQIndexTaskIOConfig) mapper.readValue(json, IOConfig.class);
-    Assert.assertEquals(oldConfig.getTaskGroupId(), currentConfig.getTaskGroupId().intValue());
-    Assert.assertEquals(oldConfig.getBaseSequenceName(), currentConfig.getBaseSequenceName());
-    Assert.assertEquals(oldConfig.getStartPartitions().asStartPartitions(true), currentConfig.getStartSequenceNumbers());
-    Assert.assertEquals(oldConfig.getEndPartitions(), currentConfig.getEndSequenceNumbers());
-    Assert.assertEquals(oldConfig.getConsumerProperties(), currentConfig.getConsumerProperties());
-    Assert.assertEquals(oldConfig.getPollTimeout(), currentConfig.getPollTimeout());
-    Assert.assertEquals(oldConfig.isUseTransaction(), currentConfig.isUseTransaction());
-    Assert.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
-    Assert.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
-  }
-
-  private static class OldRocketMQIndexTaskIoConfig implements IOConfig
-  {
-    private final int taskGroupId;
-    private final String baseSequenceName;
-    private final SeekableStreamEndSequenceNumbers<String, Long> startPartitions;
-    private final SeekableStreamEndSequenceNumbers<String, Long> endPartitions;
-    private final Map<String, Object> consumerProperties;
-    private final long pollTimeout;
-    private final boolean useTransaction;
-    private final Optional<DateTime> minimumMessageTime;
-    private final Optional<DateTime> maximumMessageTime;
-
-    @JsonCreator
-    private OldRocketMQIndexTaskIoConfig(
-        @JsonProperty("taskGroupId") int taskGroupId,
-        @JsonProperty("baseSequenceName") String baseSequenceName,
-        @JsonProperty("startPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, Long> startPartitions,
-        @JsonProperty("endPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, Long> endPartitions,
-        @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
-        @JsonProperty("pollTimeout") Long pollTimeout,
-        @JsonProperty("useTransaction") Boolean useTransaction,
-        @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-        @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
-    )
-    {
-      this.taskGroupId = taskGroupId;
-      this.baseSequenceName = baseSequenceName;
-      this.startPartitions = startPartitions;
-      this.endPartitions = endPartitions;
-      this.consumerProperties = consumerProperties;
-      this.pollTimeout = pollTimeout;
-      this.useTransaction = useTransaction;
-      this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-      this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-    }
-
-    @JsonProperty
-    public int getTaskGroupId()
-    {
-      return taskGroupId;
-    }
-
-    @JsonProperty
-    public String getBaseSequenceName()
-    {
-      return baseSequenceName;
-    }
-
-    @JsonProperty
-    public SeekableStreamEndSequenceNumbers<String, Long> getStartPartitions()
-    {
-      return startPartitions;
-    }
-
-    @JsonProperty
-    public SeekableStreamEndSequenceNumbers<String, Long> getEndPartitions()
-    {
-      return endPartitions;
-    }
-
-    @JsonProperty
-    public Map<String, Object> getConsumerProperties()
-    {
-      return consumerProperties;
-    }
-
-    @JsonProperty
-    public long getPollTimeout()
-    {
-      return pollTimeout;
-    }
-
-    @JsonProperty
-    public boolean isUseTransaction()
-    {
-      return useTransaction;
-    }
-
-    @JsonProperty
-    public Optional<DateTime> getMinimumMessageTime()
-    {
-      return minimumMessageTime;
-    }
-
-    @JsonProperty
-    public Optional<DateTime> getMaximumMessageTime()
-    {
-      return maximumMessageTime;
-    }
   }
 }

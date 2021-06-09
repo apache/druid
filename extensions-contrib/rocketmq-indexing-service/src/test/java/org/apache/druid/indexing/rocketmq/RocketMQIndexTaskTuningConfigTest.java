@@ -227,7 +227,6 @@ public class RocketMQIndexTaskTuningConfigTest
         new IndexSpec(),
         new IndexSpec(),
         true,
-        true,
         5L,
         null,
         null,
