@@ -103,7 +103,7 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
-        .appendString(expression)
+        .appendCacheable(parsed.get())
         .build();
   }
 

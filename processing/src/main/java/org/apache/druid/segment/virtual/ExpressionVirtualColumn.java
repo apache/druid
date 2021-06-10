@@ -261,7 +261,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
         .appendString(name)
-        .appendString(expression);
+        .appendCacheable(parsedExpression.get());
 
     if (outputType != null) {
       builder.appendString(outputType.toString());

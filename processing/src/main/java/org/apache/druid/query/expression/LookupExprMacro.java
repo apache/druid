@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 
@@ -36,6 +37,7 @@ import java.util.List;
 
 public class LookupExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final byte LOOKUP_EXPR_KEY = 0x01;
   private static final String FN_NAME = "lookup";
   private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
@@ -107,6 +109,12 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       public String stringify()
       {
         return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), lookupExpr.stringify());
+      }
+
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new CacheKeyBuilder(LOOKUP_EXPR_KEY).appendString(stringify()).appendCacheable(extractionFn).build();
       }
     }
 

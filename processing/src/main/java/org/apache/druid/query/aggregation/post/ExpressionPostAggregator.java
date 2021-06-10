@@ -230,7 +230,7 @@ public class ExpressionPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-        .appendString(expression)
+        .appendCacheable(parsed.get())
         .appendString(ordering)
         .build();
   }

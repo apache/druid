@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  */
@@ -115,7 +117,9 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
+    byte[] expressionBytes = Optional.ofNullable(fieldExpression.get())
+                                     .map(Expr::getCacheKey)
+                                     .orElse(StringUtils.EMPTY_BYTES);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
                      .put(AggregatorUtil.LONG_MIN_CACHE_TYPE_ID)
