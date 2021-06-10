@@ -160,8 +160,8 @@ public class GenericAvroJsonProvider implements JsonProvider
       return null;
     } else if (o instanceof GenericRecord) {
       final GenericRecord record = (GenericRecord) o;
-      if (extractUnions && isExplodableUnion(record.getSchema().getField(s))) {
-        return explodeUnion(record.get(s));
+      if (extractUnions && isExtractableUnion(record.getSchema().getField(s))) {
+        return extractUnion(record.get(s));
       }
       return record.get(s);
     } else if (o instanceof Map) {
@@ -211,13 +211,13 @@ public class GenericAvroJsonProvider implements JsonProvider
     return o;
   }
 
-  private boolean isExplodableUnion(final Schema.Field field)
+  private boolean isExtractableUnion(final Schema.Field field)
   {
     return field.schema().isUnion() &&
            field.schema().getTypes().stream().filter(type -> type.getType() != Schema.Type.NULL).count() > 1;
   }
 
-  private Map<String, Object> explodeUnion(final Object o)
+  private Map<String, Object> extractUnion(final Object o)
   {
     // Primitive types and unnamped complex types are keyed their type name.
     // Complex named types are keyed by their names.
