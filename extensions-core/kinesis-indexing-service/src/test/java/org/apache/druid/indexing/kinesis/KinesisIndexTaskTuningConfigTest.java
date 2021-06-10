@@ -74,7 +74,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertTrue(config.getBuildV9Directly());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(10000, config.getRecordBufferSize());
@@ -124,7 +123,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertTrue(config.getBuildV9Directly());
     Assert.assertTrue(config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(1000, config.getRecordBufferSize());
@@ -182,7 +180,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
     Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
     Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
@@ -242,7 +239,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
     Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
     Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
@@ -334,7 +330,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
-    Assert.assertTrue(copy.getBuildV9Directly());
     Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(1000, copy.getRecordBufferSize());
