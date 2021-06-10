@@ -124,7 +124,7 @@ export class SegmentTimeline extends React.PureComponent<
 FROM sys.segments
 WHERE
   '${startDate.toISOString()}' <= "start" AND
-   "end" <= '${endDate.toISOString()}' AND
+  "end" <= '${endDate.toISOString()}' AND
   is_published = 1 AND
   is_overshadowed = 0
 GROUP BY 1, 2, 3

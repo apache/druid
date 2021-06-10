@@ -28,8 +28,8 @@ describe('Segment Timeline', () => {
   it('.getSqlQuery', () => {
     expect(
       SegmentTimeline.getSqlQuery(
-        new Date('2020-01-01T00:00:00'),
-        new Date('2021-02-01T02:03:04'), // Note: these are in local time, not ISO
+        new Date('2020-01-01T00:00:00Z'),
+        new Date('2021-02-01T00:00:00Z'),
       ),
     ).toEqual(sane`
       SELECT
@@ -38,8 +38,8 @@ describe('Segment Timeline', () => {
         SUM("size") AS "size"
       FROM sys.segments
       WHERE
-        '2020-01-01' <= "start" AND
-        "end" < '2021-02-01' AND
+        '2020-01-01T00:00:00.000Z' <= "start" AND
+        "end" <= '2021-02-01T00:00:00.000Z' AND
         is_published = 1 AND
         is_overshadowed = 0
       GROUP BY 1, 2, 3
