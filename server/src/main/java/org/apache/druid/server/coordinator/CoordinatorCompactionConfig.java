@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -84,6 +86,21 @@ public class CoordinatorCompactionConfig
         CoordinatorCompactionConfig.class,
         CoordinatorCompactionConfig.empty()
     );
+  }
+
+  public static byte[] getConfigInByteFromDb(final MetadataStorageConnector connector, MetadataStorageTablesConfig config)
+  {
+    return connector.lookup(
+        config.getConfigTable(),
+        "name",
+        "payload",
+        CoordinatorCompactionConfig.CONFIG_KEY
+    );
+  }
+
+  public static CoordinatorCompactionConfig convertByteToConfig(final JacksonConfigManager configManager, byte[] configInByte)
+  {
+    return configManager.convertByteToConfig(configInByte, CoordinatorCompactionConfig.class, CoordinatorCompactionConfig.empty());
   }
 
   @Nonnull

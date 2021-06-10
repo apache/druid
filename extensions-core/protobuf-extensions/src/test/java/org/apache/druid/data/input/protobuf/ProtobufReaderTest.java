@@ -19,47 +19,39 @@
 
 package org.apache.druid.data.input.protobuf;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
 
-public class ProtobufInputFormatTest
+public class ProtobufReaderTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private TimestampSpec timestampSpec;
-  private DimensionsSpec dimensionsSpec;
+  private InputRowSchema inputRowSchema;
+  private InputRowSchema inputRowSchemaWithComplexTimestamp;
   private JSONPathSpec flattenSpec;
   private FileBasedProtobufBytesDecoder decoder;
-
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
   {
-    timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
+    TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
         new StringDimensionSchema("event"),
         new StringDimensionSchema("id"),
         new StringDimensionSchema("someOtherId"),
@@ -73,54 +65,28 @@ public class ProtobufInputFormatTest
             new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
         )
     );
+
+    inputRowSchema = new InputRowSchema(timestampSpec, dimensionsSpec, null);
+    inputRowSchemaWithComplexTimestamp = new InputRowSchema(
+        new TimestampSpec("otherTimestamp", "iso", null),
+        dimensionsSpec,
+        null
+    );
     decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
-    for (Module jacksonModule : new ProtobufExtensionsModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
-  }
-
-  @Test
-  public void testSerde() throws IOException
-  {
-    ProtobufInputFormat inputFormat = new ProtobufInputFormat(
-        flattenSpec,
-        decoder
-    );
-    NestedInputFormat inputFormat2 = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(inputFormat),
-        NestedInputFormat.class
-    );
-
-    Assert.assertEquals(inputFormat, inputFormat2);
-  }
-
-  @Test
-  public void testSerdeForSchemaRegistry() throws IOException
-  {
-    ProtobufInputFormat inputFormat = new ProtobufInputFormat(
-        flattenSpec,
-        new SchemaRegistryBasedProtobufBytesDecoder("http://test:8081", 100, null, null, null)
-    );
-    NestedInputFormat inputFormat2 = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(inputFormat),
-        NestedInputFormat.class
-    );
-    Assert.assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
   public void testParseNestedData() throws Exception
   {
-    //configure parser with desc file
-    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, decoder);
+    ProtobufReader reader = new ProtobufReader(inputRowSchema, null, decoder, flattenSpec);
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
     ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
 
-    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
     ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
   }
@@ -128,17 +94,32 @@ public class ProtobufInputFormatTest
   @Test
   public void testParseFlatData() throws Exception
   {
-    //configure parser with desc file
-    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(null, decoder);
+    ProtobufReader reader = new ProtobufReader(inputRowSchema, null, decoder, null);
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
     ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatData(dateTime);
 
-    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
     ProtobufInputRowParserTest.verifyFlatData(row, dateTime);
+  }
+
+  @Test
+  public void testParseFlatDataWithComplexTimestamp() throws Exception
+  {
+    ProtobufReader reader = new ProtobufReader(inputRowSchemaWithComplexTimestamp, null, decoder, null);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
+
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
   }
 }

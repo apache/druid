@@ -273,6 +273,16 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testEmptyArrayFromList()
+  {
+    // empty arrays will materialize from JSON into an empty list, which coerce list to array will make into Object[]
+    // make sure we can handle it
+    ExprEval someEmptyArray = ExprEval.bestEffortOf(new ArrayList<>());
+    Assert.assertTrue(someEmptyArray.isArray());
+    Assert.assertEquals(0, someEmptyArray.asArray().length);
+  }
+
   private void assertExpr(int position, Object expected)
   {
     assertExpr(position, ExprEval.bestEffortOf(expected));

@@ -476,8 +476,8 @@ public class JobHelper
 
     return new DataSegmentAndIndexZipFilePath(
         finalSegment,
-        tmpPath.toUri().getPath(),
-        finalIndexZipFilePath.toUri().getPath()
+        tmpPath.toUri().toString(),
+        finalIndexZipFilePath.toUri().toString()
     );
   }
 

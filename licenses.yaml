@@ -545,13 +545,13 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.9.0
 libraries:
   - commons-io: commons-io
 notices:
   - commons-io: |
       Apache Commons IO
-      Copyright 2002-2017 The Apache Software Foundation
+      Copyright 2002-2021 The Apache Software Foundation
 
 ---
 
@@ -1902,9 +1902,10 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.4.14
+version: 3.5.9
 libraries:
   - org.apache.zookeeper: zookeeper
+  - org.apache.zookeeper: zookeeper-jute
 notices:
   - zookeeper: |
       Apache ZooKeeper
@@ -5142,7 +5143,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.10.7
+version: 0.11.6
 
 ---
 

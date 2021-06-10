@@ -28,6 +28,9 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -57,15 +60,24 @@ import java.util.stream.Collectors;
 @ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
+  private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
   static final int UPDATE_NUM_RETRY = 5;
 
   private final JacksonConfigManager manager;
+  private final MetadataStorageConnector connector;
+  private final MetadataStorageTablesConfig connectorConfig;
 
   @Inject
-  public CoordinatorCompactionConfigsResource(JacksonConfigManager manager)
+  public CoordinatorCompactionConfigsResource(
+      JacksonConfigManager manager,
+      MetadataStorageConnector connector,
+      MetadataStorageTablesConfig connectorConfig
+  )
   {
     this.manager = manager;
+    this.connector = connector;
+    this.connectorConfig = connectorConfig;
   }
 
   @GET
@@ -87,8 +99,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
-
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
           current,
           compactionTaskSlotRatio,
@@ -97,8 +109,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currentBytes,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -116,7 +127,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final CoordinatorCompactionConfig newCompactionConfig;
       final Map<String, DataSourceCompactionConfig> newConfigs = current
           .getCompactionConfigs()
@@ -127,8 +139,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currentBytes,
           newCompactionConfig,
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -166,7 +177,8 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     Callable<SetResult> callable = () -> {
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
       final Map<String, DataSourceCompactionConfig> configs = current
           .getCompactionConfigs()
           .stream()
@@ -179,8 +191,7 @@ public class CoordinatorCompactionConfigsResource
 
       return manager.set(
           CoordinatorCompactionConfig.CONFIG_KEY,
-          // Do database insert without swap if the current config is empty as this means the config may be null in the database
-          CoordinatorCompactionConfig.empty().equals(current) ? null : current,
+          currentBytes,
           CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
           new AuditInfo(author, comment, req.getRemoteAddr())
       );
@@ -204,18 +215,21 @@ public class CoordinatorCompactionConfigsResource
       }
     }
     catch (Exception e) {
+      LOG.warn(e, "Update compaction config failed");
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", e))
+                     .entity(ImmutableMap.of("error", createErrorMessage(e)))
                      .build();
     }
 
     if (setResult.isOk()) {
       return Response.ok().build();
     } else if (setResult.getException() instanceof NoSuchElementException) {
+      LOG.warn(setResult.getException(), "Update compaction config failed");
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
+      LOG.warn(setResult.getException(), "Update compaction config failed");
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .entity(ImmutableMap.of("error", createErrorMessage(setResult.getException())))
                      .build();
     }
   }
@@ -227,6 +241,20 @@ public class CoordinatorCompactionConfigsResource
     }
     catch (InterruptedException ie) {
       throw new RuntimeException(ie);
+    }
+  }
+
+  private byte[] getCurrentConfigInByteFromDb()
+  {
+    return CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+  }
+
+  private String createErrorMessage(Exception e)
+  {
+    if (e.getMessage() == null) {
+      return "Unknown Error";
+    } else {
+      return e.getMessage();
     }
   }
 }

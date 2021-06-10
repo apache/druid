@@ -25,6 +25,7 @@ ACL
 ACLs
 APIs
 AvroStorage
+ARN
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -195,6 +196,8 @@ aggregator
 aggregators
 ambari
 analytics
+assumeRoleArn
+assumeRoleExternalId
 async
 authorizer
 authorizers
@@ -459,6 +462,8 @@ druid-s3-extensions
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
 LeadershipLatch
+3.5.x
+3.4.x
  - ../docs/design/auth.md
 AllowAll
 AuthenticationResult
@@ -582,6 +587,7 @@ longSum
 movingAverage
 postAggregations
 postAveragers
+pull-deps
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
 namespacePrefix

@@ -62,11 +62,17 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
       JSONPathSpec flattenSpec
   )
   {
-    this.inputRowSchema = inputRowSchema;
+    if (flattenSpec == null) {
+      this.inputRowSchema = new ProtobufInputRowSchema(inputRowSchema);
+      this.recordFlattener = null;
+    } else {
+      this.inputRowSchema = inputRowSchema;
+      this.recordFlattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(true));
+    }
+
     this.source = source;
     this.protobufBytesDecoder = protobufBytesDecoder;
     this.flattenSpec = flattenSpec;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(true));
   }
 
   @Override

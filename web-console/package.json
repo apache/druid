@@ -8,9 +8,6 @@
     "type": "git",
     "url": "https://github.com/apache/druid"
   },
-  "engines": {
-    "node": ">=10"
-  },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
@@ -54,6 +51,13 @@
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;CC0-1.0' --summary",
     "start": "webpack serve --hot --open"
   },
+  "engines": {
+    "node": ">=14"
+  },
+  "volta": {
+    "node": "14.16.1",
+    "npm": "6.14.12"
+  },
   "dependencies": {
     "@blueprintjs/core": "^3.33.0",
     "@blueprintjs/datetime": "^3.19.2",
@@ -67,7 +71,7 @@
     "d3-axis": "^1.0.12",
     "d3-scale": "^3.2.0",
     "d3-selection": "^1.4.0",
-    "druid-query-toolkit": "^0.10.7",
+    "druid-query-toolkit": "^0.11.6",
     "file-saver": "^2.0.2",
     "fontsource-open-sans": "^3.0.9",
     "has-own-prop": "^2.0.0",
