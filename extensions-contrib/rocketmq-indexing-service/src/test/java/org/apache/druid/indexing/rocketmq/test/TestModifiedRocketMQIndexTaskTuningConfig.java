@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 
-@JsonTypeName("RocketMQTuningConfig")
+@JsonTypeName("rocketmq")
 public class TestModifiedRocketMQIndexTaskTuningConfig extends RocketMQIndexTaskTuningConfig
 {
   private final String extra;
