@@ -259,8 +259,7 @@ public class ExpressionVectorSelectorsTest
         virtualColumns,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
 
     int rowCountCursor = cursors

@@ -181,8 +181,7 @@ public class LookupSegmentTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
 
     final Cursor cursor = Iterables.getOnlyElement(cursors.toList());

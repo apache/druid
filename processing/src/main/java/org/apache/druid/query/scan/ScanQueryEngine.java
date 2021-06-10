@@ -133,8 +133,7 @@ public class ScanQueryEngine
                     Granularities.ALL,
                     query.getOrder().equals(ScanQuery.Order.DESCENDING) ||
                     (query.getOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
-                    null,
-                    QueryContexts.isUseInMemoryBitmapInQuery(query)
+                    null
                 )
                 .map(cursor -> new BaseSequence<>(
                     new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()

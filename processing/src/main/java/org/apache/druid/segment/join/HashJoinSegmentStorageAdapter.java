@@ -270,8 +270,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nonnull final VirtualColumns virtualColumns,
       @Nonnull final Granularity gran,
       final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics,
-      final boolean useInMemoryBitmapInQuery
+      @Nullable final QueryMetrics<?> queryMetrics
   )
   {
     final Filter combinedFilter = baseFilterAnd(filter);
@@ -283,8 +282,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           virtualColumns,
           gran,
           descending,
-          queryMetrics,
-          false
+          queryMetrics
       );
     }
 
@@ -328,8 +326,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         VirtualColumns.create(preJoinVirtualColumns),
         gran,
         descending,
-        queryMetrics,
-        false
+        queryMetrics
     );
 
     Closer joinablesCloser = Closer.create();

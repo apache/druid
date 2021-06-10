@@ -25,7 +25,6 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -91,8 +90,7 @@ public class TopNQueryEngine
                 query.getVirtualColumns(),
                 granularity,
                 query.isDescending(),
-                queryMetrics,
-                QueryContexts.isUseInMemoryBitmapInQuery(query)
+                queryMetrics
             ),
             input -> {
               if (queryMetrics != null) {

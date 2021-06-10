@@ -457,7 +457,7 @@ public class FilterPartitionBenchmark
 
   private Sequence<Cursor> makeCursors(StorageAdapter sa, Filter filter)
   {
-    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, Granularities.ALL, false, null, false);
+    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, Granularities.ALL, false, null);
   }
 
   private void readCursors(Sequence<Cursor> cursors, Blackhole blackhole)

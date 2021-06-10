@@ -171,8 +171,7 @@ public class ExpressionAggregationBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
 
     final List<Double> results = cursors

@@ -46,8 +46,7 @@ public class QueryRunnerHelper
       final VirtualColumns virtualColumns,
       final boolean descending,
       final Granularity granularity,
-      final Function<Cursor, Result<T>> mapFn,
-      final boolean useInMemoryBitmapInQuery
+      final Function<Cursor, Result<T>> mapFn
   )
   {
     Preconditions.checkArgument(
@@ -56,8 +55,7 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, null,
-                                useInMemoryBitmapInQuery),
+            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, null),
             mapFn
         ),
         Objects::nonNull

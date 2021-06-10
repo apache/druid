@@ -270,8 +270,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       VirtualColumns virtualColumns,
       Granularity gran,
       boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics,
-      boolean useInMemoryBitmapInQuery
+      @Nullable QueryMetrics<?> queryMetrics
   )
   {
     if (queryMetrics != null) {

@@ -59,8 +59,7 @@ public interface CursorFactory
       VirtualColumns virtualColumns,
       Granularity gran,
       boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics,
-      boolean useInMemoryBitmapInQuery
+      @Nullable QueryMetrics<?> queryMetrics
   );
 
   /**

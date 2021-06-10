@@ -150,8 +150,7 @@ public class ExpressionFilterBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     final List<?> results = cursors
         .map(cursor -> {
@@ -173,8 +172,7 @@ public class ExpressionFilterBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     final List<?> results = cursors
         .map(cursor -> {

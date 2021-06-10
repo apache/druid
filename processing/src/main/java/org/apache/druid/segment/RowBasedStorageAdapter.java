@@ -159,8 +159,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       final VirtualColumns virtualColumns,
       final Granularity gran,
       final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics,
-      final boolean useInMemoryBitmapInQuery
+      @Nullable final QueryMetrics<?> queryMetrics
   )
   {
     final Interval actualInterval = queryInterval.overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));

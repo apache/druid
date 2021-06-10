@@ -239,8 +239,7 @@ public class IndexedTableJoinCursorBenchmark
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
   }
 

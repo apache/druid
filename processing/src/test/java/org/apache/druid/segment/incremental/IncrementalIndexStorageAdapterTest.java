@@ -286,8 +286,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           VirtualColumns.EMPTY,
           Granularities.NONE,
           descending,
-          null,
-          false
+          null
       );
 
       Cursor cursor = cursorSequence.limit(1).toList().get(0);
@@ -443,8 +442,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
@@ -508,8 +506,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
@@ -560,8 +557,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 

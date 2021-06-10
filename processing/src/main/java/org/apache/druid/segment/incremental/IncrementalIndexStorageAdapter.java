@@ -270,8 +270,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final VirtualColumns virtualColumns,
       final Granularity gran,
       final boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics,
-      final boolean useInMemoryBitmapInQuery
+      @Nullable QueryMetrics<?> queryMetrics
   )
   {
     if (index.isEmpty()) {
@@ -289,7 +288,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       intervals = Lists.reverse(ImmutableList.copyOf(intervals));
     }
 
-    if (!index.isEnableInMemoryBitmap() || !useInMemoryBitmapInQuery) {
+    if (!index.isEnableInMemoryBitmap()) {
       return Sequences
         .simple(intervals)
         .map(i -> new IncrementalIndexCursor(virtualColumns, descending, filter, i, actualInterval, gran));

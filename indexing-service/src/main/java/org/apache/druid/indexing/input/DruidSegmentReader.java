@@ -120,8 +120,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
 
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in

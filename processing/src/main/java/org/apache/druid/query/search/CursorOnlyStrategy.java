@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
@@ -94,8 +93,7 @@ public class CursorOnlyStrategy extends SearchStrategy
           VirtualColumns.EMPTY,
           query.getGranularity(),
           query.isDescending(),
-          null,
-          QueryContexts.isUseInMemoryBitmapInQuery(query)
+          null
       );
 
       final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());

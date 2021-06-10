@@ -334,8 +334,7 @@ public class TopNMetricSpecOptimizationsTest
           VirtualColumns virtualColumns,
           Granularity gran,
           boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics,
-          boolean useInMemoryBitmapInQuery
+          @Nullable QueryMetrics<?> queryMetrics
       )
       {
         return null;

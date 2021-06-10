@@ -314,8 +314,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        null,
-        false
+        null
     );
     int rowsProcessed = cursors.map(cursor -> {
       DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(

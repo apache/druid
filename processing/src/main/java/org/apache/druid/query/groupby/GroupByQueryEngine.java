@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.guava.FunctionalIterator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -106,8 +105,7 @@ public class GroupByQueryEngine
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null,
-        QueryContexts.isUseInMemoryBitmapInQuery(query)
+        null
     );
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
