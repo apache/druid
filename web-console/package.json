@@ -66,9 +66,9 @@
     "not ie 11"
   ],
   "dependencies": {
-    "@blueprintjs/core": "^3.33.0",
-    "@blueprintjs/datetime": "^3.19.2",
-    "@blueprintjs/icons": "^3.22.0",
+    "@blueprintjs/core": "^3.45.0",
+    "@blueprintjs/datetime": "^3.23.4",
+    "@blueprintjs/icons": "^3.26.1",
     "axios": "^0.21.1",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
