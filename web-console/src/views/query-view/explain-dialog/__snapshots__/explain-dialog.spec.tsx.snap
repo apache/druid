@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`query plan dialog matches snapshot 1`] = `
+exports[`ExplainDialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -16,7 +16,7 @@ exports[`query plan dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog query-plan-dialog"
+        class="bp3-dialog explain-dialog"
       >
         <div
           class="bp3-dialog-header"

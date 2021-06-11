@@ -21,9 +21,16 @@ import axios, { AxiosResponse } from 'axios';
 import { Api } from '../singletons';
 
 import { assemble } from './general';
+import { QueryContext } from './query-context';
 import { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
+
+export interface QueryWithContext {
+  queryString: string;
+  queryContext: QueryContext;
+  wrapQueryLimit: number | undefined;
+}
 
 export interface DruidErrorResponse {
   error?: string;
@@ -356,4 +363,9 @@ export function parseQueryPlan(
   }
 
   return parseQueryPlanResult(queryArgs);
+}
+
+export function trimSemicolon(query: string): string {
+  // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
+  return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
 }
