@@ -40,6 +40,8 @@ public interface IndexingServiceClient
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   );
 
@@ -63,4 +65,6 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskPayloadResponse getTaskPayload(String taskId);
+
+  SamplerResponse sample(SamplerSpec samplerSpec);
 }

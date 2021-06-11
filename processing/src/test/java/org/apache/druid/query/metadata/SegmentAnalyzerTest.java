@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -275,10 +276,10 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         .withRollup(true)
         .build();
 
-    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(10000)
-        .buildOnheap();
+        .build();
     IncrementalIndex incrementalIndex = TestIndex.loadIncrementalIndex(retVal, source);
     QueryableIndex queryableIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
     SegmentAnalyzer analyzer = new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));

@@ -18,6 +18,7 @@
 
 import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
@@ -41,7 +42,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
       const resp = await Api.instance.get(endpoint);
       let data = resp.data;
       if (transform) data = transform(data);
-      return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
+      return typeof data === 'string' ? data : JSONBig.stringify(data, undefined, 2);
     },
     initQuery: null,
   });

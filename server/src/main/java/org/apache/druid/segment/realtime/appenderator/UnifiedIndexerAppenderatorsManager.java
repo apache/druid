@@ -30,6 +30,7 @@ import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -188,7 +189,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          true
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -207,7 +209,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean batchMemoryMappedIndex
   )
   {
     synchronized (this) {
@@ -226,7 +229,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          batchMemoryMappedIndex
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -413,6 +417,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return baseConfig.isSkipBytesInMemoryOverheadCheck();
+    }
+
+    @Override
     public int getMaxPendingPersists()
     {
       return baseConfig.getMaxPendingPersists();
@@ -511,7 +521,32 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         AggregatorFactory[] metricAggs,
         File outDir,
         IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
+    )
+    {
+      return mergeQueryableIndex(
+          indexes,
+          rollup,
+          metricAggs,
+          null,
+          outDir,
+          indexSpec,
+          segmentWriteOutMediumFactory,
+          maxColumnsToMerge
+      );
+    }
+
+    @Override
+    public File mergeQueryableIndex(
+        List<QueryableIndex> indexes,
+        boolean rollup,
+        AggregatorFactory[] metricAggs,
+        @Nullable DimensionsSpec dimensionsSpec,
+        File outDir,
+        IndexSpec indexSpec,
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -525,9 +560,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     indexes,
                     rollup,
                     metricAggs,
+                    dimensionsSpec,
                     outDir,
                     indexSpec,
-                    segmentWriteOutMediumFactory
+                    segmentWriteOutMediumFactory,
+                    maxColumnsToMerge
                 );
               }
               catch (IOException ioe) {
@@ -590,7 +627,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
-        IndexSpec indexSpec
+        IndexSpec indexSpec,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);
@@ -647,10 +685,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         List<QueryableIndex> indexes,
         boolean rollup,
         AggregatorFactory[] metricAggs,
+        @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        int maxColumnsToMerge
     )
     {
       throw new UOE(ERROR_MSG);

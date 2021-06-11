@@ -20,10 +20,15 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,13 +59,13 @@ public class TimeseriesQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = Druids.newTimeseriesQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .granularity(QueryRunnerTestHelper.DAY_GRAN)
-        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
-        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-        .descending(descending)
-        .build();
+                        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
+                        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+                        .descending(descending)
+                        .build();
 
     String json = JSON_MAPPER.writeValueAsString(query);
     Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
@@ -68,4 +73,32 @@ public class TimeseriesQueryTest
     Assert.assertEquals(query, serdeQuery);
   }
 
+  @Test
+  public void testGetRequiredColumns()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .granularity(QueryRunnerTestHelper.DAY_GRAN)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "index",
+                      "\"fieldFromVirtualColumn\"",
+                      ValueType.LONG,
+                      ExprMacroTable.nil()
+                  )
+              )
+              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+              .aggregators(
+                  QueryRunnerTestHelper.ROWS_COUNT,
+                  QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                  QueryRunnerTestHelper.INDEX_LONG_MAX,
+                  new LongSumAggregatorFactory("beep", "aField")
+              )
+              .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+              .descending(descending)
+              .build();
+
+    Assert.assertEquals(ImmutableSet.of("__time", "fieldFromVirtualColumn", "aField"), query.getRequiredColumns());
+  }
 }

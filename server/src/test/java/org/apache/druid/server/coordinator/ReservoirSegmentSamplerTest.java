@@ -174,14 +174,74 @@ public class ReservoirSegmentSamplerTest
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < iterations; i++) {
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
-      BalancerSegmentHolder balancerSegmentHolder = ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet());
+      BalancerSegmentHolder balancerSegmentHolder = ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 100);
       if (balancerSegmentHolder != null) {
         segmentCountMap.put(balancerSegmentHolder.getSegment(), 1);
       }
     }
 
     for (DataSegment segment : segments) {
-      Assert.assertEquals(segmentCountMap.get(segment), new Integer(1));
+      Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
+    }
+
+    EasyMock.verify(druidServer1, druidServer2, druidServer3, druidServer4);
+    EasyMock.verify(holder1, holder2, holder3, holder4);
+  }
+
+  /**
+   * Makes sure that the segment on server4 is never chosen in 5k iterations because it should never have its segment
+   * checked due to the limit on segment candidates
+   */
+  @Test
+  public void getRandomBalancerSegmentHolderTestSegmentsToConsiderLimit()
+  {
+    int iterations = 5000;
+
+    EasyMock.expect(druidServer1.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
+    ImmutableDruidServerTests.expectSegments(druidServer1, segments1);
+    EasyMock.replay(druidServer1);
+
+    EasyMock.expect(druidServer2.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
+    ImmutableDruidServerTests.expectSegments(druidServer2, segments2);
+    EasyMock.replay(druidServer2);
+
+    EasyMock.expect(druidServer3.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
+    ImmutableDruidServerTests.expectSegments(druidServer3, segments3);
+    EasyMock.replay(druidServer3);
+
+    ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
+    EasyMock.replay(druidServer4);
+
+    // Have to use anyTimes() because the number of times a segment on a given server is chosen is indetermistic.
+    EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
+    EasyMock.replay(holder1);
+    EasyMock.expect(holder2.getServer()).andReturn(druidServer2).anyTimes();
+    EasyMock.replay(holder2);
+    EasyMock.expect(holder3.getServer()).andReturn(druidServer3).anyTimes();
+    EasyMock.replay(holder3);
+    // We only run getServer() each time we calculate the limit on segments to consider. Always 5k
+    EasyMock.expect(holder4.getServer()).andReturn(druidServer4).times(5000);
+    EasyMock.replay(holder4);
+
+    List<ServerHolder> holderList = new ArrayList<>();
+    holderList.add(holder1);
+    holderList.add(holder2);
+    holderList.add(holder3);
+    holderList.add(holder4);
+
+    Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
+    for (int i = 0; i < iterations; i++) {
+      segmentCountMap.put(
+          ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 75).getSegment(), 1
+      );
+    }
+
+    for (DataSegment segment : segments) {
+      if (!segment.equals(segment4)) {
+        Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
+      } else {
+        Assert.assertNull(segmentCountMap.get(segment));
+      }
     }
 
     EasyMock.verify(druidServer1, druidServer2, druidServer3, druidServer4);

@@ -24,21 +24,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
-import java.net.InetAddress;
 
 /**
  * This exception is for the query engine to surface when a query cannot be run. This can be due to the
  * following reasons: 1) The query is not supported yet. 2) The query is not something Druid would ever supports.
  * For these cases, the exact causes and details should also be documented in Druid user facing documents.
  *
- * As a {@link QueryException} it is expected to be serialied to a json response, but will be mapped to
- * {@link #STATUS_CODE} instead of the default HTTP 500 status.
+ * As a {@link QueryException} it is expected to be serialized to a json response with a proper HTTP error code
+ * ({@link #STATUS_CODE}).
  */
 public class QueryUnsupportedException extends QueryException
 {
   private static final String ERROR_CLASS = QueryUnsupportedException.class.getName();
   public static final String ERROR_CODE = "Unsupported query";
-  public static final int STATUS_CODE = 400;
+  public static final int STATUS_CODE = 501;
 
   @JsonCreator
   public QueryUnsupportedException(
@@ -54,17 +53,5 @@ public class QueryUnsupportedException extends QueryException
   public QueryUnsupportedException(String errorMessage)
   {
     super(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
-  }
-
-  private static String resolveHostname()
-  {
-    String host;
-    try {
-      host = InetAddress.getLocalHost().getCanonicalHostName();
-    }
-    catch (Exception e) {
-      host = null;
-    }
-    return host;
   }
 }

@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -49,7 +50,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
@@ -77,7 +77,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
@@ -131,22 +131,16 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput = existing.getVirtualColumns()
-                                                     .stream()
-                                                     .filter(
-                                                         virtualColumn ->
-                                                             virtualColumn.getOutputName()
-                                                                          .equals(theFactory.getFieldName())
-                                                     )
-                                                     .findFirst()
-                                                     .orElse(null);
+          final VirtualColumn virtualInput =
+              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+                                   .stream()
+                                   .findFirst()
+                                   .orElse(null);
 
           if (virtualInput == null) {
-            inputMatches = input.isDirectColumnAccess()
-                           && input.getDirectColumn().equals(theFactory.getFieldName());
+            inputMatches = input.isDirectColumnAccess() && input.getDirectColumn().equals(theFactory.getFieldName());
           } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
-                                                                   .equals(input.getExpression());
+            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
           }
 
           final boolean matches = inputMatches
@@ -171,8 +165,6 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
@@ -185,7 +177,6 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           input,
           ValueType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
@@ -194,7 +185,6 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new DoublesSketchToQuantilePostAggregator(
             name,

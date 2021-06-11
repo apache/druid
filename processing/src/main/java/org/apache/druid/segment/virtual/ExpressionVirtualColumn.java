@@ -72,7 +72,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.outputType = outputType;
-    this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.parsedExpression = Parser.lazyParse(expression, macroTable);
   }
 
   /**

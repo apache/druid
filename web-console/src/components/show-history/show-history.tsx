@@ -17,6 +17,7 @@
  */
 
 import { Tab, Tabs } from '@blueprintjs/core';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { useQueryManager } from '../../hooks';
@@ -59,26 +60,20 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
         <ShowValue
           jsonValue={
             pastSupervisor.spec
-              ? JSON.stringify(pastSupervisor.spec, undefined, 2)
+              ? JSONBig.stringify(pastSupervisor.spec, undefined, 2)
               : historyState.getErrorMessage()
           }
           downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
           endpoint={endpoint}
         />
       }
-      panelClassName={'panel'}
+      panelClassName="panel"
     />
   ));
 
   return (
     <div className="show-history">
-      <Tabs
-        animate
-        renderActiveTabPanelOnly
-        vertical
-        className={'tab-area'}
-        defaultSelectedTabId={0}
-      >
+      <Tabs animate renderActiveTabPanelOnly vertical className="tab-area" defaultSelectedTabId={0}>
         {versions}
         <Tabs.Expander />
       </Tabs>

@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -42,10 +43,10 @@ public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
   }
 
   @Override
-  public Segment factorize(DataSegment dataSegment, File parentDir, boolean lazy) throws SegmentLoadingException
+  public Segment factorize(DataSegment dataSegment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     try {
-      return new QueryableIndexSegment(indexIO.loadIndex(parentDir, lazy), dataSegment.getId());
+      return new QueryableIndexSegment(indexIO.loadIndex(parentDir, lazy, loadFailed), dataSegment.getId());
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "%s", e.getMessage());

@@ -24,14 +24,11 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Future;
 
 public abstract class CompoundMonitor implements Monitor
 {
   private final List<Monitor> monitors;
   
-  private volatile Future<?> scheduledFuture;
-
   public CompoundMonitor(List<Monitor> monitors)
   {
     this.monitors = monitors;
@@ -62,18 +59,6 @@ public abstract class CompoundMonitor implements Monitor
   public boolean monitor(final ServiceEmitter emitter)
   {
     return shouldReschedule(Lists.transform(monitors, monitor -> monitor.monitor(emitter)));
-  }
-
-  @Override
-  public Future<?> getScheduledFuture()
-  {
-    return scheduledFuture;
-  }
-
-  @Override
-  public void setScheduledFuture(Future<?> scheduledFuture)
-  {
-    this.scheduledFuture = scheduledFuture;
   }
 
   public abstract boolean shouldReschedule(List<Boolean> reschedules);

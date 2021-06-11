@@ -19,6 +19,7 @@
 import { Editor } from 'brace';
 import classNames from 'classnames';
 import Hjson from 'hjson';
+import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
 
@@ -36,7 +37,7 @@ export function extractRowColumnFromHjsonError(
   // Message would be something like:
   // `Found '}' where a key name was expected at line 26,7`
   // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
-  const m = error.message.match(/line (\d+),(\d+)/);
+  const m = /line (\d+),(\d+)/.exec(error.message);
   if (!m) return;
 
   return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
@@ -44,7 +45,7 @@ export function extractRowColumnFromHjsonError(
 
 function stringifyJson(item: any): string {
   if (item != null) {
-    const str = JSON.stringify(item, null, 2);
+    const str = JSONBig.stringify(item, undefined, 2);
     if (str === '{}') return '{\n\n}'; // Very special case for an empty object to make it more beautiful
     return str;
   } else {
@@ -54,7 +55,7 @@ function stringifyJson(item: any): string {
 
 // Not the best way to check for deep equality but good enough for what we need
 function deepEqual(a: any, b: any): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return JSONBig.stringify(a) === JSONBig.stringify(b);
 }
 
 interface InternalValue {
@@ -66,6 +67,7 @@ interface InternalValue {
 interface JsonInputProps {
   value: any;
   onChange: (value: any) => void;
+  onError?: (error: Error) => void;
   placeholder?: string;
   focus?: boolean;
   width?: string;
@@ -74,7 +76,7 @@ interface JsonInputProps {
 }
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
-  const { onChange, placeholder, focus, width, height, value, issueWithValue } = props;
+  const { onChange, onError, placeholder, focus, width, height, value, issueWithValue } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
     value,
     stringified: stringifyJson(value),
@@ -88,7 +90,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
       value,
       stringified: stringifyJson(value),
     });
-  }, [value]);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const internalValueError = internalValue.error;
   return (
@@ -119,7 +121,9 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             stringified: inputJson,
           });
 
-          if (!error) {
+          if (error) {
+            onError?.(error);
+          } else {
             onChange(value);
           }
 

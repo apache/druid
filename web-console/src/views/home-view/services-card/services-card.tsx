@@ -22,8 +22,7 @@ import React from 'react';
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { lookupBy, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, lookupBy, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServiceCounts {
@@ -51,7 +50,11 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
         }[] = await queryDruidSql({
           query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
         });
-        return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
+        return lookupBy(
+          serviceCountsFromQuery,
+          x => x.service_type,
+          x => x.count,
+        );
       } else if (capabilities.hasCoordinatorAccess()) {
         const services = (await Api.instance.get('/druid/coordinator/v1/servers?simple')).data;
 
@@ -75,9 +78,9 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
   return (
     <HomeViewCard
       className="services-card"
-      href={'#services'}
+      href="#services"
       icon={IconNames.DATABASE}
-      title={'Services'}
+      title="Services"
       loading={serviceCountState.loading}
       error={serviceCountState.error}
     >

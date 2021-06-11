@@ -30,9 +30,9 @@ public class ITRetryUtil
 
   private static final Logger LOG = new Logger(ITRetryUtil.class);
 
-  public static final int DEFAULT_RETRY_COUNT = 150; // 5 minutes
+  public static final int DEFAULT_RETRY_COUNT = 240; // 20 minutes
 
-  public static final long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(2);
+  public static final long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(5);
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
@@ -52,23 +52,43 @@ public class ITRetryUtil
       String taskMessage
   )
   {
-    try {
-      int currentTry = 0;
-      while (callable.call() != expectedValue) {
-        if (currentTry > retryCount) {
-          throw new ISE("Max number of retries[%d] exceeded for Task[%s]. Failing.", retryCount, taskMessage);
+    int currentTry = 0;
+    Exception lastException = null;
+
+    while (true) {
+      try {
+        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
+        if (currentTry > retryCount || callable.call() == expectedValue) {
+          break;
         }
         LOG.info(
-            "Attempt[%d]: Task %s still not complete. Next retry in %d ms",
-            currentTry, taskMessage, delayInMillis
+            "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
+            currentTry, retryCount, taskMessage, delayInMillis
         );
         Thread.sleep(delayInMillis);
-
         currentTry++;
       }
+      catch (Exception e) {
+        // just continue retrying if there is an exception (it may be transient!) but save the last:
+        lastException = e;
+      }
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+
+    if (currentTry > retryCount) {
+      if (lastException != null) {
+        throw new ISE(
+            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+            retryCount,
+            taskMessage,
+            lastException
+        );
+      } else {
+        throw new ISE(
+            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+            retryCount,
+            taskMessage
+        );
+      }
     }
   }
 

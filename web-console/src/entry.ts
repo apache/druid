@@ -17,11 +17,12 @@
  */
 
 import 'core-js/stable';
+import 'regenerator-runtime/runtime';
+import './bootstrap/ace';
+
 import React from 'react';
 import ReactDOM from 'react-dom';
-import 'regenerator-runtime/runtime';
 
-import './bootstrap/ace';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
@@ -73,7 +74,7 @@ if (consoleConfig.baseURL) {
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  apiConfig.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  apiConfig.headers[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
   Object.assign(apiConfig.headers, consoleConfig.customHeaders);
@@ -90,7 +91,7 @@ ReactDOM.render(
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
-  }) as any,
+  }),
   container,
 );
 

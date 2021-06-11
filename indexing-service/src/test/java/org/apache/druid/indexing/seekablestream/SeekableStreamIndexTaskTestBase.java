@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -191,7 +192,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     this.lockGranularity = lockGranularity;
   }
 
-  protected static byte[] jb(
+  protected static ByteEntity jb(
       String timestamp,
       String dim1,
       String dim2,
@@ -203,7 +204,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     return jb(false, timestamp, dim1, dim2, dimLong, dimFloat, met1);
   }
 
-  protected static byte[] jb(boolean prettyPrint,
+  protected static byte[] jbb(
       String timestamp,
       String dim1,
       String dim2,
@@ -212,16 +213,43 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       String met1
   )
   {
-    return StringUtils.toUtf8(toJsonString(prettyPrint,
-                                           timestamp,
-                                           dim1,
-                                           dim2,
-                                           dimLong,
-                                           dimFloat,
-                                           met1));
+    return jbb(false, timestamp, dim1, dim2, dimLong, dimFloat, met1);
   }
 
-  protected static List<byte[]> jbl(
+  protected static ByteEntity jb(boolean prettyPrint,
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return new ByteEntity(jbb(prettyPrint, timestamp, dim1, dim2, dimLong, dimFloat, met1));
+  }
+
+  protected static byte[] jbb(
+      boolean prettyPrint,
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return StringUtils.toUtf8(toJsonString(
+        prettyPrint,
+        timestamp,
+        dim1,
+        dim2,
+        dimLong,
+        dimFloat,
+        met1
+    ));
+  }
+
+  protected static List<ByteEntity> jbl(
       String timestamp,
       String dim1,
       String dim2,

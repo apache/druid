@@ -50,7 +50,7 @@ Expressions can contain variables. Variable names may contain letters, digits, '
 
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.html) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
 
 
 The following built-in functions are available.
@@ -106,8 +106,8 @@ The following built-in functions are available.
 |timestamp_floor|timestamp_floor(expr, period, \[origin, [timezone\]\]) rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_shift|timestamp_shift(expr, period, step, \[timezone\]) shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_extract|timestamp_extract(expr, unit, \[timezone\]) extracts a time part from expr, returning it as a number. Unit can be EPOCH (number of seconds since 1970-01-01 00:00:00 UTC), SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00"|
-|timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If the pattern is not provided, this parses time strings in either ISO8601 or SQL format. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
-|timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
+|timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat). If the pattern is not provided, this parses time strings in either ISO8601 or SQL format. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
+|timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
 
 ## Math functions
 
@@ -115,45 +115,53 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 |name|description|
 |----|-----------|
-|abs|abs(x) would return the absolute value of x|
-|acos|acos(x) would return the arc cosine of x|
-|asin|asin(x) would return the arc sine of x|
-|atan|atan(x) would return the arc tangent of x|
-|atan2|atan2(y, x) would return the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
-|cbrt|cbrt(x) would return the cube root of x|
-|ceil|ceil(x) would return the smallest (closest to negative infinity) double value that is greater than or equal to x and is equal to a mathematical integer|
-|copysign|copysign(x) would return the first floating-point argument with the sign of the second floating-point argument|
-|cos|cos(x) would return the trigonometric cosine of x|
-|cosh|cosh(x) would return the hyperbolic cosine of x|
-|cot|cot(x) would return the trigonometric cotangent of an angle x|
+|abs|abs(x) returns the absolute value of x|
+|acos|acos(x) returns the arc cosine of x|
+|asin|asin(x) returns the arc sine of x|
+|atan|atan(x) returns the arc tangent of x|
+|bitwiseAnd|bitwiseAnd(x,y) returns the result of x & y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseComplement|bitwiseComplement(x) returns the result of ~x. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
+|bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) converts a long to the IEEE 754 floating-point double specified by the bits stored in the long. If the input is not a long, it is implicitly cast to a long prior to conversion|
+|bitwiseOr|bitwiseOr(x,y) returns the result of x [PIPE] y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x << y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x >> y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseXor|bitwiseXor(x,y) returns the result of x ^ y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|atan2|atan2(y, x) returns the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
+|cbrt|cbrt(x) returns the cube root of x|
+|ceil|ceil(x) returns the smallest (closest to negative infinity) double value that is greater than or equal to x and is equal to a mathematical integer|
+|copysign|copysign(x) returns the first floating-point argument with the sign of the second floating-point argument|
+|cos|cos(x) returns the trigonometric cosine of x|
+|cosh|cosh(x) returns the hyperbolic cosine of x|
+|cot|cot(x) returns the trigonometric cotangent of an angle x|
 |div|div(x,y) is integer division of x by y|
-|exp|exp(x) would return Euler's number raised to the power of x|
-|expm1|expm1(x) would return e^x-1|
-|floor|floor(x) would return the largest (closest to positive infinity) double value that is less than or equal to x and is equal to a mathematical integer|
-|getExponent|getExponent(x) would return the unbiased exponent used in the representation of x|
-|hypot|hypot(x, y) would return sqrt(x^2+y^2) without intermediate overflow or underflow|
-|log|log(x) would return the natural logarithm of x|
-|log10|log10(x) would return the base 10 logarithm of x|
-|log1p|log1p(x) would the natural logarithm of x + 1|
-|max|max(x, y) would return the greater of two values|
-|min|min(x, y) would return the smaller of two values|
-|nextafter|nextafter(x, y) would return the floating-point number adjacent to the x in the direction of the y|
-|nextUp|nextUp(x) would return the floating-point value adjacent to x in the direction of positive infinity|
-|pi|pi would return the constant value of the π |
-|pow|pow(x, y) would return the value of the x raised to the power of y|
-|remainder|remainder(x, y) would return the remainder operation on two arguments as prescribed by the IEEE 754 standard|
-|rint|rint(x) would return value that is closest in value to x and is equal to a mathematical integer|
-|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x will return 0. If x is infinity, x will be converted to the nearest finite double. |
-|scalb|scalb(d, sf) would return d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
-|signum|signum(x) would return the signum function of the argument x|
-|sin|sin(x) would return the trigonometric sine of an angle x|
-|sinh|sinh(x) would return the hyperbolic sine of x|
-|sqrt|sqrt(x) would return the correctly rounded positive square root of x|
-|tan|tan(x) would return the trigonometric tangent of an angle x|
-|tanh|tanh(x) would return the hyperbolic tangent of x|
+|exp|exp(x) returns Euler's number raised to the power of x|
+|expm1|expm1(x) returns e^x-1|
+|floor|floor(x) returns the largest (closest to positive infinity) double value that is less than or equal to x and is equal to a mathematical integer|
+|getExponent|getExponent(x) returns the unbiased exponent used in the representation of x|
+|hypot|hypot(x, y) returns sqrt(x^2+y^2) without intermediate overflow or underflow|
+|log|log(x) returns the natural logarithm of x|
+|log10|log10(x) returns the base 10 logarithm of x|
+|log1p|log1p(x) will the natural logarithm of x + 1|
+|max|max(x, y) returns the greater of two values|
+|min|min(x, y) returns the smaller of two values|
+|nextafter|nextafter(x, y) returns the floating-point number adjacent to the x in the direction of the y|
+|nextUp|nextUp(x) returns the floating-point value adjacent to x in the direction of positive infinity|
+|pi|pi returns the constant value of the π |
+|pow|pow(x, y) returns the value of the x raised to the power of y|
+|remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
+|rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
+|round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
+|scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
+|signum|signum(x) returns the signum function of the argument x|
+|sin|sin(x) returns the trigonometric sine of an angle x|
+|sinh|sinh(x) returns the hyperbolic sine of x|
+|sqrt|sqrt(x) returns the correctly rounded positive square root of x|
+|tan|tan(x) returns the trigonometric tangent of an angle x|
+|tanh|tanh(x) returns the hyperbolic tangent of x|
 |todegrees|todegrees(x) converts an angle measured in radians to an approximately equivalent angle measured in degrees|
 |toradians|toradians(x) converts an angle measured in degrees to an approximately equivalent angle measured in radians|
-|ulp|ulp(x) would return the size of an ulp of the argument x|
+|ulp|ulp(x) returns the size of an ulp of the argument x|
 
 
 ## Array functions
@@ -169,14 +177,17 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
-| array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
+| array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_set_add(arr,expr) | adds expr to arr and converts the array to a new array composed of the unique set of elements. The resulting array type determined by the type of the array |
+| array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
 ## Apply functions
+Apply functions allow for special 'lambda' expressions to be defined and applied to array inputs to enable free-form transformations.
 
 | function | description |
 | --- | --- |
@@ -188,6 +199,26 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
+
+### Lambda expressions syntax
+Lambda expressions are a sort of function definition, where new identifiers can be defined and passed as input to the expression body
+```
+(identifier1 ...) -> expr
+```
+e.g.
+```
+(x, y) -> x + y 
+```
+The identifier arguments of a lambda expression correspond to the elements of the array it is being applied to. For example:
+```
+map((x) -> x + 1, some_multi_value_column)
+```
+will map each element of `some_multi_value_column` to the identifier `x` so that the lambda expression body can be evaluated for each `x`. The scoping rules are that lambda arguments will override identifiers which are defined externally from the lambda expression body. Using the same example:
+
+```
+map((x) -> x + 1, x)
+```
+in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
 
 ## Reduction functions
 

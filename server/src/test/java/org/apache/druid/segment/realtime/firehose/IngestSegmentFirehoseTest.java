@@ -46,6 +46,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -126,7 +127,7 @@ public class IngestSegmentFirehoseTest
 
     try (
         final QueryableIndex qi = indexIO.loadIndex(segmentDir);
-        final IncrementalIndex index = new IncrementalIndex.Builder()
+        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
             .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
@@ -134,7 +135,7 @@ public class IngestSegmentFirehoseTest
                     .build()
             )
             .setMaxRowCount(5000)
-            .buildOnheap()
+            .build()
     ) {
       final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
@@ -216,7 +217,7 @@ public class IngestSegmentFirehoseTest
     );
 
     try (
-        final IncrementalIndex index = new IncrementalIndex.Builder()
+        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
             .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
@@ -224,7 +225,7 @@ public class IngestSegmentFirehoseTest
                     .build()
             )
             .setMaxRowCount(5000)
-            .buildOnheap()
+            .build()
     ) {
       for (String line : rows) {
         index.add(parser.parse(line));

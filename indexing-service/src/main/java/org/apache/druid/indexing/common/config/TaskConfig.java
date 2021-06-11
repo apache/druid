@@ -31,6 +31,12 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
+ *
+ * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
+ * to all tasks submitted to the overlord.
+ */
 public class TaskConfig
 {
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
@@ -67,6 +73,12 @@ public class TaskConfig
   @JsonProperty
   private final List<StorageLocationConfig> shuffleDataLocations;
 
+  @JsonProperty
+  private final boolean ignoreTimestampSpecForDruidInputSource;
+
+  @JsonProperty
+  private final boolean batchMemoryMappedIndex;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -77,7 +89,9 @@ public class TaskConfig
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
-      @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations
+      @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
+      @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
+      @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMapIndex // only set to true to fall back to older behavior
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -102,6 +116,8 @@ public class TaskConfig
     } else {
       this.shuffleDataLocations = shuffleDataLocations;
     }
+    this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
+    this.batchMemoryMappedIndex = batchMemoryMapIndex;
   }
 
   @JsonProperty
@@ -177,6 +193,19 @@ public class TaskConfig
   {
     return shuffleDataLocations;
   }
+
+  @JsonProperty
+  public boolean isIgnoreTimestampSpecForDruidInputSource()
+  {
+    return ignoreTimestampSpecForDruidInputSource;
+  }
+
+  @JsonProperty
+  public boolean getBatchMemoryMappedIndex()
+  {
+    return batchMemoryMappedIndex;
+  }
+
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {

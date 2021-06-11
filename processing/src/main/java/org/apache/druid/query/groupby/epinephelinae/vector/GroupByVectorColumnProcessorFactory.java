@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class GroupByVectorColumnProcessorFactory implements VectorColumnProcessorFactory<GroupByVectorColumnSelector>
@@ -64,7 +65,9 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
         ValueType.STRING == capabilities.getType(),
         "groupBy dimension processors must be STRING typed"
     );
-    throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
+    throw new UnsupportedOperationException(
+        "Vectorized groupBys on multi-value dictionary-encoded dimensions are not yet implemented"
+    );
   }
 
   @Override
@@ -101,5 +104,17 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       return new LongGroupByVectorColumnSelector(selector);
     }
     return new NullableLongGroupByVectorColumnSelector(selector);
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    if (ValueType.STRING.equals(capabilities.getType())) {
+      return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
+    }
+    return NilGroupByVectorColumnSelector.INSTANCE;
   }
 }

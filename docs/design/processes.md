@@ -134,7 +134,7 @@ In clusters with very high segment counts, it can make sense to separate the Coo
 
 The Coordinator and Overlord processes can be run as a single combined process by setting the `druid.coordinator.asOverlord.enabled` property.
 
-Please see [Coordinator Configuration: Operation](../configuration/index.html#coordinator-operation) for details.
+Please see [Coordinator Configuration: Operation](../configuration/index.md#coordinator-operation) for details.
 
 ### Historicals and MiddleManagers
 

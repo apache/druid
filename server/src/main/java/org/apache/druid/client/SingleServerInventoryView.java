@@ -81,7 +81,7 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
         Predicates.or(segmentPredicates.values())
     );
     if (predicate.apply(Pair.of(container.getMetadata(), inventory))) {
-      addSingleInventory(container, inventory);
+      addSingleInventory(container, DataSegmentInterner.intern(inventory));
     }
     return container;
   }

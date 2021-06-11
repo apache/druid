@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.indexing;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -131,15 +131,9 @@ public class IndexMergeBenchmark
           rowsPerSegment
       );
 
-      IncrementalIndex incIndex = makeIncIndex();
+      IncrementalIndex<?> incIndex = makeIncIndex();
 
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
+      gen.addToIndex(incIndex, rowsPerSegment);
 
       tmpDir = FileUtils.createTempDir();
       log.info("Using temp dir: " + tmpDir.getAbsolutePath());
@@ -173,7 +167,8 @@ public class IndexMergeBenchmark
           schemaInfo.getAggsArray(),
           tmpFile,
           new IndexSpec(),
-          null
+          null,
+          -1
       );
 
       blackhole.consume(mergedFile);
@@ -211,7 +206,7 @@ public class IndexMergeBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
+    return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(schemaInfo.getAggsArray())
@@ -219,6 +214,6 @@ public class IndexMergeBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build();
   }
 }

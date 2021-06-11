@@ -19,6 +19,12 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+/**
+ * This class is for any exceptions that should return a bad request status code (404).
+ * See {@code BadQueryException} for query requests.
+ *
+ * @see BadRequestExceptionMapper
+ */
 public class BadRequestException extends RuntimeException
 {
   public BadRequestException(String msg)

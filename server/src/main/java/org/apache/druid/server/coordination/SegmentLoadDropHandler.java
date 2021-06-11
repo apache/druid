@@ -269,7 +269,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   {
     final boolean loaded;
     try {
-      loaded = segmentManager.loadSegment(segment, lazy);
+      loaded = segmentManager.loadSegment(segment,
+              lazy,
+          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+      );
     }
     catch (Exception e) {
       removeSegment(segment, callback, false);
@@ -295,7 +298,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     Status result = null;
     try {
@@ -336,7 +339,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -414,14 +419,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
   }
 
-  private void removeSegment(
+  @VisibleForTesting
+  void removeSegment(
       final DataSegment segment,
-      final DataSegmentChangeCallback callback,
+      @Nullable final DataSegmentChangeCallback callback,
       final boolean scheduleDrop
   )
   {
@@ -475,7 +481,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -514,7 +522,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
   {
     synchronized (requestStatusesLock) {
-      if (requestStatuses.getIfPresent(changeRequest) == null) {
+      AtomicReference<Status> status = requestStatuses.getIfPresent(changeRequest);
+
+      // If last load/drop request status is failed, here can try that again
+      if (status == null || status.get().getState() == Status.STATE.FAILED) {
         changeRequest.go(
             new DataSegmentChangeHandler()
             {

@@ -28,7 +28,7 @@ The Druid Console is hosted by the [Router](../design/router.md) process.
 
 The following cluster settings must be enabled, as they are by default:
 
-- the Router's [management proxy](../design/router.html#enabling-the-management-proxy) must be enabled.
+- the Router's [management proxy](../design/router.md#enabling-the-management-proxy) must be enabled.
 - the Broker processes in the cluster must have [Druid SQL](../querying/sql.md) enabled.
 
 The Druid console can be accessed at:
@@ -47,9 +47,9 @@ Below is a description of the high-level features and functionality of the Druid
 
 The home view provides a high level overview of the cluster.
 Each card is clickable and links to the appropriate view.
-The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
+The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.md#legacy-consoles) should you need them.
 
-![home-view](../assets/web-console-01-home-view.png)
+![home-view](../assets/web-console-01-home-view.png "home view")
 
 ## Data loader
 

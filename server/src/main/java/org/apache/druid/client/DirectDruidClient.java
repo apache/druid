@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -158,8 +159,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
-    final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
-    final String cancelUrl = StringUtils.format("%s://%s/druid/v2/%s", scheme, host, query.getId());
+    final String url = scheme + "://" + host + "/druid/v2/";
+    final String cancelUrl = url + query.getId();
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
@@ -444,7 +445,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url
             );
             setupResponseReadFailure(msg, null);
-            throw new RE(msg);
+            throw new ResourceLimitExceededException(msg);
           }
         }
       };

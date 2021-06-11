@@ -22,7 +22,7 @@ title: "Indexer Process"
   ~ under the License.
   -->
 
-> The Indexer is an optional and <a href="../development/experimental.html">experimental</a> feature.
+> The Indexer is an optional and [experimental](../development/experimental.md) feature.
 > Its memory management system is still under development and will be significantly enhanced in later releases. 
 
 The Apache Druid Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
@@ -31,11 +31,11 @@ The Indexer is designed to be easier to configure and deploy compared to the Mid
 
 ### Configuration
 
-For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.html#indexer).
+For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.md#indexer).
 
 ### HTTP endpoints
 
-The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.html#middlemanager).
+The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.md#middlemanager).
 
 ### Running
 
@@ -51,7 +51,7 @@ The following resources are shared across all tasks running inside an Indexer pr
 
 The query processing threads and buffers are shared across all tasks. The Indexer will serve queries from a single endpoint shared by all tasks.
 
-If [query caching](../configuration/index.html#indexer-caching) is enabled, the query cache is also shared across all tasks.
+If [query caching](../configuration/index.md#indexer-caching) is enabled, the query cache is also shared across all tasks.
 
 #### Server HTTP threads
 

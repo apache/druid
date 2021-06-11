@@ -18,6 +18,7 @@
 
 import { AnchorButton, Button, ButtonGroup, Intent, Switch } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { Loader } from '../../components';
@@ -49,8 +50,8 @@ export interface ShowLogState {
 export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   static CHECK_INTERVAL = 2500;
 
-  private showLogQueryManager: QueryManager<null, string>;
-  private log = React.createRef<HTMLTextAreaElement>();
+  private readonly showLogQueryManager: QueryManager<null, string>;
+  private readonly log = React.createRef<HTMLTextAreaElement>();
   private interval: number | undefined;
 
   constructor(props: ShowLogProps, context: any) {
@@ -68,7 +69,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
         );
         const data = resp.data;
 
-        let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
+        let logValue = typeof data === 'string' ? data : JSONBig.stringify(data, undefined, 2);
         if (tailOffset) logValue = removeFirstPartialLine(logValue);
         return logValue;
       },
@@ -122,7 +123,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     delete this.interval;
   }
 
-  private handleCheckboxChange = () => {
+  private readonly handleCheckboxChange = () => {
     const { tail } = this.state;
 
     const nextTail = !tail;

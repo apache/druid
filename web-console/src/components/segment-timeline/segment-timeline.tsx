@@ -22,8 +22,7 @@ import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
 import { Api } from '../../singletons';
-import { Capabilities } from '../../utils';
-import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
+import { Capabilities, formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
 import { Loader } from '../loader/loader';
 
@@ -115,6 +114,20 @@ export class SegmentTimeline extends React.PureComponent<
     return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
   }
 
+  static getSqlQuery(timeSpan: number): string {
+    return `SELECT
+  "start", "end", "datasource",
+  COUNT(*) AS "count",
+  SUM("size") AS "size"
+FROM sys.segments
+WHERE
+  "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS') AND
+  is_published = 1 AND
+  is_overshadowed = 0
+GROUP BY 1, 2, 3
+ORDER BY "start" DESC`;
+  }
+
   static processRawData(data: IntervalRow[]) {
     if (data === null) return [];
 
@@ -138,9 +151,9 @@ export class SegmentTimeline extends React.PureComponent<
           total: segmentSize,
         };
       } else {
-        const countDataEntry = countData[day][datasource];
+        const countDataEntry: number | undefined = countData[day][datasource];
         countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
-        const sizeDataEntry = sizeData[day][datasource];
+        const sizeDataEntry: number | undefined = sizeData[day][datasource];
         sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
         countData[day].total += count;
         sizeData[day].total += segmentSize;
@@ -219,8 +232,12 @@ export class SegmentTimeline extends React.PureComponent<
     return singleDatasourceData;
   }
 
-  private dataQueryManager: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
-  private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
+  private readonly dataQueryManager: QueryManager<
+    { capabilities: Capabilities; timeSpan: number },
+    any
+  >;
+
+  private readonly chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {
     super(props);
@@ -250,16 +267,7 @@ export class SegmentTimeline extends React.PureComponent<
           let intervals: IntervalRow[];
           let datasources: string[];
           if (capabilities.hasSql()) {
-            const query = `
-SELECT
-  "start", "end", "datasource",
-  COUNT(*) AS "count", SUM("size") as "size"
-FROM sys.segments
-WHERE "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
-GROUP BY 1, 2, 3
-ORDER BY "start" DESC`;
-
-            intervals = await queryDruidSql({ query });
+            intervals = await queryDruidSql({ query: SegmentTimeline.getSqlQuery(timeSpan) });
             datasources = uniq(intervals.map(r => r.datasource));
           } else if (capabilities.hasCoordinatorAccess()) {
             const before = new Date();
@@ -267,29 +275,33 @@ ORDER BY "start" DESC`;
             const beforeIso = before.toISOString();
 
             datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
-            intervals = (await Promise.all(
-              datasources.map(async datasource => {
-                const intervalMap = (await Api.instance.get(
-                  `/druid/coordinator/v1/datasources/${Api.encodePath(
-                    datasource,
-                  )}/intervals?simple`,
-                )).data;
+            intervals = (
+              await Promise.all(
+                datasources.map(async datasource => {
+                  const intervalMap = (
+                    await Api.instance.get(
+                      `/druid/coordinator/v1/datasources/${Api.encodePath(
+                        datasource,
+                      )}/intervals?simple`,
+                    )
+                  ).data;
 
-                return Object.keys(intervalMap)
-                  .map(interval => {
-                    const [start, end] = interval.split('/');
-                    const { count, size } = intervalMap[interval];
-                    return {
-                      start,
-                      end,
-                      datasource,
-                      count,
-                      size,
-                    };
-                  })
-                  .filter(a => beforeIso < a.start);
-              }),
-            ))
+                  return Object.keys(intervalMap)
+                    .map(interval => {
+                      const [start, end] = interval.split('/');
+                      const { count, size } = intervalMap[interval];
+                      return {
+                        start,
+                        end,
+                        datasource,
+                        count,
+                        size,
+                      };
+                    })
+                    .filter(a => beforeIso < a.start);
+                }),
+              )
+            )
               .flat()
               .sort((a, b) => b.start.localeCompare(a.start));
           } else {
@@ -338,8 +350,7 @@ ORDER BY "start" DESC`;
       prevProps.chartHeight !== this.props.chartHeight
     ) {
       const scales: BarChartScales | undefined = this.calculateScales();
-      let dataToRender: BarUnitData[] | undefined;
-      dataToRender = activeDatasource
+      const dataToRender: BarUnitData[] | undefined = activeDatasource
         ? singleDatasourceData
           ? singleDatasourceData[activeDataType][activeDatasource]
           : undefined
@@ -452,7 +463,7 @@ ORDER BY "start" DESC`;
     if (error) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when loading data: {error.message}</span>
+          <span className="no-data-text">Error when loading data: {error.message}</span>
         </div>
       );
     }
@@ -460,7 +471,7 @@ ORDER BY "start" DESC`;
     if (xScale === null || yScale === null) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when calculating scales</span>
+          <span className="no-data-text">Error when calculating scales</span>
         </div>
       );
     }
@@ -468,7 +479,7 @@ ORDER BY "start" DESC`;
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className={'no-data-text'}>No data available for the time span selected</span>
+          <span className="no-data-text">No data available for the time span selected</span>
         </div>
       );
     }
@@ -479,7 +490,7 @@ ORDER BY "start" DESC`;
     ) {
       return (
         <div>
-          <span className={'no-data-text'}>
+          <span className="no-data-text">
             No data available for <i>{activeDatasource}</i>
           </span>
         </div>
@@ -495,7 +506,7 @@ ORDER BY "start" DESC`;
         svgHeight={chartHeight}
         svgWidth={chartWidth}
         margin={this.chartMargin}
-        changeActiveDatasource={(datasource: string) =>
+        changeActiveDatasource={(datasource: string | null) =>
           this.setState(prevState => ({
             activeDatasource: prevState.activeDatasource ? null : datasource,
           }))
@@ -513,20 +524,20 @@ ORDER BY "start" DESC`;
     const { datasources, activeDataType, activeDatasource, timeSpan } = this.state;
 
     return (
-      <div className={'segment-timeline app-view'}>
+      <div className="segment-timeline app-view">
         {this.renderStackedBarChart()}
-        <div className={'side-control'}>
+        <div className="side-control">
           <FormGroup>
             <RadioGroup
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Total size'} value={'sizeData'} />
-              <Radio label={'Segment count'} value={'countData'} />
+              <Radio label="Total size" value="sizeData" />
+              <Radio label="Segment count" value="countData" />
             </RadioGroup>
           </FormGroup>
 
-          <FormGroup label={'Datasource:'}>
+          <FormGroup label="Datasource:">
             <HTMLSelect
               onChange={(e: any) =>
                 this.setState({
@@ -536,7 +547,7 @@ ORDER BY "start" DESC`;
               value={activeDatasource == null ? 'all' : activeDatasource}
               fill
             >
-              <option value={'all'}>Show all</option>
+              <option value="all">Show all</option>
               {datasources.map(d => {
                 return (
                   <option key={d} value={d}>
@@ -547,7 +558,7 @@ ORDER BY "start" DESC`;
             </HTMLSelect>
           </FormGroup>
 
-          <FormGroup label={'Period:'}>
+          <FormGroup label="Period:">
             <HTMLSelect
               onChange={(e: any) => this.onTimeSpanChange(e.target.value)}
               value={timeSpan}

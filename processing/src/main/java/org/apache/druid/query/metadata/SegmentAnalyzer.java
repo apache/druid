@@ -37,6 +37,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -52,6 +53,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Map;
@@ -231,11 +233,16 @@ public class SegmentAnalyzer
       }
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
-      DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
-      cardinality = theColumn.getCardinality();
-      if (analyzingMinMax() && cardinality > 0) {
-        min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-        max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+      try (BaseColumn column = columnHolder.getColumn()) {
+        DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
+        cardinality = theColumn.getCardinality();
+        if (analyzingMinMax() && cardinality > 0) {
+          min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
+          max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+        }
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
       }
     } else {
       cardinality = 0;

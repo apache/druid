@@ -32,7 +32,7 @@ jest.mock('../../hooks', () => {
 
 describe('DatasourceColumnsTable', () => {
   function makeDatasourceColumnsTable() {
-    return <DatasourceColumnsTable datasourceId={'test'} downloadFilename={'test'} />;
+    return <DatasourceColumnsTable datasourceId="test" downloadFilename="test" />;
   }
 
   it('matches snapshot on init', () => {

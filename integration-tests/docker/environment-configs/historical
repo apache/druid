@@ -24,6 +24,7 @@ DRUID_LOG_PATH=/shared/logs/historical.log
 SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007
 
 # Druid configs
+druid_host=druid-historical
 druid_processing_buffer_sizeBytes=25000000
 druid_processing_numThreads=2
 druid_query_groupBy_maxOnDiskStorage=300000000

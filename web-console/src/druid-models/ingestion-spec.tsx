@@ -113,7 +113,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
     case 'kinesis':
       return ioConfig.type;
 
-    case 'index_parallel':
+    case 'index_parallel': {
       const inputSource = deepGet(spec, 'spec.ioConfig.inputSource') || EMPTY_OBJECT;
       switch (inputSource.type) {
         case 'local':
@@ -126,6 +126,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
       }
+    }
   }
 
   return;
@@ -482,32 +483,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <p>
               A String representing ISO-8601 Interval. This defines the time range to fetch the data
               over.
-            </p>
-          ),
-        },
-        {
-          name: 'inputSource.dimensions',
-          label: 'Dimensions',
-          type: 'string-array',
-          placeholder: '(optional)',
-          hideInMore: true,
-          info: (
-            <p>
-              The list of dimensions to select. If left empty, no dimensions are returned. If left
-              null or not defined, all dimensions are returned.
-            </p>
-          ),
-        },
-        {
-          name: 'inputSource.metrics',
-          label: 'Metrics',
-          type: 'string-array',
-          placeholder: '(optional)',
-          hideInMore: true,
-          info: (
-            <p>
-              The list of metrics to select. If left empty, no metrics are returned. If left null or
-              not defined, all metrics are selected.
             </p>
           ),
         },
@@ -908,11 +883,10 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             'kinesis.us-gov-east-1.amazonaws.com',
             'kinesis.us-gov-west-1.amazonaws.com',
           ],
-          required: true,
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href={`https://docs.aws.amazon.com/general/latest/gr/ak.html`}>
+              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak.html">
                 here
               </ExternalLink>
               .
@@ -1080,8 +1054,8 @@ export function getIoConfigTuningFormFields(
               <p>
                 The maximum number of reading tasks in a replica set. This means that the maximum
                 number of reading tasks will be <Code>taskCount * replicas</Code> and the total
-                number of tasks (reading + publishing) will be higher than this. See 'Capacity
-                Planning' below for more details.
+                number of tasks (reading + publishing) will be higher than this. See &apos;Capacity
+                Planning&apos; below for more details.
               </p>
             </>
           ),
@@ -1238,7 +1212,7 @@ function filterIsFilename(filter: string): boolean {
 }
 
 function filenameFromPath(path: string): string | undefined {
-  const m = path.match(/([^\/.]+)[^\/]*?\/?$/);
+  const m = /([^/.]+)[^/]*?\/?$/.exec(path);
   if (!m) return;
   return m[1];
 }
@@ -1259,7 +1233,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
 
   switch (ioConfig.type) {
     case 'index':
-    case 'index_parallel':
+    case 'index_parallel': {
       const inputSource = ioConfig.inputSource;
       if (!inputSource) return;
 
@@ -1275,11 +1249,12 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
 
         case 's3':
         case 'azure':
-        case 'google':
+        case 'google': {
           const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
           const uriPath =
             (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
           return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
+        }
 
         case 'http':
           return Array.isArray(inputSource.uris)
@@ -1294,6 +1269,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
       }
 
       return;
+    }
 
     case 'kafka':
       return ioConfig.topic;
@@ -1387,9 +1363,9 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     info: (
       <>
         The granularity to create time chunks at. Multiple segments can be created per time chunk.
-        For example, with 'DAY' segmentGranularity, the events of the same day fall into the same
-        time chunk which can be optionally further partitioned into multiple segments based on other
-        configurations and input size.
+        For example, with &apos;DAY&apos; segmentGranularity, the events of the same day fall into
+        the same time chunk which can be optionally further partitioned into multiple segments based
+        on other configurations and input size.
       </>
     ),
   },
@@ -1511,8 +1487,8 @@ export function getSecondaryPartitionRelatedFormFields(
               </p>
               <p>
                 Directly specify the number of shards to create. If this is specified and
-                'intervals' is specified in the granularitySpec, the index task can skip the
-                determine intervals/partitions pass through the data.
+                &apos;intervals&apos; is specified in the granularitySpec, the index task can skip
+                the determine intervals/partitions pass through the data.
               </p>
             </>
           ),
@@ -1745,7 +1721,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     info: (
       <>
-        Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.
+        Milliseconds to wait for pushing segments. It must be &gt;= 0, where 0 means to wait
+        forever.
       </>
     ),
   },

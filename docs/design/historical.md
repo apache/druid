@@ -25,11 +25,11 @@ title: "Historical Process"
 
 ### Configuration
 
-For Apache Druid Historical Process Configuration, see [Historical Configuration](../configuration/index.html#historical).
+For Apache Druid Historical Process Configuration, see [Historical Configuration](../configuration/index.md#historical).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Historical, please see the [API reference](../operations/api-reference.html#historical).
+For a list of API endpoints supported by the Historical, please see the [API reference](../operations/api-reference.md#historical).
 
 ### Running
 

@@ -63,11 +63,20 @@ public interface BalancerStrategy
    *                             NOTE: this should really be handled on a per-segment basis, to properly support
    *                                   the interval or period-based broadcast rules. For simplicity of the initial
    *                                   implementation, only forever broadcast rules are supported.
+   * @param percentOfSegmentsToConsider The percentage of the total number of segments that we will consider when
+   *                                    choosing which segment to move. {@link CoordinatorDynamicConfig} defines a
+   *                                    config percentOfSegmentsToConsiderPerMove that will be used as an argument
+   *                                    for implementations of this method.
+   *
    * @return {@link BalancerSegmentHolder} containing segment to move and server it currently resides on, or null if
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
   @Nullable
-  BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, Set<String> broadcastDatasources);
+  BalancerSegmentHolder pickSegmentToMove(
+      List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      double percentOfSegmentsToConsider
+  );
 
   /**
    * Returns an iterator for a set of servers to drop from, ordered by preference of which server to drop from first

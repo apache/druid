@@ -17,15 +17,31 @@
  */
 
 import { render } from '@testing-library/react';
+import { sane } from 'druid-query-toolkit/build/test-utils';
 import { mount } from 'enzyme';
 import React from 'react';
 
-import { QueryManager } from '../../utils';
-import { Capabilities } from '../../utils';
+import { Capabilities, QueryManager } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
 describe('Segment Timeline', () => {
+  it('.getSqlQuery', () => {
+    expect(SegmentTimeline.getSqlQuery(3)).toEqual(sane`
+      SELECT
+        "start", "end", "datasource",
+        COUNT(*) AS "count",
+        SUM("size") AS "size"
+      FROM sys.segments
+      WHERE
+        "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -3, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS') AND
+        is_published = 1 AND
+        is_overshadowed = 0
+      GROUP BY 1, 2, 3
+      ORDER BY "start" DESC
+    `);
+  });
+
   it('matches snapshot', () => {
     const segmentTimeline = (
       <SegmentTimeline capabilities={Capabilities.FULL} chartHeight={100} chartWidth={100} />
@@ -87,6 +103,7 @@ class MockDataQueryManager extends QueryManager<
 
   constructor() {
     super({
+      // eslint-disable-next-line @typescript-eslint/require-await
       processQuery: async ({ timeSpan }) => {
         this.queryTimeSpan = timeSpan;
       },

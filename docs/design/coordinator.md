@@ -25,11 +25,11 @@ title: "Coordinator Process"
 
 ### Configuration
 
-For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
+For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.html#coordinator).
+For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
 
 ### Overview
 
@@ -89,12 +89,12 @@ Once some segments are found, it issues a [compaction task](../ingestion/tasks.m
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
-See [Compaction Configuration API](../operations/api-reference.html#compaction-configuration) and [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) to enable the compaction.
+See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration) and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) to enable the compaction.
 
 Compaction tasks might fail due to the following reasons.
 
 - If the input segments of a compaction task are removed or overshadowed before it starts, that compaction task fails immediately.
-- If a task of a higher priority acquires a [time chunk lock](../ingestion/tasks.html#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
+- If a task of a higher priority acquires a [time chunk lock](../ingestion/tasks.md#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
 
 Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 
@@ -127,7 +127,7 @@ If the coordinator has enough task slots for compaction, this policy will contin
 `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`.
 Finally, `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION` will be picked up even though there is only one segment in the time chunk of `2017-09-01T00:00:00.000Z/2017-10-01T00:00:00.000Z`.
 
-The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration).
+The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.md#compaction-dynamic-configuration).
 If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
@@ -138,7 +138,7 @@ Note that realtime tasks have a higher priority than compaction tasks by default
 
 ### The Coordinator console
 
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [coordinator console](../operations/management-uis.html#coordinator-consoles).
+The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [coordinator console](../operations/management-uis.md#coordinator-consoles).
 
 ### FAQ
 

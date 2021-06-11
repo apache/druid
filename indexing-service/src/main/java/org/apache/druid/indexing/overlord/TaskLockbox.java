@@ -775,6 +775,25 @@ public class TaskLockbox
     }
   }
 
+  public void unlockAll(Task task)
+  {
+    giant.lock();
+    try {
+      for (final TaskLockPosse taskLockPosse : findLockPossesForTask(task)) {
+        unlock(
+            task,
+            taskLockPosse.getTaskLock().getInterval(),
+            taskLockPosse.getTaskLock().getGranularity() == LockGranularity.SEGMENT
+            ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
+            : null
+        );
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   public void add(Task task)
   {
     giant.lock();
@@ -798,15 +817,7 @@ public class TaskLockbox
     try {
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
-        for (final TaskLockPosse taskLockPosse : findLockPossesForTask(task)) {
-          unlock(
-              task,
-              taskLockPosse.getTaskLock().getInterval(),
-              taskLockPosse.getTaskLock().getGranularity() == LockGranularity.SEGMENT
-              ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
-              : null
-          );
-        }
+        unlockAll(task);
       }
       finally {
         activeTasks.remove(task.getId());

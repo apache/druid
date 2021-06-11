@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -47,7 +48,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BaseVarianceSqlAggregator implements SqlAggregator
@@ -71,7 +71,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         project,
         aggregateCall.getArgList().get(0)
     );
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         inputOperand
@@ -83,7 +83,6 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final RelDataType dataType = inputOperand.getType();
     final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final DimensionSpec dimensionSpec;
     final String aggName = StringUtils.format("%s:agg", name);
     final SqlAggFunction func = calciteFunction();
@@ -97,7 +96,6 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
       VirtualColumn virtualColumn =
           virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, dataType);
       dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-      virtualColumns.add(virtualColumn);
     }
 
     switch (inputType) {
@@ -134,7 +132,6 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         postAggregator
     );

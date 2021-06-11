@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LimitedBufferHashGrouperTest
+public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -126,6 +127,8 @@ public class LimitedBufferHashGrouperTest
     }
 
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
+    // iterate again, even though the min-max offset heap has been destroyed, it is replaced with a reverse sorted array
+    Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
   }
 
   @Test
@@ -191,6 +194,31 @@ public class LimitedBufferHashGrouperTest
     }
 
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
+    // iterate again, even though the min-max offset heap has been destroyed, it is replaced with a reverse sorted array
+    Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
+  }
+
+  @Test
+  public void testAggregateAfterIterated()
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("attempted to add offset after grouper was iterated");
+
+    final int limit = 100;
+    final int keyBase = 100000;
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 12120, 2, limit);
+    final int numRows = 1000;
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+    for (int i = 0; i < numRows; i++) {
+      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
+    }
+    List<Grouper.Entry<Integer>> iterated = Lists.newArrayList(grouper.iterator(true));
+    Assert.assertEquals(limit, iterated.size());
+
+    // an attempt to aggregate with a new key will explode after the grouper has been iterated
+    grouper.aggregate(keyBase + numRows + 1);
   }
 
   private static LimitedBufferHashGrouper<Integer> makeGrouper(

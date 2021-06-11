@@ -44,12 +44,12 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +62,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
 
   private final ObjectMapper jsonMapper;
 
@@ -72,6 +73,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
@@ -93,6 +96,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         HashedPartitionsSpec.NAME
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -115,6 +119,13 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   private String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Override
@@ -146,11 +157,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
 
-    List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
-    if (partitionDimensions == null) {
-      partitionDimensions = HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS;
-    }
-
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
@@ -179,8 +185,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     ) {
       Map<Interval, byte[]> cardinalities = determineCardinalities(
           inputRowIterator,
-          granularitySpec,
-          partitionDimensions
+          granularitySpec
       );
 
       sendReport(
@@ -194,8 +199,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private Map<Interval, byte[]> determineCardinalities(
       CloseableIterator<InputRow> inputRowIterator,
-      GranularitySpec granularitySpec,
-      List<String> partitionDimensions
+      GranularitySpec granularitySpec
   )
   {
     Map<Interval, HllSketch> intervalToCardinalities = new HashMap<>();
@@ -205,9 +209,9 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
       DateTime timestamp = inputRow.getTimestamp();
       final Interval interval;
       if (granularitySpec.inputIntervals().isEmpty()) {
-        interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+        interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
       } else {
-        final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+        final Optional<Interval> optInterval = granularitySpec.bucketInterval(timestamp);
         // this interval must exist since it passed the rowFilter
         assert optInterval.isPresent();
         interval = optInterval.get();
@@ -218,8 +222,10 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
           interval,
           (intervalKey) -> DimensionCardinalityReport.createHllSketchForReport()
       );
+      // For cardinality estimation, we want to consider unique rows instead of unique hash buckets and therefore
+      // we do not use partition dimensions in computing the group key
       List<Object> groupKey = HashPartitioner.extractKeys(
-          partitionDimensions,
+          Collections.emptyList(),
           queryGranularity.bucketStart(timestamp).getMillis(),
           inputRow
       );
@@ -253,5 +259,4 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     );
     taskClient.report(supervisorTaskId, report);
   }
-
 }

@@ -95,7 +95,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     }
 
     File indexFile = indexMerger
-        .mergeQueryableIndex(indexes, true, aggregatorFactories, tempDir, indexSpec, null);
+        .mergeQueryableIndex(indexes, true, aggregatorFactories, tempDir, indexSpec, null, -1);
     try (QueryableIndex mergedIndex = indexIO.loadIndex(indexFile)) {
       Assert.assertEquals("Number of rows should be 1", 1, mergedIndex.getNumRows());
     }

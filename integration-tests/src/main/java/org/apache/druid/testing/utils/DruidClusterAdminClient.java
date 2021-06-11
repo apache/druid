@@ -35,10 +35,12 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -47,8 +49,10 @@ public class DruidClusterAdminClient
 {
   private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
   private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
+  private static final String COORDINATOR_TWO_DOCKER_CONTAINER_NAME = "/druid-coordinator-two";
   private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
   private static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
+  private static final String OVERLORD_TWO_DOCKER_CONTAINER_NAME = "/druid-overlord-two";
   private static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
   private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
   private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
@@ -74,6 +78,11 @@ public class DruidClusterAdminClient
     restartDockerContainer(COORDINATOR_DOCKER_CONTAINER_NAME);
   }
 
+  public void restartCoordinatorTwoContainer()
+  {
+    restartDockerContainer(COORDINATOR_TWO_DOCKER_CONTAINER_NAME);
+  }
+
   public void restartHistoricalContainer()
   {
     restartDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME);
@@ -82,6 +91,11 @@ public class DruidClusterAdminClient
   public void restartOverlordContainer()
   {
     restartDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME);
+  }
+
+  public void restartOverlordTwoContainer()
+  {
+    restartDockerContainer(OVERLORD_TWO_DOCKER_CONTAINER_NAME);
   }
 
   public void restartBrokerContainer()
@@ -102,7 +116,22 @@ public class DruidClusterAdminClient
   public void waitUntilCoordinatorReady()
   {
     waitUntilInstanceReady(config.getCoordinatorUrl());
-    postDynamicConfig(CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1).build());
+    postDynamicConfig(CoordinatorDynamicConfig.builder()
+                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .build());
+  }
+
+  public void waitUntilCoordinatorTwoReady()
+  {
+    waitUntilInstanceReady(config.getCoordinatorTwoUrl());
+    postDynamicConfig(CoordinatorDynamicConfig.builder()
+                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .build());
+  }
+
+  public void waitUntilOverlordTwoReady()
+  {
+    waitUntilInstanceReady(config.getOverlordTwoUrl());
   }
 
   public void waitUntilHistoricalReady()
@@ -112,7 +141,7 @@ public class DruidClusterAdminClient
 
   public void waitUntilIndexerReady()
   {
-    waitUntilInstanceReady(config.getIndexerUrl());
+    waitUntilInstanceReady(config.getOverlordUrl());
   }
 
   public void waitUntilBrokerReady()
@@ -158,7 +187,27 @@ public class DruidClusterAdminClient
             return response.getStatus().equals(HttpResponseStatus.OK);
           }
           catch (Throwable e) {
-            LOG.error(e, "");
+            //
+            // supress stack trace logging for some specific exceptions
+            // to reduce excessive stack trace messages when waiting druid nodes to start up
+            //
+            if (e.getCause() instanceof ChannelException) {
+              Throwable channelException = e.getCause();
+
+              if (channelException.getCause() instanceof ClosedChannelException) {
+                LOG.error("Channel Closed");
+              } else if ("Channel disconnected".equals(channelException.getMessage())) {
+                // log message only
+                LOG.error("Channel disconnected");
+              } else {
+                // log stack trace for unknown exception
+                LOG.error(e, "");
+              }
+            } else {
+              // log stack trace for unknown exception
+              LOG.error(e, "");
+            }
+
             return false;
           }
         },
@@ -180,7 +229,8 @@ public class DruidClusterAdminClient
             ).get();
 
             LOG.info("%s %s", response.getStatus(), response.getContent());
-            return response.getStatus().equals(HttpResponseStatus.OK);
+            // if coordinator is not leader then it will return 307 instead of 200
+            return response.getStatus().equals(HttpResponseStatus.OK) || response.getStatus().equals(HttpResponseStatus.TEMPORARY_REDIRECT);
           }
           catch (Throwable e) {
             LOG.error(e, "");

@@ -23,7 +23,7 @@ title: "LDAP auth"
   -->
 
 
-This page describes how to set up Druid user authentication and authorization through LDAP. The first step is to enable LDAP authentication and authorization for Druid. You then map an LDAP group to roles and assign permissions and users to roles.
+This page describes how to set up Druid user authentication and authorization through LDAP. The first step is to enable LDAP authentication and authorization for Druid. You then map an LDAP group to roles and assign permissions to roles.
 
 ## Enable LDAP in Druid
 
@@ -52,7 +52,7 @@ After verifying basic connectivity, check your search criteria. For example, the
 ldapsearch -x -W -H ldap://<ldap_server>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
 ```
 
-Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. The sAMAccountName attribute contains the authenticated user identity. 
+Note the `memberOf` attribute in the results; it shows the groups that the user belongs to. You will use this value to map the LDAP group to the Druid roles later. This attribute may be implemented differently on different types of LDAP servers. For instance, some LDAP servers may support recursive groupings, and some may not. Some LDAP server implementations may not have any object classes that contain this attribute altogether. If your LDAP server does not use the `memberOf` attribute, then Druid will not be able to determine a user's group membership using LDAP. The sAMAccountName attribute used in this example contains the authenticated user identity. This is an attribute of an object class specific to Microsoft Active Directory. The object classes and attribute used in your LDAP server may be different.
 
 ## Configure Druid user authentication with LDAP/Active Directory 
 
@@ -177,7 +177,14 @@ To add additional roles to the group mapping, use the following API:
 curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
 ```
 
-### Step 4. Assign roles for individual LDAP users
+In the next two steps you will be creating a user, and assigning previously created roles to it. These steps are only needed in the following cases: 
+                                                                                                 
+ - Your LDAP server does not support the `memberOf` attribute, or 
+ - You want to configure a user with additional roles that are not mapped to the group(s) that the user is a member of
+ 
+ If this is not the case for your scenario, you can skip these steps.
+
+### Step 4. Create a user
 
 Once LDAP is enabled, only user passwords are verified with LDAP. You add the LDAP user to Druid as follows: 
 

@@ -132,11 +132,17 @@ public interface Expr
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression. A return
-   * value of null indicates that the given type information was not enough to resolve the output type, so the
-   * expression must be evaluated using default {@link #eval} handling where types are only known after evaluation,
-   * through {@link ExprEval#type}.
-   * @param inspector
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression.
+   *
+   * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
+   * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
+   * the entire expression. Otherwise, all vectorizable expressions must produce an output type to correctly operate
+   * with the vectorized engine.
+   *
+   * Outside of the context of vectorized expressions, a return value of null can also indicate that the given type
+   * information was not enough to resolve the output type, so the expression must be evaluated using default
+   * {@link #eval} handling where types are only known after evaluation, through {@link ExprEval#type}, such as
+   * transform expressions at ingestion time
    */
   @Nullable
   default ExprType getOutputType(InputBindingInspector inspector)
@@ -208,6 +214,36 @@ public interface Expr
     }
 
     /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * value of true.
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     */
+    default boolean areScalar(List<Expr> args)
+    {
+      boolean scalar = true;
+      for (Expr arg : args) {
+        ExprType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        scalar &= argType.isScalar();
+      }
+      return scalar;
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * value of true.
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     */
+    default boolean areScalar(Expr... args)
+    {
+      return areScalar(Arrays.asList(args));
+    }
+
+    /**
      * Check if every provided {@link Expr} computes {@link Expr#canVectorize(InputBindingInspector)} to a value of true
      */
     default boolean canVectorize(List<Expr> args)
@@ -265,6 +301,13 @@ public interface Expr
     boolean[] getNullVector(String name);
 
     int getCurrentVectorSize();
+
+    /**
+     * Returns an integer that uniquely identifies the current position of the underlying vector offset, if this
+     * binding is backed by a segment. This is useful for caching: it is safe to assume nothing has changed in the
+     * offset so long as the id remains the same. See also: ReadableVectorOffset (in druid-processing)
+     */
+    int getCurrentVectorId();
   }
 
   /**

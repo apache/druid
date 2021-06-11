@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -33,7 +34,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 
 import java.util.Map;
 
-public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
+public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
   private static final String TYPE = "index_kinesis";
 
@@ -63,7 +64,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new KinesisIndexTaskRunner(

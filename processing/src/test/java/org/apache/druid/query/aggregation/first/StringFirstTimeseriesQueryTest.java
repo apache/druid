@@ -42,6 +42,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -69,7 +70,7 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
     final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
     ComplexMetrics.registerSerde(serde.getTypeName(), serde);
 
-    incrementalIndex = new IncrementalIndex.Builder()
+    incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
@@ -78,7 +79,7 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     incrementalIndex.add(
         new MapBasedInputRow(

@@ -26,12 +26,23 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 
 public class StringCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy<DimensionSelector>
 {
   public static final String CARDINALITY_AGG_NULL_STRING = "\u0000";
   public static final char CARDINALITY_AGG_SEPARATOR = '\u0001';
+
+  public static void addStringToCollector(final HyperLogLogCollector collector, @Nullable final String s)
+  {
+    // SQL standard spec does not count null values,
+    // Skip counting null values when we are not replacing null with default value.
+    // A special value for null in case null handling is configured to use empty string for null.
+    if (NullHandling.replaceWithDefault() || s != null) {
+      collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(nullToSpecial(s)).asBytes());
+    }
+  }
 
   @Override
   public void hashRow(DimensionSelector dimSelector, Hasher hasher)
@@ -80,16 +91,11 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
       int index = row.get(i);
       final String value = dimSelector.lookupName(index);
-      // SQL standard spec does not count null values,
-      // Skip counting null values when we are not replacing null with default value.
-      // A special value for null in case null handling is configured to use empty string for null.
-      if (NullHandling.replaceWithDefault() || value != null) {
-        collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(nullToSpecial(value)).asBytes());
-      }
+      addStringToCollector(collector, value);
     }
   }
 
-  private String nullToSpecial(String value)
+  private static String nullToSpecial(String value)
   {
     return value == null ? CARDINALITY_AGG_NULL_STRING : value;
   }

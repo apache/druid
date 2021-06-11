@@ -127,7 +127,7 @@ public abstract class ServerRunnable extends GuiceRunnable
    * This is a helper class used by CliXXX classes to announce {@link DiscoveryDruidNode}
    * as part of {@link Lifecycle.Stage#ANNOUNCEMENTS}.
    */
-  protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
+  public static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
     public static class Child
     {

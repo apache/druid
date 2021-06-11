@@ -26,8 +26,8 @@ describe('interval calendar component', () => {
   it('matches snapshot', () => {
     const intervalInput = (
       <IntervalInput
-        interval={'2010-01-01/2020-01-01'}
-        placeholder={'2010-01-01/2020-01-01'}
+        interval="2010-01-01/2020-01-01"
+        placeholder="2010-01-01/2020-01-01"
         onValueChange={() => {}}
         intent={Intent.PRIMARY}
       />

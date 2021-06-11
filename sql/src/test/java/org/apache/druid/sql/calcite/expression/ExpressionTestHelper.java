@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -32,6 +31,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -67,9 +67,7 @@ class ExpressionTestHelper
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      CalciteTests.REGULAR_USER_AUTH_RESULT
+      ImmutableMap.of()
   );
 
   private final RowSignature rowSignature;
@@ -249,7 +247,7 @@ class ExpressionTestHelper
     Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                               .eval(Parser.withMap(bindings));
+                               .eval(InputBindings.withMap(bindings));
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }

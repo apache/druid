@@ -16,8 +16,11 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 import {
   DimensionsSpec,
+  getDimensionNamesFromTransforms,
   getSpecType,
   getTimestampSchema,
   IngestionSpec,
@@ -27,6 +30,8 @@ import {
   isDruidSource,
   MetricSpec,
   PLACEHOLDER_TIMESTAMP_SPEC,
+  REINDEX_TIMESTAMP_SPEC,
+  TIME_COLUMN,
   TimestampSpec,
   Transform,
   TransformSpec,
@@ -127,7 +132,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
     type: 'inline',
-    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+    data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
@@ -150,13 +155,13 @@ export function headerFromSampleResponse(options: HeaderFromSampleResponseOption
 
   let columns = sortWithPrefixSuffix(
     dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
-    columnOrder || ['__time'],
+    columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
     alphanumericCompare,
   );
 
   if (ignoreTimeColumn) {
-    columns = columns.filter(c => c !== '__time');
+    columns = columns.filter(c => c !== TIME_COLUMN);
   }
 
   return columns;
@@ -288,7 +293,7 @@ export async function sampleForConnect(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     } as any,
@@ -336,13 +341,15 @@ export async function sampleForParser(
     sampleStrategy,
   );
 
+  const reingestMode = isDruidSource(spec);
+
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
       },
     },
@@ -396,7 +403,7 @@ export async function sampleForTimestamp(
         dimensionsSpec: {},
         timestampSpec,
         transformSpec: {
-          transforms: transforms.filter(transform => transform.name === '__time'),
+          transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
         },
       },
     },
@@ -412,7 +419,8 @@ export async function sampleForTimestamp(
   }
 
   const sampleTimeData = sampleTime.data;
-  return Object.assign({}, sampleColumns, {
+  return {
+    ...sampleColumns,
     data: sampleColumns.data.map((d, i) => {
       // Merge the column sample with the time column sample
       if (!d.parsed) return d;
@@ -420,7 +428,7 @@ export async function sampleForTimestamp(
       d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
       return d;
     }),
-  });
+  };
 }
 
 export async function sampleForTransform(
@@ -457,8 +465,8 @@ export async function sampleForTransform(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: ['__time'].concat(inputFormatColumns),
-      }).concat(transforms.map(t => t.name)),
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 
@@ -516,8 +524,8 @@ export async function sampleForFilter(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: ['__time'].concat(inputFormatColumns),
-      }).concat(transforms.map(t => t.name)),
+        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
+      }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
 

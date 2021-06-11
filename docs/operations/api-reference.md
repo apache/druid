@@ -67,7 +67,7 @@ monitoring checks such as AWS load balancer health checks are not able to look a
 ## Master Server
 
 This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Coordinator
 
@@ -86,6 +86,8 @@ Coordinator of the cluster. In addition, returns HTTP 200 if the server is the c
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
 
+
+<a name="coordinator-segment-loading"></a>
 #### Segment Loading
 
 ##### GET
@@ -101,6 +103,14 @@ Returns the number of segments left to load until segments that should be loaded
 * `/druid/coordinator/v1/loadstatus?full`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
+
+* `/druid/coordinator/v1/loadstatus?full&computeUsingClusterView`
+
+Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
+The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
+A segment is considered fully loaded when:
+- Druid has replicated it the number of times configured in the corresponding load rule.
+- Or the number of replicas for the segment in each tier where it is configured to be replicated equals the available nodes of a service type that are currently allowed to load the segment in the tier.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -151,25 +161,45 @@ Setting `forceMetadataRefresh` to true will force the coordinator to poll latest
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
 of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+You can pass the optional query parameter `computeUsingClusterView` to factor in the available cluster services when calculating
+the segments left to load. See [Coordinator Segment Loading](#coordinator-segment-loading) for details.
 If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
 
 ##### GET
 
+* `/druid/coordinator/v1/metadata/segments`
+
+Returns a list of all segments for each datasource enabled in the cluster.
+
+* `/druid/coordinator/v1/metadata/segments?datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all segments for one or more specific datasources enabled in the cluster.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus`
+
+Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all segments for one or more specific datasources with the full segment metadata and an extra field `overshadowed`.
+
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of data sources with at least one used segment in the cluster.
+Returns a list of the names of datasources with at least one used segment in the cluster.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
-Returns a list of the names of data sources, regardless of whether there are used segments belonging to those data
-sources in the cluster or not.
+Returns a list of the names of datasources, regardless of whether there are used segments belonging to those datasources in the cluster or not.
+
+* `/druid/coordinator/v1/metadata/datasources?includeDisabled`
+
+Returns a list of the names of datasources, regardless of whether the datasource is disabled or not.
 
 * `/druid/coordinator/v1/metadata/datasources?full`
 
-Returns a list of all data sources with at least one used segment in the cluster. Returns all metadata about those data
-sources as stored in the metadata store.
+Returns a list of all datasources with at least one used segment in the cluster. Returns all metadata about those datasources as stored in the metadata store.
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}`
 
@@ -280,13 +310,13 @@ Caution : Avoid using indexing or kill tasks and these API's at the same time fo
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as used all segments belonging to a data source. Returns a JSON object of the form
+Marks as used all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as used) as the result of this API call.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as used a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
 result of this API call.
 
@@ -314,7 +344,7 @@ JSON Request Payload:
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as unused all segments belonging to a data source. Returns a JSON object of the form
+Marks as unused all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as unused) as the result of this API call.
 
@@ -325,7 +355,7 @@ Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as unused a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
 result of this API call.
 
@@ -401,6 +431,30 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
+#### Dynamic configuration
+
+See [Coordinator Dynamic Configuration](../configuration/index.md#dynamic-configuration) for details.
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
+##### GET
+
+* `/druid/coordinator/v1/config`
+
+Retrieves current coordinator dynamic configuration.
+
+* `/druid/coordinator/v1/config/history?interval={interval}&count={count}`
+
+Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
+to filter by interval and limit the number of results respectively.
+
+##### POST
+
+* `/druid/coordinator/v1/config`
+
+Update overlord dynamic worker configuration.
+
 #### Compaction Status
 
 ##### GET
@@ -461,7 +515,7 @@ will be set for them.
 * `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource.
-See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+See [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
@@ -584,7 +638,7 @@ Retrieve list of task status objects for list of task id strings in request body
 
 Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with
 `numDeleted` and count of rows deleted from the pending segments table. This API is used by the
-`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.html#coordinator-operation)
+`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
 
 #### Supervisors
@@ -602,8 +656,8 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
@@ -614,8 +668,8 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
 
@@ -678,7 +732,7 @@ Shutdown a supervisor.
 
 #### Dynamic configuration
 
-See [Overlord Dynamic Configuration](../configuration/index.html#overlord-dynamic-configuration) for details.
+See [Overlord Dynamic Configuration](../configuration/index.md#overlord-dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 (e.g., 2016-06-27_2016-06-28).
@@ -689,7 +743,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 Retrieves current overlord dynamic configuration.
 
-* `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
+* `/druid/indexer/v1/worker/history?interval={interval}&count={count}`
 
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
@@ -711,7 +765,7 @@ Update overlord dynamic worker configuration.
 ## Data Server
 
 This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
-in the suggested [three-server configuration](../design/processes.html#server-types).
+in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### MiddleManager
 
@@ -802,7 +856,7 @@ in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven'
 
 ## Query Server
 
-This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Broker
 

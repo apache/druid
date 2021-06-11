@@ -42,6 +42,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
@@ -137,7 +138,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         null,
         segment.getTotalSpace()
     );
-    backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false);
+    backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false, SegmentLazyLoadFailCallback.NOOP);
 
     columnNames = ImmutableList.<String>builder().add(ColumnHolder.TIME_COLUMN_NAME)
                                                  .addAll(backingSegment.asQueryableIndex().getColumnNames()).build();

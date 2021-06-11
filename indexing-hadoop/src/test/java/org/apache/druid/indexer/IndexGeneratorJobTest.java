@@ -547,6 +547,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -599,7 +600,7 @@ public class IndexGeneratorJobTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
     int shardCount = 0;
     int segmentNum = 0;
-    for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+    for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
       List<ShardSpec> specs = constructShardSpecFromShardInfo(partitionType, shardInfoForEachShard[segmentNum++]);
       List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
       for (ShardSpec spec : specs) {
@@ -620,13 +621,21 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job)));
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     IndexGeneratorJob
-        .getPublishedSegments(config)
-        .forEach(segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
-                                              .add(segment));
+        .getPublishedSegmentAndIndexZipFilePaths(config)
+        .forEach(segmentAndIndexZipFilePath -> intervalToSegments.computeIfAbsent(segmentAndIndexZipFilePath.getSegment().getInterval(), k -> new ArrayList<>())
+                                              .add(segmentAndIndexZipFilePath.getSegment()));
+
+    List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths =
+        IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    JobHelper.renameIndexFilesForSegments(config.getSchema(), dataSegmentAndIndexZipFilePaths);
+
+    JobHelper.maybeDeleteIntermediatePath(true, config.getSchema());
+    File workingPath = new File(config.makeIntermediatePath().toUri().getPath());
+    Assert.assertTrue(workingPath.exists());
 
     final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;

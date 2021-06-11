@@ -42,11 +42,10 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -108,12 +107,7 @@ public class VectorGroupByEngine
               if (columnCapabilities == null) {
                 return true;
               }
-              // strings must be single valued, dictionary encoded, and have unique dictionary entries
-              if (ValueType.STRING.equals(columnCapabilities.getType())) {
-                return columnCapabilities.hasMultipleValues().isFalse() &&
-                       columnCapabilities.isDictionaryEncoded().isTrue() &&
-                       columnCapabilities.areDictionaryValuesUnique().isTrue();
-              }
+              // must be single valued
               return columnCapabilities.hasMultipleValues().isFalse();
             });
   }
@@ -175,7 +169,7 @@ public class VectorGroupByEngine
               final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
               final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
                   dimensionSpec ->
-                      DimensionHandlerUtils.makeVectorProcessor(
+                      ColumnProcessors.makeVectorProcessor(
                           dimensionSpec,
                           GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory

@@ -1,22 +1,24 @@
 [
   {
-    "server": "172.172.172.6:8283",
-    "host": "172.172.172.6",
+    "server": "%%HISTORICAL%%:8283",
+    "host": "%%HISTORICAL%%",
     "plaintext_port": 8083,
     "tls_port": 8283,
     "server_type": "historical",
     "tier": "_default_tier",
     "curr_size": 2208932412,
-    "max_size": 5000000000
+    "max_size": 5000000000,
+    "is_leader": %%NON_LEADER%%
   },
   {
-    "server": "172.172.172.9:8282",
-    "host": "172.172.172.9",
+    "server": "%%BROKER%%:8282",
+    "host": "%%BROKER%%",
     "plaintext_port": 8082,
     "tls_port": 8282,
     "server_type": "broker",
     "tier": "_default_tier",
     "curr_size": 0,
-    "max_size": 1000000000
+    "max_size": 1000000000,
+    "is_leader": %%NON_LEADER%%
   }
 ]

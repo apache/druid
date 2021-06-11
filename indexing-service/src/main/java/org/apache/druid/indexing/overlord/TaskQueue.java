@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -34,6 +35,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -81,6 +84,7 @@ public class TaskQueue
 
   private final TaskLockConfig lockConfig;
   private final TaskQueueConfig config;
+  private final DefaultTaskConfig defaultTaskConfig;
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
   private final TaskActionClientFactory taskActionClientFactory;
@@ -112,6 +116,7 @@ public class TaskQueue
   public TaskQueue(
       TaskLockConfig lockConfig,
       TaskQueueConfig config,
+      DefaultTaskConfig defaultTaskConfig,
       TaskStorage taskStorage,
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
@@ -121,11 +126,18 @@ public class TaskQueue
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
     this.config = Preconditions.checkNotNull(config, "config");
+    this.defaultTaskConfig = Preconditions.checkNotNull(defaultTaskConfig, "defaultTaskContextConfig");
     this.taskStorage = Preconditions.checkNotNull(taskStorage, "taskStorage");
     this.taskRunner = Preconditions.checkNotNull(taskRunner, "taskRunner");
     this.taskActionClientFactory = Preconditions.checkNotNull(taskActionClientFactory, "taskActionClientFactory");
     this.taskLockbox = Preconditions.checkNotNull(taskLockbox, "taskLockbox");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
+  }
+
+  @VisibleForTesting
+  void setActive(boolean active)
+  {
+    this.active = active;
   }
 
   /**
@@ -242,71 +254,80 @@ public class TaskQueue
       giant.lock();
 
       try {
-        // Task futures available from the taskRunner
-        final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
-        for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
-          runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
-        }
-        // Attain futures for all active tasks (assuming they are ready to run).
-        // Copy tasks list, as notifyStatus may modify it.
-        for (final Task task : ImmutableList.copyOf(tasks)) {
-          if (!taskFutures.containsKey(task.getId())) {
-            final ListenableFuture<TaskStatus> runnerTaskFuture;
-            if (runnerTaskFutures.containsKey(task.getId())) {
-              runnerTaskFuture = runnerTaskFutures.get(task.getId());
-            } else {
-              // Task should be running, so run it.
-              final boolean taskIsReady;
-              try {
-                taskIsReady = task.isReady(taskActionClientFactory.create(task));
-              }
-              catch (Exception e) {
-                log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-                notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
-                continue;
-              }
-              if (taskIsReady) {
-                log.info("Asking taskRunner to run: %s", task.getId());
-                runnerTaskFuture = taskRunner.run(task);
-              } else {
-                continue;
-              }
-            }
-            taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
-          } else if (isTaskPending(task)) {
-            // if the taskFutures contain this task and this task is pending, also let the taskRunner
-            // to run it to guarantee it will be assigned to run
-            // see https://github.com/apache/druid/pull/6991
-            taskRunner.run(task);
-          }
-        }
-        // Kill tasks that shouldn't be running
-        final Set<String> knownTaskIds = tasks
-            .stream()
-            .map(Task::getId)
-            .collect(Collectors.toSet());
-        final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
-        if (!tasksToKill.isEmpty()) {
-          log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
-          for (final String taskId : tasksToKill) {
-            try {
-              taskRunner.shutdown(
-                  taskId,
-                  "task is not in knownTaskIds[%s]",
-                  knownTaskIds
-              );
-            }
-            catch (Exception e) {
-              log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
-            }
-          }
-        }
+        manageInternal();
         // awaitNanos because management may become necessary without this condition signalling,
         // due to e.g. tasks becoming ready when other folks mess with the TaskLockbox.
         managementMayBeNecessary.awaitNanos(MANAGEMENT_WAIT_TIMEOUT_NANOS);
       }
       finally {
         giant.unlock();
+      }
+    }
+  }
+
+  @VisibleForTesting
+  void manageInternal()
+  {
+    // Task futures available from the taskRunner
+    final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
+    for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
+      runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
+    }
+    // Attain futures for all active tasks (assuming they are ready to run).
+    // Copy tasks list, as notifyStatus may modify it.
+    for (final Task task : ImmutableList.copyOf(tasks)) {
+      if (!taskFutures.containsKey(task.getId())) {
+        final ListenableFuture<TaskStatus> runnerTaskFuture;
+        if (runnerTaskFutures.containsKey(task.getId())) {
+          runnerTaskFuture = runnerTaskFutures.get(task.getId());
+        } else {
+          // Task should be running, so run it.
+          final boolean taskIsReady;
+          try {
+            taskIsReady = task.isReady(taskActionClientFactory.create(task));
+          }
+          catch (Exception e) {
+            log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
+            notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
+            continue;
+          }
+          if (taskIsReady) {
+            log.info("Asking taskRunner to run: %s", task.getId());
+            runnerTaskFuture = taskRunner.run(task);
+          } else {
+            // Task.isReady() can internally lock intervals or segments.
+            // We should release them if the task is not ready.
+            taskLockbox.unlockAll(task);
+            continue;
+          }
+        }
+        taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
+      } else if (isTaskPending(task)) {
+        // if the taskFutures contain this task and this task is pending, also let the taskRunner
+        // to run it to guarantee it will be assigned to run
+        // see https://github.com/apache/druid/pull/6991
+        taskRunner.run(task);
+      }
+    }
+    // Kill tasks that shouldn't be running
+    final Set<String> knownTaskIds = tasks
+        .stream()
+        .map(Task::getId)
+        .collect(Collectors.toSet());
+    final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
+    if (!tasksToKill.isEmpty()) {
+      log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
+      for (final String taskId : tasksToKill) {
+        try {
+          taskRunner.shutdown(
+              taskId,
+              "task is not in knownTaskIds[%s]",
+              knownTaskIds
+          );
+        }
+        catch (Exception e) {
+          log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
+        }
       }
     }
   }
@@ -335,6 +356,13 @@ public class TaskQueue
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
+    defaultTaskConfig.getContext().forEach(task::addToContextIfAbsent);
+    // Every task shuold use the lineage-based segment allocation protocol unless it is explicitly set to
+    // using the legacy protocol.
+    task.addToContextIfAbsent(
+        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
+        SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
+    );
 
     giant.lock();
 
@@ -691,5 +719,11 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
     return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                 .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
+
+  @VisibleForTesting
+  List<Task> getTasks()
+  {
+    return tasks;
   }
 }

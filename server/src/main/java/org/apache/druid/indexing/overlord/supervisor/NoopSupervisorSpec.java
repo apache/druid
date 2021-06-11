@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -153,6 +154,18 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
       {
 
+      }
+
+      @Override
+      public LagStats computeLagStats()
+      {
+        return new LagStats(0, 0, 0);
+      }
+
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return -1;
       }
     };
   }

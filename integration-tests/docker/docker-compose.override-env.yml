@@ -35,9 +35,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-metadata-storage:druid-metadata-storage
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
     depends_on:
       - druid-metadata-storage
       - druid-zookeeper-kafka
@@ -50,10 +47,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-overlord:druid-overlord
-      - druid-metadata-storage:druid-metadata-storage
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
     depends_on:
       - druid-overlord
       - druid-metadata-storage
@@ -67,8 +60,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
     depends_on:
       - druid-zookeeper-kafka
 
@@ -80,9 +71,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-overlord:druid-overlord
     depends_on:
       - druid-zookeeper-kafka
       - druid-overlord
@@ -95,10 +83,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-middlemanager:druid-middlemanager
-      - druid-historical:druid-historical
     depends_on:
       - druid-zookeeper-kafka
       - druid-middlemanager
@@ -112,10 +96,6 @@ services:
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-      - druid-coordinator:druid-coordinator
-      - druid-broker:druid-broker
     depends_on:
       - druid-zookeeper-kafka
       - druid-coordinator

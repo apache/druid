@@ -44,14 +44,14 @@ When migrating from Derby, the coordinator processes will still need to be up in
 
 Before migrating, you will need to copy your old segments to the new deep storage.
 
-For information on what path structure to use in the new deep storage, please see [deep storage migration options](../operations/export-metadata.html#deep-storage-migration).
+For information on what path structure to use in the new deep storage, please see [deep storage migration options](../operations/export-metadata.md#deep-storage-migration).
 
 ## Export segments with rewritten load specs
 
 Druid provides an [Export Metadata Tool](../operations/export-metadata.md) for exporting metadata from Derby into CSV files
 which can then be reimported.
 
-By setting [deep storage migration options](../operations/export-metadata.html#deep-storage-migration), the `export-metadata` tool will export CSV files where the segment load specs have been rewritten to load from your new deep storage location.
+By setting [deep storage migration options](../operations/export-metadata.md#deep-storage-migration), the `export-metadata` tool will export CSV files where the segment load specs have been rewritten to load from your new deep storage location.
 
 Run the `export-metadata` tool on your existing cluster, using the migration options appropriate for your new deep storage location, and save the CSV files it generates. After a successful export, you can shut down the coordinator.
 
@@ -59,7 +59,7 @@ Run the `export-metadata` tool on your existing cluster, using the migration opt
 
 After generating the CSV exports with the modified segment data, you can reimport the contents of the Druid segments table from the generated CSVs.
 
-Please refer to [import commands](../operations/export-metadata.html#importing-metadata) for examples. Only the `druid_segments` table needs to be imported.
+Please refer to [import commands](../operations/export-metadata.md#importing-metadata) for examples. Only the `druid_segments` table needs to be imported.
 
 ### Restart cluster
 

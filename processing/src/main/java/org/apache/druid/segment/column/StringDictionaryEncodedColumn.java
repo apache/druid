@@ -31,6 +31,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.CachingIndexed;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -38,15 +39,18 @@ import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 
 /**
+ *
  */
 public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
@@ -54,17 +58,20 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   private final ColumnarInts column;
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
-  private final CachingIndexed<String> cachedLookups;
+  private final CachingIndexed<String> cachedDictionary;
+  private final Indexed<ByteBuffer> dictionaryUtf8;
 
   public StringDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      CachingIndexed<String> cachedLookups
+      CachingIndexed<String> dictionary,
+      Indexed<ByteBuffer> dictionaryUtf8
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
-    this.cachedLookups = cachedLookups;
+    this.cachedDictionary = dictionary;
+    this.dictionaryUtf8 = dictionaryUtf8;
   }
 
   @Override
@@ -95,19 +102,39 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Nullable
   public String lookupName(int id)
   {
-    return cachedLookups.get(id);
+    return cachedDictionary.get(id);
+  }
+
+
+  /**
+   * Returns the value for a particular dictionary id as UTF-8 bytes.
+   *
+   * The returned buffer is in big-endian order. It is not reused, so callers may modify the position, limit, byte
+   * order, etc of the buffer.
+   *
+   * The returned buffer points to the original data, so callers must take care not to use it outside the valid
+   * lifetime of this column.
+   *
+   * @param id id to lookup the dictionary value for
+   *
+   * @return dictionary value for the given id, or null if the value is itself null
+   */
+  @Nullable
+  public ByteBuffer lookupNameUtf8(int id)
+  {
+    return dictionaryUtf8.get(id);
   }
 
   @Override
   public int lookupId(String name)
   {
-    return cachedLookups.indexOf(name);
+    return cachedDictionary.indexOf(name);
   }
 
   @Override
   public int getCardinality()
   {
-    return cachedLookups.size();
+    return cachedDictionary.size();
   }
 
   @Override
@@ -138,6 +165,19 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       {
         final String value = StringDictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
+      }
+
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
       }
 
       @Override
@@ -336,7 +376,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
     {
       private final int[] vector = new int[offset.getMaxVectorSize()];
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       @Override
       public int[] getRowVector()
@@ -366,6 +406,19 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       public String lookupName(final int id)
       {
         return StringDictionaryEncodedColumn.this.lookupName(id);
+      }
+
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
       }
 
       @Override
@@ -409,7 +462,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     class QueryableMultiValueDimensionVectorSelector implements MultiValueDimensionVectorSelector, IdLookup
     {
       private final IndexedInts[] vector = new IndexedInts[offset.getMaxVectorSize()];
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       @Override
       public IndexedInts[] getRowVector()
@@ -451,6 +504,19 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       public String lookupName(final int id)
       {
         return StringDictionaryEncodedColumn.this.lookupName(id);
+      }
+
+      @Nullable
+      @Override
+      public ByteBuffer lookupNameUtf8(int id)
+      {
+        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+      }
+
+      @Override
+      public boolean supportsLookupNameUtf8()
+      {
+        return true;
       }
 
       @Override
@@ -496,7 +562,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       {
         private final int[] vector = new int[offset.getMaxVectorSize()];
         private final String[] strings = new String[offset.getMaxVectorSize()];
-        private int id = ReadableVectorOffset.NULL_ID;
+        private int id = ReadableVectorInspector.NULL_ID;
 
         @Override
 
@@ -541,7 +607,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Override
   public void close() throws IOException
   {
-    CloseQuietly.close(cachedLookups);
+    CloseQuietly.close(cachedDictionary);
 
     if (column != null) {
       column.close();

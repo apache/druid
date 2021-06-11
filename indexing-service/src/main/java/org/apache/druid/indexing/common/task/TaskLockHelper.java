@@ -21,15 +21,12 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.SegmentLockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -183,7 +180,6 @@ public class TaskLockHelper
   private boolean tryLockSegments(TaskActionClient actionClient, List<DataSegment> segments) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(segments);
-    final Closer lockCloserOnError = Closer.create();
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       final Interval interval = entry.getKey();
       final List<DataSegment> segmentsInInterval = entry.getValue();
@@ -206,14 +202,7 @@ public class TaskLockHelper
           )
       );
 
-      lockResults.stream()
-                 .filter(LockResult::isOk)
-                 .map(result -> (SegmentLock) result.getTaskLock())
-                 .forEach(segmentLock -> lockCloserOnError.register(() -> actionClient.submit(
-                     new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
-                 )));
       if (lockResults.stream().anyMatch(result -> !result.isOk())) {
-        lockCloserOnError.close();
         return false;
       }
       lockedExistingSegments.addAll(segmentsInInterval);
@@ -292,16 +281,28 @@ public class TaskLockHelper
         atomicUpdateGroupSize++;
       } else {
         if (curSegment.getEndRootPartitionId() != nextSegment.getStartRootPartitionId()) {
-          throw new ISE("Can't compact segments of non-consecutive rootPartition range");
+          throw new ISE(
+              "Can't compact segments of non-consecutive rootPartition range. Missing partitionIds between [%s] and [%s]",
+              curSegment.getEndRootPartitionId(),
+              nextSegment.getStartRootPartitionId()
+          );
         }
         if (atomicUpdateGroupSize != curSegment.getAtomicUpdateGroupSize()) {
-          throw new ISE("All atomicUpdateGroup must be compacted together");
+          throw new ISE(
+              "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+              curSegment.getAtomicUpdateGroupSize(),
+              atomicUpdateGroupSize
+          );
         }
         atomicUpdateGroupSize = 1;
       }
     }
     if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
-      throw new ISE("All atomicUpdateGroup must be compacted together");
+      throw new ISE(
+          "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+          sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize(),
+          atomicUpdateGroupSize
+      );
     }
   }
 }

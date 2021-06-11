@@ -55,7 +55,7 @@ To use the AWS S3 as the deep storage, you need to configure `druid.storage.stor
 |`druid.storage.type`|hdfs| |Must be set.|
 |`druid.storage.storageDirectory`|s3a://bucket/example/directory or s3n://bucket/example/directory|Path to the deep storage|Must be set.|
 
-You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html), especially the `hadoop-aws.jar` in the Druid classpath.
+You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/), especially the `hadoop-aws.jar` in the Druid classpath.
 Run the below command to install the `hadoop-aws.jar` file under `${DRUID_HOME}/extensions/druid-hdfs-storage` in all nodes.
 
 ```bash
@@ -64,7 +64,7 @@ cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${H
 ```
 
 Finally, you need to add the below properties in the `core-site.xml`.
-For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
+For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/).
 
 ```xml
 <property>
@@ -111,7 +111,7 @@ and authentication properties needed for GCS. You may want to copy the below
 example properties. Please follow the instructions at
 [https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
 for more details.
-For more configurations, [GCS core default](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml)
+For more configurations, [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
 and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
 
 ```xml

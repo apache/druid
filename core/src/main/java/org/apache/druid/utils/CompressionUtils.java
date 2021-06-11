@@ -51,7 +51,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
@@ -138,7 +140,9 @@ public class CompressionUtils
     final ZipOutputStream zipOut = new ZipOutputStream(out);
 
     long totalSize = 0;
-    for (File file : directory.listFiles()) {
+
+    // Sort entries to make life easier when writing streaming-decompression unit tests.
+    for (File file : Arrays.stream(directory.listFiles()).sorted().collect(Collectors.toList())) {
       log.debug("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
       if (file.length() > Integer.MAX_VALUE) {
         zipOut.finish();
@@ -162,7 +166,9 @@ public class CompressionUtils
    *
    * @param byteSource   The ByteSource which supplies the zip data
    * @param outDir       The output directory to put the contents of the zip
-   * @param shouldRetry  A predicate expression to determine if a new InputStream should be acquired from ByteSource and the copy attempted again
+   * @param shouldRetry  A predicate expression to determine if a new InputStream should be acquired from ByteSource
+   *                     and the copy attempted again. If you want to retry on any exception, use
+   *                     {@link FileUtils#IS_EXCEPTION}.
    * @param cacheLocally A boolean flag to indicate if the data should be cached locally
    *
    * @return A FileCopyResult containing the result of writing the zip entries to disk
@@ -207,27 +213,6 @@ public class CompressionUtils
         }
       }
     }
-  }
-
-  /**
-   * Unzip the byteSource to the output directory. If cacheLocally is true, the byteSource is cached to local disk before unzipping.
-   * This may cause more predictable behavior than trying to unzip a large file directly off a network stream, for example.
-   *
-   * @param byteSource   The ByteSource which supplies the zip data
-   * @param outDir       The output directory to put the contents of the zip
-   * @param cacheLocally A boolean flag to indicate if the data should be cached locally
-   *
-   * @return A FileCopyResult containing the result of writing the zip entries to disk
-   *
-   * @throws IOException
-   */
-  public static FileUtils.FileCopyResult unzip(
-      final ByteSource byteSource,
-      final File outDir,
-      boolean cacheLocally
-  ) throws IOException
-  {
-    return unzip(byteSource, outDir, FileUtils.IS_EXCEPTION, cacheLocally);
   }
 
   /**
@@ -321,6 +306,13 @@ public class CompressionUtils
         result.addFile(file);
         zipIn.closeEntry();
       }
+
+      // Skip the rest of the zip file to work around https://github.com/apache/druid/issues/6905
+      final byte[] buf = new byte[512];
+      while (in.read(buf) != -1) {
+        // Intentionally left empty.
+      }
+
       return result;
     }
   }

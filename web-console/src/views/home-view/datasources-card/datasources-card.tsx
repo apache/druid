@@ -21,8 +21,7 @@ import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
@@ -52,9 +51,9 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
   return (
     <HomeViewCard
       className="datasources-card"
-      href={'#datasources'}
+      href="#datasources"
       icon={IconNames.MULTI_SELECT}
-      title={'Datasources'}
+      title="Datasources"
       loading={datasourceCountState.loading}
       error={datasourceCountState.error}
     >

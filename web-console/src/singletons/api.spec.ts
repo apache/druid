@@ -23,4 +23,32 @@ describe('Api', () => {
     expect(Api.encodePath('wikipedia')).toEqual('wikipedia');
     expect(Api.encodePath(`wi%ki?pe#dia&'[]`)).toEqual('wi%25ki%3Fpe%23dia%26%27%5B%5D');
   });
+
+  describe(`with BigInt`, () => {
+    it('works as expected', () => {
+      const res = (Api.getDefaultConfig().transformResponse as any)[0](`{"x":9223372036854775799}`);
+      expect(typeof res).toEqual('object');
+      expect(typeof res.x).toEqual('bigint');
+      expect(String(res.x)).toEqual('9223372036854775799');
+    });
+  });
+
+  describe(`without BigInt`, () => {
+    const originalBigInt = (global as any).BigInt;
+
+    beforeAll(() => {
+      (global as any).BigInt = null;
+    });
+
+    afterAll(() => {
+      (global as any).BigInt = originalBigInt;
+    });
+
+    it('works as expected', () => {
+      const res = (Api.getDefaultConfig().transformResponse as any)[0](`{"x":9223372036854775799}`);
+      expect(typeof res).toEqual('object');
+      expect(typeof res.x).toEqual('number');
+      expect(String(res.x)).toEqual('9223372036854776000');
+    });
+  });
 });

@@ -93,7 +93,7 @@ Following are main parts to a groupBy query:
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
-|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is [described later](groupbyquery.html#more-on-subtotalsspec) in more detail.|no|
+|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is [described later](groupbyquery.md#more-on-subtotalsspec) in more detail.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the `country` dimension, m is the cardinality of the `device` dimension, each day between 2012-01-01 and 2012-01-03, from the `sample_datasource` table. Each data point contains the (long) sum of `total_usage` if the value of the data point is greater than 100, the (double) sum of `data_transfer` and the (double) result of `total_usage` divided by `data_transfer` for the filter set for a particular grouping of `country` and `device`. The output looks like this:
@@ -132,10 +132,10 @@ groupBy queries can group on multi-value dimensions. When grouping on a multi-va
 from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
 there are rows. For example, a groupBy on the dimension `tags` with filter `"t1" AND "t3"` would match only row1, and
 generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
-See [Multi-value dimensions](multi-value-dimensions.html) for more details.
+See [Multi-value dimensions](multi-value-dimensions.md) for more details.
 
 ## More on subtotalsSpec
 
@@ -299,9 +299,9 @@ will not exceed available memory for the maximum possible concurrent query load 
 `druid.processing.numMergeBuffers`). See the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) 
 for more details about direct memory usage, organized by Druid process type.
 
-Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a `query` dataSource) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.html#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
+Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a `query` dataSource) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.md#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
 
-Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.html#parallel-combine) is enabled, in which case they need two merge buffers per query.
+Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.md#parallel-combine) is enabled, in which case they need two merge buffers per query.
 
 When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
 `druid.query.groupBy.maxResults`. This is a cap on the maximum number of results in a result set. Queries that exceed
@@ -355,11 +355,11 @@ computing intermediate aggregates from each segment and another for combining in
 
 There are some situations where other query types may be a better choice than groupBy.
 
-- For queries with no "dimensions" (i.e. grouping by time only) the [Timeseries query](timeseriesquery.html) will
+- For queries with no "dimensions" (i.e. grouping by time only) the [Timeseries query](timeseriesquery.md) will
 generally be faster than groupBy. The major differences are that it is implemented in a fully streaming manner (taking
 advantage of the fact that segments are already sorted on time) and does not need to use a hash table for merging.
 
-- For queries with a single "dimensions" element (i.e. grouping by one string dimension), the [TopN query](topnquery.html)
+- For queries with a single "dimensions" element (i.e. grouping by one string dimension), the [TopN query](topnquery.md)
 will sometimes be faster than groupBy. This is especially true if you are ordering by a metric and find approximate
 results acceptable.
 
@@ -373,7 +373,7 @@ strategy perform the outer query on the Broker in a single-threaded fashion.
 
 ### Configurations
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.html).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.md).
 
 #### Configurations for groupBy v2
 

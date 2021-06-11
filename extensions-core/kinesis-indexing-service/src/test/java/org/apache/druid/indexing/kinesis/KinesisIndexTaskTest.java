@@ -40,6 +40,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -96,6 +97,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
@@ -103,8 +106,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -153,7 +154,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static final String SHARD_ID1 = "1";
   private static final String SHARD_ID0 = "0";
   private static KinesisRecordSupplier recordSupplier;
-  private static List<OrderedPartitionableRecord<String, String>> records;
 
   private static ServiceEmitter emitter;
 
@@ -216,7 +216,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     maxParseExceptions = null;
     maxSavedParseExceptions = null;
     doHandoff = true;
-    records = generateRecords(STREAM);
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     maxRecordsPerPoll = 1;
 
@@ -249,7 +248,24 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     emitter.close();
   }
 
-  private static List<OrderedPartitionableRecord<String, String>> generateRecords(String stream)
+  // records can only be read once, hence we generate fresh records every time
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start)
+  {
+    final List<OrderedPartitionableRecord<String, String, ByteEntity>> records = generateRecords(STREAM);
+    return records.subList(start, records.size());
+  }
+
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(int start, int end)
+  {
+    return generateRecords(STREAM).subList(start, end);
+  }
+
+  private List<OrderedPartitionableRecord<String, String, ByteEntity>> generateSinglePartitionRecords(int start, int end)
+  {
+    return generateSinglePartitionRecords(STREAM).subList(start, end);
+  }
+
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(String stream)
   {
     return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, "1", "0", jbl("2008", "a", "y", "10", "20.0", "1.0")),
@@ -267,15 +283,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             stream,
             "1",
             "6",
-            Collections.singletonList(StringUtils.toUtf8("unparseable"))
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
         ),
         new OrderedPartitionableRecord<>(
             stream,
             "1",
             "7",
-            Collections.singletonList(StringUtils.toUtf8("unparseable2"))
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("")))
         ),
-        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}")))),
         new OrderedPartitionableRecord<>(stream, "1", "9", jbl("2013", "f", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, "1", "10", jbl("2049", "f", "y", "notanumber", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, "1", "11", jbl("2049", "f", "y", "10", "notanumber", "1.0")),
@@ -285,7 +301,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  private static List<OrderedPartitionableRecord<String, String>> generateSinglePartitionRecords(String stream)
+  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateSinglePartitionRecords(String stream)
   {
     return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, "1", "0", jbl("2008", "a", "y", "10", "20.0", "1.0")),
@@ -317,7 +333,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 5)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 5)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -384,7 +400,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 5)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 5)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -459,7 +475,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(Collections.emptyList())
             .times(5)
-            .andReturn(records.subList(13, 15))
+            .andReturn(generateRecords(13, 15))
             .once();
 
     recordSupplier.close();
@@ -531,9 +547,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(0, 5))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(0, 5))
             .once()
-            .andReturn(records.subList(4, records.size()))
+            .andReturn(generateRecords(4))
             .once();
 
     recordSupplier.close();
@@ -643,11 +659,11 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(0, 3))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(0, 3))
             .once()
-            .andReturn(records.subList(2, 10))
+            .andReturn(generateRecords(2, 10))
             .once()
-            .andReturn(records.subList(9, 11));
+            .andReturn(generateRecords(9, 11));
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -774,7 +790,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(0, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(0, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -844,7 +860,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(0, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(0, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -916,7 +932,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(0, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(0, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -994,7 +1010,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 3)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 3)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1053,7 +1069,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1123,7 +1139,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1196,7 +1212,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1256,7 +1272,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1331,7 +1347,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
             "Timestamp[null] is unparseable! Event: {}",
-            "Unable to parse row [unparseable2]",
+            "Unable to parse [] as the intermediateRow resulted in empty input row",
             "Unable to parse row [unparseable]",
             "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
         )
@@ -1356,7 +1372,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1418,7 +1434,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
-            "Unable to parse row [unparseable2]",
+            "Unable to parse [] as the intermediateRow resulted in empty input row",
             "Unable to parse row [unparseable]"
         )
     );
@@ -1439,7 +1455,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13)).times(2);
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
+            .andReturn(generateRecords(2, 13)).once()
+            .andReturn(generateRecords(2, 13)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().times(2);
@@ -1530,9 +1548,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13))
             .once()
-            .andReturn(records.subList(3, 13))
+            .andReturn(generateRecords(3, 13))
             .once();
 
     recordSupplier.close();
@@ -1622,9 +1640,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13))
             .once()
-            .andReturn(records.subList(3, 13))
+            .andReturn(generateRecords(3, 13))
             .once();
 
     recordSupplier.close();
@@ -1715,7 +1733,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, records.size())).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2)).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
@@ -1791,9 +1809,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13))
             .once()
-            .andReturn(records.subList(13, 15))
+            .andReturn(generateRecords(13, 15))
             .once();
 
     recordSupplier.close();
@@ -1884,7 +1902,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EasyMock.expectLastCall();
     recordSupplier.seek(streamPartition, "2");
     EasyMock.expectLastCall();
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 4))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 4))
             .once()
             .andReturn(Collections.emptyList())
             .anyTimes();
@@ -1935,7 +1953,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EasyMock.expectLastCall();
     recordSupplier.seek(streamPartition, "3");
     EasyMock.expectLastCall();
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(3, 6)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(3, 6)).once();
     recordSupplier.assign(ImmutableSet.of());
     EasyMock.expectLastCall();
     recordSupplier.close();
@@ -2005,7 +2023,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
-    records = generateSinglePartitionRecords(STREAM);
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> records = generateSinglePartitionRecords(STREAM);
 
     recordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -2162,7 +2180,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EasyMock.expectLastCall();
     recordSupplier.seek(streamPartition, "2");
     EasyMock.expectLastCall();
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 5))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 5))
             .once()
             .andReturn(Collections.emptyList())
             .anyTimes();
@@ -2273,7 +2291,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(records.subList(2, 13))
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(2, 13))
             .once();
 
     recordSupplier.close();
@@ -2340,8 +2358,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Test(timeout = 5000L)
   public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
   {
-    records = generateSinglePartitionRecords(STREAM);
-
     final String baseSequenceName = "sequence0";
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
@@ -2352,9 +2368,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EasyMock.expect(recordSupplier1.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     recordSupplier1.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(recordSupplier1.poll(EasyMock.anyLong())).andReturn(records.subList(0, 5))
+    EasyMock.expect(recordSupplier1.poll(EasyMock.anyLong())).andReturn(generateSinglePartitionRecords(0, 5))
             .once()
-            .andReturn(records.subList(4, 10))
+            .andReturn(generateSinglePartitionRecords(4, 10))
             .once();
     recordSupplier1.close();
     EasyMock.expectLastCall().once();
@@ -2364,9 +2380,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     EasyMock.expect(recordSupplier2.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     recordSupplier2.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(recordSupplier2.poll(EasyMock.anyLong())).andReturn(records.subList(0, 5))
+    EasyMock.expect(recordSupplier2.poll(EasyMock.anyLong())).andReturn(generateSinglePartitionRecords(0, 5))
             .once()
-            .andReturn(records.subList(4, 10))
+            .andReturn(generateSinglePartitionRecords(4, 10))
             .once();
     recordSupplier2.close();
     EasyMock.expectLastCall().once();
@@ -2579,12 +2595,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    List<OrderedPartitionableRecord<String, String>> eosRecord = ImmutableList.of(
+    List<OrderedPartitionableRecord<String, String, ByteEntity>> eosRecord = ImmutableList.of(
         new OrderedPartitionableRecord<>(STREAM, SHARD_ID1, KinesisSequenceNumber.END_OF_SHARD_MARKER, null)
     );
 
     EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
-            .andReturn(records.subList(2, 5)).once()
+            .andReturn(generateRecords(2, 5)).once()
             .andReturn(eosRecord).once();
 
     recordSupplier.close();
@@ -2629,7 +2645,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Check metrics
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway()); // EOS marker
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2742,6 +2758,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         maxRowsInMemory,
         null,
+        null,
         maxRowsPerSegment,
         maxTotalRows,
         new Period("P1Y"),
@@ -2850,7 +2867,9 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         true,
         null,
         null,
-        null
+        null,
+        false,
+        false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();

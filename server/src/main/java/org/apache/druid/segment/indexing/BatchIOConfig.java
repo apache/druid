@@ -32,4 +32,6 @@ public interface BatchIOConfig extends IOConfig
   InputFormat getInputFormat();
 
   boolean isAppendToExisting();
+
+  boolean isDropExisting();
 }

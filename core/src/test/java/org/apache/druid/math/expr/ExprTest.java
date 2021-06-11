@@ -161,6 +161,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(StringArrayExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new String[]{"foo"}, new String[0])
                   .usingGetClass()
                   .verify();
   }
@@ -170,6 +171,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(LongArrayExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new Long[]{1L}, new Long[0])
                   .usingGetClass()
                   .verify();
   }
@@ -179,6 +181,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(DoubleArrayExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(Object.class, new Double[]{1.0}, new Double[0])
                   .usingGetClass()
                   .verify();
   }
@@ -198,7 +201,7 @@ public class ExprTest
   public void testEqualsContractForNullLongExpr()
   {
     EqualsVerifier.forClass(NullLongExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
                   .verify();
   }
 
@@ -206,7 +209,7 @@ public class ExprTest
   public void testEqualsContractForNullDoubleExpr()
   {
     EqualsVerifier.forClass(NullDoubleExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
                   .verify();
   }
 }

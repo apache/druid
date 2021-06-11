@@ -183,8 +183,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   boolean canHandle(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
-      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
+      OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, ?> record
   )
   {
     lock.lock();
@@ -240,7 +240,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   Supplier<Committer> getCommitterSupplier(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       String stream,
       Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets
   )
@@ -304,7 +304,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   TransactionalSegmentPublisher createPublisher(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
       TaskToolbox toolbox,
       boolean useTransaction
   )
@@ -319,12 +319,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private class SequenceMetadataTransactionalSegmentPublisher
       implements TransactionalSegmentPublisher
   {
-    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
+    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner;
     private final TaskToolbox toolbox;
     private final boolean useTransaction;
 
     public SequenceMetadataTransactionalSegmentPublisher(
-        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner,
         TaskToolbox toolbox,
         boolean useTransaction
     )
@@ -336,15 +336,22 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
 
     @Override
     public SegmentPublishResult publishAnnotatedSegments(
-        @Nullable Set<DataSegment> mustBeNullOrEmptySegments,
+        @Nullable Set<DataSegment> mustBeNullOrEmptyOverwriteSegments,
+        @Nullable Set<DataSegment> mustBeNullOrEmptyDropSegments,
         Set<DataSegment> segmentsToPush,
         @Nullable Object commitMetadata
     ) throws IOException
     {
-      if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+      if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
         throw new ISE(
             "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
-            SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptySegments)
+            SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
+        );
+      }
+      if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
+        throw new ISE(
+            "Stream ingestion task unexpectedly attempted to drop segments: %s",
+            SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
         );
       }
       final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");

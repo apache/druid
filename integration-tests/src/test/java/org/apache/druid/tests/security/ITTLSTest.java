@@ -96,7 +96,7 @@ public class ITTLSTest
         httpClient
     );
     makeRequest(adminClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
+    makeRequest(adminClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
@@ -113,7 +113,7 @@ public class ITTLSTest
         httpClient
     );
     makeRequest(adminClient, HttpMethod.GET, config.getCoordinatorTLSUrl() + "/status", null);
-    makeRequest(adminClient, HttpMethod.GET, config.getIndexerTLSUrl() + "/status", null);
+    makeRequest(adminClient, HttpMethod.GET, config.getOverlordTLSUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getBrokerTLSUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getHistoricalTLSUrl() + "/status", null);
     makeRequest(adminClient, HttpMethod.GET, config.getRouterTLSUrl() + "/status", null);
@@ -130,7 +130,7 @@ public class ITTLSTest
         "intermediate_ca_client"
     );
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getCoordinatorTLSUrl() + "/status", null);
-    makeRequest(intermediateCertClient, HttpMethod.GET, config.getIndexerTLSUrl() + "/status", null);
+    makeRequest(intermediateCertClient, HttpMethod.GET, config.getOverlordTLSUrl() + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getBrokerTLSUrl() + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getHistoricalTLSUrl() + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getRouterTLSUrl() + "/status", null);
@@ -144,7 +144,7 @@ public class ITTLSTest
     LOG.info("---------Testing TLS resource access without a certificate---------");
     HttpClient certlessClient = makeCertlessClient();
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessNoCert(certlessClient, HttpMethod.GET, config.getRouterTLSUrl());
@@ -161,7 +161,7 @@ public class ITTLSTest
         "invalid_hostname_client"
     );
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getRouterTLSUrl());
@@ -178,7 +178,7 @@ public class ITTLSTest
         "druid_another_root"
     );
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getRouterTLSUrl());
@@ -195,7 +195,7 @@ public class ITTLSTest
         "revoked_druid"
     );
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getRouterTLSUrl());
@@ -212,7 +212,7 @@ public class ITTLSTest
         "expired_client"
     );
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getRouterTLSUrl());
@@ -230,7 +230,7 @@ public class ITTLSTest
         "invalid_ca_client"
     );
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
-    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getIndexerTLSUrl());
+    checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getOverlordTLSUrl());
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getBrokerTLSUrl());
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getHistoricalTLSUrl());
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getRouterTLSUrl());

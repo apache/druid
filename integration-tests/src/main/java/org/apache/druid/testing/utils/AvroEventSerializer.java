@@ -40,7 +40,7 @@ public class AvroEventSerializer implements EventSerializer
 {
   public static final String TYPE = "avro";
 
-  private static final Schema SCHEMA = SchemaBuilder
+  static final Schema SCHEMA = SchemaBuilder
       .record("wikipedia")
       .namespace("org.apache.druid")
       .fields()
@@ -62,12 +62,12 @@ public class AvroEventSerializer implements EventSerializer
       .requiredInt("delta")
       .endRecord();
 
-  private final DatumWriter<Object> writer = new GenericDatumWriter<>(SCHEMA);
+  protected final DatumWriter<Object> writer = new GenericDatumWriter<>(SCHEMA);
 
   @Override
   public byte[] serialize(List<Pair<String, Object>> event) throws IOException
   {
-    final WikipediaRecord record = new WikipediaRecord();
+    final WikipediaRecord record = new WikipediaRecord(SCHEMA);
     event.forEach(pair -> record.put(pair.lhs, pair.rhs));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     final BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
@@ -82,12 +82,18 @@ public class AvroEventSerializer implements EventSerializer
   {
   }
 
-  private static class WikipediaRecord implements GenericRecord
+  static class WikipediaRecord implements GenericRecord
   {
     private final Map<String, Object> event = new HashMap<>();
     private final BiMap<Integer, String> indexes = HashBiMap.create(SCHEMA.getFields().size());
 
     private int nextIndex = 0;
+    private final Schema schema;
+
+    public WikipediaRecord(Schema schema)
+    {
+      this.schema = schema;
+    }
 
     @Override
     public void put(String key, Object v)
@@ -125,7 +131,7 @@ public class AvroEventSerializer implements EventSerializer
     @Override
     public Schema getSchema()
     {
-      return SCHEMA;
+      return schema;
     }
   }
 }

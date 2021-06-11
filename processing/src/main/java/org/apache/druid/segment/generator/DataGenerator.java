@@ -24,17 +24,22 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DataGenerator
 {
   private final List<GeneratorColumnSchema> columnSchemas;
-  private final long seed;
 
   private List<ColumnValueGenerator> columnGenerators;
   private final long startTime;
@@ -46,6 +51,8 @@ public class DataGenerator
   private int timeCounter;
   private List<String> dimensionNames;
 
+  private static final Logger log = new Logger(DataGenerator.class);
+
   public DataGenerator(
       List<GeneratorColumnSchema> columnSchemas,
       final long seed,
@@ -55,7 +62,6 @@ public class DataGenerator
   )
   {
     this.columnSchemas = columnSchemas;
-    this.seed = seed;
 
     this.startTime = startTime;
     this.endTime = Long.MAX_VALUE;
@@ -63,7 +69,7 @@ public class DataGenerator
     this.timestampIncrement = timestampIncrement;
     this.currentTime = startTime;
 
-    init();
+    reset(seed);
   }
 
   public DataGenerator(
@@ -74,7 +80,6 @@ public class DataGenerator
   )
   {
     this.columnSchemas = columnSchemas;
-    this.seed = seed;
 
     this.startTime = interval.getStartMillis();
     this.endTime = interval.getEndMillis() - 1;
@@ -85,7 +90,7 @@ public class DataGenerator
     this.timestampIncrement = timeDelta / (numRows * 1.0);
     this.numConsecutiveTimestamps = 0;
 
-    init();
+    reset(seed);
   }
 
   public InputRow nextRow()
@@ -98,7 +103,12 @@ public class DataGenerator
     return row;
   }
 
-  private void init()
+  /**
+   * Reset this generator to start from the begining of the interval with a new seed.
+   *
+   * @param seed the new seed to generate rows from
+   */
+  public DataGenerator reset(long seed)
   {
     this.timeCounter = 0;
     this.currentTime = startTime;
@@ -126,6 +136,8 @@ public class DataGenerator
             }
         )
     );
+
+    return this;
   }
 
   private long nextTimestamp()
@@ -143,4 +155,71 @@ public class DataGenerator
     }
   }
 
+  /**
+   * Initialize a Java Stream generator for InputRow from this DataGenerator.
+   * The generator will log its progress once every 10,000 rows.
+   *
+   * @param numOfRows the number of rows to generate
+   * @return a generator
+   */
+  private Stream<InputRow> generator(int numOfRows)
+  {
+    return Stream.generate(
+        new Supplier<InputRow>()
+        {
+          int i = 0;
+
+          @Override
+          public InputRow get()
+          {
+            InputRow row = DataGenerator.this.nextRow();
+            i++;
+            if (i % 10_000 == 0) {
+              log.info("%,d/%,d rows generated.", i, numOfRows);
+            }
+            return row;
+          }
+        }
+    ).limit(numOfRows);
+  }
+
+  /**
+   * Add rows from any generator to an index.
+   *
+   * @param stream the stream of rows to add
+   * @param index the index to add rows to
+   */
+  public static void addStreamToIndex(Stream<InputRow> stream, IncrementalIndex<?> index)
+  {
+    stream.forEachOrdered(row -> {
+      try {
+        index.add(row);
+      }
+      catch (IndexSizeExceededException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  /**
+   * Add rows from this generator to an index.
+   *
+   * @param index the index to add rows to
+   * @param numOfRows the number of rows to add
+   */
+  public void addToIndex(IncrementalIndex<?> index, int numOfRows)
+  {
+    addStreamToIndex(generator(numOfRows), index);
+  }
+
+  /**
+   * Put rows from this generator to a list.
+   *
+   * @param numOfRows the number of rows to put in the list
+   * @return a List of InputRow
+   */
+  public List<InputRow> toList(int numOfRows)
+  {
+    return generator(numOfRows).collect(Collectors.toList());
+  }
 }

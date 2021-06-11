@@ -36,7 +36,7 @@ public class ITSystemTableQueryTest
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String TWITTER_DATA_SOURCE = "twitterstream";
-  private static final String SYSTEM_QUERIES_RESOURCE = "/queries/sys_segment_queries.json";
+  private static final String SYSTEM_QUERIES_RESOURCE = "/queries/sys_queries.json";
 
   @Inject
   CoordinatorResourceTestClient coordinatorClient;

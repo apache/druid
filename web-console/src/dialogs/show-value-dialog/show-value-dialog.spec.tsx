@@ -26,9 +26,7 @@ describe('clipboard dialog', () => {
     const compactionDialog = (
       <ShowValueDialog
         onClose={() => {}}
-        str={
-          'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
-        }
+        str="Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])"
       />
     );
     render(compactionDialog);

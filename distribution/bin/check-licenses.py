@@ -216,6 +216,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache-2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache Software License - Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['The Apache License, Version 2.0'] = 'Apache License version 2.0'
@@ -223,8 +224,10 @@ def build_compatible_license_names():
     compatible_licenses['Apache License Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License Version 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License v2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License, 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License, version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2.0 License'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License, 2.0'] = 'Apache License version 2.0'
 
     compatible_licenses['Public Domain'] = 'Public Domain'
 
@@ -260,6 +263,14 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Public License - Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License v1.0'] = 'Eclipse Public License 1.0'
+    compatible_licenses['EPL 1.0'] = 'Eclipse Public License 1.0'
+
+    compatible_licenses['Eclipse Public License 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['The Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License - Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License v2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['EPL 2.0'] = 'Eclipse Public License 2.0'
 
     compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
@@ -277,6 +288,7 @@ def build_compatible_license_names():
     compatible_licenses['The MIT License'] = 'MIT License'
     compatible_licenses['MIT License'] = 'MIT License'
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
+    compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses
@@ -318,7 +330,7 @@ def check_licenses(license_yaml, dependency_reports_root):
                 # Determine if it's druid core or an extension
                 druid_module_name = find_druid_module_name(dirpath)
                 print_log_to_stderr("Parsing {}".format(full_path))
-                with open(full_path) as report_file:
+                with open(full_path, encoding="utf-8") as report_file:
                     parser = DependencyReportParser(druid_module_name, compatible_license_names)
                     reported_dep_to_licenses.update(parser.parse(report_file))
 

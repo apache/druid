@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.indexing;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -32,7 +33,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -53,7 +56,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -90,68 +93,84 @@ public class IndexPersistBenchmark
   @Param({"none", "moderate", "high"})
   private String rollupOpportunity;
 
-  private IncrementalIndex incIndex;
-  private ArrayList<InputRow> rows;
+  @Param({"onheap", "offheap"})
+  private String indexType;
+
+  private AppendableIndexSpec appendableIndexSpec;
+  private IncrementalIndex<?> incIndex;
+  private List<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
+  private File tmpDir;
 
   @Setup
-  public void setup()
+  public void setup() throws JsonProcessingException
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    rows = new ArrayList<InputRow>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    int valuesPerTimestamp = 1;
-    switch (rollupOpportunity) {
-      case "moderate":
-        valuesPerTimestamp = 1000;
-        break;
-      case "high":
-        valuesPerTimestamp = 10000;
-        break;
-
-    }
+    // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+    // It is used in {@code makeIncIndex()} to instanciate an incremental-index of the specified type.
+    appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
 
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        valuesPerTimestamp,
+        getValuesPerTimestamp(rollupOpportunity),
         1000.0
     );
 
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      if (i % 10000 == 0) {
-        log.info(i + " rows generated.");
-      }
-      rows.add(row);
+    rows = gen.toList(rowsPerSegment);
+  }
+
+  public static int getValuesPerTimestamp(String rollupOpportunity)
+  {
+    switch (rollupOpportunity) {
+      case "moderate":
+        return 1000;
+      case "high":
+        return 10000;
+      case "none":
+        return 1;
+      default:
+        throw new IllegalArgumentException("Rollup opportunity must be moderate, high or none.");
     }
   }
 
   @Setup(Level.Iteration)
-  public void setup2() throws IOException
+  public void setup2()
   {
     incIndex = makeIncIndex();
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = rows.get(i);
-      incIndex.add(row);
-    }
+    DataGenerator.addStreamToIndex(rows.stream(), incIndex);
   }
 
   @TearDown(Level.Iteration)
   public void teardown()
   {
-    incIndex.close();
-    incIndex = null;
+    if (incIndex != null) {
+      incIndex.close();
+    }
   }
 
-  private IncrementalIndex makeIncIndex()
+  @Setup(Level.Invocation)
+  public void setupTemp()
   {
-    return new IncrementalIndex.Builder()
+    tmpDir = FileUtils.createTempDir();
+    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
+  }
+
+  @TearDown(Level.Invocation)
+  public void teardownTemp() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
+  private IncrementalIndex<?> makeIncIndex()
+  {
+    return appendableIndexSpec.builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(schemaInfo.getAggsArray())
@@ -159,7 +178,7 @@ public class IndexPersistBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build();
   }
 
   @Benchmark
@@ -167,21 +186,13 @@ public class IndexPersistBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void persistV9(Blackhole blackhole) throws Exception
   {
-    File tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-    try {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndex,
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
+    File indexFile = INDEX_MERGER_V9.persist(
+        incIndex,
+        tmpDir,
+        new IndexSpec(),
+        null
+    );
 
-      blackhole.consume(indexFile);
-
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
-    }
+    blackhole.consume(indexFile);
   }
 }

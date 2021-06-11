@@ -214,10 +214,15 @@ public class CostBalancerStrategy implements BalancerStrategy
   @Override
   public BalancerSegmentHolder pickSegmentToMove(
       final List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources
+      Set<String> broadcastDatasources,
+      double percentOfSegmentsToConsider
   )
   {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders, broadcastDatasources);
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
+        serverHolders,
+        broadcastDatasources,
+        percentOfSegmentsToConsider
+    );
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.hadoop;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
@@ -44,6 +45,6 @@ public class ITS3InputToHdfsHadoopIndexTest extends AbstractS3InputHadoopIndexTe
   @Test()
   public void testS3IndexData() throws Exception
   {
-    doTest();
+    doTest(new Pair<>(false, false));
   }
 }

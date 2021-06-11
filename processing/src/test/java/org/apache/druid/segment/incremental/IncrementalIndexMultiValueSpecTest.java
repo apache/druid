@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
@@ -28,19 +29,45 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingTest
 {
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexMultiValueSpecTest(String indexType) throws JsonProcessingException
+  {
+    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
+        .setIndexSchema((IncrementalIndexSchema) args[0])
+        .setMaxRowCount(10_000)
+        .build()
+    ));
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return IncrementalIndexCreator.getAppendableIndexTypes();
+  }
+
   @Test
   public void test() throws IndexSizeExceededException
   {
@@ -78,10 +105,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
         return null;
       }
     };
-    IncrementalIndex<?> index = new IncrementalIndex.Builder()
-        .setIndexSchema(schema)
-        .setMaxRowCount(10000)
-        .buildOnheap();
+    IncrementalIndex<?> index = indexCreator.createIndex(schema);
     index.add(
         new MapBasedInputRow(
             0,
