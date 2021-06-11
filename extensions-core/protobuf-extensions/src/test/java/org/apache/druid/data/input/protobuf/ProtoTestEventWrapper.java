@@ -410,6 +410,7 @@ public final class ProtoTestEventWrapper {
       public static final int CATEGORY_TWO_VALUE = 2;
 
 
+      @Override
       public final int getNumber() {
         return value;
       }
@@ -444,15 +445,18 @@ public final class ProtoTestEventWrapper {
       private static final com.google.protobuf.Internal.EnumLiteMap<
           EventCategory> internalValueMap =
             new com.google.protobuf.Internal.EnumLiteMap<EventCategory>() {
+              @Override
               public EventCategory findValueByNumber(int number) {
                 return EventCategory.forNumber(number);
               }
             };
 
+      @Override
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
         return getDescriptor().getValues().get(ordinal());
       }
+      @Override
       public final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptorForType() {
         return getDescriptor();
@@ -519,14 +523,14 @@ public final class ProtoTestEventWrapper {
         bar_ = "";
       }
 
-      @java.lang.Override
+      @Override
       @SuppressWarnings({"unused"})
       protected java.lang.Object newInstance(
           UnusedPrivateParameter unused) {
         return new Foo();
       }
 
-      @java.lang.Override
+      @Override
       public final com.google.protobuf.UnknownFieldSet
       getUnknownFields() {
         return this.unknownFields;
@@ -595,7 +599,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string bar = 1;</code>
        * @return Whether the bar field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasBar() {
         return ((bitField0_ & 0x00000001) != 0);
       }
@@ -603,7 +607,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string bar = 1;</code>
        * @return The bar.
        */
-      @java.lang.Override
+      @Override
       public java.lang.String getBar() {
         java.lang.Object ref = bar_;
         if (ref instanceof java.lang.String) {
@@ -622,7 +626,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string bar = 1;</code>
        * @return The bytes for bar.
        */
-      @java.lang.Override
+      @Override
       public com.google.protobuf.ByteString
           getBarBytes() {
         java.lang.Object ref = bar_;
@@ -652,7 +656,7 @@ public final class ProtoTestEventWrapper {
         return true;
       }
 
-      @java.lang.Override
+      @Override
       public void writeTo(com.google.protobuf.CodedOutputStream output)
                           throws java.io.IOException {
         if (((bitField0_ & 0x00000001) != 0)) {
@@ -661,7 +665,7 @@ public final class ProtoTestEventWrapper {
         unknownFields.writeTo(output);
       }
 
-      @java.lang.Override
+      @Override
       public int getSerializedSize() {
         int size = memoizedSize;
         if (size != -1) return size;
@@ -675,7 +679,7 @@ public final class ProtoTestEventWrapper {
         return size;
       }
 
-      @java.lang.Override
+      @Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
          return true;
@@ -694,7 +698,7 @@ public final class ProtoTestEventWrapper {
         return true;
       }
 
-      @java.lang.Override
+      @Override
       public int hashCode() {
         if (memoizedHashCode != 0) {
           return memoizedHashCode;
@@ -835,7 +839,7 @@ public final class ProtoTestEventWrapper {
                   .alwaysUseFieldBuilders) {
           }
         }
-        @java.lang.Override
+        @Override
         public Builder clear() {
           super.clear();
           bar_ = "";
@@ -843,18 +847,18 @@ public final class ProtoTestEventWrapper {
           return this;
         }
 
-        @java.lang.Override
+        @Override
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
           return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
         }
 
-        @java.lang.Override
+        @Override
         public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstanceForType() {
           return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance();
         }
 
-        @java.lang.Override
+        @Override
         public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo build() {
           org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo result = buildPartial();
           if (!result.isInitialized()) {
@@ -863,7 +867,7 @@ public final class ProtoTestEventWrapper {
           return result;
         }
 
-        @java.lang.Override
+        @Override
         public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo buildPartial() {
           org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo result = new org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo(this);
           int from_bitField0_ = bitField0_;
@@ -877,39 +881,39 @@ public final class ProtoTestEventWrapper {
           return result;
         }
 
-        @java.lang.Override
+        @Override
         public Builder clone() {
           return super.clone();
         }
-        @java.lang.Override
+        @Override
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
             java.lang.Object value) {
           return super.setField(field, value);
         }
-        @java.lang.Override
+        @Override
         public Builder clearField(
             com.google.protobuf.Descriptors.FieldDescriptor field) {
           return super.clearField(field);
         }
-        @java.lang.Override
+        @Override
         public Builder clearOneof(
             com.google.protobuf.Descriptors.OneofDescriptor oneof) {
           return super.clearOneof(oneof);
         }
-        @java.lang.Override
+        @Override
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
             int index, java.lang.Object value) {
           return super.setRepeatedField(field, index, value);
         }
-        @java.lang.Override
+        @Override
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
             java.lang.Object value) {
           return super.addRepeatedField(field, value);
         }
-        @java.lang.Override
+        @Override
         public Builder mergeFrom(com.google.protobuf.Message other) {
           if (other instanceof org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo) {
             return mergeFrom((org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo)other);
@@ -931,7 +935,7 @@ public final class ProtoTestEventWrapper {
           return this;
         }
 
-        @java.lang.Override
+        @Override
         public final boolean isInitialized() {
           if (!hasBar()) {
             return false;
@@ -939,7 +943,7 @@ public final class ProtoTestEventWrapper {
           return true;
         }
 
-        @java.lang.Override
+        @Override
         public Builder mergeFrom(
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -964,6 +968,7 @@ public final class ProtoTestEventWrapper {
          * <code>required string bar = 1;</code>
          * @return Whether the bar field is set.
          */
+        @Override
         public boolean hasBar() {
           return ((bitField0_ & 0x00000001) != 0);
         }
@@ -971,6 +976,7 @@ public final class ProtoTestEventWrapper {
          * <code>required string bar = 1;</code>
          * @return The bar.
          */
+        @Override
         public java.lang.String getBar() {
           java.lang.Object ref = bar_;
           if (!(ref instanceof java.lang.String)) {
@@ -989,6 +995,7 @@ public final class ProtoTestEventWrapper {
          * <code>required string bar = 1;</code>
          * @return The bytes for bar.
          */
+        @Override
         public com.google.protobuf.ByteString
             getBarBytes() {
           java.lang.Object ref = bar_;
@@ -1042,13 +1049,13 @@ public final class ProtoTestEventWrapper {
           onChanged();
           return this;
         }
-        @java.lang.Override
+        @Override
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
           return super.setUnknownFields(unknownFields);
         }
 
-        @java.lang.Override
+        @Override
         public final Builder mergeUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
           return super.mergeUnknownFields(unknownFields);
@@ -1070,7 +1077,7 @@ public final class ProtoTestEventWrapper {
 
       @java.lang.Deprecated public static final com.google.protobuf.Parser<Foo>
           PARSER = new com.google.protobuf.AbstractParser<Foo>() {
-        @java.lang.Override
+        @Override
         public Foo parsePartialFrom(
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1083,12 +1090,12 @@ public final class ProtoTestEventWrapper {
         return PARSER;
       }
 
-      @java.lang.Override
+      @Override
       public com.google.protobuf.Parser<Foo> getParserForType() {
         return PARSER;
       }
 
-      @java.lang.Override
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstanceForType() {
         return DEFAULT_INSTANCE;
       }
@@ -1102,14 +1109,14 @@ public final class ProtoTestEventWrapper {
      * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
      * @return Whether the eventType field is set.
      */
-    @java.lang.Override public boolean hasEventType() {
+    @Override public boolean hasEventType() {
       return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
      * @return The eventType.
      */
-    @java.lang.Override public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
+    @Override public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
       @SuppressWarnings("deprecation")
       org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory result = org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.valueOf(eventType_);
       return result == null ? org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO : result;
@@ -1121,7 +1128,7 @@ public final class ProtoTestEventWrapper {
      * <code>required uint64 id = 2;</code>
      * @return Whether the id field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasId() {
       return ((bitField0_ & 0x00000002) != 0);
     }
@@ -1129,7 +1136,7 @@ public final class ProtoTestEventWrapper {
      * <code>required uint64 id = 2;</code>
      * @return The id.
      */
-    @java.lang.Override
+    @Override
     public long getId() {
       return id_;
     }
@@ -1140,7 +1147,7 @@ public final class ProtoTestEventWrapper {
      * <code>required string timestamp = 3;</code>
      * @return Whether the timestamp field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasTimestamp() {
       return ((bitField0_ & 0x00000004) != 0);
     }
@@ -1148,7 +1155,7 @@ public final class ProtoTestEventWrapper {
      * <code>required string timestamp = 3;</code>
      * @return The timestamp.
      */
-    @java.lang.Override
+    @Override
     public java.lang.String getTimestamp() {
       java.lang.Object ref = timestamp_;
       if (ref instanceof java.lang.String) {
@@ -1167,7 +1174,7 @@ public final class ProtoTestEventWrapper {
      * <code>required string timestamp = 3;</code>
      * @return The bytes for timestamp.
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.ByteString
         getTimestampBytes() {
       java.lang.Object ref = timestamp_;
@@ -1188,7 +1195,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint32 someOtherId = 4;</code>
      * @return Whether the someOtherId field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasSomeOtherId() {
       return ((bitField0_ & 0x00000008) != 0);
     }
@@ -1196,7 +1203,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint32 someOtherId = 4;</code>
      * @return The someOtherId.
      */
-    @java.lang.Override
+    @Override
     public int getSomeOtherId() {
       return someOtherId_;
     }
@@ -1207,7 +1214,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional bool isValid = 5;</code>
      * @return Whether the isValid field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasIsValid() {
       return ((bitField0_ & 0x00000010) != 0);
     }
@@ -1215,7 +1222,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional bool isValid = 5;</code>
      * @return The isValid.
      */
-    @java.lang.Override
+    @Override
     public boolean getIsValid() {
       return isValid_;
     }
@@ -1226,7 +1233,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional string description = 6;</code>
      * @return Whether the description field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasDescription() {
       return ((bitField0_ & 0x00000020) != 0);
     }
@@ -1234,7 +1241,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional string description = 6;</code>
      * @return The description.
      */
-    @java.lang.Override
+    @Override
     public java.lang.String getDescription() {
       java.lang.Object ref = description_;
       if (ref instanceof java.lang.String) {
@@ -1253,7 +1260,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional string description = 6;</code>
      * @return The bytes for description.
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.ByteString
         getDescriptionBytes() {
       java.lang.Object ref = description_;
@@ -1274,7 +1281,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional float someFloatColumn = 7;</code>
      * @return Whether the someFloatColumn field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasSomeFloatColumn() {
       return ((bitField0_ & 0x00000040) != 0);
     }
@@ -1282,7 +1289,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional float someFloatColumn = 7;</code>
      * @return The someFloatColumn.
      */
-    @java.lang.Override
+    @Override
     public float getSomeFloatColumn() {
       return someFloatColumn_;
     }
@@ -1293,7 +1300,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint32 someIntColumn = 8;</code>
      * @return Whether the someIntColumn field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasSomeIntColumn() {
       return ((bitField0_ & 0x00000080) != 0);
     }
@@ -1301,7 +1308,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint32 someIntColumn = 8;</code>
      * @return The someIntColumn.
      */
-    @java.lang.Override
+    @Override
     public int getSomeIntColumn() {
       return someIntColumn_;
     }
@@ -1312,7 +1319,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint64 someLongColumn = 9;</code>
      * @return Whether the someLongColumn field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasSomeLongColumn() {
       return ((bitField0_ & 0x00000100) != 0);
     }
@@ -1320,7 +1327,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint64 someLongColumn = 9;</code>
      * @return The someLongColumn.
      */
-    @java.lang.Override
+    @Override
     public long getSomeLongColumn() {
       return someLongColumn_;
     }
@@ -1331,7 +1338,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
      * @return Whether the foo field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasFoo() {
       return ((bitField0_ & 0x00000200) != 0);
     }
@@ -1339,14 +1346,14 @@ public final class ProtoTestEventWrapper {
      * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
      * @return The foo.
      */
-    @java.lang.Override
+    @Override
     public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getFoo() {
       return foo_ == null ? org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
     }
     /**
      * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
      */
-    @java.lang.Override
+    @Override
     public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getFooOrBuilder() {
       return foo_ == null ? org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
     }
@@ -1356,14 +1363,14 @@ public final class ProtoTestEventWrapper {
     /**
      * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
      */
-    @java.lang.Override
+    @Override
     public java.util.List<org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo> getBarList() {
       return bar_;
     }
     /**
      * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
      */
-    @java.lang.Override
+    @Override
     public java.util.List<? extends org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder> 
         getBarOrBuilderList() {
       return bar_;
@@ -1371,21 +1378,21 @@ public final class ProtoTestEventWrapper {
     /**
      * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
      */
-    @java.lang.Override
+    @Override
     public int getBarCount() {
       return bar_.size();
     }
     /**
      * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
      */
-    @java.lang.Override
+    @Override
     public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getBar(int index) {
       return bar_.get(index);
     }
     /**
      * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
      */
-    @java.lang.Override
+    @Override
     public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getBarOrBuilder(
         int index) {
       return bar_.get(index);
@@ -1397,7 +1404,7 @@ public final class ProtoTestEventWrapper {
      * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
      * @return Whether the otherTimestamp field is set.
      */
-    @java.lang.Override
+    @Override
     public boolean hasOtherTimestamp() {
       return ((bitField0_ & 0x00000400) != 0);
     }
@@ -1405,20 +1412,20 @@ public final class ProtoTestEventWrapper {
      * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
      * @return The otherTimestamp.
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Timestamp getOtherTimestamp() {
       return otherTimestamp_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : otherTimestamp_;
     }
     /**
      * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.TimestampOrBuilder getOtherTimestampOrBuilder() {
       return otherTimestamp_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : otherTimestamp_;
     }
 
     private byte memoizedIsInitialized = -1;
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -1452,7 +1459,7 @@ public final class ProtoTestEventWrapper {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (((bitField0_ & 0x00000001) != 0)) {
@@ -1494,7 +1501,7 @@ public final class ProtoTestEventWrapper {
       unknownFields.writeTo(output);
     }
 
-    @java.lang.Override
+    @Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
@@ -1551,7 +1558,7 @@ public final class ProtoTestEventWrapper {
       return size;
     }
 
-    @java.lang.Override
+    @Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
@@ -1622,7 +1629,7 @@ public final class ProtoTestEventWrapper {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public int hashCode() {
       if (memoizedHashCode != 0) {
         return memoizedHashCode;
@@ -1756,7 +1763,7 @@ public final class ProtoTestEventWrapper {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    @java.lang.Override
+    @Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -1764,13 +1771,13 @@ public final class ProtoTestEventWrapper {
     public static Builder newBuilder(org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
-    @java.lang.Override
+    @Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
     }
 
-    @java.lang.Override
+    @Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       Builder builder = new Builder(parent);
@@ -1788,7 +1795,7 @@ public final class ProtoTestEventWrapper {
         return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
       }
 
-      @java.lang.Override
+      @Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable
@@ -1814,7 +1821,7 @@ public final class ProtoTestEventWrapper {
           getOtherTimestampFieldBuilder();
         }
       }
-      @java.lang.Override
+      @Override
       public Builder clear() {
         super.clear();
         eventType_ = 0;
@@ -1856,18 +1863,18 @@ public final class ProtoTestEventWrapper {
         return this;
       }
 
-      @java.lang.Override
+      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
       }
 
-      @java.lang.Override
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType() {
         return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance();
       }
 
-      @java.lang.Override
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent build() {
         org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent result = buildPartial();
         if (!result.isInitialized()) {
@@ -1876,7 +1883,7 @@ public final class ProtoTestEventWrapper {
         return result;
       }
 
-      @java.lang.Override
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent buildPartial() {
         org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent result = new org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent(this);
         int from_bitField0_ = bitField0_;
@@ -1947,39 +1954,39 @@ public final class ProtoTestEventWrapper {
         return result;
       }
 
-      @java.lang.Override
+      @Override
       public Builder clone() {
         return super.clone();
       }
-      @java.lang.Override
+      @Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
           java.lang.Object value) {
         return super.setField(field, value);
       }
-      @java.lang.Override
+      @Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
         return super.clearField(field);
       }
-      @java.lang.Override
+      @Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
         return super.clearOneof(oneof);
       }
-      @java.lang.Override
+      @Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
           int index, java.lang.Object value) {
         return super.setRepeatedField(field, index, value);
       }
-      @java.lang.Override
+      @Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
           java.lang.Object value) {
         return super.addRepeatedField(field, value);
       }
-      @java.lang.Override
+      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent) {
           return mergeFrom((org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent)other);
@@ -2059,7 +2066,7 @@ public final class ProtoTestEventWrapper {
         return this;
       }
 
-      @java.lang.Override
+      @Override
       public final boolean isInitialized() {
         if (!hasEventType()) {
           return false;
@@ -2083,7 +2090,7 @@ public final class ProtoTestEventWrapper {
         return true;
       }
 
-      @java.lang.Override
+      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -2108,14 +2115,14 @@ public final class ProtoTestEventWrapper {
        * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
        * @return Whether the eventType field is set.
        */
-      @java.lang.Override public boolean hasEventType() {
+      @Override public boolean hasEventType() {
         return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
        * @return The eventType.
        */
-      @java.lang.Override
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
         @SuppressWarnings("deprecation")
         org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory result = org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.valueOf(eventType_);
@@ -2151,7 +2158,7 @@ public final class ProtoTestEventWrapper {
        * <code>required uint64 id = 2;</code>
        * @return Whether the id field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasId() {
         return ((bitField0_ & 0x00000002) != 0);
       }
@@ -2159,7 +2166,7 @@ public final class ProtoTestEventWrapper {
        * <code>required uint64 id = 2;</code>
        * @return The id.
        */
-      @java.lang.Override
+      @Override
       public long getId() {
         return id_;
       }
@@ -2190,6 +2197,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string timestamp = 3;</code>
        * @return Whether the timestamp field is set.
        */
+      @Override
       public boolean hasTimestamp() {
         return ((bitField0_ & 0x00000004) != 0);
       }
@@ -2197,6 +2205,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string timestamp = 3;</code>
        * @return The timestamp.
        */
+      @Override
       public java.lang.String getTimestamp() {
         java.lang.Object ref = timestamp_;
         if (!(ref instanceof java.lang.String)) {
@@ -2215,6 +2224,7 @@ public final class ProtoTestEventWrapper {
        * <code>required string timestamp = 3;</code>
        * @return The bytes for timestamp.
        */
+      @Override
       public com.google.protobuf.ByteString
           getTimestampBytes() {
         java.lang.Object ref = timestamp_;
@@ -2274,7 +2284,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint32 someOtherId = 4;</code>
        * @return Whether the someOtherId field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasSomeOtherId() {
         return ((bitField0_ & 0x00000008) != 0);
       }
@@ -2282,7 +2292,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint32 someOtherId = 4;</code>
        * @return The someOtherId.
        */
-      @java.lang.Override
+      @Override
       public int getSomeOtherId() {
         return someOtherId_;
       }
@@ -2313,7 +2323,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional bool isValid = 5;</code>
        * @return Whether the isValid field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasIsValid() {
         return ((bitField0_ & 0x00000010) != 0);
       }
@@ -2321,7 +2331,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional bool isValid = 5;</code>
        * @return The isValid.
        */
-      @java.lang.Override
+      @Override
       public boolean getIsValid() {
         return isValid_;
       }
@@ -2352,6 +2362,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional string description = 6;</code>
        * @return Whether the description field is set.
        */
+      @Override
       public boolean hasDescription() {
         return ((bitField0_ & 0x00000020) != 0);
       }
@@ -2359,6 +2370,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional string description = 6;</code>
        * @return The description.
        */
+      @Override
       public java.lang.String getDescription() {
         java.lang.Object ref = description_;
         if (!(ref instanceof java.lang.String)) {
@@ -2377,6 +2389,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional string description = 6;</code>
        * @return The bytes for description.
        */
+      @Override
       public com.google.protobuf.ByteString
           getDescriptionBytes() {
         java.lang.Object ref = description_;
@@ -2436,7 +2449,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional float someFloatColumn = 7;</code>
        * @return Whether the someFloatColumn field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasSomeFloatColumn() {
         return ((bitField0_ & 0x00000040) != 0);
       }
@@ -2444,7 +2457,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional float someFloatColumn = 7;</code>
        * @return The someFloatColumn.
        */
-      @java.lang.Override
+      @Override
       public float getSomeFloatColumn() {
         return someFloatColumn_;
       }
@@ -2475,7 +2488,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint32 someIntColumn = 8;</code>
        * @return Whether the someIntColumn field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasSomeIntColumn() {
         return ((bitField0_ & 0x00000080) != 0);
       }
@@ -2483,7 +2496,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint32 someIntColumn = 8;</code>
        * @return The someIntColumn.
        */
-      @java.lang.Override
+      @Override
       public int getSomeIntColumn() {
         return someIntColumn_;
       }
@@ -2514,7 +2527,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint64 someLongColumn = 9;</code>
        * @return Whether the someLongColumn field is set.
        */
-      @java.lang.Override
+      @Override
       public boolean hasSomeLongColumn() {
         return ((bitField0_ & 0x00000100) != 0);
       }
@@ -2522,7 +2535,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional uint64 someLongColumn = 9;</code>
        * @return The someLongColumn.
        */
-      @java.lang.Override
+      @Override
       public long getSomeLongColumn() {
         return someLongColumn_;
       }
@@ -2555,6 +2568,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
        * @return Whether the foo field is set.
        */
+      @Override
       public boolean hasFoo() {
         return ((bitField0_ & 0x00000200) != 0);
       }
@@ -2562,6 +2576,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
        * @return The foo.
        */
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getFoo() {
         if (fooBuilder_ == null) {
           return foo_ == null ? org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
@@ -2643,6 +2658,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
        */
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getFooOrBuilder() {
         if (fooBuilder_ != null) {
           return fooBuilder_.getMessageOrBuilder();
@@ -2683,6 +2699,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
        */
+      @Override
       public java.util.List<org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo> getBarList() {
         if (barBuilder_ == null) {
           return java.util.Collections.unmodifiableList(bar_);
@@ -2693,6 +2710,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
        */
+      @Override
       public int getBarCount() {
         if (barBuilder_ == null) {
           return bar_.size();
@@ -2703,6 +2721,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
        */
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getBar(int index) {
         if (barBuilder_ == null) {
           return bar_.get(index);
@@ -2853,6 +2872,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
        */
+      @Override
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getBarOrBuilder(
           int index) {
         if (barBuilder_ == null) {
@@ -2863,7 +2883,8 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
        */
-      public java.util.List<? extends org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder> 
+      @Override
+      public java.util.List<? extends org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
            getBarOrBuilderList() {
         if (barBuilder_ != null) {
           return barBuilder_.getMessageOrBuilderList();
@@ -2915,6 +2936,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
        * @return Whether the otherTimestamp field is set.
        */
+      @Override
       public boolean hasOtherTimestamp() {
         return ((bitField0_ & 0x00000800) != 0);
       }
@@ -2922,6 +2944,7 @@ public final class ProtoTestEventWrapper {
        * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
        * @return The otherTimestamp.
        */
+      @Override
       public com.google.protobuf.Timestamp getOtherTimestamp() {
         if (otherTimestampBuilder_ == null) {
           return otherTimestamp_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : otherTimestamp_;
@@ -3003,6 +3026,7 @@ public final class ProtoTestEventWrapper {
       /**
        * <code>optional .google.protobuf.Timestamp otherTimestamp = 12;</code>
        */
+      @Override
       public com.google.protobuf.TimestampOrBuilder getOtherTimestampOrBuilder() {
         if (otherTimestampBuilder_ != null) {
           return otherTimestampBuilder_.getMessageOrBuilder();
@@ -3027,13 +3051,13 @@ public final class ProtoTestEventWrapper {
         }
         return otherTimestampBuilder_;
       }
-      @java.lang.Override
+      @Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
-      @java.lang.Override
+      @Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -3055,7 +3079,7 @@ public final class ProtoTestEventWrapper {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<ProtoTestEvent>
         PARSER = new com.google.protobuf.AbstractParser<ProtoTestEvent>() {
-      @java.lang.Override
+      @Override
       public ProtoTestEvent parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -3068,12 +3092,12 @@ public final class ProtoTestEventWrapper {
       return PARSER;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Parser<ProtoTestEvent> getParserForType() {
       return PARSER;
     }
 
-    @java.lang.Override
+    @Override
     public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }

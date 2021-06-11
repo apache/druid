@@ -113,6 +113,7 @@ public class CryptoService
 
       SecretKey tmp = getKeyFromPassword(passPhrase, salt);
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+      @SuppressWarnings("InsecureCryptoUsage")
       Cipher ecipher = Cipher.getInstance(transformation);
       ecipher.init(Cipher.ENCRYPT_MODE, secret);
       return new EncryptedData(
@@ -133,7 +134,7 @@ public class CryptoService
 
       SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
-
+      @SuppressWarnings("InsecureCryptoUsage")
       Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());

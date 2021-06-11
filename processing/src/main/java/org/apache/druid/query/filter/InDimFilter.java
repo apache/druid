@@ -537,8 +537,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       // not be able to accept nulls. We don't want to copy the Sets (since they may be large) so instead we'll wrap
       // it in a null-checking lambda if needed.
 
-      //noinspection ResultOfMethodCallIgnored
-      values.contains(null);
+      boolean ignored = values.contains(null);
 
       // Safe to do values.contains(null).
       return values::contains;
