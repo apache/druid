@@ -115,8 +115,8 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-sts</artifactId>
-      <scope>provided</scope>
-    </dependency>    
+      <version>${aws.sdk.version}</version>
+    </dependency>
     <!-- Tests -->
     <dependency>
       <groupId>org.apache.druid</groupId>

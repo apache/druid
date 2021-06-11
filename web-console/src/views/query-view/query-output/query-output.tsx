@@ -27,13 +27,12 @@ import {
   SqlRef,
   trimString,
 } from 'druid-query-toolkit';
-import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
 import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql } from '../../../utils';
+import { copyAndAlert, deepSet, filterMap, prettyPrintSql, stringifyValue } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -42,18 +41,6 @@ import './query-output.scss';
 
 function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
-}
-
-function stringifyValue(value: unknown): string {
-  switch (typeof value) {
-    case 'object':
-      if (!value) return String(value);
-      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
-      return JSONBig.stringify(value);
-
-    default:
-      return String(value);
-  }
 }
 
 interface Pagination {
@@ -257,7 +244,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
           onQueryChange(
-            having ? parsedQuery.addToHaving(clause) : parsedQuery.addToWhere(clause),
+            having ? parsedQuery.addHaving(clause) : parsedQuery.addWhere(clause),
             true,
           );
         }}
@@ -300,7 +287,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
-          ex = selectValue.expression as SqlExpression;
+          ex = selectValue.getUnderlyingExpression();
         }
       } else if (parsedQuery.hasStarInSelect()) {
         ex = SqlRef.column(header);
@@ -370,17 +357,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     setRenamingColumn(-1);
     if (renameTo && parsedQuery) {
       if (parsedQuery.hasStarInSelect()) return;
-      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      const selectExpression = parsedQuery.getSelectExpressionForIndex(renamingColumn);
       if (!selectExpression) return;
-      onQueryChange(
-        parsedQuery.changeSelectExpressions(
-          parsedQuery.selectExpressions.change(
-            renamingColumn,
-            selectExpression.changeAliasName(renameTo),
-          ),
-        ),
-        true,
-      );
+      onQueryChange(parsedQuery.changeSelect(renamingColumn, selectExpression.as(renameTo)), true);
     }
   }
 

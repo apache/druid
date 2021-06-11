@@ -4948,6 +4948,42 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testLongPredicateIsNull() throws Exception
+  {
+    testQuery(
+          "SELECT l1 is null FROM druid.numfoo",
+          ImmutableList.of(
+            newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .columns("v0")
+            .virtualColumns(
+            expressionVirtualColumn("v0", NullHandling.replaceWithDefault() ? "0" : "isnull(\"l1\")", ValueType.LONG)
+        )
+          .context(QUERY_CONTEXT_DEFAULT)
+          .build()
+        ),
+              NullHandling.replaceWithDefault() ?
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false}
+                      ) :
+                      ImmutableList.of(
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{false},
+                              new Object[]{true},
+                              new Object[]{true},
+                              new Object[]{true}
+                      )
+    );
+  }
+
+  @Test
   public void testLongPredicateFilterNulls() throws Exception
   {
     testQuery(
@@ -16893,6 +16929,45 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT druid.broadcast.dim4, COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
+        + "GROUP BY 1 ORDER BY 1 DESC LIMIT 4",
+        queryContext,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
+                        "j0.",
+                        equalsCondition(
+                            DruidExpression.fromColumn("dim4"),
+                            DruidExpression.fromColumn("j0.dim4")
+                        ),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("j0.dim4", "_d0", ValueType.STRING))
+                .threshold(4)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(queryContext)
+                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", 9L},
+            new Object[]{"a", 9L}
+        )
+    );
+  }
+
+  @Test
   public void testTimeStampAddZeroDayPeriod() throws Exception
   {
     testQuery(
@@ -17454,5 +17529,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of()
     );
+  }
+
+  @Test
+  public void testJoinWithTimeDimension() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT count(*) FROM druid.foo t1 inner join druid.foo t2 on t1.__time = t2.__time",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(JoinDataSource.create(new TableDataSource(CalciteTests.DATASOURCE1),
+                                                                 new QueryDataSource(
+                                                                     Druids.newScanQueryBuilder()
+                                                                           .dataSource(CalciteTests.DATASOURCE1)
+                                                                           .intervals(querySegmentSpec(Filtration.eternity()))
+                                                                           .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                           .columns("__time")
+                                                                           .legacy(false)
+                                                                           .context(QUERY_CONTEXT_DEFAULT)
+                                                                           .build()),
+                                                                 "j0.",
+                                                                 "(\"__time\" == \"j0.__time\")",
+                                                                 JoinType.INNER,
+                                                                 null,
+                                                                 ExprMacroTable.nil()))
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                               .context(QUERY_CONTEXT_DEFAULT)
+                               .build()),
+        ImmutableList.of(new Object[]{6L}));
   }
 }

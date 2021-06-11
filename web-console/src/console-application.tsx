@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
@@ -279,23 +279,25 @@ export class ConsoleApplication extends React.PureComponent<
     }
 
     return (
-      <HashRouter hashType="noslash">
-        <div className="console-application">
-          <Switch>
-            <Route path="/load-data" component={this.wrappedLoadDataView} />
+      <HotkeysProvider>
+        <HashRouter hashType="noslash">
+          <div className="console-application">
+            <Switch>
+              <Route path="/load-data" component={this.wrappedLoadDataView} />
 
-            <Route path="/ingestion" component={this.wrappedIngestionView} />
-            <Route path="/datasources" component={this.wrappedDatasourcesView} />
-            <Route path="/segments" component={this.wrappedSegmentsView} />
-            <Route path="/services" component={this.wrappedServicesView} />
+              <Route path="/ingestion" component={this.wrappedIngestionView} />
+              <Route path="/datasources" component={this.wrappedDatasourcesView} />
+              <Route path="/segments" component={this.wrappedSegmentsView} />
+              <Route path="/services" component={this.wrappedServicesView} />
 
-            <Route path="/query" component={this.wrappedQueryView} />
+              <Route path="/query" component={this.wrappedQueryView} />
 
-            <Route path="/lookups" component={this.wrappedLookupsView} />
-            <Route component={this.wrappedHomeView} />
-          </Switch>
-        </div>
-      </HashRouter>
+              <Route path="/lookups" component={this.wrappedLookupsView} />
+              <Route component={this.wrappedHomeView} />
+            </Switch>
+          </div>
+        </HashRouter>
+      </HotkeysProvider>
     );
   }
 }

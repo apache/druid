@@ -50,7 +50,8 @@ describe('AutoForm', () => {
           },
 
           { name: 'testNotDefined', type: 'string', defined: false },
-          { name: 'testAdvanced', type: 'string', hideInMore: true },
+          { name: 'testHide', type: 'string', hide: true },
+          { name: 'testHideInMore', type: 'string', hideInMore: true },
         ]}
         model={String}
         onChange={() => {}}

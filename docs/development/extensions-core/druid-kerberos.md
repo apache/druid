@@ -67,7 +67,7 @@ In older releases, the Kerberos authenticator had an `excludedPaths` property th
 `druid.auth.authenticator.kerberos.authToLocal` allows you to set a general rules for mapping principal names to local user names.
 The syntax for mapping rules is `RULE:\[n:string](regexp)s/pattern/replacement/g`. The integer n indicates how many components the target principal should have. If this matches, then a string will be formed from string, substituting the realm of the principal for $0 and the nth component of the principal for $n. e.g. if the principal was druid/admin then `\[2:$2$1suffix]` would result in the string `admindruidsuffix`.
 If this string matches regexp, then the s//\[g] substitution command will be run over the string. The optional g will cause the substitution to be global over the string, instead of replacing only the first match in the string.
-If required, multiple rules can be be joined by newline character and specified as a String.
+If required, multiple rules can be joined by newline character and specified as a String.
 
 ### Increasing HTTP Header size for large SPNEGO negotiate header
 In Active Directory environment, SPNEGO token in the Authorization header includes PAC (Privilege Access Certificate) information,
