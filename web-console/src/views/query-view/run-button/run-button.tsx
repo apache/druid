@@ -140,16 +140,16 @@ export const RunButton = React.memo(function RunButton(props: RunButtonProps) {
         allowInInput: true,
         global: true,
         combo: 'ctrl + enter',
-        label: 'run on click',
+        label: 'Runs the current query',
         onKeyDown: handleRun,
       },
     ];
   }, [handleRun]);
 
-  const { handleKeyDown, handleKeyUp } = useHotkeys(hotkeys);
+  useHotkeys(hotkeys);
 
   return (
-    <ButtonGroup className="run-button" onKeyDown={handleKeyDown} onKeyUp={handleKeyUp}>
+    <ButtonGroup className="run-button">
       {onRun ? (
         <Button
           className={runeMode ? 'rune-button' : undefined}
