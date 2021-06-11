@@ -57,6 +57,18 @@ public class ThriftInputFormat extends NestedInputFormat
     return false;
   }
 
+  @JsonProperty
+  public String getThriftJar()
+  {
+    return jarPath;
+  }
+
+  @JsonProperty
+  public String getThriftClass()
+  {
+    return thriftClassName;
+  }
+
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {

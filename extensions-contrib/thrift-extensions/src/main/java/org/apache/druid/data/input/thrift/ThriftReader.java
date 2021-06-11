@@ -82,16 +82,13 @@ public class ThriftReader extends IntermediateRowParsingReader<String>
         thriftClass = getThriftClass();
       }
       catch (IOException e) {
-        e.printStackTrace();
+        throw new IAE(e, "failed to load jar [%s]", jarPath);
       }
       catch (ClassNotFoundException e) {
-        e.printStackTrace();
+        throw new IAE(e, "class [%s] not found in jar", thriftClassName);
       }
-      catch (IllegalAccessException e) {
-        e.printStackTrace();
-      }
-      catch (InstantiationException e) {
-        e.printStackTrace();
+      catch (InstantiationException | IllegalAccessException e) {
+        throw new IAE(e, "instantiation thrift instance failed");
       }
     }
   }
