@@ -23,19 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 /**
  */
@@ -52,19 +47,11 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   )
   {
     super(macroTable, name, fieldName, expression);
-    this.cacheKey = Suppliers.memoize(() -> {
-      byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-      byte[] expressionBytes = Optional.ofNullable(fieldExpression.get())
-                                       .map(Expr::getCacheKey)
-                                       .orElse(StringUtils.EMPTY_BYTES);
-
-      return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                       .put(AggregatorUtil.LONG_SUM_CACHE_TYPE_ID)
-                       .put(fieldNameBytes)
-                       .put(AggregatorUtil.STRING_SEPARATOR)
-                       .put(expressionBytes)
-                       .array();
-    });
+    this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
+        AggregatorUtil.LONG_SUM_CACHE_TYPE_ID,
+        fieldName,
+        fieldExpression
+    );
   }
 
   public LongSumAggregatorFactory(String name, String fieldName)
