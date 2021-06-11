@@ -42,7 +42,7 @@ import java.util.Set;
 @SubclassesMustOverrideEqualsAndHashCode
 public interface Expr extends Cacheable
 {
-  byte EXPR_CACHE_KEY = 0x00;
+
   String NULL_LITERAL = "null";
   Joiner ARG_JOINER = Joiner.on(", ");
 
@@ -177,7 +177,7 @@ public interface Expr extends Cacheable
   @Override
   default byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(EXPR_CACHE_KEY).appendString(stringify()).build();
+    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
   }
 
   /**
