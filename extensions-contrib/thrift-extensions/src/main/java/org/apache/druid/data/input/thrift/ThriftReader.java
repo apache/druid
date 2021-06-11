@@ -19,12 +19,14 @@
 
 package org.apache.druid.data.input.thrift;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
@@ -39,9 +41,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.utils.CollectionUtils;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 
@@ -49,21 +49,19 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ThriftReader extends IntermediateRowParsingReader<DynamicMessage>
+public class ThriftReader extends IntermediateRowParsingReader<String>
 {
-  private final InputRowSchema inputRowSchema;
   private final InputEntity source;
-  private final JSONPathSpec flattenSpec;
-  private final ObjectFlattener<JsonNode> recordFlattener;
   private final String jarPath;
   private final String thriftClassName;
-  private Parser<String, Object> parser;
   private volatile Class<TBase> thriftClass = null;
+  private final ObjectMapper objectMapper;
+  private final ObjectFlattener<JsonNode> flattener;
+  private final InputRowSchema inputRowSchema;
+
 
   ThriftReader(
       InputRowSchema inputRowSchema,
@@ -73,18 +71,12 @@ public class ThriftReader extends IntermediateRowParsingReader<DynamicMessage>
       JSONPathSpec flattenSpec
   )
   {
-    if (flattenSpec == null) {
-      this.inputRowSchema = new ProtobufInputRowSchema(inputRowSchema);
-      this.recordFlattener = null;
-    } else {
-      this.inputRowSchema = inputRowSchema;
-      this.recordFlattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(true));
-    }
-
+    this.inputRowSchema = inputRowSchema;
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(true));
     this.source = source;
     this.jarPath = jarPath;
     this.thriftClassName = thriftClassName;
-    this.flattenSpec = flattenSpec;
+    this.objectMapper = new ObjectMapper();
     if (thriftClass == null) {
       try {
         thriftClass = getThriftClass();
@@ -123,7 +115,7 @@ public class ThriftReader extends IntermediateRowParsingReader<DynamicMessage>
   }
 
   @Override
-  protected CloseableIterator<DynamicMessage> intermediateRowIterator() throws IOException
+  protected CloseableIterator<String> intermediateRowIterator() throws IOException
   {
     final String json;
     try {
@@ -136,40 +128,47 @@ public class ThriftReader extends IntermediateRowParsingReader<DynamicMessage>
       throw new IAE("some thing wrong with your thrift?");
     }
 
-    Map<String, Object> record = parser.parseToMap(json);
-    ThriftDeserialization.detectAndDeserialize(bytes, o);
     return CloseableIterators.withEmptyBaggage(
-        Iterators.singletonIterator(protobufBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open()))))
+        Iterators.singletonIterator(json)
     );
   }
 
   @Override
-  protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException, JsonProcessingException
+  protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
-    Map<String, Object> record;
-
-    if (flattenSpec == null) {
-      try {
-        record = CollectionUtils.mapKeys(intermediateRow.getAllFields(), k -> k.getJsonName());
-      } catch (Exception ex) {
-        throw new ParseException(ex, "Protobuf message could not be parsed");
-      }
-    } else {
-      try {
-        String json = JsonFormat.printer().print(intermediateRow);
-        JsonNode document = new ObjectMapper().readValue(json, JsonNode.class);
-        record = recordFlattener.flatten(document);
-      } catch (InvalidProtocolBufferException e) {
-        throw new ParseException(e, "Protobuf message could not be parsed");
-      }
+    final List<InputRow> inputRows;
+    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+      final MappingIterator<JsonNode> delegate = this.objectMapper.readValues(parser, JsonNode.class);
+      inputRows = FluentIterable.from(() -> delegate)
+          .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
+          .toList();
     }
-
-    return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, record));
+    catch (RuntimeException e) {
+      if (e.getCause() instanceof JsonParseException) {
+        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+      }
+      throw e;
+    }
+    if (CollectionUtils.isNullOrEmpty(inputRows)) {
+      throw new ParseException("Unable to parse [%s] as the intermediateRow resulted in empty input row", intermediateRow);
+    }
+    return inputRows;
   }
 
   @Override
-  protected List<Map<String, Object>> toMap(DynamicMessage intermediateRow) throws JsonProcessingException, InvalidProtocolBufferException
+  protected List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
-    return Collections.singletonList(new ObjectMapper().readValue(JsonFormat.printer().print(intermediateRow), Map.class));
+    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+      final MappingIterator<Map> delegate = objectMapper.readValues(parser, Map.class);
+      return FluentIterable.from(() -> delegate)
+          .transform(map -> (Map<String, Object>) map)
+          .toList();
+    }
+    catch (RuntimeException e) {
+      if (e.getCause() instanceof JsonParseException) {
+        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+      }
+      throw e;
+    }
   }
 }
