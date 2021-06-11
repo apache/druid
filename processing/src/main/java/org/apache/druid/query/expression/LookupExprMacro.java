@@ -114,9 +114,9 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public byte[] getCacheKey()
       {
-        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_KEY).appendString(stringify())
-                                                         .appendCacheable(extractionFn)
-                                                         .build();
+        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
+                                                               .appendCacheable(extractionFn)
+                                                               .build();
       }
     }
 
