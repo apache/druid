@@ -127,7 +127,7 @@ const RunButtonExtraMenu = (props: RunButtonProps) => {
 };
 
 export const RunButton = React.memo(function RunButton(props: RunButtonProps) {
-  const { runeMode, onRun, loading } = props;
+  const { runeMode, onRun, loading, onExplain } = props;
 
   const handleRun = React.useCallback(() => {
     if (!onRun) return;
@@ -139,12 +139,29 @@ export const RunButton = React.memo(function RunButton(props: RunButtonProps) {
       {
         allowInInput: true,
         global: true,
-        combo: 'ctrl + enter',
+        group: 'Query',
+        combo: 'mod + enter',
         label: 'Runs the current query',
         onKeyDown: handleRun,
       },
+      {
+        allowInInput: true,
+        global: true,
+        group: 'Query',
+        combo: 'mod + e',
+        label: 'Explain the current query',
+        onKeyDown: onExplain,
+      },
+      {
+        allowInInput: true,
+        global: true,
+        group: 'X-Legacy', // This is prefixed with X so it appears in the bottom of the list
+        combo: 'ctrl + enter',
+        label: 'Runs the current query (old shortcut)',
+        onKeyDown: handleRun,
+      },
     ];
-  }, [handleRun]);
+  }, [handleRun, onExplain]);
 
   useHotkeys(hotkeys);
 
