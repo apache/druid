@@ -71,6 +71,9 @@ public class IndexIngestionBenchmark
   @Param({"onheap", "offheap"})
   private String indexType;
 
+  @Param({"true", "false"})
+  private boolean enableInMemoryBitmap;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -129,6 +132,7 @@ public class IndexIngestionBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment * 2)
+        .setEnableInMemoryBitmap(enableInMemoryBitmap)
         .build();
   }
 

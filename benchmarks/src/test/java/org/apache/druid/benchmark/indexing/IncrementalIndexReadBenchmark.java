@@ -87,6 +87,9 @@ public class IncrementalIndexReadBenchmark
   @Param({"onheap", "offheap"})
   private String indexType;
 
+  @Param({"true", "false"})
+  private boolean enableInMemoryBitmap;
+
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -140,6 +143,7 @@ public class IncrementalIndexReadBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment)
+        .setEnableInMemoryBitmap(enableInMemoryBitmap)
         .build();
   }
 
