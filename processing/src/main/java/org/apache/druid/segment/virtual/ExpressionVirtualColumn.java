@@ -191,13 +191,24 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // if we can infer the column capabilities from the expression plan, then use that
     if (inferred != null) {
       // explicit outputType is used as a hint, how did it compare to the planners inferred output type?
-      if (inferred.getType() != outputType) {
-        log.warn(
-            "Projected output type %s of expression %s does not match provided type %s",
-            inferred.getType(),
-            expression,
-            outputType
-        );
+      if (inferred.getType() != outputType && outputType != null) {
+        // if both sides are numeric, let it slide and log at debug level
+        // but mismatches involving strings and arrays might be worth knowing about so warn
+        if (!inferred.getType().isNumeric() && !outputType.isNumeric()) {
+          log.warn(
+              "Projected output type %s of expression %s does not match provided type %s",
+              inferred.getType(),
+              expression,
+              outputType
+          );
+        } else {
+          log.debug(
+              "Projected output type %s of expression %s does not match provided type %s",
+              inferred.getType(),
+              expression,
+              outputType
+          );
+        }
       }
       return inferred;
     }
