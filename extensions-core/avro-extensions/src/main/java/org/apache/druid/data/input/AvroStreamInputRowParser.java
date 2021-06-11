@@ -37,7 +37,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
   private final Boolean binaryAsString;
-  private final Boolean extractUnions;
+  private final Boolean extractUnionsByType;
   private final AvroBytesDecoder avroBytesDecoder;
   private final ObjectFlattener<GenericRecord> avroFlattener;
   private final MapInputRowParser mapParser;
@@ -47,14 +47,14 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
       @JsonProperty("parseSpec") ParseSpec parseSpec,
       @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder,
       @JsonProperty("binaryAsString") Boolean binaryAsString,
-      @JsonProperty("extractUnions") Boolean extractUnions
+      @JsonProperty("extractUnionsByType") Boolean extractUnionsByType
   )
   {
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
     this.binaryAsString = binaryAsString != null && binaryAsString;
-    this.extractUnions = extractUnions != null && extractUnions;
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, this.binaryAsString, this.extractUnions);
+    this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, this.binaryAsString, this.extractUnionsByType);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 
@@ -84,7 +84,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
         parseSpec,
         avroBytesDecoder,
         binaryAsString,
-        extractUnions
+        extractUnionsByType
     );
   }
 

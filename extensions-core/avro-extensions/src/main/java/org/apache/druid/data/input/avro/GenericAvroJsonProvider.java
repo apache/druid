@@ -45,11 +45,11 @@ import java.util.stream.Collectors;
  */
 public class GenericAvroJsonProvider implements JsonProvider
 {
-  private final boolean extractUnions;
+  private final boolean extractUnionsByType;
 
-  GenericAvroJsonProvider(final boolean extractUnions)
+  GenericAvroJsonProvider(final boolean extractUnionsByType)
   {
-    this.extractUnions = extractUnions;
+    this.extractUnionsByType = extractUnionsByType;
   }
 
   @Override
@@ -160,8 +160,8 @@ public class GenericAvroJsonProvider implements JsonProvider
       return null;
     } else if (o instanceof GenericRecord) {
       final GenericRecord record = (GenericRecord) o;
-      if (extractUnions && isExtractableUnion(record.getSchema().getField(s))) {
-        return extractUnion(record.get(s));
+      if (extractUnionsByType && isExtractableUnion(record.getSchema().getField(s))) {
+        return extractUnionTypes(record.get(s));
       }
       return record.get(s);
     } else if (o instanceof Map) {
@@ -217,7 +217,7 @@ public class GenericAvroJsonProvider implements JsonProvider
            field.schema().getTypes().stream().filter(type -> type.getType() != Schema.Type.NULL).count() > 1;
   }
 
-  private Map<String, Object> extractUnion(final Object o)
+  private Map<String, Object> extractUnionTypes(final Object o)
   {
     // Primitive types and unnamped complex types are keyed their type name.
     // Complex named types are keyed by their names.

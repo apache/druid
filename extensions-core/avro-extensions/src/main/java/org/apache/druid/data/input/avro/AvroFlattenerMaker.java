@@ -94,12 +94,12 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
    * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
    * @param binaryAsString boolean to encode the byte[] as a string.
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnions)
+  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnionsByType)
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
 
-    this.avroJsonProvider = new GenericAvroJsonProvider(extractUnions);
+    this.avroJsonProvider = new GenericAvroJsonProvider(extractUnionsByType);
     this.jsonPathConfiguration =
         Configuration.builder()
                      .jsonProvider(avroJsonProvider)

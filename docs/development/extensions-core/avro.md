@@ -40,13 +40,19 @@ Make sure to [include](../../development/extensions.md#loading-extensions) `drui
 Druid supports most Avro types natively, there are however some exceptions which are detailed here.
 
 #### Unions
-Druid has two modes for supporting `union` types. The original legacy mode can only support unions of the form `[null, otherType]`.
-The newer mode can be enabled by setting `extractUnions` on the Avro parser in which case unions will be expanded according to the following rules:
+Druid has two modes for supporting `union` types.
+
+The default mode will treat unions as a single value regardless of the type it is poulated with.
+
+If you wish to operate on each different member of a union however you can set `extractUnionsByType` on the Avro parser in which case unions will be expanded into nested objects according to the following rules:
 * Primitive types and unnamed complex types are keyed their type name. i.e `int`, `string`
 * Complex named types are keyed by their names, this includes `record`, `fixed` and `enum`.
-* The Avro null type is elided as it's value can only ever be null
+* The Avro null type is elided as its value can only ever be null
 
-This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed. i.e only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
+This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed.
+i.e only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
+
+The members can then be accessed using a [flattenSpec](../../ingestion/data-formats.md#flattenspec) similar other nested types.
 
 #### Binary types
 `bytes` and `fixed` Avro types will be returned by default as base64 encoded strings unless the `binaryAsString` option is enabled on the Avro parser.
