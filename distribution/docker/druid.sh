@@ -139,7 +139,10 @@ if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:Max
 if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:NewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
-JAVA_OPTS="$JAVA_OPTS $(cat $SERVICE_CONF_DIR/jvm.config | xargs)"
+# Combine options from jvm.config and those given as JAVA_OPTS
+# If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
+# However this behavior is not part of the spec and is thus implementation specific
+JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
