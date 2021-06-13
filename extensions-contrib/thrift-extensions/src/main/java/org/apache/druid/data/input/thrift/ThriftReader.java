@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.thrift;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
@@ -134,18 +133,11 @@ public class ThriftReader extends IntermediateRowParsingReader<String>
   protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
     final List<InputRow> inputRows;
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
-      final MappingIterator<JsonNode> delegate = this.objectMapper.readValues(parser, JsonNode.class);
-      inputRows = FluentIterable.from(() -> delegate)
-          .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
-          .toList();
-    }
-    catch (RuntimeException e) {
-      if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
-      }
-      throw e;
-    }
+    JsonParser parser = new JsonFactory().createParser(intermediateRow);
+    final MappingIterator<JsonNode> delegate = this.objectMapper.readValues(parser, JsonNode.class);
+    inputRows = FluentIterable.from(() -> delegate)
+        .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
+        .toList();
     if (CollectionUtils.isNullOrEmpty(inputRows)) {
       throw new ParseException("Unable to parse [%s] as the intermediateRow resulted in empty input row", intermediateRow);
     }
@@ -155,17 +147,10 @@ public class ThriftReader extends IntermediateRowParsingReader<String>
   @Override
   protected List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
-      final MappingIterator<Map> delegate = objectMapper.readValues(parser, Map.class);
-      return FluentIterable.from(() -> delegate)
-          .transform(map -> (Map<String, Object>) map)
-          .toList();
-    }
-    catch (RuntimeException e) {
-      if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
-      }
-      throw e;
-    }
+    JsonParser parser = new JsonFactory().createParser(intermediateRow);
+    final MappingIterator<Map> delegate = objectMapper.readValues(parser, Map.class);
+    return FluentIterable.from(() -> delegate)
+        .transform(map -> (Map<String, Object>) map)
+        .toList();
   }
 }
