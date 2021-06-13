@@ -605,8 +605,7 @@ An example of the result is
         "logParseExceptions": false,
         "maxParseExceptions": 2147483647,
         "maxSavedParseExceptions": 0,
-        "forceGuaranteedRollup": false,
-        "buildV9Directly": true
+        "forceGuaranteedRollup": false
       }
     }
   },
