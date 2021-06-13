@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.DynamicMessage;
@@ -40,6 +41,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Map;
 
 public class SchemaRegistryBasedProtobufBytesDecoderTest
 {
@@ -156,6 +158,44 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
 
     // Then
     Assert.assertNotEquals(decoder.hashCode(), 0);
+  }
+
+  @Test
+  public void testParseHeader() throws JsonProcessingException
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{},\"headers\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.header.prop.2\":\"value.2\", \"registry.header.prop.3\":\"value.3\"}},\"registry.header.prop.1\":\"value.1\",\"registry.header.prop.2\":\"value.4\"}}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedProtobufBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+        .readerFor(ProtobufBytesDecoder.class)
+        .readValue(json);
+
+    Map<String, String> heaeder = decoder.createRegistryHeader();
+
+    // Then
+    Assert.assertEquals(3, heaeder.size());
+    Assert.assertEquals("value.1", heaeder.get("registry.header.prop.1"));
+    Assert.assertEquals("value.2", heaeder.get("registry.header.prop.2"));
+    Assert.assertEquals("value.3", heaeder.get("registry.header.prop.3"));
+  }
+
+  @Test
+  public void testParseConfig() throws JsonProcessingException
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.config.prop.2\":\"value.2\", \"registry.config.prop.3\":\"value.3\"}},\"registry.config.prop.1\":\"value.1\",\"registry.config.prop.2\":\"value.4\"},\"headers\":{}}";
+    ObjectMapper mapper = new ObjectMapper();
+    SchemaRegistryBasedProtobufBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+        .readerFor(ProtobufBytesDecoder.class)
+        .readValue(json);
+
+    Map<String, ?> heaeder = decoder.createRegistryConfig();
+
+    // Then
+    Assert.assertEquals(3, heaeder.size());
+    Assert.assertEquals("value.1", heaeder.get("registry.config.prop.1"));
+    Assert.assertEquals("value.2", heaeder.get("registry.config.prop.2"));
+    Assert.assertEquals("value.3", heaeder.get("registry.config.prop.3"));
   }
 
   private ProtobufSchema parseProtobufSchema() throws IOException

@@ -21,6 +21,7 @@ package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
@@ -34,10 +35,13 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.metadata.DynamicConfigProvider;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,16 +52,18 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   private final String url;
   private final int capacity;
   private final List<String> urls;
-  private final Map<String, ?> config;
-  private final Map<String, String> headers;
+  private final Map<String, Object> config;
+  private final Map<String, Object> headers;
+  private final ObjectMapper mapper;
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
   public SchemaRegistryBasedAvroBytesDecoder(
       @JsonProperty("url") @Deprecated String url,
       @JsonProperty("capacity") Integer capacity,
       @JsonProperty("urls") @Nullable List<String> urls,
-      @JsonProperty("config") @Nullable Map<String, ?> config,
-      @JsonProperty("headers") @Nullable Map<String, String> headers
+      @JsonProperty("config") @Nullable Map<String, Object> config,
+      @JsonProperty("headers") @Nullable Map<String, Object> headers
   )
   {
     this.url = url;
@@ -65,10 +71,11 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.urls = urls;
     this.config = config;
     this.headers = headers;
+    this.mapper = new ObjectMapper();
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, createRegistryConfig(), createRegistryHeader());
     } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, createRegistryConfig(), createRegistryHeader());
     }
   }
 
@@ -91,15 +98,60 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   }
 
   @JsonProperty
-  public Map<String, ?> getConfig()
+  public Map<String, Object> getConfig()
   {
     return config;
   }
 
   @JsonProperty
-  public Map<String, String> getHeaders()
+  public Map<String, Object> getHeaders()
   {
     return headers;
+  }
+
+  protected Map<String, String> createRegistryHeader()
+  {
+    HashMap<String, String> registryHeader = new HashMap<>();
+    if (headers != null) {
+      for (String key : headers.keySet()) {
+        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(key)) {
+          registryHeader.put(key, headers.get(key).toString());
+        }
+      }
+      Map<String, String> dynamicConfig = extraConfigFromProvider(headers.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
+      for (String key : dynamicConfig.keySet()) {
+        registryHeader.put(key, dynamicConfig.get(key));
+      }
+    }
+    return registryHeader;
+  }
+
+  protected Map<String, Object> createRegistryConfig()
+  {
+    HashMap<String, Object> registryConfig = new HashMap<>();
+    if (config != null) {
+      for (String key : config.keySet()) {
+        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(key)) {
+          registryConfig.put(key, config.get(key));
+        }
+      }
+      if (config.containsKey(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY)) {
+        Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
+        for (String key : dynamicConfig.keySet()) {
+          registryConfig.put(key, dynamicConfig.get(key));
+        }
+      }
+    }
+    return registryConfig;
+  }
+
+  private Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson)
+  {
+    if (dynamicConfigProviderJson != null) {
+      DynamicConfigProvider dynamicConfigProvider = mapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
+      return dynamicConfigProvider.getConfig();
+    }
+    return Collections.emptyMap();
   }
 
   //For UT only
@@ -112,6 +164,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.config = null;
     this.headers = null;
     this.registry = registry;
+    this.mapper = new ObjectMapper();
   }
 
   @Override
