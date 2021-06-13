@@ -23,11 +23,11 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
   Position,
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
@@ -184,13 +184,13 @@ export const RunButton = React.memo(function RunButton(props: RunButtonProps) {
           disabled
         />
       )}
-      <Popover position={Position.BOTTOM_LEFT} content={<RunButtonExtraMenu {...props} />}>
+      <Popover2 position={Position.BOTTOM_LEFT} content={<RunButtonExtraMenu {...props} />}>
         <Button
           className={runeMode ? 'rune-button' : undefined}
           icon={IconNames.MORE}
           intent={onRun ? Intent.PRIMARY : undefined}
         />
-      </Popover>
+      </Popover2>
     </ButtonGroup>
   );
 });

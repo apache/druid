@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Icon, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import {
   QueryResult,
@@ -396,14 +397,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover className="clickable-cell" content={getHeaderMenu(h, i)}>
+                      <Popover2 className="clickable-cell" content={getHeaderMenu(h, i)}>
                         <div>
                           {h}
                           {hasFilterOnHeader(h, i) && (
                             <Icon icon={IconNames.FILTER} iconSize={14} />
                           )}
                         </div>
-                      </Popover>
+                      </Popover2>
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
@@ -412,7 +413,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
               const value = row.value;
               return (
                 <div>
-                  <Popover content={getCellMenu(h, i, value)}>
+                  <Popover2 content={getCellMenu(h, i, value)}>
                     {numericColumnBraces[i] ? (
                       <BracedText
                         text={String(value)}
@@ -422,7 +423,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover>
+                  </Popover2>
                 </div>
               );
             },

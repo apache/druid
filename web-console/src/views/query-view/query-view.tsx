@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
+import { Code, Intent, Switch } from '@blueprintjs/core';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
@@ -367,7 +368,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <Tooltip
+      <Tooltip2
         content="Automatically wrap the query with a limit to protect against queries with very large result sets."
         hoverOpenDelay={800}
       >
@@ -377,7 +378,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           label="Auto limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
         />
-      </Tooltip>
+      </Tooltip2>
     );
   }
 

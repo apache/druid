@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { HTMLInputProps, INumericInputProps, NumericInput } from '@blueprintjs/core';
+import { HTMLInputProps, NumericInput, NumericInputProps } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-export type NumericInputWithDefaultProps = HTMLInputProps & INumericInputProps;
+export type NumericInputWithDefaultProps = HTMLInputProps & NumericInputProps;
 
 export const NumericInputWithDefault = React.memo(function NumericInputWithDefault(
   props: NumericInputWithDefaultProps,
