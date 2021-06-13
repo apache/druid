@@ -89,6 +89,21 @@ setJavaKey() {
     echo $value >> $file
 }
 
+# This is to allow configuration via a Kubernetes configMap without
+# e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
+if [ -n "$DRUID_CONFIG_COMMON" ]
+then
+    cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
+fi
+
+SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
+SCONFIG=$(eval echo \$$(echo $SCONFIG))
+
+if [ -n "${SCONFIG}" ]
+then
+    cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
+fi
+
 ## Setup host names
 if [ -n "${ZOOKEEPER}" ];
 then
@@ -115,21 +130,6 @@ do
     var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
     echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
 done
-
-# This is to allow configuration via a Kubernetes configMap without
-# e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
-if [ -n "$DRUID_CONFIG_COMMON" ]
-then
-    cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
-fi
-
-SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
-SCONFIG=$(eval echo \$$(echo $SCONFIG))
-
-if [ -n "${SCONFIG}" ]
-then
-    cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
-fi
 
 # Now do the java options
 
