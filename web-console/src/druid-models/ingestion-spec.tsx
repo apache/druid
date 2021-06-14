@@ -71,12 +71,13 @@ export function isEmptyIngestionSpec(spec: Partial<IngestionSpec>) {
   return Object.keys(spec).length === 0;
 }
 
-export type IngestionType = 'kafka' | 'kinesis' | 'index_parallel';
+export type IngestionType = 'kafka' | 'kinesis' | 'pulsar' | 'index_parallel';
 
 // A combination of IngestionType and inputSourceType
 export type IngestionComboType =
   | 'kafka'
   | 'kinesis'
+  | 'pulsar'
   | 'index_parallel:http'
   | 'index_parallel:local'
   | 'index_parallel:druid'
@@ -98,6 +99,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   switch (ingestionType) {
     case 'kafka':
     case 'kinesis':
+    case 'pulsar':
     case 'index_parallel':
       return ingestionType;
 
@@ -114,6 +116,7 @@ export function getIngestionComboType(
   switch (ioConfig.type) {
     case 'kafka':
     case 'kinesis':
+    case 'pulsar':
       return ioConfig.type;
 
     case 'index_parallel': {
@@ -167,6 +170,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'kinesis':
       return 'Amazon Kinesis';
 
+    case 'pulsar':
+      return 'Apache Pulsar';
+
     case 'hadoop':
       return 'HDFS';
 
@@ -200,6 +206,9 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
     case 'kinesis':
       return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
 
+    case 'pulsar':
+      return `${getLink('DOCS')}/development/extensions-contrib/pulsar-ingestion.html`;
+
     default:
       return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
   }
@@ -224,6 +233,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'kinesis':
       return 'druid-kinesis-indexing-service';
+
+    case 'pulsar':
+      return 'druid-pulsar-indexing-service';
 
     default:
       return;
@@ -911,6 +923,23 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: <>The AWS external id to use for additional permissions.</>,
         },
       ];
+    case 'pulsar':
+      return [
+        {
+          name: 'topic',
+          type: 'string',
+          required: true,
+          info: <>The Pulsar topic to read from.</>,
+        },
+        {
+          name: 'serviceUrl',
+          label: 'Pulsar Service URL',
+          type: 'string',
+          placeholder: 'pulsar://hostname:port',
+          required: true,
+          info: <>Pulsar broker service URL.</>,
+        }
+      ]
   }
 
   throw new Error(`unknown input type ${ingestionComboType}`);
@@ -930,6 +959,7 @@ export function issueWithIoConfig(
       }
       break;
 
+    case 'pulsar':
     case 'kafka':
       if (!ioConfig.topic) return 'must have a topic';
       break;
@@ -1004,6 +1034,7 @@ export function getIoConfigTuningFormFields(
 
     case 'kafka':
     case 'kinesis':
+    case 'pulsar':
       return [
         {
           name: 'useEarliestOffset',
@@ -1031,6 +1062,21 @@ export function getIoConfigTuningFormFields(
               If a supervisor is managing a dataSource for the first time, it will obtain a set of
               starting sequence numbers from Kinesis. This flag determines whether it retrieves the
               earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent
+              tasks will start from where the previous segments ended so this flag will only be used
+              on first run.
+            </>
+          ),
+        },
+        {
+          name: 'useEarliestMessageId',
+          type: 'boolean',
+          defined: typeIs('pulsar'),
+          required: true,
+          info: (
+            <>
+              If a supervisor is managing a dataSource for the first time, it will obtain a set of
+              starting message IDs from Pulsar. This flag determines whether it retrieves the
+              earliest or latest message IDs in Pulsar. Under normal circumstances, subsequent
               tasks will start from where the previous segments ended so this flag will only be used
               on first run.
             </>
@@ -1275,6 +1321,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     }
 
     case 'kafka':
+    case 'pulsar':
       return ioConfig.topic;
 
     case 'kinesis':
@@ -1569,6 +1616,7 @@ export function getSecondaryPartitionRelatedFormFields(
 
     case 'kafka':
     case 'kinesis':
+    case 'pulsar':
       return [
         {
           name: 'spec.tuningConfig.maxRowsPerSegment',
@@ -1629,7 +1677,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defined: s =>
       Boolean(
         s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+        oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
@@ -1640,7 +1688,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defined: s =>
       Boolean(
         s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+        oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
       ),
     info: (
       <>

@@ -794,6 +794,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             {this.renderIngestionCard('kafka')}
             {this.renderIngestionCard('kinesis')}
             {this.renderIngestionCard('azure-event-hubs')}
+            {this.renderIngestionCard('pulsar')}
             {this.renderIngestionCard('index_parallel:s3')}
             {this.renderIngestionCard('index_parallel:azure')}
             {this.renderIngestionCard('index_parallel:google')}
@@ -893,6 +894,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'kinesis':
         return <p>Load streaming data in real-time from Amazon Kinesis.</p>;
 
+      case 'pulsar':
+        return <p>Load streaming data in real-time from Apache Pulsar.</p>
+
       case 'azure-event-hubs':
         return (
           <>
@@ -952,6 +956,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:hdfs':
       case 'kafka':
       case 'kinesis':
+      case 'pulsar':
         return (
           <FormGroup>
             <Button
@@ -1240,7 +1245,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {oneOf(specType, 'kafka', 'kinesis') && (
+          {oneOf(specType, 'kafka', 'kinesis', 'pulsar') && (
             <FormGroup label="Where should the data be sampled from?">
               <HTMLSelect
                 value={sampleStrategy}
