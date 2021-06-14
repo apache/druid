@@ -22,8 +22,6 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
-import './interval-input.scss';
-
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 function removeLocalTimezone(localDate: Date): Date {
