@@ -25,6 +25,7 @@ ACL
 ACLs
 APIs
 AvroStorage
+ARN
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -195,6 +196,8 @@ aggregator
 aggregators
 ambari
 analytics
+assumeRoleArn
+assumeRoleExternalId
 async
 authorizer
 authorizers
