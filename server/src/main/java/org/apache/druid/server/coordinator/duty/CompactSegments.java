@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -79,6 +80,7 @@ public class CompactSegments implements CoordinatorDuty
   private static final Logger LOG = new Logger(CompactSegments.class);
 
   private final CompactionSegmentSearchPolicy policy;
+  private final boolean skipLockedIntervals;
   private final IndexingServiceClient indexingServiceClient;
 
   // This variable is updated by the Coordinator thread executing duties and
@@ -87,13 +89,17 @@ public class CompactSegments implements CoordinatorDuty
 
   @Inject
   public CompactSegments(
+      DruidCoordinatorConfig config,
       ObjectMapper objectMapper,
       IndexingServiceClient indexingServiceClient
   )
   {
     this.policy = new NewestSegmentFirstPolicy(objectMapper);
     this.indexingServiceClient = indexingServiceClient;
+    this.skipLockedIntervals = config.getCompactionSkipLockedIntervals();
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());
+
+    LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
   }
 
   @Override
@@ -114,16 +120,11 @@ public class CompactSegments implements CoordinatorDuty
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
-        // dataSource -> list of intervals for which compaction will be skipped in this run
-        final Map<String, List<Interval>> intervalsToSkipCompaction = Maps.newHashMapWithExpectedSize(
-            compactionConfigList.size());
 
+        // dataSource -> list of intervals for which compaction will be skipped in this run
         // Skip all the intervals locked by higher priority tasks for each datasource
-        getLockedIntervalsToSkip(compactionConfigList).forEach(
-            (datasource, lockedIntervals) -> intervalsToSkipCompaction
-                .computeIfAbsent(datasource, ds -> new ArrayList<>())
-                .addAll(lockedIntervals)
-        );
+        final Map<String, List<Interval>> intervalsToSkipCompaction =
+            getLockedIntervalsToSkip(compactionConfigList);
 
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactionTasks) {
@@ -234,6 +235,11 @@ public class CompactSegments implements CoordinatorDuty
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
+    if (!skipLockedIntervals) {
+      LOG.info("Not skipping any locked interval for Compaction");
+      return new HashMap<>();
+    }
+
     final Map<String, Integer> minTaskPriority = compactionConfigs
         .stream()
         .collect(
@@ -242,8 +248,8 @@ public class CompactSegments implements CoordinatorDuty
                 DataSourceCompactionConfig::getTaskPriority
             )
         );
-    final Map<String, List<Interval>> datasourceToLockedIntervals = new HashMap<>(
-        indexingServiceClient.getLockedIntervals(minTaskPriority));
+    final Map<String, List<Interval>> datasourceToLockedIntervals =
+        new HashMap<>(indexingServiceClient.getLockedIntervals(minTaskPriority));
     LOG.debug(
         "Skipping the following intervals for Compaction as they are currently locked: %s",
         datasourceToLockedIntervals

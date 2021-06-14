@@ -1171,6 +1171,26 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testGetLockedIntervalsForLowPriorityTask() throws Exception
+  {
+    // Acquire lock for a low priority task
+    final Task lowPriorityTask = NoopTask.create(5);
+    lockbox.add(lowPriorityTask);
+    taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
+    tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        lowPriorityTask,
+        Intervals.of("2017/2018")
+    );
+
+    final Map<String, Integer> minTaskPriority = new HashMap<>();
+    minTaskPriority.put(lowPriorityTask.getDataSource(), 10);
+
+    Map<String, List<Interval>> lockedIntervals = lockbox.getLockedIntervals(minTaskPriority);
+    Assert.assertTrue(lockedIntervals.isEmpty());
+  }
+
+  @Test
   public void testGetLockedIntervalsForRevokedLocks() throws Exception
   {
     // Acquire lock for a low priority task

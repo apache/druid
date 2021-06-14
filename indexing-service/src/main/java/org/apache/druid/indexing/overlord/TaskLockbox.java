@@ -681,11 +681,12 @@ public class TaskLockbox
    * the corresponding Segment.
    *
    * @param minTaskPriority Minimum task priority for each datasource. Only the
-   *                        Intervals that are locked by Tasks higher than this
-   *                        priority are returned. Tasks for datasources that
-   *                        are not present in this Map are not returned.
+   *                        Intervals that are locked by Tasks with equal or
+   *                        higher priority than this are returned. Locked intervals
+   *                        for datasources that are not present in this Map are
+   *                        not returned.
    * @return Map from Datasource to List of Intervals locked by Tasks that have
-   * priority strictly greater than the {@code minTaskPriority} for that datasource.
+   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
   public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {

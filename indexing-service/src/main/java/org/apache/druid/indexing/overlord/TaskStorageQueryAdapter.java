@@ -58,9 +58,15 @@ public class TaskStorageQueryAdapter
   }
 
   /**
-   * Gets a Map containing intervals locked by active Tasks.
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
    *
-   * @return Map from Task Id to locked intervals.
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks with equal or
+   *                        higher priority than this are returned. Locked intervals
+   *                        for datasources that are not present in this Map are
+   *                        not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
   public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.tests.coordinator.duty;
 
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -38,6 +38,8 @@ import org.apache.druid.testing.utils.StreamEventWriter;
 import org.apache.druid.testing.utils.StreamGenerator;
 import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest;
+import org.apache.druid.tests.indexer.AbstractStreamIndexingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.Period;

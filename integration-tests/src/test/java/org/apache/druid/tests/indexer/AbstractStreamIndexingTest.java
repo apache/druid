@@ -652,7 +652,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     private Function<String, String> streamIngestionPropsTransform;
     private Function<String, String> streamQueryPropsTransform;
 
-    protected GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
