@@ -78,6 +78,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   private final PartialSegmentMergeIOConfig<P> ioConfig;
   private final int numAttempts;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -85,6 +86,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       final String groupId,
       final TaskResource taskResource,
       final String supervisorTaskId,
+      @Nullable String subtaskSpecId,
       DataSchema dataSchema,
       PartialSegmentMergeIOConfig<P> ioConfig,
       ParallelIndexTuningConfig tuningConfig,
@@ -105,6 +107,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         !dataSchema.getGranularitySpec().inputIntervals().isEmpty(),
         "Missing intervals in granularitySpec"
     );
+    this.subtaskSpecId = subtaskSpecId;
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;
@@ -120,6 +123,13 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   public String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Override
@@ -206,8 +216,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
     // Fetch partition files
     for (Entry<Interval, Int2ObjectMap<List<P>>> entryPerInterval : intervalToBuckets.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
-      for (Int2ObjectMap.Entry<List<P>> entryPerBucketId :
-          entryPerInterval.getValue().int2ObjectEntrySet()) {
+      for (Int2ObjectMap.Entry<List<P>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
         final int bucketId = entryPerBucketId.getIntKey();
         final File partitionDir = FileUtils.getFile(
             tempDir,

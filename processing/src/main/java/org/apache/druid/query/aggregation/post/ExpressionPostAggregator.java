@@ -75,6 +75,7 @@ public class ExpressionPostAggregator implements PostAggregator
 
   private final Supplier<Expr> parsed;
   private final Supplier<Set<String>> dependentFields;
+  private final Supplier<byte[]> cacheKey;
 
   /**
    * Constructor for serialization.
@@ -144,6 +145,12 @@ public class ExpressionPostAggregator implements PostAggregator
 
     this.parsed = parsed;
     this.dependentFields = dependentFields;
+    this.cacheKey = Suppliers.memoize(() -> {
+      return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
+          .appendCacheable(parsed.get())
+          .appendString(ordering)
+          .build();
+    });
   }
 
 
@@ -229,10 +236,7 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-        .appendString(expression)
-        .appendString(ordering)
-        .build();
+    return cacheKey.get();
   }
 
   public enum Ordering implements Comparator<Comparable>

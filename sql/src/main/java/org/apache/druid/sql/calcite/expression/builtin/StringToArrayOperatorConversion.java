@@ -32,27 +32,20 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public class MultiValueStringSliceOperatorConversion implements SqlOperatorConversion
+public class StringToArrayOperatorConversion implements SqlOperatorConversion
 {
+  // note: since this function produces an array
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("MV_SLICE")
+      .operatorBuilder("STRING_TO_ARRAY")
       .operandTypeChecker(
-          OperandTypes.or(
-            OperandTypes.sequence(
-                "(expr,start)",
-                OperandTypes.family(SqlTypeFamily.STRING),
-                OperandTypes.family(SqlTypeFamily.NUMERIC)
-            ),
-            OperandTypes.sequence(
-                "(expr,start,end)",
-                OperandTypes.family(SqlTypeFamily.STRING),
-                OperandTypes.family(SqlTypeFamily.NUMERIC),
-                OperandTypes.family(SqlTypeFamily.NUMERIC)
-            )
+          OperandTypes.sequence(
+              "(string,expr)",
+              OperandTypes.family(SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.STRING)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeNullableArray(SqlTypeName.VARCHAR)
       .build();
 
   @Override
@@ -74,7 +67,7 @@ public class MultiValueStringSliceOperatorConversion implements SqlOperatorConve
         rexNode,
         druidExpressions -> DruidExpression.of(
             null,
-            DruidExpression.functionCall("array_slice", druidExpressions)
+            DruidExpression.functionCall("string_to_array", druidExpressions)
         )
     );
   }

@@ -37,7 +37,6 @@ exports[`TimedButton matches snapshot 1`] = `
     minimal={false}
     modifiers={Object {}}
     openOnTargetFocus={true}
-    position="auto"
     targetTagName="span"
     transitionDuration={300}
     usePortal={true}

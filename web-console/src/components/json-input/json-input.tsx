@@ -67,6 +67,7 @@ interface InternalValue {
 interface JsonInputProps {
   value: any;
   onChange: (value: any) => void;
+  onError?: (error: Error) => void;
   placeholder?: string;
   focus?: boolean;
   width?: string;
@@ -75,7 +76,7 @@ interface JsonInputProps {
 }
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
-  const { onChange, placeholder, focus, width, height, value, issueWithValue } = props;
+  const { onChange, onError, placeholder, focus, width, height, value, issueWithValue } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
     value,
     stringified: stringifyJson(value),
@@ -120,7 +121,9 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             stringified: inputJson,
           });
 
-          if (!error) {
+          if (error) {
+            onError?.(error);
+          } else {
             onChange(value);
           }
 

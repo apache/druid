@@ -17,30 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.vector;
+package org.apache.druid.java.util;
 
-import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
+import com.google.common.base.Predicate;
+import org.apache.druid.java.util.common.RetryUtils;
 
-public class NilCardinalityVectorProcessor implements CardinalityVectorProcessor
+/**
+ * This Exception class can be use with {@link RetryUtils}.
+ * The method {@link RetryUtils#retry(RetryUtils.Task, Predicate, int)} retry condition (Predicate argument)
+ * requires an exception to be thrown and applying the predicate to the thrown exception.
+ * For cases where the task method does not throw an exception but still needs retrying,
+ * the method can throw this RetryableException so that the RetryUtils can then retry the task
+ */
+public class RetryableException extends Exception
 {
-  public static final NilCardinalityVectorProcessor INSTANCE = new NilCardinalityVectorProcessor();
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+  public RetryableException(Throwable t)
   {
-    // Do nothing.
+    super(t);
   }
 
-  @Override
-  public void aggregate(
-      ByteBuffer buf,
-      int numRows,
-      int[] positions,
-      @Nullable int[] rows,
-      int positionOffset
-  )
-  {
-    // Do nothing.
-  }
 }

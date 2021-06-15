@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -72,13 +73,54 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
+  public <T> T convertByteToConfig(byte[] configInByte, Class<? extends T> clazz, T defaultVal)
+  {
+    if (configInByte == null) {
+      return defaultVal;
+    } else {
+      final ConfigSerde<T> serde = create(clazz, defaultVal);
+      return serde.deserialize(configInByte);
+    }
+  }
+
+  /**
+   * Set the config and add audit entry
+   *
+   * @param key of the config to set
+   * @param val new config value to insert
+   * @param auditInfo metadata regarding the change to config, for audit purposes
+   */
   public <T> SetResult set(String key, T val, AuditInfo auditInfo)
   {
-    ConfigSerde configSerde = create(val.getClass(), null);
+    return set(key, null, val, auditInfo);
+  }
+
+  /**
+   * Set the config and add audit entry
+   *
+   * @param key of the config to set
+   * @param oldValue old config value. If not null, then the update will only succeed if the insert
+   *                 happens when current database entry is the same as this value. Note that the current database
+   *                 entry (in array of bytes) have to be exactly the same as the array of bytes of this value for
+   *                 update to succeed. If null, then the insert will not consider the current database entry. Note
+   *                 that this field intentionally uses byte array to be resilient across serde of existing data
+   *                 retrieved from the database (instead of Java object which may have additional fields added
+   *                 as a result of serde)
+   * @param newValue new config value to insert
+   * @param auditInfo metadata regarding the change to config, for audit purposes
+   */
+  public <T> SetResult set(
+      String key,
+      @Nullable byte[] oldValue,
+      T newValue,
+      AuditInfo auditInfo
+  )
+  {
+    ConfigSerde configSerde = create(newValue.getClass(), null);
     // Audit and actual config change are done in separate transactions
     // there can be phantom audits and reOrdering in audit changes as well.
-    auditManager.doAudit(key, key, auditInfo, val, configSerde);
-    return configManager.set(key, configSerde, val);
+    auditManager.doAudit(key, key, auditInfo, newValue, configSerde);
+    return configManager.set(key, configSerde, oldValue, newValue);
   }
 
   @VisibleForTesting

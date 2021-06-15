@@ -114,6 +114,20 @@ export class SegmentTimeline extends React.PureComponent<
     return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
   }
 
+  static getSqlQuery(timeSpan: number): string {
+    return `SELECT
+  "start", "end", "datasource",
+  COUNT(*) AS "count",
+  SUM("size") AS "size"
+FROM sys.segments
+WHERE
+  "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS') AND
+  is_published = 1 AND
+  is_overshadowed = 0
+GROUP BY 1, 2, 3
+ORDER BY "start" DESC`;
+  }
+
   static processRawData(data: IntervalRow[]) {
     if (data === null) return [];
 
@@ -253,16 +267,7 @@ export class SegmentTimeline extends React.PureComponent<
           let intervals: IntervalRow[];
           let datasources: string[];
           if (capabilities.hasSql()) {
-            const query = `
-SELECT
-  "start", "end", "datasource",
-  COUNT(*) AS "count", SUM("size") as "size"
-FROM sys.segments
-WHERE "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
-GROUP BY 1, 2, 3
-ORDER BY "start" DESC`;
-
-            intervals = await queryDruidSql({ query });
+            intervals = await queryDruidSql({ query: SegmentTimeline.getSqlQuery(timeSpan) });
             datasources = uniq(intervals.map(r => r.datasource));
           } else if (capabilities.hasCoordinatorAccess()) {
             const before = new Date();

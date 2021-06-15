@@ -17,7 +17,11 @@
 # under the License.
 #
 
-FROM maven:3-jdk-8-slim as builder
+ARG JDK_VERSION=8
+FROM maven:3-jdk-11-slim as builder
+# Rebuild from source in this stage
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get -qq update \
@@ -25,21 +29,23 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN mvn -B -ff -q dependency:go-offline \
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      mvn -B -ff -q dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true
+      -Dmaven.javadoc.skip=true \
+      ; fi
 
-RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
+RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
+ && mv /opt/apache-druid-${VERSION} /opt/druid
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
-FROM gcr.io/distroless/java:8
+FROM gcr.io/distroless/java:$JDK_VERSION
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
@@ -50,9 +56,13 @@ RUN addgroup -S -g 1000 druid \
 
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
-RUN mkdir /opt/druid/var \
- && chown druid:druid /opt/druid/var \
- && chmod 775 /opt/druid/var
+
+# create necessary directories which could be mounted as volume
+#   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
+#   /opt/shared is used to keep segments and task logs shared among Druid services
+RUN mkdir /opt/druid/var /opt/shared \
+ && chown druid:druid /opt/druid/var /opt/shared \
+ && chmod 775 /opt/druid/var /opt/shared
 
 USER druid
 VOLUME /opt/druid/var
