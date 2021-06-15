@@ -5,6 +5,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
   className="coordinator-dynamic-config-dialog"
   onClose={[Function]}
   onSave={[Function]}
+  saveDisabled={false}
   title="Coordinator dynamic config"
 >
   <p>

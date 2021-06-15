@@ -122,6 +122,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-protobuf-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
@@ -302,7 +308,7 @@
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-transport-netty</artifactId>
-            <version>3.2.0</version>
+            <version>3.2.8</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
@@ -366,6 +372,17 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-provider</artifactId>
+            <version>5.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.11.0</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -386,6 +403,12 @@
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.os72</groupId>
+            <artifactId>protobuf-dynamic</artifactId>
+            <version>0.9.3</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -439,7 +462,6 @@
                 <docker.build.skip>false</docker.build.skip>
                 <docker.build.hadoop>false</docker.build.hadoop>
                 <it.indexer>middleManager</it.indexer>
-                <zk.version>3.5</zk.version>
                 <override.config.path />
                 <resource.file.dir.path />
 
@@ -470,8 +492,9 @@
                                         <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
+                                        <CONFLUENT_VERSION>5.5.1</CONFLUENT_VERSION>
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
-                                        <ZK_VERSION>${zk.version}</ZK_VERSION>
+                                        <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>
@@ -516,6 +539,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                -Xmx64m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}

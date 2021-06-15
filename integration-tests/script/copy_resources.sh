@@ -80,6 +80,7 @@ fi
 mkdir -p $SHARED_DIR/wikiticker-it
 cp ../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
 cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
+cp docker/test-data/wikipedia.desc $SHARED_DIR/wikiticker-it/wikipedia.desc
 
 # copy other files if needed
 if [ -n "$DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH" ]

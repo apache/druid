@@ -33,6 +33,7 @@ import org.apache.druid.query.lookup.LookupIntrospectHandler;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -48,13 +49,16 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 
   private LookupEnabledTestExprMacroTable()
   {
-    super(
-        Lists.newArrayList(
-            Iterables.concat(
-                TestExprMacroTable.INSTANCE.getMacros(),
-                Collections.singletonList(
-                    new LookupExprMacro(createTestLookupProvider(ImmutableMap.of("foo", "xfoo")))
-                )
+    super(makeTestMacros(ImmutableMap.of("foo", "xfoo")));
+  }
+
+  public static List<ExprMacro> makeTestMacros(final Map<String, String> theLookup)
+  {
+    return Lists.newArrayList(
+        Iterables.concat(
+            TestExprMacroTable.INSTANCE.getMacros(),
+            Collections.singletonList(
+                new LookupExprMacro(createTestLookupProvider(theLookup))
             )
         )
     );

@@ -46,8 +46,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
@@ -2205,10 +2207,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Collections.singletonList(new FilteredAggregatorFactory(
-                        new CountAggregatorFactory("filteredAgg"),
-                        new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
-                    ))
+                    ImmutableList.of(
+                        new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("filteredAgg"),
+                            new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
+                        )
+                    )
                 )
             )
         )
@@ -2222,13 +2226,81 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "filteredAgg", 18L,
-                    "addRowsIndexConstant", 12486.361190795898d,
-                    "index", 12459.361190795898d,
-                    "uniques", 9.019833517963864d,
-                    "rows", 26L
+                ImmutableMap.<String, Object>builder()
+                            .put("filteredAgg", 18L)
+                            .put("addRowsIndexConstant", 12486.361190795898d)
+                            .put("index", 12459.361190795898d)
+                            .put("uniques", 9.019833517963864d)
+                            .put("rows", 26L)
+                            .build()
+            )
+        )
+    );
+
+    assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
+  {
+    // can't vectorize if expression
+    cannotVectorize();
+    TimeseriesQuery query = Druids
+        .newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    aggregatorFactoryList,
+                    ImmutableList.of(
+                        new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("filteredAgg"),
+                            new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
+                        ),
+                        new LongSumAggregatorFactory(
+                            "altLongCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        ),
+                        new DoubleSumAggregatorFactory(
+                            "altDoubleCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        ),
+                        new FloatSumAggregatorFactory(
+                            "altFloatCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
                 )
+            )
+        )
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+        .descending(descending)
+        .context(makeContext())
+        .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                            .put("filteredAgg", 18L)
+                            .put("addRowsIndexConstant", 12486.361190795898d)
+                            .put("index", 12459.361190795898d)
+                            .put("uniques", 9.019833517963864d)
+                            .put("rows", 26L)
+                            .put("altLongCount", 18L)
+                            .put("altDoubleCount", 18.0)
+                            .put("altFloatCount", 18.0f)
+                            .build()
             )
         )
     );

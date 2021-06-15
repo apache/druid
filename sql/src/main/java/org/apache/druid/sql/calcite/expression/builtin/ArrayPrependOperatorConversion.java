@@ -24,27 +24,33 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public class MultiValueStringConcatOperatorConversion implements SqlOperatorConversion
+public class ArrayPrependOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("MV_CONCAT")
+      .operatorBuilder("ARRAY_PREPEND")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,array)",
-              OperandTypes.family(SqlTypeFamily.STRING),
-              OperandTypes.family(SqlTypeFamily.STRING)
+              "(expr,array)",
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
+              ),
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.ARRAY),
+                  OperandTypes.family(SqlTypeFamily.STRING)
+              )
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeInference(ReturnTypes.ARG1_NULLABLE)
       .build();
 
   @Override
@@ -66,7 +72,7 @@ public class MultiValueStringConcatOperatorConversion implements SqlOperatorConv
         rexNode,
         druidExpressions -> DruidExpression.of(
             null,
-            DruidExpression.functionCall("array_concat", druidExpressions)
+            DruidExpression.functionCall("array_prepend", druidExpressions)
         )
     );
   }

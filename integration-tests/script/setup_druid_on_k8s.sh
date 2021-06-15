@@ -45,7 +45,7 @@ sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
 $KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
 
 # Wait a bit
-sleep 60
+sleep 180
 
 ## Debug And FastFail
 
