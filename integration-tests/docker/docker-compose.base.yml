@@ -53,8 +53,6 @@ services:
       - ./service-supervisords/kafka.conf:/usr/lib/druid/conf/kafka.conf
     env_file:
       - ./environment-configs/common
-    environment:
-      - ZK_VERSION
 
   druid-metadata-storage:
     image: druid/cluster

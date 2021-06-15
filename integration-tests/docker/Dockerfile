@@ -21,6 +21,9 @@ FROM openjdk:$JDK_VERSION as druidbase
 
 COPY base-setup.sh /root/base-setup.sh
 ARG KAFKA_VERSION
+# ZooKeeper version to install in the base image
+# This is passed in by maven at build time to align with the client version we depend on in the pom file
+ARG ZK_VERSION
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
 RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && rm -f /root/base-setup.sh
 

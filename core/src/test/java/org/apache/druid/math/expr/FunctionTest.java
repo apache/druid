@@ -605,11 +605,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
 
+
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
@@ -626,5 +629,7 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

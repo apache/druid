@@ -34,7 +34,7 @@ exports[`QueryView matches snapshot 1`] = `
       <div
         className="query-control-bar"
       >
-        <HotkeysTarget(RunButton)
+        <Memo(RunButton)
           loading={true}
           onEditContext={[Function]}
           onExplain={[Function]}
@@ -49,6 +49,7 @@ exports[`QueryView matches snapshot 1`] = `
           content="Automatically wrap the query with a limit to protect against queries with very large result sets."
           hoverCloseDelay={0}
           hoverOpenDelay={800}
+          minimal={false}
           transitionDuration={100}
         >
           <Blueprint3.Switch
@@ -112,7 +113,7 @@ exports[`QueryView matches snapshot with query 1`] = `
       <div
         className="query-control-bar"
       >
-        <HotkeysTarget(RunButton)
+        <Memo(RunButton)
           loading={true}
           onEditContext={[Function]}
           onExplain={[Function]}
@@ -127,6 +128,7 @@ exports[`QueryView matches snapshot with query 1`] = `
           content="Automatically wrap the query with a limit to protect against queries with very large result sets."
           hoverCloseDelay={0}
           hoverOpenDelay={800}
+          minimal={false}
           transitionDuration={100}
         >
           <Blueprint3.Switch

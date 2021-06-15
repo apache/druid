@@ -176,7 +176,7 @@ public class ConfigManager
     return set(key, serde, null, obj);
   }
 
-  public <T> SetResult set(final String key, final ConfigSerde<T> serde, @Nullable final T oldObject, final T newObject)
+  public <T> SetResult set(final String key, final ConfigSerde<T> serde, @Nullable final byte[] oldValue, final T newObject)
   {
     if (newObject == null || !started) {
       if (newObject == null) {
@@ -191,11 +191,10 @@ public class ConfigManager
     try {
       return exec.submit(
           () -> {
-            if (oldObject == null) {
+            if (oldValue == null || !config.get().isEnableCompareAndSwap()) {
               dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
             } else {
-              final byte[] oldBytes = serde.serialize(oldObject);
-              MetadataCASUpdate metadataCASUpdate = createMetadataCASUpdate(key, oldBytes, newBytes);
+              MetadataCASUpdate metadataCASUpdate = createMetadataCASUpdate(key, oldValue, newBytes);
               boolean success = dbConnector.compareAndSwap(ImmutableList.of(metadataCASUpdate));
               if (!success) {
                 return SetResult.fail(new IllegalStateException("Config value has changed"), true);

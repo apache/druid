@@ -378,7 +378,7 @@ public abstract class ExprEval<T>
       return new String[]{null};
     } else {
       if (val != null) {
-        return val.toArray();
+        return new String[0];
       }
       return null;
     }

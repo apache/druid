@@ -48,6 +48,7 @@ import {
   QueryState,
   RowColumn,
   SemiJoinQueryExplanation,
+  stringifyValue,
 } from '../../utils';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
@@ -142,19 +143,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
-  static formatStr(s: string | number, format: 'csv' | 'tsv') {
+  static formatStr(s: null | string | number | Date, format: 'csv' | 'tsv') {
+    // stringify and remove line break
+    const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
+
     if (format === 'csv') {
-      // remove line break, single quote => double quote, handle ','
-      return `"${String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/"/g, '""')}"`;
+      // csv: single quote => double quote, handle ','
+      return `"${str.replace(/"/g, '""')}"`;
     } else {
-      // tsv
-      // remove line break, single quote => double quote, \t => ''
-      return String(s)
-        .replace(/(?:\r\n|\r|\n)/g, ' ')
-        .replace(/\t/g, '')
-        .replace(/"/g, '""');
+      // tsv: single quote => double quote, \t => ''
+      return str.replace(/\t/g, '').replace(/"/g, '""');
     }
   }
 
