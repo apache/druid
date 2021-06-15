@@ -73,6 +73,16 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
+  public <T> T convertByteToConfig(byte[] configInByte, Class<? extends T> clazz, T defaultVal)
+  {
+    if (configInByte == null) {
+      return defaultVal;
+    } else {
+      final ConfigSerde<T> serde = create(clazz, defaultVal);
+      return serde.deserialize(configInByte);
+    }
+  }
+
   /**
    * Set the config and add audit entry
    *
@@ -90,14 +100,18 @@ public class JacksonConfigManager
    *
    * @param key of the config to set
    * @param oldValue old config value. If not null, then the update will only succeed if the insert
-   *                 happens when current database entry is the same as this value. If null, then the insert
-   *                 will not consider the current database entry.
+   *                 happens when current database entry is the same as this value. Note that the current database
+   *                 entry (in array of bytes) have to be exactly the same as the array of bytes of this value for
+   *                 update to succeed. If null, then the insert will not consider the current database entry. Note
+   *                 that this field intentionally uses byte array to be resilient across serde of existing data
+   *                 retrieved from the database (instead of Java object which may have additional fields added
+   *                 as a result of serde)
    * @param newValue new config value to insert
    * @param auditInfo metadata regarding the change to config, for audit purposes
    */
   public <T> SetResult set(
       String key,
-      @Nullable T oldValue,
+      @Nullable byte[] oldValue,
       T newValue,
       AuditInfo auditInfo
   )

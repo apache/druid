@@ -234,10 +234,10 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         .appendStrings(fields)
         .appendString(initialValueExpressionString)
         .appendString(initialCombineValueExpressionString)
-        .appendString(foldExpressionString)
-        .appendString(combineExpressionString)
-        .appendString(compareExpressionString)
-        .appendString(finalizeExpressionString)
+        .appendCacheable(foldExpression.get())
+        .appendCacheable(combineExpression.get())
+        .appendCacheable(combineExpression.get())
+        .appendCacheable(finalizeExpression.get())
         .appendInt(maxSizeBytes.getBytesInInt())
         .build();
   }
@@ -248,7 +248,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
         thePlan.getExpression(),
-        thePlan.getBindings()
+        thePlan.getBindings(),
+        maxSizeBytes.getBytesInInt()
     );
   }
 

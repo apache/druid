@@ -71,6 +71,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT-1s")
   public abstract Duration getCoordinatorAuditKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.compaction.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorCompactionKillPeriod();
+
   @Config("druid.coordinator.kill.rule.period")
   @Default("P1D")
   public abstract Duration getCoordinatorRuleKillPeriod();

@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -190,4 +191,22 @@ public class RetryUtilsTest
     }
   }
 
+  @Test
+  public void testExceptionPredicateForRetryableException() throws Exception
+  {
+    final AtomicInteger count = new AtomicInteger();
+    String result = RetryUtils.retry(
+        () -> {
+          if (count.incrementAndGet() >= 2) {
+            return "hey";
+          } else {
+            throw new RetryableException(new RuntimeException("uhh"));
+          }
+        },
+        e -> e instanceof RetryableException,
+        3
+    );
+    Assert.assertEquals(result, "hey");
+    Assert.assertEquals("count", 2, count.get());
+  }
 }

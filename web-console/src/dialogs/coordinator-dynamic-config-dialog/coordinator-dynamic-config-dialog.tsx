@@ -46,6 +46,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   const { onClose } = props;
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [dynamicConfig, setDynamicConfig] = useState<CoordinatorDynamicConfig>({});
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     processQuery: async () => {
@@ -100,6 +101,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   return (
     <SnitchDialog
       className="coordinator-dynamic-config-dialog"
+      saveDisabled={Boolean(jsonError)}
       onSave={saveConfig}
       onClose={onClose}
       title="Coordinator dynamic config"
@@ -121,7 +123,15 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
           onChange={setDynamicConfig}
         />
       ) : (
-        <JsonInput value={dynamicConfig} onChange={setDynamicConfig} height="50vh" />
+        <JsonInput
+          value={dynamicConfig}
+          height="50vh"
+          onChange={v => {
+            setDynamicConfig(v);
+            setJsonError(undefined);
+          }}
+          onError={setJsonError}
+        />
       )}
     </SnitchDialog>
   );

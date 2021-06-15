@@ -75,6 +75,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
         null,
         null,
         ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 600L, null)),
+        false,
         false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();

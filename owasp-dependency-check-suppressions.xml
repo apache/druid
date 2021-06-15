@@ -315,7 +315,7 @@
      ]]></notes>
     <cve>CVE-2017-15288</cve>
   </suppress>
-  <suppress until="2021-04-30">
+  <suppress until="2021-05-30">
     <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
     <notes><![CDATA[
      This vulnerability should be fixed soon and the suppression should be removed.

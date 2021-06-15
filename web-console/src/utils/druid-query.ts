@@ -123,6 +123,22 @@ export class DruidError extends Error {
       };
     }
 
+    const matchLexical = /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(
+      errorMessage,
+    );
+    if (matchLexical) {
+      return {
+        label: 'Replace fancy quotes with ASCII quotes',
+        fn: str => {
+          const newQuery = str
+            .replace(/[\u2018-\u201b]/gim, `'`)
+            .replace(/[\u201c-\u201f]/gim, `"`);
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
     // Incorrect quoting on table
     // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
     const matchQuotes = /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
@@ -144,14 +160,55 @@ export class DruidError extends Error {
       };
     }
 
-    // , before FROM
-    const matchComma = /Encountered "(FROM)" at/i.exec(errorMessage);
-    if (matchComma) {
-      const fromKeyword = matchComma[1];
+    // Single quotes on AS alias
+    const matchSingleQuotesAlias = /Encountered "\\'([\w-]+)\\'" at/i.exec(errorMessage);
+    if (matchSingleQuotesAlias) {
+      const alias = matchSingleQuotesAlias[1];
       return {
-        label: `Remove , before ${fromKeyword}`,
+        label: `Replace '${alias}' with "${alias}"`,
+        fn: str => {
+          const newQuery = str.replace(new RegExp(`(AS\\s*)'(${alias})'`, 'gim'), '$1"$2"');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // , before FROM
+    const matchCommaFrom = /Encountered "(FROM)" at/i.exec(errorMessage);
+    if (matchCommaFrom) {
+      const keyword = matchCommaFrom[1];
+      return {
+        label: `Remove , before ${keyword}`,
         fn: str => {
           const newQuery = str.replace(/,(\s+FROM)/gim, '$1');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // , before GROUP, ORDER, or LIMIT
+    const matchComma = /Encountered ", (GROUP|ORDER|LIMIT)" at/i.exec(errorMessage);
+    if (matchComma) {
+      const keyword = matchComma[1];
+      return {
+        label: `Remove , before ${keyword}`,
+        fn: str => {
+          const newQuery = str.replace(new RegExp(`,(\\s+${keyword})`, 'gim'), '$1');
+          if (newQuery === str) return;
+          return newQuery;
+        },
+      };
+    }
+
+    // ; at the end
+    const matchSemicolon = /Encountered ";" at/i.exec(errorMessage);
+    if (matchSemicolon) {
+      return {
+        label: `Remove trailing ;`,
+        fn: str => {
+          const newQuery = str.replace(/;+(\s*)$/m, '$1');
           if (newQuery === str) return;
           return newQuery;
         },

@@ -38,6 +38,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.Objects;
+
 @RunWith(MockitoJUnitRunner.class)
 public class JacksonConfigManagerTest
 {
@@ -136,6 +138,27 @@ public class JacksonConfigManagerTest
     Assert.assertNotNull(configSerdeCapture.getValue());
   }
 
+  @Test
+  public void testConvertByteToConfigWithNullConfigInByte()
+  {
+    TestConfig defaultExpected = new TestConfig("version", null, 3);
+    TestConfig actual = jacksonConfigManager.convertByteToConfig(null, TestConfig.class, defaultExpected);
+    Assert.assertEquals(defaultExpected, actual);
+  }
+
+  @Test
+  public void testConvertByteToConfigWithNonNullConfigInByte()
+  {
+    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
+    {
+    }, null);
+    TestConfig defaultConfig = new TestConfig("version", null, 3);
+    TestConfig expectedConfig = new TestConfig("version2", null, 5);
+    byte[] expectedConfigInByte = configConfigSerdeFromTypeReference.serialize(expectedConfig);
+
+    TestConfig actual = jacksonConfigManager.convertByteToConfig(expectedConfigInByte, TestConfig.class, defaultConfig);
+    Assert.assertEquals(expectedConfig, actual);
+  }
 
   static class TestConfig
   {
@@ -168,6 +191,27 @@ public class JacksonConfigManagerTest
     public int getSettingInt()
     {
       return settingInt;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TestConfig config = (TestConfig) o;
+      return settingInt == config.settingInt &&
+             Objects.equals(version, config.version) &&
+             Objects.equals(settingString, config.settingString);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(version, settingString, settingInt);
     }
   }
 

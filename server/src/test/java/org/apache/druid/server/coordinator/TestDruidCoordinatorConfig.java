@@ -35,6 +35,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorSupervisorKillDurationToRetain;
   private final Duration coordinatorAuditKillPeriod;
   private final Duration coordinatorAuditKillDurationToRetain;
+  private final Duration coordinatorCompactionKillPeriod;
   private final Duration coordinatorRuleKillPeriod;
   private final Duration coordinatorRuleKillDurationToRetain;
   private final Duration coordinatorDatasourceKillPeriod;
@@ -55,6 +56,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorSupervisorKillDurationToRetain,
       Duration coordinatorAuditKillPeriod,
       Duration coordinatorAuditKillDurationToRetain,
+      Duration coordinatorCompactionKillPeriod,
       Duration coordinatorRuleKillPeriod,
       Duration coordinatorRuleKillDurationToRetain,
       Duration coordinatorDatasourceKillPeriod,
@@ -75,6 +77,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorSupervisorKillDurationToRetain = coordinatorSupervisorKillDurationToRetain;
     this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
     this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
+    this.coordinatorCompactionKillPeriod = coordinatorCompactionKillPeriod;
     this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
     this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
     this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
@@ -142,6 +145,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorAuditKillDurationToRetain()
   {
     return coordinatorAuditKillDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorCompactionKillPeriod()
+  {
+    return coordinatorCompactionKillPeriod;
   }
 
   @Override
