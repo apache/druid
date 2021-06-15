@@ -19,13 +19,13 @@
 
 package org.apache.druid.client.cache;
 
+import com.google.common.collect.Maps;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.util.JedisClusterCRC16;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,40 +51,60 @@ public class RedisClusterCache extends AbstractRedisCache
     cluster.setex(key, (int) expiration.getSeconds(), value);
   }
 
-  static class Key {
+  static class Key
+  {
     byte[] key;
+
+    /**
+     * index of this key in original array
+     */
     int index;
 
-    public Key(byte[] key, int index) {
+    public Key(byte[] key, int index)
+    {
       this.key = key;
       this.index = index;
     }
   }
+
+  /**
+   * Jedis does not work if the given keys are distributed among different redis nodes
+   * A simple way is to group keys by their slots and mget values for each slot.
+   * <p>
+   * In the future, Jedis could be replaced by Lettuce which supports mget operation on a redis cluster
+   */
   @Override
   protected List<byte[]> mgetFromRedis(byte[]... keys)
   {
-    if ( keys.length <= 1 ) {
+    if (keys.length <= 1) {
       return cluster.mget(keys);
     }
-    Map<Integer, List<Key>> keyGroup = new HashMap<>();
-    for(int i = 0; i < keys.length; i++) {
-      int slot = JedisClusterCRC16.getSlot(keys[i]);
-      keyGroup.computeIfAbsent(slot, val->new ArrayList<>()).add(new Key(keys[i], i));
+
+    // group keys based on their slot
+    Map<Integer, List<Key>> slot2Keys = Maps.newHashMapWithExpectedSize(keys.length);
+    for (int i = 0; i < keys.length; i++) {
+      int keySlot = JedisClusterCRC16.getSlot(keys[i]);
+      slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(new Key(keys[i], i));
     }
 
-    byte[][] returns = new byte[keys.length][];
-    keyGroup.keySet().parallelStream()
-            .forEach( slot-> {
-                        List<Key> keyList = keyGroup.get(slot);
+    byte[][] returning = new byte[keys.length][];
+    slot2Keys.keySet()
+             .parallelStream()
+             .forEach(slot -> {
+               List<Key> keyList = slot2Keys.get(slot);
 
-              List<byte[]> ret = cluster.mget(keyList.stream()
-                                                     .map(key -> key.key).toArray(byte[][]::new));
-              for(int i = 0; i < keyList.size(); i++) {
-                returns[keyList.get(i).index] = ret.get(i);
-              }
-            }
-            );
-    return Arrays.asList(returns);
+               // mget for this slot
+               List<byte[]> values = cluster.mget(keyList.stream()
+                                                         .map(key -> key.key)
+                                                         .toArray(byte[][]::new));
+
+               // set returned values to their corresponding position
+               for (int i = 0; i < keyList.size(); i++) {
+                 returning[keyList.get(i).index] = values.get(i);
+               }
+             });
+
+    return Arrays.asList(returning);
   }
 
   @Override
