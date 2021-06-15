@@ -47,7 +47,7 @@ public class ArrayOffsetOfOperatorConversion implements SqlOperatorConversion
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.INTEGER)
+      .returnTypeNullable(SqlTypeName.INTEGER)
       .build();
 
   @Override
