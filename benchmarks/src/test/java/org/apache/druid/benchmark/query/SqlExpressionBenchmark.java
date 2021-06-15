@@ -178,7 +178,11 @@ public class SqlExpressionBenchmark
       // 26: group by string expr with non-expr agg
       "SELECT CONCAT(string2, '-', long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
       // 27: group by string expr with expr agg
-      "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2"
+      "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 28: logical and operator
+      "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      // 29: isnull, notnull
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
   );
 
   @Param({"5000000"})
@@ -217,7 +221,9 @@ public class SqlExpressionBenchmark
       "24",
       "25",
       "26",
-      "27"
+      "27",
+      "28",
+      "29"
   })
   private String query;
 

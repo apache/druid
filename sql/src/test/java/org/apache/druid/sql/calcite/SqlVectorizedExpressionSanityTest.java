@@ -86,7 +86,9 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT string1 + string2, COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT CONCAT(string1, '-', string2), string3, COUNT(*) FROM foo GROUP BY 1,2 ORDER BY 3",
-      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1"
+      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1",
+      "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
