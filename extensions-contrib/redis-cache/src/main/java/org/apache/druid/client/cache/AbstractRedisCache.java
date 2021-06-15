@@ -19,17 +19,15 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import redis.clients.jedis.exceptions.JedisException;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 public abstract class AbstractRedisCache implements Cache
 {
@@ -93,21 +91,12 @@ public abstract class AbstractRedisCache implements Cache
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
     totalRequestCount.incrementAndGet();
-    Map<NamedKey, byte[]> results = new HashMap<>();
-
     try {
-      List<NamedKey> namedKeys = Lists.newArrayList(keys);
-      List<byte[]> byteKeys = Lists.transform(namedKeys, NamedKey::toByteArray);
-
-      List<byte[]> byteValues = this.mgetFromRedis(byteKeys.toArray(new byte[0][]));
-      for (int i = 0; i < byteValues.size(); ++i) {
-        if (byteValues.get(i) != null) {
-          results.put(namedKeys.get(i), byteValues.get(i));
-        }
-      }
+      Map<NamedKey, byte[]> results = this.mgetFromRedis(keys);
 
       hitCount.addAndGet(results.size());
-      missCount.addAndGet(namedKeys.size() - results.size());
+      missCount.addAndGet(Stream.of(keys).count() - results.size());
+      return results;
     }
     catch (JedisException e) {
       if (e.getMessage().contains("Read timed out")) {
@@ -116,9 +105,8 @@ public abstract class AbstractRedisCache implements Cache
         errorCount.incrementAndGet();
       }
       log.warn(e, "Exception pulling items from cache");
+      return null;
     }
-
-    return results;
   }
 
   @Override
@@ -172,7 +160,7 @@ public abstract class AbstractRedisCache implements Cache
 
   protected abstract void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration);
 
-  protected abstract List<byte[]> mgetFromRedis(byte[]... keys);
+  protected abstract Map<NamedKey, byte[]> mgetFromRedis(Iterable<NamedKey> keys);
 
   protected abstract void cleanup();
 }

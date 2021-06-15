@@ -19,15 +19,15 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Maps;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.util.JedisClusterCRC16;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisClusterCache extends AbstractRedisCache
 {
@@ -51,60 +51,55 @@ public class RedisClusterCache extends AbstractRedisCache
     cluster.setex(key, (int) expiration.getSeconds(), value);
   }
 
-  static class Key
+  static class CachableKey
   {
-    byte[] key;
+    byte[] keyBytes;
+    NamedKey namedKey;
 
-    /**
-     * index of this key in original array
-     */
-    int index;
-
-    public Key(byte[] key, int index)
+    public CachableKey(NamedKey namedKey)
     {
-      this.key = key;
-      this.index = index;
+      this.keyBytes = namedKey.toByteArray();
+      this.namedKey = namedKey;
     }
   }
 
   /**
    * Jedis does not work if the given keys are distributed among different redis nodes
-   * A simple way is to group keys by their slots and mget values for each slot.
+   * A simple workaround is to group keys by their slots and mget values for each slot.
    * <p>
-   * In the future, Jedis could be replaced by Lettuce which supports mget operation on a redis cluster
+   * In future, Jedis could be replaced by the Lettuce driver which supports mget operation on a redis cluster
    */
   @Override
-  protected List<byte[]> mgetFromRedis(byte[]... keys)
+  protected Map<NamedKey, byte[]> mgetFromRedis(Iterable<NamedKey> keys)
   {
-    if (keys.length <= 1) {
-      return cluster.mget(keys);
-    }
-
     // group keys based on their slot
-    Map<Integer, List<Key>> slot2Keys = Maps.newHashMapWithExpectedSize(keys.length);
-    for (int i = 0; i < keys.length; i++) {
-      int keySlot = JedisClusterCRC16.getSlot(keys[i]);
-      slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(new Key(keys[i], i));
+    Map<Integer, List<CachableKey>> slot2Keys = new HashMap<>();
+    for (NamedKey key : keys) {
+      CachableKey cachableKey = new CachableKey(key);
+      int keySlot = JedisClusterCRC16.getSlot(cachableKey.keyBytes);
+      slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(cachableKey);
     }
 
-    byte[][] returning = new byte[keys.length][];
+    Map<NamedKey, byte[]> results = new ConcurrentHashMap<>();
     slot2Keys.keySet()
              .parallelStream()
              .forEach(slot -> {
-               List<Key> keyList = slot2Keys.get(slot);
+               List<CachableKey> keyList = slot2Keys.get(slot);
 
                // mget for this slot
                List<byte[]> values = cluster.mget(keyList.stream()
-                                                         .map(key -> key.key)
+                                                         .map(key -> key.keyBytes)
                                                          .toArray(byte[][]::new));
 
-               // set returned values to their corresponding position
                for (int i = 0; i < keyList.size(); i++) {
-                 returning[keyList.get(i).index] = values.get(i);
+                 byte[] value = values.get(i);
+                 if (value != null) {
+                   results.put(keyList.get(i).namedKey, value);
+                 }
                }
              });
 
-    return Arrays.asList(returning);
+    return results;
   }
 
   @Override
