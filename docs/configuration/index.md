@@ -1773,6 +1773,9 @@ You can optionally only configure caching to be enabled on the Broker by setting
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
+> Note: Even if cache is enabled, Brokers never cache group-by queries when [groupBy v2 strategy](../querying/groupbyquery.md#strategies), which is the default, is configured.
+> See [Differences between v1 and v2](../querying/groupbyquery.md#differences-between-v1-and-v2) query strategies for more information.
+
 #### Segment Discovery
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
