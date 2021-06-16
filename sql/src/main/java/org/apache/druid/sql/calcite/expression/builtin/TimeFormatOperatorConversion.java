@@ -47,7 +47,7 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_FORMAT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(1)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 

@@ -316,7 +316,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
         contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
-        contextBuilder.put("bySegment", true);
+        contextBuilder.put(QueryContexts.BY_SEGMENT_KEY, true);
       }
       return contextBuilder.build();
     }

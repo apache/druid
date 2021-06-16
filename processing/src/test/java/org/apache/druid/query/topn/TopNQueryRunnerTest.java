@@ -43,6 +43,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -1148,7 +1149,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   {
 
     final HashMap<String, Object> specialContext = new HashMap<String, Object>();
-    specialContext.put("bySegment", "true");
+    specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -3639,7 +3640,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
         )
-        .context(ImmutableMap.of("finalize", true, "bySegment", true))
+        .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true, QueryContexts.BY_SEGMENT_KEY, true))
         .build();
     TopNResultValue topNResult = new TopNResultValue(
         Arrays.<Map<String, Object>>asList(
