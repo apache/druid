@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
-import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.timeline.CompactionState;
