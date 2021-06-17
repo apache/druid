@@ -24,7 +24,9 @@ import { Capabilities } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
-describe('Segment Timeline', () => {
+jest.useFakeTimers('modern').setSystemTime(Date.parse('2021-06-08T12:34:56Z'));
+
+describe('SegmentTimeline', () => {
   it('.getSqlQuery', () => {
     expect(
       SegmentTimeline.getSqlQuery(

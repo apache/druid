@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Segment Timeline matches snapshot 1`] = `
+exports[`SegmentTimeline matches snapshot 1`] = `
 <div
   class="segment-timeline app-view"
 >
@@ -155,7 +155,7 @@ exports[`Segment Timeline matches snapshot 1`] = `
                 readonly=""
                 style="padding-right: 0px;"
                 type="text"
-                value="2021-03-11 ➔ 2021-06-11"
+                value="2021-03-09 ➔ 2021-06-09"
               />
               <span
                 class="bp3-input-action"
