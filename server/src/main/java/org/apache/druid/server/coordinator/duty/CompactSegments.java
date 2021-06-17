@@ -122,9 +122,7 @@ public class CompactSegments implements CoordinatorDuty
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
 
         // dataSource -> list of intervals for which compaction will be skipped in this run
-        // Skip all the intervals locked by higher priority tasks for each datasource
-        final Map<String, List<Interval>> intervalsToSkipCompaction =
-            getLockedIntervalsToSkip(compactionConfigList);
+        final Map<String, List<Interval>> intervalsToSkipCompaction = new HashMap<>();
 
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactionTasks) {
@@ -162,6 +160,16 @@ public class CompactSegments implements CoordinatorDuty
             throw new ISE("task[%s] is not a compactionTask", status.getId());
           }
         }
+
+        // Skip all the intervals locked by higher priority tasks for each datasource
+        // This must be done after the invalid compaction tasks are cancelled
+        // in the loop above so that their intervals are not considered locked
+        getLockedIntervalsToSkip(compactionConfigList).forEach(
+            (dataSource, intervals) ->
+                intervalsToSkipCompaction
+                    .computeIfAbsent(dataSource, ds -> new ArrayList<>())
+                    .addAll(intervals)
+        );
 
         final CompactionSegmentIterator iterator =
             policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);

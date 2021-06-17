@@ -710,8 +710,8 @@ public class TaskLockbox
                             // Do not proceed if the lock is revoked
                             return;
                           } else if (taskLockPosse.getTaskLock().getPriority() == null
-                                     || taskLockPosse.getTaskLock().getPriority() <= minTaskPriority.get(datasource)) {
-                            // Do not proceed if the lock has a priority less than or equal to the minimum
+                                     || taskLockPosse.getTaskLock().getPriority() < minTaskPriority.get(datasource)) {
+                            // Do not proceed if the lock has a priority strictly less than the minimum
                             return;
                           }
 
