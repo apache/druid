@@ -49,9 +49,10 @@ export const DateRangeSelector = React.memo(function DateRangeSelector(
             const [startDate, endDate] = selectedRange;
             if (!startDate || !endDate) {
               setIntermediateDateRange(selectedRange);
-              return;
+            } else {
+              setIntermediateDateRange(undefined);
+              onChange(localToUtcDate(startDate), localToUtcDate(endDate));
             }
-            onChange(localToUtcDate(startDate), localToUtcDate(endDate));
           }}
         />
       }
