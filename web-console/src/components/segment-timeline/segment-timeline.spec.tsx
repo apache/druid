@@ -18,23 +18,30 @@
 
 import { render } from '@testing-library/react';
 import { sane } from 'druid-query-toolkit/build/test-utils';
-import { mount } from 'enzyme';
 import React from 'react';
 
-import { Capabilities, QueryManager } from '../../utils';
+import { Capabilities } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
-describe('Segment Timeline', () => {
+jest.useFakeTimers('modern').setSystemTime(Date.parse('2021-06-08T12:34:56Z'));
+
+describe('SegmentTimeline', () => {
   it('.getSqlQuery', () => {
-    expect(SegmentTimeline.getSqlQuery(3)).toEqual(sane`
+    expect(
+      SegmentTimeline.getSqlQuery(
+        new Date('2020-01-01T00:00:00Z'),
+        new Date('2021-02-01T00:00:00Z'),
+      ),
+    ).toEqual(sane`
       SELECT
         "start", "end", "datasource",
         COUNT(*) AS "count",
         SUM("size") AS "size"
       FROM sys.segments
       WHERE
-        "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -3, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS') AND
+        '2020-01-01T00:00:00.000Z' <= "start" AND
+        "end" <= '2021-02-01T00:00:00.000Z' AND
         is_published = 1 AND
         is_overshadowed = 0
       GROUP BY 1, 2, 3
@@ -43,72 +50,8 @@ describe('Segment Timeline', () => {
   });
 
   it('matches snapshot', () => {
-    const segmentTimeline = (
-      <SegmentTimeline capabilities={Capabilities.FULL} chartHeight={100} chartWidth={100} />
-    );
+    const segmentTimeline = <SegmentTimeline capabilities={Capabilities.FULL} />;
     const { container } = render(segmentTimeline);
     expect(container.firstChild).toMatchSnapshot();
   });
-
-  it('queries 3 months of data by default', () => {
-    const dataQueryManager = new MockDataQueryManager();
-    const segmentTimeline = (
-      <SegmentTimeline
-        capabilities={Capabilities.FULL}
-        chartHeight={100}
-        chartWidth={100}
-        dataQueryManager={dataQueryManager}
-      />
-    );
-    render(segmentTimeline);
-
-    // Ideally, the test should verify the rendered bar graph to see if the bars
-    // cover the selected period. Since the unit test does not have a druid
-    // instance to query from, just verify the query has the correct time span.
-    expect(dataQueryManager.queryTimeSpan).toBe(3);
-  });
-
-  it('queries matching time span when new period is selected from dropdown', () => {
-    const dataQueryManager = new MockDataQueryManager();
-    const segmentTimeline = (
-      <SegmentTimeline
-        capabilities={Capabilities.FULL}
-        chartHeight={100}
-        chartWidth={100}
-        dataQueryManager={dataQueryManager}
-      />
-    );
-    const wrapper = mount(segmentTimeline);
-    const selects = wrapper.find('select');
-    expect(selects.length).toBe(2); // Datasource & Period
-    const periodSelect = selects.at(1);
-    const newTimeSpanMonths = 6;
-    periodSelect.simulate('change', { target: { value: newTimeSpanMonths } });
-
-    // Ideally, the test should verify the rendered bar graph to see if the bars
-    // cover the selected period. Since the unit test does not have a druid
-    // instance to query from, just verify the query has the correct time span.
-    expect(dataQueryManager.queryTimeSpan).toBe(newTimeSpanMonths);
-  });
 });
-
-/**
- * Mock the data query manager, since the unit test does not have a druid instance
- */
-class MockDataQueryManager extends QueryManager<
-  { capabilities: Capabilities; timeSpan: number },
-  any
-> {
-  queryTimeSpan?: number;
-
-  constructor() {
-    super({
-      // eslint-disable-next-line @typescript-eslint/require-await
-      processQuery: async ({ timeSpan }) => {
-        this.queryTimeSpan = timeSpan;
-      },
-      debounceIdle: 0,
-      debounceLoading: 0,
-    });
-  }
-}
