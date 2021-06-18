@@ -112,7 +112,7 @@ public class KafkaEmitter implements Emitter
         }
       }
 
-      return new KafkaProducer<>(props).;
+      return new KafkaProducer<>(props);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
