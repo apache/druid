@@ -28,9 +28,9 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
-import { escapeControlCharacters, unescapeControlCharacters } from '../../utils';
+import { jsonEscape, jsonUnescape } from '../../utils';
 
 export interface SuggestionGroup {
   group: string;
@@ -59,6 +59,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
     ...rest
   } = props;
 
+  const [intermediateValue, setIntermediateValue] = useState<string | undefined>();
   const lastFocusValue = useRef<string>();
 
   function handleSuggestionSelect(suggestion: undefined | string) {
@@ -69,15 +70,27 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   return (
     <InputGroup
       className={classNames('suggestible-input', className)}
-      value={escapeControlCharacters(value as string)}
+      value={
+        typeof intermediateValue !== 'undefined' ? intermediateValue : jsonEscape(value as string)
+      }
       defaultValue={defaultValue as string}
       onChange={(e: any) => {
-        onValueChange(unescapeControlCharacters(e.target.value));
+        const rawValue = e.target.value;
+        setIntermediateValue(rawValue);
+
+        let unescapedValue: string | undefined;
+        try {
+          unescapedValue = jsonUnescape(rawValue);
+        } catch {
+          return;
+        }
+        onValueChange(unescapedValue);
       }}
       onFocus={(e: any) => {
         lastFocusValue.current = e.target.value;
       }}
       onBlur={(e: any) => {
+        setIntermediateValue(undefined);
         if (onBlur) onBlur(e);
         if (lastFocusValue.current === e.target.value) return;
         if (onFinalize) onFinalize();
@@ -101,7 +114,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
                     return (
                       <MenuItem
                         key={suggestion}
-                        text={escapeControlCharacters(suggestion)}
+                        text={jsonEscape(suggestion)}
                         onClick={() => handleSuggestionSelect(suggestion)}
                       />
                     );

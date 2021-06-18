@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { escapeControlCharacters, unescapeControlCharacters } from './escape';
+import { jsonEscape, jsonUnescape } from './escape';
 
 describe('escape', () => {
-  it('escapeControlCharacters', () => {
+  it('jsonEscape', () => {
     expect(
       new Array(38).fill(0).map((_, i) => {
-        return escapeControlCharacters(
+        return jsonEscape(
           i + ' : `' + String.fromCharCode(i) + '` : `' + String.fromCharCode(i) + '`',
         );
       }),
@@ -61,24 +61,21 @@ describe('escape', () => {
       '31 : `\\u001f` : `\\u001f`',
       '32 : ` ` : ` `',
       '33 : `!` : `!`',
-      '34 : `\\"` : `\\"`',
+      '34 : `"` : `"`',
       '35 : `#` : `#`',
       '36 : `$` : `$`',
       '37 : `%` : `%`',
     ]);
 
-    expect(escapeControlCharacters(`hello "world"`)).toEqual(`hello \\"world\\"`);
-    expect(escapeControlCharacters(`hello \\`)).toEqual(`hello \\`);
+    expect(jsonEscape(`hello "world"`)).toEqual(`hello "world"`);
   });
 
-  it('unescapeControlCharacters', () => {
+  it('jsonEscape', () => {
     new Array(38).fill(0).forEach((_, i) => {
       const str = i + ' : `' + String.fromCharCode(i) + '` : `' + String.fromCharCode(i) + '`';
-      return expect(unescapeControlCharacters(escapeControlCharacters(str))).toEqual(str);
+      expect(jsonUnescape(jsonEscape(str))).toEqual(str);
     });
 
-    expect(unescapeControlCharacters(`hello \\"world\\"`)).toEqual(`hello "world"`);
-    expect(unescapeControlCharacters(`hello "world"`)).toEqual(`hello "world"`);
-    expect(unescapeControlCharacters(`hello \\`)).toEqual(`hello \\`);
+    expect(jsonUnescape(`hello "world"`)).toEqual(`hello "world"`);
   });
 });

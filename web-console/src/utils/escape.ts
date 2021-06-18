@@ -16,30 +16,16 @@
  * limitations under the License.
  */
 
-export function escapeControlCharacters(str: string): string {
+export function jsonEscape(str: string): string {
   if (typeof str !== 'string') throw new TypeError(`must be a string`);
 
-  const n = str.length;
-  let trailingSlash = false;
-  if ((n - str.replace(/\\+$/, '').length) % 2 === 1) {
-    // String ends with an odd number of '\' on the end
-    trailingSlash = true;
-    str = str.substr(0, str.length - 1);
-  }
-
   const json = JSON.stringify(str);
-  let escaped = json.substr(1, json.length - 2);
-  if (trailingSlash) escaped += '\\';
-
-  return escaped;
+  return json.substr(1, json.length - 2).replace(/\\"/g, '"');
 }
 
-export function unescapeControlCharacters(str: string): string {
+export function jsonUnescape(str: string): string {
   // Replace every " (and \") with \" so that parsing `"hi" there` would not fail as a string
   str = str.replace(/\\?"/g, '\\"');
-
-  // Replace \ at the end with \\
-  str = str.replace(/\\$/, '\\\\');
 
   return JSON.parse('"' + str + '"');
 }
