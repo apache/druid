@@ -112,6 +112,7 @@ public class OrcReaderTest
             ImmutableList.of(
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_int", "$.middle.list[1].int1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_intlist", "$.middle.list[*].int1"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_middleListLength", "$.middle.list.length()"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "list_struct_string", "$.list[0].string1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "map_struct_int", "$.map.chani.int1")
             )
@@ -145,6 +146,9 @@ public class OrcReaderTest
       Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
       Assert.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
       Assert.assertEquals("good", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
+
+      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_intlistLength")));
+      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_middleListLength")));
       Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
 
       while (iterator.hasNext()) {
