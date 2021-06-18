@@ -198,7 +198,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
         null,
         new LocalInputSource(new File("tmp"), "test_*"),
         new CsvInputFormat(Arrays.asList("ts", "dim", "val"), null, null, false, 0),
-        false
+        false,
+        null
     );
 
     // For dataSchema.granularitySpec
@@ -253,11 +254,13 @@ public class ParallelIndexSupervisorTaskSerdeTest
           null,
           null,
           null,
+          null,
           partitionsSpec,
           null,
           null,
           null,
           forceGuaranteedRollup,
+          null,
           null,
           null,
           null,

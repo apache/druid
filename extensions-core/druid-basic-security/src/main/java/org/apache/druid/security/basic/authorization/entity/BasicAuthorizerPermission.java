@@ -119,4 +119,13 @@ public class BasicAuthorizerPermission
                             : 0);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "BasicAuthorizerPermission{" +
+           "resourceAction=" + resourceAction +
+           ", resourceNamePattern=" + resourceNamePattern +
+           '}';
+  }
 }

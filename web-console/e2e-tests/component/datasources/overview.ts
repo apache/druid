@@ -124,7 +124,7 @@ export class DatasourcesOverview {
     }
 
     const editActions = await this.page.$$('span[icon=wrench]');
-    editActions[index].click();
+    await editActions[index].click();
     await this.waitForPopupMenu();
   }
 

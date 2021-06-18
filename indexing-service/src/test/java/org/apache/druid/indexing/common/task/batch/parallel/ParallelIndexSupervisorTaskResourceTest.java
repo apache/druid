@@ -108,6 +108,12 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
   private TestSupervisorTask task;
 
+  public ParallelIndexSupervisorTaskResourceTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @After
   public void teardown()
   {
@@ -123,7 +129,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             new TestInputSource(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
             new NoopInputFormat(),
-            false
+            false,
+            null
         )
     );
     getIndexingServiceClient().runTask(task.getId(), task);
@@ -428,7 +435,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             NUM_SUB_TASKS,
+            null,
             null,
             null,
             null,
@@ -547,7 +556,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().isAppendToExisting()
+                  getIngestionSchema().getIOConfig().isAppendToExisting(),
+                  null
               ),
               getIngestionSchema().getTuningConfig()
           ),
@@ -586,6 +596,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       final TestSubTask subTask = new TestSubTask(
           getGroupId(),
           getSupervisorTaskId(),
+          getId(),
           numAttempts,
           getIngestionSpec(),
           getContext()
@@ -629,6 +640,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     TestSubTask(
         String groupId,
         String supervisorTaskId,
+        String subtaskSpecId,
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
@@ -639,6 +651,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           groupId,
           null,
           supervisorTaskId,
+          subtaskSpecId,
           numAttempts,
           ingestionSchema,
           context
@@ -665,19 +678,20 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           .getGivenOrDefaultPartitionsSpec();
       final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
           toolbox,
-          getId(),
+          getSubtaskSpecId(),
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
           getIngestionSchema().getIOConfig().isAppendToExisting(),
-          partitionsSpec
+          partitionsSpec,
+          true
       );
 
       final SegmentIdWithShardSpec segmentIdentifier = segmentAllocator.allocate(
           new MapBasedInputRow(DateTimes.of("2017-01-01"), Collections.emptyList(), Collections.emptyMap()),
-          getId(),
+          getSubtaskSpecId(),
           null,
-          true
+          false
       );
 
       final DataSegment segment = new DataSegment(

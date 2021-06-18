@@ -1208,6 +1208,16 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Action.WRITE
     );
 
+    ResourceAction viewR = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.READ
+    );
+
+    ResourceAction viewW = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.WRITE
+    );
+
     ResourceAction configR = new ResourceAction(
         new Resource(".*", ResourceType.CONFIG),
         Action.READ
@@ -1228,6 +1238,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Action.WRITE
     );
 
-    return Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
+    return Lists.newArrayList(datasourceR, datasourceW, viewR, viewW, configR, configW, stateR, stateW);
   }
 }

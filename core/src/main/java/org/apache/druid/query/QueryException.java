@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;
@@ -44,8 +45,9 @@ public class QueryException extends RuntimeException
     this.host = host;
   }
 
+  @VisibleForTesting
   @JsonCreator
-  protected QueryException(
+  public QueryException(
       @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
       @JsonProperty("errorClass") @Nullable String errorClass,

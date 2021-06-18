@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -55,7 +57,6 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -79,7 +80,7 @@ import java.util.concurrent.TimeoutException;
  * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexTaskRunner} instead of
  * publishing on its own.
  */
-public class SinglePhaseSubTask extends AbstractBatchIndexTask
+public class SinglePhaseSubTask extends AbstractBatchSubtask
 {
   public static final String TYPE = "single_phase_sub_task";
   public static final String OLD_TYPE_NAME = "index_sub";
@@ -89,6 +90,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -98,7 +100,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * the segment granularity of existing segments until the task reads all data because we don't know what segments
    * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
    * are missing and force to use timeChunk lock.
-   *
+   * <p>
    * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
    * in the task logs.
    */
@@ -111,6 +113,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
@@ -128,14 +132,15 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       throw new UnsupportedOperationException("Guaranteed rollup is not supported");
     }
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
-                                           && !ingestionSchema.getDataSchema()
-                                                              .getGranularitySpec()
-                                                              .bucketIntervals()
-                                                              .isPresent();
+                                           && ingestionSchema.getDataSchema()
+                                                             .getGranularitySpec()
+                                                             .inputIntervals()
+                                                             .isEmpty();
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
@@ -152,7 +157,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   {
     return determineLockGranularityAndTryLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -172,6 +177,13 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   public String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @Override
+  @JsonProperty
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Override
@@ -263,7 +275,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
-   *
+   * <p>
    * At the end of this method, all the remaining segments are published.
    *
    * @return true if generated segments are successfully published, otherwise false
@@ -291,15 +303,25 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
-    final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
+    final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
+    final boolean useLineageBasedSegmentAllocation = getContextValue(
+        SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
+        SinglePhaseParallelIndexTaskRunner.LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
+    );
+    // subtaskSpecId is used as the sequenceName, so that retry tasks for the same spec
+    // can allocate the same set of segments.
+    final String sequenceName = useLineageBasedSegmentAllocation
+                                ? Preconditions.checkNotNull(subtaskSpecId, "subtaskSpecId")
+                                : getId();
+    final SegmentAllocatorForBatch segmentAllocator = SegmentAllocators.forLinearPartitioning(
         toolbox,
-        getId(),
+        sequenceName,
         new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         getIngestionSchema().getDataSchema(),
         getTaskLockHelper(),
         ingestionSchema.getIOConfig().isAppendToExisting(),
-        partitionsSpec
+        partitionsSpec,
+        useLineageBasedSegmentAllocation
     );
 
     final RowIngestionMeters rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
@@ -355,7 +377,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
 
         // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
         // (in append mode) or may be created on our own authority (in overwrite mode).
-        final String sequenceName = getId();
         final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
         if (addResult.isOk()) {

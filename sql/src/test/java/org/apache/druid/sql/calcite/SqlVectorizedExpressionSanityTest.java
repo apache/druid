@@ -40,8 +40,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -85,7 +83,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT TIME_FLOOR(__time, 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1H'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1",
       "SELECT (long1 * long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
-      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT string1 + string2, COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT CONCAT(string1, '-', string2), string3, COUNT(*) FROM foo GROUP BY 1,2 ORDER BY 3",
+      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
@@ -165,7 +166,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
 
-
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException, RelConversionException, SqlParseException
   {
@@ -177,12 +177,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         QueryContexts.VECTORIZE_KEY, "false",
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
     );
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlanner(vector, ImmutableList.of(), authenticationResult);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlanner(nonvector, ImmutableList.of(), authenticationResult)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan(query);
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan(query);

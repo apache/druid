@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
@@ -54,6 +55,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -2090,6 +2092,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 false,
                 true,
                 true,
+                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
                 QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
             ),
             joinableClauses.getJoinableClauses(),
@@ -2169,6 +2172,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 true,
                 false,
                 true,
+                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
                 QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
             ),
             joinableClauses.getJoinableClauses(),
@@ -2589,6 +2593,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 true,
                 true,
                 true,
+                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
                 QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
             ),
             joinableClauses,
@@ -2649,5 +2654,30 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                   .usingGetClass()
                   .withNonnullFields("virtualColumns")
                   .verify();
+  }
+
+  @Test
+  public void test_filterPushDown_baseTableFilter()
+  {
+    Filter originalFilter = new SelectorFilter("channel", "#en.wikipedia");
+    Filter baseTableFilter = new SelectorFilter("countryIsoCode", "CA");
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        originalFilter,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        Filters.and(Arrays.asList(originalFilter, baseTableFilter)),
+        null,
+        ImmutableSet.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseTableFilter);
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 }

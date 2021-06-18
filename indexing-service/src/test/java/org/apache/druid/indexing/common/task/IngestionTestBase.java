@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -47,6 +48,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -102,6 +104,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
@@ -311,7 +314,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            null,
+            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,

@@ -21,11 +21,13 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,11 +46,17 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -1682,7 +1690,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(makeContext(ImmutableMap.of("skipEmptyBuckets", "true")))
+                                  .context(makeContext(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, "true")))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
@@ -2199,10 +2207,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Collections.singletonList(new FilteredAggregatorFactory(
-                        new CountAggregatorFactory("filteredAgg"),
-                        new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
-                    ))
+                    ImmutableList.of(
+                        new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("filteredAgg"),
+                            new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
+                        )
+                    )
                 )
             )
         )
@@ -2216,13 +2226,81 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "filteredAgg", 18L,
-                    "addRowsIndexConstant", 12486.361190795898d,
-                    "index", 12459.361190795898d,
-                    "uniques", 9.019833517963864d,
-                    "rows", 26L
+                ImmutableMap.<String, Object>builder()
+                            .put("filteredAgg", 18L)
+                            .put("addRowsIndexConstant", 12486.361190795898d)
+                            .put("index", 12459.361190795898d)
+                            .put("uniques", 9.019833517963864d)
+                            .put("rows", 26L)
+                            .build()
+            )
+        )
+    );
+
+    assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
+  {
+    // can't vectorize if expression
+    cannotVectorize();
+    TimeseriesQuery query = Druids
+        .newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    aggregatorFactoryList,
+                    ImmutableList.of(
+                        new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("filteredAgg"),
+                            new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
+                        ),
+                        new LongSumAggregatorFactory(
+                            "altLongCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        ),
+                        new DoubleSumAggregatorFactory(
+                            "altDoubleCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        ),
+                        new FloatSumAggregatorFactory(
+                            "altFloatCount",
+                            null,
+                            "if (market == 'spot', 1, 0)",
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
                 )
+            )
+        )
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+        .descending(descending)
+        .context(makeContext())
+        .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                            .put("filteredAgg", 18L)
+                            .put("addRowsIndexConstant", 12486.361190795898d)
+                            .put("index", 12459.361190795898d)
+                            .put("uniques", 9.019833517963864d)
+                            .put("rows", 26L)
+                            .put("altLongCount", 18L)
+                            .put("altDoubleCount", 18.0)
+                            .put("altFloatCount", 18.0f)
+                            .build()
             )
         )
     );
@@ -2554,7 +2632,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       makeContext(
                                           ImmutableMap.of(
                                               TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              "skipEmptyBuckets", true
+                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
                                           )
                                       )
                                   )
@@ -2685,7 +2763,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       makeContext(
                                           ImmutableMap.of(
                                               TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              "skipEmptyBuckets", true
+                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
                                           )
                                       )
                                   )
@@ -2926,6 +3004,219 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableMap.of(
                     "myTimestamp", aprilSecond.getMillis(),
                     "timestampInPostAgg", aprilSecond.getMillis()
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithExpressionAggregator()
+  {
+    // expression agg cannot vectorize
+    cannotVectorize();
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_count",
+                                              ImmutableSet.of(),
+                                              null,
+                                              "0",
+                                              null,
+                                              "__acc + 1",
+                                              "__acc + diy_count",
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_sum",
+                                              ImmutableSet.of("index"),
+                                              null,
+                                              "0.0",
+                                              null,
+                                              "__acc + index",
+                                              null,
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "diy_decomposed_sum",
+                                              ImmutableSet.of("index"),
+                                              null,
+                                              "0.0",
+                                              "<DOUBLE>[]",
+                                              "__acc + index",
+                                              "array_concat(__acc, diy_decomposed_sum)",
+                                              null,
+                                              "fold((x, acc) -> x + acc, o, 0.0)",
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          ),
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "array_agg_distinct",
+                                              ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+                                              "acc",
+                                              "[]",
+                                              null,
+                                              "array_set_add(acc, market)",
+                                              "array_set_add_all(acc, array_agg_distinct)",
+                                              null,
+                                              null,
+                                              null,
+                                              TestExprMacroTable.INSTANCE
+                                          )
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .context(makeContext())
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "diy_count", 13L,
+                    "diy_sum", 6626.151569,
+                    "diy_decomposed_sum", 6626.151569,
+                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "diy_count", 13L,
+                    "diy_sum", 5833.209718,
+                    "diy_decomposed_sum", 5833.209718,
+                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithExpressionAggregatorTooBig()
+  {
+    // expression agg cannot vectorize
+    cannotVectorize();
+    if (!vectorize) {
+      // size bytes when it overshoots varies slightly between algorithms
+      expectedException.expectMessage("Unable to serialize [STRING_ARRAY]");
+    }
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.DAY)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(
+                                      Collections.singletonList(
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "array_agg_distinct",
+                                              ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+                                              "acc",
+                                              "[]",
+                                              null,
+                                              "array_set_add(acc, market)",
+                                              "array_set_add_all(acc, array_agg_distinct)",
+                                              null,
+                                              null,
+                                              HumanReadableBytes.valueOf(10),
+                                              TestExprMacroTable.INSTANCE
+                                          )
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .context(makeContext())
+                                  .build();
+
+    runner.run(QueryPlus.wrap(query)).toList();
+  }
+
+  @Test
+  public void testTimeseriesCardinalityAggOnMultiStringExpression()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .virtualColumns(
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+        )
+        .aggregators(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "numVals",
+                ImmutableList.of(DefaultDimensionSpec.of("v0")),
+                false
+            )
+        )
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    26L,
+                    "numVals",
+                    13.041435202975777d
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesCardinalityAggOnHyperUnique()
+  {
+    // Cardinality aggregator on complex columns (like hyperUnique) returns 0.
+
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "cardinality",
+                ImmutableList.of(DefaultDimensionSpec.of("quality_uniques")),
+                false
+            ),
+            new HyperUniquesAggregatorFactory("hyperUnique", "quality_uniques", false, false)
+        )
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    26L,
+                    "cardinality",
+                    NullHandling.replaceWithDefault() ? 1.0002442201269182 : 0.0d,
+                    "hyperUnique",
+                    9.019833517963864d
                 )
             )
         )

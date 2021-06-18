@@ -88,6 +88,21 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsInNodeLoadingQueue;
   private final boolean pauseCoordination;
 
+  /**
+   * This decides whether additional replication is needed for segments that have failed to load due to a load timeout.
+   * When enabled, the coordinator will attempt to replicate the failed segment on a different historical server.
+   * The historical which failed to load the segment may still load the segment later. Therefore, enabling this setting
+   * works better if there are a few slow historicals in the cluster and segment availability needs to be sped up.
+   */
+  private final boolean replicateAfterLoadTimeout;
+
+  /**
+   * This is the maximum number of non-primary segment replicants to load per Coordination run. This number can
+   * be set to put a hard upper limit on the number of replicants loaded. It is a tool that can help prevent
+   * long delays in new data loads after events such as a Historical server leaving the cluster.
+   */
+  private final int maxNonPrimaryReplicantsToLoad;
+
   private static final Logger log = new Logger(CoordinatorDynamicConfig.class);
 
   @JsonCreator
@@ -120,7 +135,9 @@ public class CoordinatorDynamicConfig
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
-      @JsonProperty("pauseCoordination") boolean pauseCoordination
+      @JsonProperty("pauseCoordination") boolean pauseCoordination,
+      @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
+      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -166,6 +183,23 @@ public class CoordinatorDynamicConfig
       );
     }
     this.pauseCoordination = pauseCoordination;
+    this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+
+    if (maxNonPrimaryReplicantsToLoad == null) {
+      log.debug(
+          "maxNonPrimaryReplicantsToLoad was null! This is likely because your metastore does not "
+          + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+          + "to the Druid default of %d. It is recommended that you re-submit your dynamic config with your "
+          + "desired value for maxNonPrimaryReplicantsToLoad",
+          Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
+      );
+      maxNonPrimaryReplicantsToLoad = Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD;
+    }
+    Preconditions.checkArgument(
+        maxNonPrimaryReplicantsToLoad >= 0,
+        "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
+    );
+    this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -320,6 +354,19 @@ public class CoordinatorDynamicConfig
     return pauseCoordination;
   }
 
+  @JsonProperty
+  public boolean getReplicateAfterLoadTimeout()
+  {
+    return replicateAfterLoadTimeout;
+  }
+
+  @Min(0)
+  @JsonProperty
+  public int getMaxNonPrimaryReplicantsToLoad()
+  {
+    return maxNonPrimaryReplicantsToLoad;
+  }
+
   @Override
   public String toString()
   {
@@ -341,6 +388,8 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
            ", pauseCoordination=" + pauseCoordination +
+           ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
+           ", maxNonPrimaryReplicantsToLoad=" + maxNonPrimaryReplicantsToLoad +
            '}';
   }
 
@@ -402,6 +451,12 @@ public class CoordinatorDynamicConfig
     if (pauseCoordination != that.pauseCoordination) {
       return false;
     }
+    if (replicateAfterLoadTimeout != that.replicateAfterLoadTimeout) {
+      return false;
+    }
+    if (maxNonPrimaryReplicantsToLoad != that.maxNonPrimaryReplicantsToLoad) {
+      return false;
+    }
     return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
@@ -424,7 +479,8 @@ public class CoordinatorDynamicConfig
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
-        pauseCoordination
+        pauseCoordination,
+        maxNonPrimaryReplicantsToLoad
     );
   }
 
@@ -449,6 +505,8 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
+    private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
+    private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -466,6 +524,8 @@ public class CoordinatorDynamicConfig
     private Object decommissioningNodes;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
     private Boolean pauseCoordination;
+    private Boolean replicateAfterLoadTimeout;
+    private Integer maxNonPrimaryReplicantsToLoad;
 
     public Builder()
     {
@@ -490,7 +550,9 @@ public class CoordinatorDynamicConfig
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
         @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove")
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
-        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination
+        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
+        @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
+        @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -510,6 +572,8 @@ public class CoordinatorDynamicConfig
       this.decommissioningNodes = decommissioningNodes;
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
       this.pauseCoordination = pauseCoordination;
+      this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -602,6 +666,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withReplicateAfterLoadTimeout(boolean replicateAfterLoadTimeout)
+    {
+      this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+      return this;
+    }
+
+    public Builder withMaxNonPrimaryReplicantsToLoad(int maxNonPrimaryReplicantsToLoad)
+    {
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -629,7 +705,9 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination
+          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination,
+          replicateAfterLoadTimeout == null ? DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null ? DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD : maxNonPrimaryReplicantsToLoad
       );
     }
 
@@ -663,7 +741,9 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination
+          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination,
+          replicateAfterLoadTimeout == null ? defaults.getReplicateAfterLoadTimeout() : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null ? defaults.getMaxNonPrimaryReplicantsToLoad() : maxNonPrimaryReplicantsToLoad
       );
     }
   }

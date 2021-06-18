@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -120,6 +121,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
       DataSourceMetadata oldCommitMetadata,
       DataSourceMetadata newCommitMetadata
   )
@@ -137,6 +139,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
   }
+
+  @Override
+  public int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources)
+  {
+    throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
+  }
+
 
   @Override
   public SegmentIdWithShardSpec allocatePendingSegment(

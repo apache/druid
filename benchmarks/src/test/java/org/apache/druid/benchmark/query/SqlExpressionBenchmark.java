@@ -36,8 +36,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -176,7 +174,11 @@ public class SqlExpressionBenchmark
       // 24: group by long expr with non-expr agg
       "SELECT (long1 * long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
       // 25: group by non-expr with expr agg
-      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+      "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 26: group by string expr with non-expr agg
+      "SELECT CONCAT(string2, '-', long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
+      // 27: group by string expr with expr agg
+      "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2"
   );
 
   @Param({"5000000"})
@@ -213,7 +215,9 @@ public class SqlExpressionBenchmark
       "22",
       "23",
       "24",
-      "25"
+      "25",
+      "26",
+      "27"
   })
   private String query;
 
@@ -290,10 +294,9 @@ public class SqlExpressionBenchmark
         QueryContexts.VECTORIZE_KEY, vectorize,
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(context, ImmutableList.of(), authenticationResult)) {
-      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan(sql);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);

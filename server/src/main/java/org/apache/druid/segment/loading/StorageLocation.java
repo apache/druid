@@ -22,7 +22,7 @@ package org.apache.druid.segment.loading;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -41,7 +41,7 @@ import java.util.Set;
 */
 public class StorageLocation
 {
-  private static final Logger log = new Logger(StorageLocation.class);
+  private static final EmittingLogger log = new EmittingLogger(StorageLocation.class);
 
   private final File path;
   private final long maxSizeBytes;
@@ -118,6 +118,33 @@ public class StorageLocation
   }
 
   /**
+   * Reserves space to store the given segment, only if it has not been done already. This can be used
+   * when segment is already downloaded on the disk. Unlike {@link #reserve(String, DataSegment)}, this function
+   * skips the check on disk availability. We also account for segment usage even if available size dips below 0.
+   * Such a situation indicates a configuration problem or a bug and we don't let segment loading fail because
+   * of this.
+   */
+  public synchronized void maybeReserve(String segmentFilePathToAdd, DataSegment segment)
+  {
+    final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
+    if (files.contains(segmentFileToAdd)) {
+      // Already reserved
+      return;
+    }
+    files.add(segmentFileToAdd);
+    currSizeBytes += segment.getSize();
+    if (availableSizeBytes() < 0) {
+      log.makeAlert(
+          "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+          getPath(),
+          availableSizeBytes(),
+          segment.getId(),
+          segment.getSize()
+      ).emit();
+    }
+  }
+
+  /**
    * Reserves space to store the given segment.
    * If it succeeds, it returns a file for the given segmentFilePathToAdd in this storage location.
    * Returns null otherwise.
@@ -136,6 +163,16 @@ public class StorageLocation
     } else {
       return null;
     }
+  }
+
+  public synchronized boolean release(String segmentFilePath, long segmentSize)
+  {
+    final File segmentFile = new File(path, segmentFilePath);
+    if (files.remove(segmentFile)) {
+      currSizeBytes -= segmentSize;
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -184,5 +221,12 @@ public class StorageLocation
   public synchronized long currSizeBytes()
   {
     return currSizeBytes;
+  }
+
+  @VisibleForTesting
+  synchronized boolean contains(String relativePath)
+  {
+    final File segmentFileToAdd = new File(path, relativePath);
+    return files.contains(segmentFileToAdd);
   }
 }

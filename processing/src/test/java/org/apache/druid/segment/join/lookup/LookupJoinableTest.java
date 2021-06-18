@@ -21,6 +21,8 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -35,12 +37,13 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
-public class LookupJoinableTest
+public class LookupJoinableTest extends NullHandlingTest
 {
   private static final String UNKNOWN_COLUMN = "UNKNOWN_COLUMN";
   private static final String SEARCH_KEY_VALUE = "SEARCH_KEY_VALUE";
@@ -56,9 +59,17 @@ public class LookupJoinableTest
   @Before
   public void setUp()
   {
+    final Set<String> keyValues = new HashSet<>();
+    keyValues.add("foo");
+    keyValues.add("bar");
+    keyValues.add("");
+    keyValues.add(null);
+
     Mockito.doReturn(SEARCH_VALUE_VALUE).when(extractor).apply(SEARCH_KEY_VALUE);
     Mockito.doReturn(ImmutableList.of(SEARCH_KEY_VALUE)).when(extractor).unapply(SEARCH_VALUE_VALUE);
     Mockito.doReturn(ImmutableList.of()).when(extractor).unapply(SEARCH_VALUE_UNKNOWN);
+    Mockito.doReturn(true).when(extractor).canGetKeySet();
+    Mockito.doReturn(keyValues).when(extractor).keySet();
     target = LookupJoinable.wrap(extractor);
   }
 
@@ -124,7 +135,8 @@ public class LookupJoinableTest
             SEARCH_KEY_VALUE,
             LookupColumnSelectorFactory.VALUE_COLUMN,
             0,
-            false);
+            false
+        );
 
     Assert.assertFalse(correlatedValues.isPresent());
   }
@@ -138,10 +150,12 @@ public class LookupJoinableTest
             SEARCH_KEY_VALUE,
             UNKNOWN_COLUMN,
             0,
-            false);
+            false
+        );
 
     Assert.assertFalse(correlatedValues.isPresent());
   }
+
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
   {
@@ -150,7 +164,8 @@ public class LookupJoinableTest
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         0,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
@@ -162,7 +177,8 @@ public class LookupJoinableTest
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
@@ -174,7 +190,8 @@ public class LookupJoinableTest
         SEARCH_KEY_NULL_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(Collections.singleton(null)), correlatedValues);
   }
 
@@ -186,14 +203,16 @@ public class LookupJoinableTest
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         10,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
     correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
@@ -205,7 +224,8 @@ public class LookupJoinableTest
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
@@ -217,7 +237,8 @@ public class LookupJoinableTest
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
@@ -234,7 +255,8 @@ public class LookupJoinableTest
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         0,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
@@ -246,7 +268,46 @@ public class LookupJoinableTest
         SEARCH_VALUE_UNKNOWN,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+        LookupColumnSelectorFactory.VALUE_COLUMN,
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(Optional.empty(), values);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+        LookupColumnSelectorFactory.KEY_COLUMN,
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Optional.of(
+            NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", "")
+        ),
+        values
+    );
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+        LookupColumnSelectorFactory.KEY_COLUMN,
+        1
+    );
+
+    Assert.assertEquals(Optional.empty(), values);
   }
 }

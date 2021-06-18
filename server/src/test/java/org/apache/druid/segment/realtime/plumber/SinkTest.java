@@ -68,6 +68,7 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         100,
         null,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -223,6 +224,7 @@ public class SinkTest extends InitializedNullHandlingTest
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         null,
         100,
+        null,
         null,
         new Period("P1Y"),
         null,

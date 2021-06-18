@@ -47,12 +47,12 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -143,6 +143,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     }
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         new AtomicLong(),
         analysis.getBaseQuery().orElse(query)
@@ -259,11 +260,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       final List<WindowedSegment> retVal = new ArrayList<>();
 
       for (SegmentDescriptor spec : specs) {
-        final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+        final PartitionChunk<ReferenceCountingSegment> entry = timeline.findChunk(
             spec.getInterval(),
-            spec.getVersion()
+            spec.getVersion(),
+            spec.getPartitionNumber()
         );
-        retVal.add(new WindowedSegment(entry.getChunk(spec.getPartitionNumber()).getObject(), spec.getInterval()));
+        retVal.add(new WindowedSegment(entry.getObject(), spec.getInterval()));
       }
 
       return retVal;

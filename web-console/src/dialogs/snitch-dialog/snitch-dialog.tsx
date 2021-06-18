@@ -179,7 +179,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     if (showFinalStep) return this.renderFinalStep();
     if (showHistory) return this.renderHistoryDialog();
 
-    const propsClone: any = Object.assign({}, this.props);
+    const propsClone: any = { ...this.props };
     propsClone.className = classNames('snitch-dialog', propsClone.className);
     return (
       <Dialog isOpen {...propsClone} canOutsideClickClose={false}>

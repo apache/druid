@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -37,7 +38,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable
   private final InputFormat inputFormat; // nullable for backward compatibility
   private final Integer replicas;
-  private final Integer taskCount;
+  private Integer taskCount;
   private final Duration taskDuration;
   private final Duration startDelay;
   private final Duration period;
@@ -46,6 +47,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
+  @Nullable private final AutoScalerConfig autoScalerConfig;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -59,13 +61,21 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
+      @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.inputFormat = inputFormat;
     this.replicas = replicas != null ? replicas : 1;
-    this.taskCount = taskCount != null ? taskCount : 1;
+    // Could be null
+    this.autoScalerConfig = autoScalerConfig;
+    // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+      this.taskCount = autoScalerConfig.getTaskCountMin();
+    } else {
+      this.taskCount = taskCount != null ? taskCount : 1;
+    }
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
@@ -113,10 +123,22 @@ public abstract class SeekableStreamSupervisorIOConfig
     return replicas;
   }
 
+  @Nullable
+  @JsonProperty
+  public AutoScalerConfig getAutoscalerConfig()
+  {
+    return autoScalerConfig;
+  }
+
   @JsonProperty
   public Integer getTaskCount()
   {
     return taskCount;
+  }
+
+  public void setTaskCount(final int taskCount)
+  {
+    this.taskCount = taskCount;
   }
 
   @JsonProperty

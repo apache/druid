@@ -904,15 +904,17 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectException(
-        IAE.class,
-        "The first argument to the function[round] should be integer or double type but got the type: STRING"
-    );
+    if (!NullHandling.sqlCompatible()) {
+      expectException(
+          IAE.class,
+          "The first argument to the function[round] should be integer or double type but got the type: STRING"
+      );
+    }
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("round(\"s\")"),
-        "IAE Exception"
+        NullHandling.sqlCompatible() ? null : "IAE Exception"
     );
   }
 
@@ -1979,6 +1981,102 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidUnaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"a\")"),
+        -11L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"x\")"),
+        -3L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseComplement(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidUnaryDoubleFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"a\")"),
+        4.9E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"x\")"),
+        1.0E-323
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testOperatorConversionsDruidBinaryLongFn()
+  {
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("a"),
+            testHelper.makeInputRef("b")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"a\",\"b\")"),
+        8L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeInputRef("y")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"x\",\"y\")"),
+        2L
+    );
+
+    testHelper.testExpression(
+        OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
+        ),
+        DruidExpression.fromExpression("bitwiseAnd(\"s\",\"s\")"),
         null
     );
   }

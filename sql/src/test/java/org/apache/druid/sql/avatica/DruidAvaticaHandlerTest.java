@@ -35,6 +35,7 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
@@ -46,7 +47,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
@@ -81,6 +81,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Date;
@@ -101,7 +102,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class DruidAvaticaHandlerTest extends CalciteTestBase
+public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
 {
   private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
   {
@@ -200,20 +201,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     druidMeta = injector.getInstance(DruidMeta.class);
-    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        druidMeta,
-        new DruidNode("dummy", "dummy", false, 1, null, true, false),
-        new AvaticaMonitor()
-    );
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(druidMeta);
     final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    url = StringUtils.format(
-        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-        port,
-        DruidAvaticaHandler.AVATICA_PATH
-    );
+    url = this.getJdbcConnectionString(port);
     client = DriverManager.getConnection(url, "regularUser", "druid");
     superuserClient = DriverManager.getConnection(url, CalciteTests.TEST_SUPERUSER_NAME, "druid");
 
@@ -345,9 +338,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
                                    DUMMY_SQL_QUERY_ID
-                )
+                ),
+                "RESOURCES",
+                "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
             )
         ),
         getRows(resultSet)
@@ -432,6 +427,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
         ),
         getRows(
@@ -498,6 +499,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -884,20 +891,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", false, 1, null, true, false),
-        new AvaticaMonitor()
-    );
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
     final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
-    String smallFrameUrl = StringUtils.format(
-        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
-        port,
-        DruidAvaticaHandler.AVATICA_PATH
-    );
+    String smallFrameUrl = this.getJdbcConnectionString(port);
     Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
 
     final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
@@ -905,6 +904,99 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
     List<Map<String, Object>> rows = getRows(resultSet);
     Assert.assertEquals(2, frames.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("dim1", ""),
+            ImmutableMap.of("dim1", "10.1"),
+            ImmutableMap.of("dim1", "2"),
+            ImmutableMap.of("dim1", "1"),
+            ImmutableMap.of("dim1", "def"),
+            ImmutableMap.of("dim1", "abc")
+        ),
+        rows
+    );
+  }
+
+
+  @Test
+  public void testMinRowsPerFrame() throws Exception
+  {
+    final int minFetchSize = 1000;
+    final AvaticaServerConfig smallFrameConfig = new AvaticaServerConfig()
+    {
+      @Override
+      public int getMaxConnections()
+      {
+        return 2;
+      }
+
+      @Override
+      public int getMaxStatementsPerConnection()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getMinRowsPerFrame()
+      {
+        return minFetchSize;
+      }
+    };
+
+    final PlannerConfig plannerConfig = new PlannerConfig();
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final List<Meta.Frame> frames = new ArrayList<>();
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    DruidMeta smallFrameDruidMeta = new DruidMeta(
+        CalciteTests.createSqlLifecycleFactory(
+            new PlannerFactory(
+                rootSchema,
+                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                operatorTable,
+                macroTable,
+                plannerConfig,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                CalciteTests.getJsonMapper(),
+                CalciteTests.DRUID_SCHEMA_NAME
+            )
+        ),
+        smallFrameConfig,
+        injector
+    )
+    {
+      @Override
+      public Frame fetch(
+          final StatementHandle statement,
+          final long offset,
+          final int fetchMaxRowCount
+      ) throws NoSuchStatementException, MissingResultsException
+      {
+        // overriding fetch allows us to track how many frames are processed after the first frame, and also fetch size
+        Assert.assertEquals(minFetchSize, fetchMaxRowCount);
+        Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
+        frames.add(frame);
+        return frame;
+      }
+    };
+
+    final AbstractAvaticaHandler handler = this.getAvaticaHandler(smallFrameDruidMeta);
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
+    Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
+    smallFrameServer.setHandler(handler);
+    smallFrameServer.start();
+    String smallFrameUrl = this.getJdbcConnectionString(port);
+    Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
+
+    // use a prepared statement because avatica currently ignores fetchSize on the initial fetch of a Statement
+    PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
+    // set a fetch size below the minimum configured threshold
+    statement.setFetchSize(2);
+    final ResultSet resultSet = statement.executeQuery();
+    List<Map<String, Object>> rows = getRows(resultSet);
+    // expect minimum threshold to be used, which should be enough to do this all in first fetch
+    Assert.assertEquals(0, frames.size());
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("dim1", ""),
@@ -1225,6 +1317,37 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testArrayStuffs() throws Exception
+  {
+    PreparedStatement statement = client.prepareStatement(
+        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(d1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo"
+    );
+    final ResultSet resultSet = statement.executeQuery();
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(1, rows.size());
+    Assert.assertTrue(rows.get(0).containsKey("arr1"));
+    Assert.assertTrue(rows.get(0).containsKey("arr2"));
+    Assert.assertTrue(rows.get(0).containsKey("arr3"));
+    Assert.assertTrue(rows.get(0).containsKey("arr4"));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, null, null, null}, (Object[]) rows.get(0).get("arr4"));
+    } else {
+      Assert.assertArrayEquals(new Object[]{"a", null, null, "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, 0L, 0L, 0L}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.0f}, (Object[]) rows.get(0).get("arr4"));
+    }
+  }
+
+  protected abstract String getJdbcConnectionString(int port);
+
+  protected abstract AbstractAvaticaHandler getAvaticaHandler(DruidMeta druidMeta);
+
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException
   {
     return getRows(resultSet, null);
@@ -1240,7 +1363,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         final Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < metaData.getColumnCount(); i++) {
           if (returnKeys == null || returnKeys.contains(metaData.getColumnLabel(i + 1))) {
-            row.put(metaData.getColumnLabel(i + 1), resultSet.getObject(i + 1));
+            Object result = resultSet.getObject(i + 1);
+            if (result instanceof Array) {
+              row.put(metaData.getColumnLabel(i + 1), ((Array) result).getArray());
+            } else {
+              row.put(metaData.getColumnLabel(i + 1), result);
+            }
           }
         }
         rows.add(row);

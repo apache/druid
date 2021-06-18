@@ -20,6 +20,11 @@
 @import '../../../blueprint-overrides/common/colors';
 
 .query-output {
+  &.more-results .-totalPages {
+    // Hide the total page counter as it can be confusing due to the auto limit
+    display: none;
+  }
+
   .ReactTable {
     position: absolute;
     top: 0;

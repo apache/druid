@@ -57,53 +57,41 @@ import { FormGroupWithInfo } from '../../components/form-group-with-info/form-gr
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addTimestampTransform,
+  adjustForceGuaranteedRollup,
   adjustId,
+  cleanSpec,
+  computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
-  FILTER_FIELDS,
-  FILTERS_FIELDS,
-  FLATTEN_FIELD_FIELDS,
-  getDimensionSpecName,
-  getIssueWithSpec,
-  getMetricSpecName,
-  getTimestampExpressionFields,
-  getTimestampSchema,
-  INPUT_FORMAT_FIELDS,
-  issueWithSampleData,
-  KNOWN_FILTER_TYPES,
-  METRIC_SPEC_FIELDS,
-  PRIMARY_PARTITION_RELATED_FORM_FIELDS,
-  removeTimestampTransform,
-  TIMESTAMP_SPEC_FIELDS,
-  TimestampSpec,
-  Transform,
-  TRANSFORM_FIELDS,
-  updateSchemaWithSample,
-} from '../../druid-models';
-import {
-  adjustForceGuaranteedRollup,
-  cleanSpec,
-  computeFlattenPathsForData,
   DimensionMode,
   DimensionSpec,
   DruidFilter,
   fillDataSourceNameIfNeeded,
   fillInputFormatIfNeeded,
+  FILTER_FIELDS,
+  FILTERS_FIELDS,
+  FLATTEN_FIELD_FIELDS,
   FlattenField,
   getDimensionMode,
+  getDimensionSpecName,
   getIngestionComboType,
   getIngestionImage,
   getIngestionTitle,
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
+  getIssueWithSpec,
+  getMetricSpecName,
   getRequiredModule,
   getRollup,
   getSecondaryPartitionRelatedFormFields,
   getSpecType,
+  getTimestampExpressionFields,
+  getTimestampSchema,
   getTuningFormFields,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  INPUT_FORMAT_FIELDS,
   InputFormat,
   inputFormatCanFlatten,
   invalidIoConfig,
@@ -112,16 +100,27 @@ import {
   isDruidSource,
   isEmptyIngestionSpec,
   issueWithIoConfig,
+  issueWithSampleData,
   isTask,
   joinFilter,
+  KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
+  METRIC_SPEC_FIELDS,
   MetricSpec,
   normalizeSpec,
   NUMERIC_TIME_FORMATS,
   possibleDruidFormatForValues,
+  PRIMARY_PARTITION_RELATED_FORM_FIELDS,
+  removeTimestampTransform,
   splitFilter,
+  TIME_COLUMN,
+  TIMESTAMP_SPEC_FIELDS,
+  TimestampSpec,
+  Transform,
+  TRANSFORM_FIELDS,
   TuningConfig,
   updateIngestionType,
+  updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
 import { getLink } from '../../links';
@@ -417,13 +416,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { initTaskId, initSupervisorId } = this.props;
     const { spec } = this.state;
 
-    this.getOverlordModules();
+    void this.getOverlordModules();
     if (initTaskId) {
       this.updateStep('loading');
-      this.getTaskJson();
+      void this.getTaskJson();
     } else if (initSupervisorId) {
       this.updateStep('loading');
-      this.getSupervisorJson();
+      void this.getSupervisorJson();
     } else if (isEmptyIngestionSpec(spec)) {
       this.updateStep('welcome');
     } else {
@@ -485,11 +484,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   }
 
-  private updateStep = (newStep: Step) => {
+  private readonly updateStep = (newStep: Step) => {
     this.setState(state => ({ step: newStep, specPreview: state.spec }));
   };
 
-  private updateSpec = (newSpec: IngestionSpec) => {
+  private readonly updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
@@ -500,18 +499,18 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(newSpec));
   };
 
-  private updateSpecPreview = (newSpecPreview: IngestionSpec) => {
+  private readonly updateSpecPreview = (newSpecPreview: IngestionSpec) => {
     this.setState({ specPreview: newSpecPreview });
   };
 
-  private applyPreviewSpec = () => {
+  private readonly applyPreviewSpec = () => {
     this.setState(({ spec, specPreview }) => {
       localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(specPreview));
-      return { spec: spec === specPreview ? Object.assign({}, specPreview) : specPreview }; // If applying again, make a shallow copy to force a refresh
+      return { spec: spec === specPreview ? { ...specPreview } : specPreview }; // If applying again, make a shallow copy to force a refresh
     });
   };
 
-  private revertPreviewSpec = () => {
+  private readonly revertPreviewSpec = () => {
     this.setState(({ spec }) => ({ specPreview: spec }));
   };
 
@@ -552,16 +551,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       case 'schema':
         return this.queryForSchema(initRun);
+
+      case 'loading':
+      case 'partition':
+      case 'publish':
+      case 'tuning':
+      case 'spec':
+        return;
     }
   }
 
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
     return (
-      <Card className={'spec-card'} interactive onClick={onClick} elevation={1}>
+      <Card className="spec-card" interactive onClick={onClick} elevation={1}>
         <Icon className="spec-card-icon" icon={icon} iconSize={30} />
-        <div className={'spec-card-header'}>
+        <div className="spec-card-header">
           {title}
-          <div className={'spec-card-caption'}>{caption}</div>
+          <div className="spec-card-caption">{caption}</div>
         </div>
       </Card>
     );
@@ -706,7 +712,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     comboType: IngestionComboTypeWithExtra,
     disabled?: boolean,
   ): JSX.Element | undefined {
-    const { overlordModules, selectedComboType } = this.state;
+    const { overlordModules, selectedComboType, spec } = this.state;
     if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
     const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
@@ -716,10 +722,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         elevation={1}
-        onClick={() => {
-          this.setState({
-            selectedComboType: selectedComboType !== comboType ? comboType : undefined,
-          });
+        onClick={e => {
+          if (e.altKey && e.shiftKey) {
+            this.updateSpec(updateIngestionType(spec, comboType as any));
+            this.updateStep('connect');
+          } else {
+            this.setState({
+              selectedComboType: selectedComboType !== comboType ? comboType : undefined,
+            });
+          }
         }}
       >
         <img
@@ -1010,7 +1021,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           Please make sure that the
-          <Code>"{requiredModule}"</Code> extension is included in the <Code>loadList</Code>.
+          <Code>&quot;{requiredModule}&quot;</Code> extension is included in the{' '}
+          <Code>loadList</Code>.
         </p>
         <p>
           For more information please refer to the{' '}
@@ -1023,17 +1035,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private handleResetConfirm = () => {
+  private readonly handleResetConfirm = () => {
     this.setState({ showResetConfirm: true });
   };
 
-  private handleResetSpec = () => {
+  private readonly handleResetSpec = () => {
     this.setState({ showResetConfirm: false, continueToSpec: true });
     this.updateSpec({} as any);
     this.updateStep('welcome');
   };
 
-  private handleContinueSpec = () => {
+  private readonly handleContinueSpec = () => {
     this.setState({ continueToSpec: true });
   };
 
@@ -1104,7 +1116,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (inlineMode) {
       mainFill = (
         <TextArea
@@ -1221,8 +1233,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
             if (druidSource) {
               let newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', {
-                column: '__time',
-                format: 'iso',
+                column: TIME_COLUMN,
+                format: 'millis',
               });
 
               if (typeof inputData.rollup === 'boolean') {
@@ -1247,7 +1259,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   newSpec,
                   'spec.dataSchema.dimensionsSpec.dimensions',
                   Object.keys(inputData.columns)
-                    .filter(k => k !== '__time' && !aggregators[k])
+                    .filter(k => k !== TIME_COLUMN && !aggregators[k])
                     .map(k => ({
                       name: k,
                       type: String(inputData.columns![k].type || 'string').toLowerCase(),
@@ -1354,7 +1366,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const canFlatten = inputFormatCanFlatten(inputFormat);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (parserQueryState.isInit()) {
       mainFill = (
         <CenterMessage>
@@ -1444,9 +1456,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             </FormGroup>
-          ) : (
-            undefined
-          )}
+          ) : undefined}
         </div>
         {this.renderNextBar({
           disabled: !parserQueryState.data,
@@ -1455,7 +1465,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             let possibleTimestampSpec: TimestampSpec;
             if (isDruidSource(spec)) {
               possibleTimestampSpec = {
-                column: '__time',
+                column: TIME_COLUMN,
                 format: 'auto',
               };
             } else {
@@ -1478,7 +1488,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onFlattenFieldSelect = (field: FlattenField, index: number) => {
+  private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
     this.setState({
       selectedFlattenFieldIndex: index,
       selectedFlattenField: field,
@@ -1608,7 +1618,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: {
           headerAndRows: headerAndRowsFromSampleResponse({
             sampleResponse,
-            columnOrder: ['__time'].concat(inputFormatColumns),
+            columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
           }),
           spec,
         },
@@ -1625,7 +1635,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (timestampQueryState.isInit()) {
       mainFill = (
         <CenterMessage>
@@ -1754,7 +1764,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
+  private readonly onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
     const { specPreview } = this.state;
     this.updateSpecPreview(deepSet(specPreview, 'spec.dataSchema.timestampSpec', newTimestampSpec));
   };
@@ -1802,7 +1812,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       transformQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse({
           sampleResponse,
-          columnOrder: ['__time'].concat(inputFormatColumns),
+          columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
         }),
         lastData: transformQueryState.getSomeData(),
       }),
@@ -1821,9 +1831,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (transformQueryState.isInit()) {
-      mainFill = <CenterMessage>{`Please fill in the previous steps`}</CenterMessage>;
+      mainFill = <CenterMessage>Please fill in the previous steps</CenterMessage>;
     } else {
       const data = transformQueryState.getSomeData();
       mainFill = (
@@ -1905,7 +1915,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onTransformSelect = (transform: Transform, index: number) => {
+  private readonly onTransformSelect = (transform: Transform, index: number) => {
     this.setState({
       selectedTransformIndex: index,
       selectedTransform: transform,
@@ -2020,7 +2030,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         filterQueryState: new QueryState({
           data: headerAndRowsFromSampleResponse({
             sampleResponse,
-            columnOrder: ['__time'].concat(inputFormatColumns),
+            columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
             parsedOnly: true,
           }),
           lastData: filterQueryState.getSomeData(),
@@ -2043,7 +2053,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const headerAndRowsNoFilter = headerAndRowsFromSampleResponse({
       sampleResponse: sampleResponseNoFilter,
-      columnOrder: ['__time'].concat(inputFormatColumns),
+      columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       parsedOnly: true,
     });
 
@@ -2056,7 +2066,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }));
   }
 
-  private getMemoizedDimensionFiltersFromSpec = memoize(spec => {
+  private readonly getMemoizedDimensionFiltersFromSpec = memoize(spec => {
     const { dimensionFilters } = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
     return dimensionFilters;
   });
@@ -2065,7 +2075,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, specPreview, columnFilter, filterQueryState, selectedFilter } = this.state;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (filterQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else {
@@ -2129,7 +2139,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onFilterSelect = (filter: DruidFilter, index: number) => {
+  private readonly onFilterSelect = (filter: DruidFilter, index: number) => {
     this.setState({
       selectedFilterIndex: index,
       selectedFilter: filter,
@@ -2232,7 +2242,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: {
           headerAndRows: headerAndRowsFromSampleResponse({
             sampleResponse,
-            columnOrder: ['__time'].concat(dimensions ? dimensions.map(getDimensionSpecName) : []),
+            columnOrder: [TIME_COLUMN].concat(
+              dimensions ? dimensions.map(getDimensionSpecName) : [],
+            ),
             suffixColumnOrder: metricsSpec ? metricsSpec.map(getMetricSpecName) : undefined,
           }),
           dimensions,
@@ -2254,13 +2266,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedMetricSpec,
       selectedMetricSpecIndex,
     } = this.state;
-    const rollup: boolean = Boolean(deepGet(spec, 'spec.dataSchema.granularitySpec.rollup'));
+    const rollup = Boolean(deepGet(spec, 'spec.dataSchema.granularitySpec.rollup'));
     const somethingSelected = Boolean(
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
     const dimensionMode = getDimensionMode(spec);
 
-    let mainFill: JSX.Element | string = '';
+    let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else {
@@ -2461,7 +2473,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private onAutoDimensionSelect = (selectedAutoDimension: string) => {
+  private readonly onAutoDimensionSelect = (selectedAutoDimension: string) => {
     this.setState({
       selectedAutoDimension,
       selectedDimensionSpec: undefined,
@@ -2471,7 +2483,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  private onDimensionSelect = (
+  private readonly onDimensionSelect = (
     selectedDimensionSpec: DimensionSpec | undefined,
     selectedDimensionSpecIndex: number,
   ) => {
@@ -2484,7 +2496,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  private onMetricSelect = (
+  private readonly onMetricSelect = (
     selectedMetricSpec: MetricSpec | undefined,
     selectedMetricSpecIndex: number,
   ) => {
@@ -3099,7 +3111,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   // ==================================================================
-  private getSupervisorJson = async (): Promise<void> => {
+  private readonly getSupervisorJson = async (): Promise<void> => {
     const { initSupervisorId } = this.props;
     if (!initSupervisorId) return;
 
@@ -3118,7 +3130,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   };
 
-  private getTaskJson = async (): Promise<void> => {
+  private readonly getTaskJson = async (): Promise<void> => {
     const { initTaskId } = this.props;
     if (!initTaskId) return;
 
@@ -3182,7 +3194,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  private handleSubmit = async () => {
+  private readonly handleSubmit = async () => {
     const { goToIngestion } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;

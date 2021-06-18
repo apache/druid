@@ -53,7 +53,7 @@ public interface GroupByVectorColumnSelector
    * Write key parts for this column into a particular result row.
    *
    * @param keyMemory         key memory
-   * @param keyOffset         starting position for this key part within keyMemory
+   * @param keyOffset         starting position for this key part within keyMemory
    * @param resultRow         result row to receive key parts
    * @param resultRowPosition position within the result row for this key part
    */

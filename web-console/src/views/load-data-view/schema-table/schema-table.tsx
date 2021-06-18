@@ -98,7 +98,9 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: ({ value }) => <TableCell value={value} />,
+            Cell: function SchemaTableCell({ value }) {
+              return <TableCell value={value} />;
+            },
           };
         } else {
           const isTimestamp = columnName === '__time';
@@ -142,7 +144,9 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             id: String(i),
             width: isTimestamp ? 200 : 100,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={isTimestamp ? new Date(row.value) : row.value} />,
+            Cell: function SchemaTableCell(row) {
+              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
+            },
           };
         }
       })}

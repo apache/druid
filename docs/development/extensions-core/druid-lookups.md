@@ -72,7 +72,7 @@ Same for Loading cache, developer can implement a new type of loading cache by i
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|dataFetcher|JSON object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
+|dataFetcher|JSON object|Specifies the lookup data fetcher type for fetching data|yes|null|
 |cacheFactory|JSON Object|Cache factory implementation|no |onHeapPolling|
 |pollPeriod|Period|polling period |no |null (poll once)|
 
@@ -129,7 +129,7 @@ Guava cache configuration spec.
    "type":"loadingLookup",
    "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
    "loadingCacheSpec":{"type":"guava"},
-   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterAccess":10000}
+   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterWrite":10000}
 }
 ```
 
@@ -150,6 +150,16 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
    "type":"loadingLookup",
    "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
    "loadingCacheSpec":{"type":"mapDb", "maxEntriesSize":100000},
-   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterAccess":10000}
+   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterWrite":10000}
 }
 ```
+
+### JDBC Data Fetcher
+
+|Field|Type|Description|Required|default|
+|-----|----|-----------|--------|-------|
+|`connectorConfig`|JSON object|Specifies the database connection details. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../../configuration/index.md#jdbc-connections-to-external-databases) for more details.|yes||
+|`table`|string|The table name to read from.|yes||
+|`keyColumn`|string|The column name that contains the lookup key.|yes||
+|`valueColumn`|string|The column name that contains the lookup value.|yes||
+|`streamingFetchSize`|int|Fetch size used in JDBC connections.|no|1000|

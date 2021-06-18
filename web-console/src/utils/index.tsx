@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './druid-lookup';
-export * from './escape';
-export * from './query-state';
-export * from './query-manager';
-export * from './query-cursor';
-export * from './local-storage-keys';
-export * from './column-metadata';
-export * from './object-change';
 export * from './capabilities';
+export * from './column-metadata';
+export * from './date';
+export * from './druid-lookup';
+export * from './druid-query';
+export * from './escape';
+export * from './general';
+export * from './local-storage-keys';
+export * from './object-change';
+export * from './query-cursor';
+export * from './query-manager';
+export * from './query-state';

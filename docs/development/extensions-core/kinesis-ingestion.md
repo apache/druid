@@ -24,16 +24,15 @@ sidebar_label: "Amazon Kinesis"
   -->
 
 
-Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
-Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
+Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service for Apache Druid enables the configuration of *supervisors* on the Overlord. These supervisors facilitate ingestion from Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
 Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion.
 The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid extension (see
-[Including Extensions](../../development/extensions.md#loading-extensions)). Please note that this is
-currently designated as an *experimental feature* and is subject to the usual
-[experimental caveats](../experimental.md).
+[Including Extensions](../../development/extensions.md#loading-extensions)).
+
+> Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
 ## Submitting a Supervisor Spec
 
@@ -150,10 +149,8 @@ but unfortunately, it doesn't support all data formats supported by the legacy `
 (They will be supported in the future.)
 
 The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
-[`delimited`](../../ingestion/data-formats.md#tsv-delimited), and [`json`](../../ingestion/data-formats.md#json).
-You can also read [`avro_stream`](../../ingestion/data-formats.md#avro-stream-parser),
-[`protobuf`](../../ingestion/data-formats.md#protobuf-parser),
-and [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
+[`delimited`](../../ingestion/data-formats.md#tsv-delimited), [`json`](../../ingestion/data-formats.md#json), [`avro_stream`](../../ingestion/data-formats.md#avro-stream), [`protobuf`](../../ingestion/data-formats.md#protobuf).
+You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
 
@@ -193,7 +190,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 | `maxSavedParseExceptions`             | Integer        | When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/tasks.md#reports). Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | no, default == 0                                                                                             |
 | `maxRecordsPerPoll`                   | Integer        | The maximum number of records/events to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | no, default == 100                                                                                           |
 | `repartitionTransitionDuration`       | ISO8601 Period | When shards are split or merged, the supervisor will recompute shard -> task group mappings, and signal any running tasks created under the old mappings to stop early at (current time + `repartitionTransitionDuration`). Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split/merge, which helps avoid the issues with empty shard handling described at https://github.com/apache/druid/issues/7600.                                                                                                                                                                                                                                                                                                                                                                               | no, (default == PT2M)                                                                                        |
-| `offsetFetchPeriod`                   | ISO8601 Period | How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | no (default == PT30S, min == PT5S)                                                                           |
+| `offsetFetchPeriod`                   | ISO8601 Period | How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value (`PT5S`), the supervisor ignores the value and uses the minimum value instead.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | no (default == PT30S, min == PT5S)                                                                           |
 
 #### IndexSpec
 
@@ -236,7 +233,7 @@ To authenticate with AWS, you must provide your AWS access key and AWS secret ke
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
 The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will
-look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance
+look for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance
 profile provider (in this order).
 
 ### Getting Supervisor Status Report
@@ -472,3 +469,13 @@ This window with early task shutdowns and possible task failures will conclude w
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage
 - Any remaining tasks that had inactive shards in the assignment have been shutdown (these tasks would have been created before the closed shards were completely drained)
 
+## Kinesis known issues
+
+Before you deploy the Kinesis extension to production, consider the following known issues:
+
+- Avoid implementing more than one Kinesis supervisor that read from the same Kinesis stream for ingestion. Kinesis has a per-shard read throughput limit and having multiple supervisors on the same stream can reduce available read throughput for an individual Supervisor's tasks. Additionally, multiple Supervisors ingesting to the same Druid Datasource can cause increased contention for locks on the Datasource.
+- The only way to change the stream reset policy is to submit a new ingestion spec and set up a new supervisor.
+- Timeouts for retrieving earliest sequence number will cause a reset of the supervisor. The job will resume own its own eventually, but it can trigger alerts.
+- The Kinesis supervisor will not make progress if you have empty shards. Make sure you have at least 1 record in the shard.
+- If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
+- A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.

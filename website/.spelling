@@ -22,8 +22,10 @@
 500MiB
 64-bit
 ACL
+ACLs
 APIs
 AvroStorage
+ARN
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -38,10 +40,11 @@ Base64-encoded
 ByteBuffer
 CIDR
 CORS
+CNF
 CPUs
 CSVs
 Ceph
-CNF
+CloudWatch
 ColumnDescriptor
 Corretto
 DDL
@@ -124,6 +127,7 @@ JsonProperty
 KMS
 Kerberized
 Kerberos
+KeyStores
 Kinesis
 Kubernetes
 LRU
@@ -192,6 +196,8 @@ aggregator
 aggregators
 ambari
 analytics
+assumeRoleArn
+assumeRoleExternalId
 async
 authorizer
 authorizers
@@ -218,6 +224,7 @@ codec
 colocated
 colocation
 compactable
+compactionTask
 config
 configs
 consumerProperties
@@ -258,6 +265,7 @@ firehoses
 fromPigAvroStorage
 frontends
 granularities
+granularitySpec
 gzip
 gzipped
 hadoop
@@ -280,6 +288,7 @@ javadoc
 joinable
 kerberos
 keystore
+keytool
 keytab
 kubernetes
 laning
@@ -300,6 +309,7 @@ mergeable
 metadata
 millis
 misconfiguration
+misconfigured
 mostAvailableSize
 multitenancy
 multitenant
@@ -312,6 +322,7 @@ netflow
 non-nullable
 noop
 numerics
+numShards
 parameterized
 parseable
 partitioner
@@ -365,6 +376,7 @@ reingest
 reingesting
 reingestion
 repo
+requireSSL
 rollup
 rollups
 rsync
@@ -380,6 +392,8 @@ sharding
 skipHeaderRows
 smooshed
 splittable
+ssl
+sslmode
 stdout
 storages
 stringified
@@ -415,8 +429,10 @@ unparsed
 unsetting
 untrusted
 useFilterCNF
+useSSL
 uptime
 uris
+urls
 useFieldDiscovery
 v1
 v2
@@ -446,6 +462,8 @@ druid-s3-extensions
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
 LeadershipLatch
+3.5.x
+3.4.x
  - ../docs/design/auth.md
 AllowAll
 AuthenticationResult
@@ -569,6 +587,7 @@ longSum
 movingAverage
 postAggregations
 postAveragers
+pull-deps
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
 namespacePrefix
@@ -582,6 +601,11 @@ com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
  - ../docs/development/extensions-contrib/statsd.md
 convertRange
+- ../docs/development/extensions-contrib/prometheus.md
+HTTPServer
+conversionFactor
+prometheus
+Pushgateway
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -624,6 +648,7 @@ Avro-1124
 SchemaRepo
 avro
 avroBytesDecoder
+protoBytesDecoder
 flattenSpec
 jq
 org.apache.druid.extensions
@@ -938,6 +963,7 @@ ctrl
 jsonLowercase
 listDelimiter
 timestampSpec
+urls
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -963,6 +989,7 @@ InputSplit
 JobHistory
 a.example.com
 assumeGrouped
+awaitSegmentAvailabilityTimeoutMillis
 cleanupOnFailure
 combineText
 connectURI
@@ -1027,7 +1054,9 @@ baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
 connectorConfig
+countryName
 dataSchema's
+dropExisting
 foldCase
 forceGuaranteedRollup
 httpAuthenticationPassword
@@ -1052,6 +1081,7 @@ timeChunk
 totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
+awaitSegmentAvailabilityTimeoutMillis
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1077,6 +1107,8 @@ arr1
 arr2
 array_append
 array_concat
+array_set_add
+array_set_add_all
 array_contains
 array_length
 array_offset
@@ -1090,6 +1122,15 @@ array_to_string
 asin
 atan
 atan2
+bitwise
+bitwiseAnd
+bitwiseComplement
+bitwiseConvertDoubleToLongBits
+bitwiseConvertLongBitsToDouble
+bitwiseOr
+bitwiseShiftLeft
+bitwiseShiftRight
+bitwiseXor
 bloom_filter_test
 cartesian_fold
 cartesian_map
@@ -1411,6 +1452,7 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 DatasourceMetadata
 TimeBoundary
@@ -1462,6 +1504,7 @@ file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
+ARRAY_AGG
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -1512,6 +1555,7 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
+druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
 error_msg
 exprs
@@ -1544,6 +1588,7 @@ timestamp_expr
 tls_port
 total_size
 useApproximateCountDistinct
+useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
  - ../docs/querying/timeseriesquery.md
@@ -1623,6 +1668,7 @@ HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
 InetAddress.getLocalHost
+IOConfig
 JRE8u60
 KeyManager
 L1
@@ -1647,6 +1693,7 @@ PT1S
 PT24H
 PT300S
 PT30S
+PT3600S
 PT5M
 PT5S
 PT60S
@@ -1667,7 +1714,6 @@ _default_tier
 addr
 affinityConfig
 allowAll
-allowList
 ANDed
 array_mod
 autoscale
@@ -1681,7 +1727,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-denyList
 doubleMax
 doubleMin
 doubleSum
@@ -1749,6 +1794,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties
@@ -1763,6 +1809,7 @@ successfulSending
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
+timestampSpec
 tmp
 tmpfs
 truststore
@@ -1797,6 +1844,7 @@ expr
 jackson-jq
 missingValue
 schemaless
+skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
  - ../docs/tutorials/index.md
@@ -1837,3 +1885,6 @@ MiB
 GiB
 TiB
 PiB
+protobuf
+Golang
+multiValueHandling

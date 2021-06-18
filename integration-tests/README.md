@@ -46,6 +46,12 @@ environment variable to localhost on your system, as follows:
 export DOCKER_IP=127.0.0.1
 ```
 
+Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override `https://archive.apache.org` host. This host is used to download archives such as hadoop and kafka during building docker images:
+
+```
+export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
+```
+
 ## Running tests
 
 To run all tests from a test group using docker and mvn run the following command: 
@@ -56,8 +62,10 @@ To run all tests from a test group using docker and mvn run the following comman
 
 To run only a single test using mvn run the following command:
 ```
-  mvn verify -P integration-tests -Dit.test=<test_name>
+  mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>
 ```
+The test group should always be set, as certain test setup and cleanup tasks are based on the test group. You can find
+the test group for a given test as an annotation in the respective test class.
 
 Add `-rf :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
@@ -250,7 +258,7 @@ of the integration test run discussed above. Running these tests requires the us
 their own Cloud. 
 
 Currently, the integration test supports Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure.
-These can be run by providing "kinesis-index", "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
+These can be run by providing "kinesis-index", "kinesis-data-format", "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
 to -Dgroups for Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure respectively. Note that only
 one group should be run per mvn command.
 

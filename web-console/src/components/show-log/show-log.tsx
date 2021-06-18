@@ -50,8 +50,8 @@ export interface ShowLogState {
 export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   static CHECK_INTERVAL = 2500;
 
-  private showLogQueryManager: QueryManager<null, string>;
-  private log = React.createRef<HTMLTextAreaElement>();
+  private readonly showLogQueryManager: QueryManager<null, string>;
+  private readonly log = React.createRef<HTMLTextAreaElement>();
   private interval: number | undefined;
 
   constructor(props: ShowLogProps, context: any) {
@@ -123,7 +123,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     delete this.interval;
   }
 
-  private handleCheckboxChange = () => {
+  private readonly handleCheckboxChange = () => {
     const { tail } = this.state;
 
     const nextTail = !tail;

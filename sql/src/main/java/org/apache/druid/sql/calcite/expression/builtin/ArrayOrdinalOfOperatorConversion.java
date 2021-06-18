@@ -40,15 +40,14 @@ public class ArrayOrdinalOfOperatorConversion implements SqlOperatorConversion
           OperandTypes.sequence(
               "(array,expr)",
               OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.STRING),
                   OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.MULTISET)
+                  OperandTypes.family(SqlTypeFamily.STRING)
               ),
               OperandTypes.family(SqlTypeFamily.ANY)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.INTEGER)
+      .returnTypeCascadeNullable(SqlTypeName.INTEGER)
       .build();
 
   @Override

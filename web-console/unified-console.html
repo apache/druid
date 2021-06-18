@@ -27,9 +27,49 @@
     <title>Apache Druid</title>
     <meta name="description" content="Apache Druid console" />
     <link rel="shortcut icon" href="favicon.png" />
+    <style>
+      body {
+        background: #24283b;
+      }
+      #browser-update {
+        background-color: #d9822b;
+        border-radius: 3px;
+        color: #ffffff;
+        font-family: sans-serif;
+        font-size: 13px;
+        line-height: 1.2;
+        padding: 13px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        z-index: 11;
+      }
+      #browser-update a {
+        color: white;
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body class="bp3-dark mouse-mode">
     <div class="app-container"></div>
+    <div id="browser-update" style="display: none">
+      You are using an unsupported browser. The console will not work properly.
+      <a href="https://browser-update.org/update.html">Update to a supported browser.</a>
+    </div>
+    <script>
+      function showUpdate() {
+        document.getElementById('browser-update').style.display = 'block';
+      }
+      if (!('Proxy' in window)) showUpdate();
+      window.onerror = function (message, source, lineno, colno, error) {
+        if (error instanceof SyntaxError || message === 'Syntax error') {
+          showUpdate();
+        }
+        return false;
+      };
+    </script>
     <script src="console-config.js"></script>
     <script src="public/web-console-0.22.0.js"></script>
   </body>

@@ -61,6 +61,7 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -70,7 +71,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -106,7 +106,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -214,6 +213,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private RowIngestionMeters rowIngestionMeters;
   @MonotonicNonNull
   private ParseExceptionHandler parseExceptionHandler;
+  @MonotonicNonNull
+  private FireDepartmentMetrics fireDepartmentMetrics;
 
   @MonotonicNonNull
   private AuthorizerMapper authorizerMapper;
@@ -243,13 +244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.task = task;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
-    this.inputRowSchema = new InputRowSchema(
-        task.getDataSchema().getTimestampSpec(),
-        task.getDataSchema().getDimensionsSpec(),
-        Arrays.stream(task.getDataSchema().getAggregators())
-              .map(AggregatorFactory::getName)
-              .collect(Collectors.toList())
-    );
+    this.inputRowSchema = InputRowSchemas.fromDataSchema(task.getDataSchema());
     this.inputFormat = ioConfig.getInputFormat();
     this.parser = parser;
     this.authorizerMapper = authorizerMapper;
@@ -395,7 +390,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         new RealtimeIOConfig(null, null),
         null
     );
-    FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    this.fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     toolbox.addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
@@ -622,7 +617,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<InputRow> rows = parser.parse(record.getData());
+              final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse = sequences
@@ -710,6 +705,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               recordSupplier.assign(assignment);
               stillReading = !assignment.isEmpty();
             }
+          }
+
+          if (!stillReading) {
+            // We let the fireDepartmentMetrics know that all messages have been read. This way, some metrics such as
+            // high message gap need not be reported
+            fireDepartmentMetrics.markProcessingDone();
           }
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
@@ -1049,6 +1050,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     log.info("Saved sequence metadata to disk: %s", sequences);
   }
 
+  /**
+   * Return a map of reports for the task.
+   *
+   * A successfull task should always have a null errorMsg. Segments availability is inherently confirmed
+   * if the task was succesful.
+   *
+   * A falied task should always have a non-null errorMsg. Segment availability is never confirmed if the task
+   * was not successful.
+   *
+   * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @return Map of reports for the task.
+   */
   private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
   {
     return TaskReport.buildTaskReports(
@@ -1058,7 +1071,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                errorMsg == null
             )
         )
     );
@@ -1354,6 +1368,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public RowIngestionMeters getRowIngestionMeters()
   {
     return rowIngestionMeters;
+  }
+
+  @VisibleForTesting
+  public FireDepartmentMetrics getFireDepartmentMetrics()
+  {
+    return fireDepartmentMetrics;
   }
 
   public void stopForcefully()

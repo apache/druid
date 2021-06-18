@@ -66,6 +66,7 @@ public class IndexTaskSerdeTest
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(1000, 2000L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(false),
@@ -83,7 +84,8 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
-        1234
+        1234,
+        0L
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -97,6 +99,7 @@ public class IndexTaskSerdeTest
         null,
         100,
         2000L,
+        null,
         null,
         null,
         null,
@@ -118,7 +121,8 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
-        null
+        null,
+        -1L
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -132,6 +136,7 @@ public class IndexTaskSerdeTest
         null,
         100,
         2000L,
+        null,
         3000L,
         null,
         null,
@@ -153,7 +158,8 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
-        null
+        null,
+        1L
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -167,6 +173,7 @@ public class IndexTaskSerdeTest
         null,
         100,
         2000L,
+        null,
         null,
         null,
         10,
@@ -188,7 +195,8 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
-        1234
+        1234,
+        null
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -204,6 +212,7 @@ public class IndexTaskSerdeTest
         null,
         100,
         2000L,
+        null,
         null,
         null,
         null,
@@ -225,6 +234,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        null,
         null
     );
   }
@@ -240,6 +250,7 @@ public class IndexTaskSerdeTest
         null,
         100,
         2000L,
+        null,
         null,
         null,
         null,
@@ -261,6 +272,7 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        null,
         null
     );
   }

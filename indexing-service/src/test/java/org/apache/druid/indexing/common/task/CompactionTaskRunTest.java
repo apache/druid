@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -43,6 +44,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
@@ -54,6 +56,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -88,7 +92,6 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -130,9 +133,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
-
-  // Expecte compaction state to exist after compaction as we store compaction state by default
-  private static CompactionState DEFAULT_COMPACTION_STATE;
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
@@ -186,14 +186,26 @@ public class CompactionTaskRunTest extends IngestionTestBase
     this.lockGranularity = lockGranularity;
   }
 
-  @BeforeClass
-  public static void setupClass() throws JsonProcessingException
+  public static CompactionState getDefaultCompactionState(Granularity segmentGranularity,
+                                                          Granularity queryGranularity,
+                                                          List<Interval> intervals) throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-
-    DEFAULT_COMPACTION_STATE = new CompactionState(
+    // Expected compaction state to exist after compaction as we store compaction state by default
+    return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class)
+      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+      mapper.readValue(
+          mapper.writeValueAsString(
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  queryGranularity,
+                  true,
+                  intervals
+              )
+          ),
+          Map.class
+      )
     );
   }
 
@@ -238,7 +250,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
@@ -280,11 +295,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 null,
+                null,
                 new HashedPartitionsSpec(null, 3, null),
                 null,
                 null,
                 null,
                 true,
+                null,
                 null,
                 null,
                 null,
@@ -310,10 +327,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final List<DataSegment> segments = resultPair.rhs;
     Assert.assertEquals(6, segments.size());
-    final CompactionState expectedState = new CompactionState(
-        new HashedPartitionsSpec(null, 3, null),
-        compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
-    );
 
     for (int i = 0; i < 3; i++) {
       final Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
@@ -322,6 +335,21 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Assert.assertEquals(
             interval,
             segments.get(segmentIdx).getInterval()
+        );
+        CompactionState expectedState = new CompactionState(
+            new HashedPartitionsSpec(null, 3, null),
+            compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+            getObjectMapper().readValue(
+                getObjectMapper().writeValueAsString(
+                    new UniformGranularitySpec(
+                        Granularities.HOUR,
+                        Granularities.MINUTE,
+                        true,
+                        ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
+                    )
+                ),
+                Map.class
+            )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
         Assert.assertSame(HashBasedNumberedShardSpec.class, segments.get(segmentIdx).getShardSpec().getClass());
@@ -360,7 +388,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -387,7 +418,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(
@@ -449,6 +483,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            false,
             false
         ),
         null
@@ -486,7 +521,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -525,7 +563,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
-    Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(0).getLastCompactionState());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
 
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
@@ -543,7 +584,187 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
+          segments.get(i).getLastCompactionState()
+      );
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullSegmentGranularityAndNullQueryGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
+
+    // hour segmentGranularity
+    final CompactionTask compactionTask2 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null))
+        .build();
+
+    resultPair = runTask(compactionTask2);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    segments = resultPair.rhs;
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01/2014-01-02"))),
+          segments.get(i).getLastCompactionState()
+      );
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullQueryGranularityAndNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day queryGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.SECOND, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
+    }
+  }
+
+  @Test
+  public void testWithGranularitySpecNonNullQueryGranularityAndNonNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity and day queryGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(Granularities.DAY, Granularities.DAY, ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))),
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
+  public void testWithGranularitySpecNullQueryGranularityAndNullSegmentGranularity() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
     }
   }
 
@@ -579,6 +800,184 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     Assert.assertEquals(expectedSegments, usedSegments);
+  }
+
+  @Test
+  public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompactWithDropExistingTrue() throws Exception
+  {
+    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    // This creates HOUR segments with intervals of
+    // - 2014-01-01T00:00:00/2014-01-01T01:00:00
+    // - 2014-01-01T01:00:00/2014-01-01T02:00:00
+    // - 2014-01-01T02:00:00/2014-01-01T03:00:00
+    runIndexTask();
+
+    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+
+    // Segments that did not belong in the compaction interval are expected unchanged
+    final Set<DataSegment> expectedSegments = new HashSet<>();
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask partialCompactionTask = builder
+        .segmentGranularity(Granularities.MINUTE)
+        // Set dropExisting to true
+        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+
+    // New segments that was compacted are expected. However, old segments of the compacted interval should be drop
+    // regardless of the new segments fully overshadow the old segments or not. Hence, we do not expect old segments
+    // of the 2014-01-01T01:00:00/2014-01-01T02:00:00 interval post-compaction
+    expectedSegments.addAll(partialCompactionResult.rhs);
+
+    final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+
+    final CompactionTask fullCompactionTask = builder
+        .segmentGranularity(null)
+        // Set dropExisting to true
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), true)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
+
+    final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    segmentsAfterFullCompaction.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
+    );
+
+    Assert.assertEquals(3, segmentsAfterFullCompaction.size());
+    // Full Compaction with null segmentGranularity meaning that the original segmentGrnaularity is perserved
+    // For the intervals, 2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z and 2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z
+    // the original segmentGranularity is HOUR from the initial ingestion.
+    // For the interval, 2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z, the original segmentGranularity is
+    // MINUTE from the partial compaction done earlier.
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z"),
+        segmentsAfterFullCompaction.get(0).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z"),
+        segmentsAfterFullCompaction.get(1).getInterval()
+    );
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
+        segmentsAfterFullCompaction.get(2).getInterval()
+    );
+  }
+
+  @Test
+  public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompactWithDropExistingFalse() throws Exception
+  {
+    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    runIndexTask();
+
+    final Set<DataSegment> expectedSegments = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+    final CompactionTask partialCompactionTask = builder
+        .segmentGranularity(Granularities.MINUTE)
+        // Set dropExisting to false
+        .inputSpec(new CompactionIntervalSpec(partialInterval, null), false)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+    // All segments in the previous expectedSegments should still appear as they have larger segment granularity.
+    expectedSegments.addAll(partialCompactionResult.rhs);
+
+    final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+
+    Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+
+    final CompactionTask fullCompactionTask = builder
+        .segmentGranularity(null)
+        // Set dropExisting to false
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), false)
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
+
+    final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    segmentsAfterFullCompaction.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
+    );
+
+    Assert.assertEquals(3, segmentsAfterFullCompaction.size());
+    for (int i = 0; i < segmentsAfterFullCompaction.size(); i++) {
+      Assert.assertEquals(
+          Intervals.of(StringUtils.format("2014-01-01T%02d/2014-01-01T%02d", i, i + 1)),
+          segmentsAfterFullCompaction.get(i).getInterval()
+      );
+    }
   }
 
   @Test
@@ -758,6 +1157,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     segmentLoaderFactory,
                     RETRY_POLICY_FACTORY
                 ),
+                false,
                 false
             ),
             IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
@@ -780,7 +1180,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      Assert.assertEquals(
+          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of()),
+          segments.get(i).getLastCompactionState()
+      );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
@@ -831,7 +1234,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null
             ),
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
-            appendToExisting
+            appendToExisting,
+            false
         ),
         null
     );
@@ -894,7 +1298,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     return new TaskToolbox(
-        null,
+        new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
         null,
         createActionClient(task),
         null,

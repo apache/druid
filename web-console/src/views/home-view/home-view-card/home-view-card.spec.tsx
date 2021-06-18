@@ -27,9 +27,9 @@ describe('home view card', () => {
     const homeViewCard = (
       <HomeViewCard
         className="some-card"
-        href={'#somewhere'}
+        href="#somewhere"
         icon={IconNames.DATABASE}
-        title={'Something'}
+        title="Something"
         loading={false}
         error={undefined}
       >

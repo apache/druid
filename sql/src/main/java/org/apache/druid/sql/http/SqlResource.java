@@ -97,8 +97,8 @@ public class SqlResource
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
       lifecycle.setParameters(sqlQuery.getParameterList());
-      
-      final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
+      lifecycle.validateAndAuthorize(req);
+      final PlannerContext plannerContext = lifecycle.plan();
       final DateTimeZone timeZone = plannerContext.getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.

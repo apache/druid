@@ -19,11 +19,14 @@
 
 package org.apache.druid.sql.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.avatica.AvaticaModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
@@ -39,15 +42,25 @@ import java.util.Properties;
 
 public class SqlModule implements Module
 {
-  private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
-  private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
-  private static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
+  public static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
+  public static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
+  public static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
+  public static final String PROPERTY_SQL_VIEW_MANAGER_TYPE = "druid.sql.viewmanager.type";
 
   @Inject
   private Properties props;
 
   public SqlModule()
   {
+
+  }
+
+  @VisibleForTesting
+  public SqlModule(
+      Properties props
+  )
+  {
+    this.props = props;
   }
 
   @Override
@@ -56,7 +69,17 @@ public class SqlModule implements Module
     if (isEnabled()) {
       Calcites.setSystemProperties();
 
-      binder.bind(ViewManager.class).to(NoopViewManager.class).in(LazySingleton.class);
+      PolyBind.optionBinder(binder, Key.get(ViewManager.class))
+              .addBinding(NoopViewManager.TYPE)
+              .to(NoopViewManager.class)
+              .in(LazySingleton.class);
+
+      PolyBind.createChoiceWithDefault(
+          binder,
+          PROPERTY_SQL_VIEW_MANAGER_TYPE,
+          Key.get(ViewManager.class),
+          NoopViewManager.TYPE
+      );
 
       binder.install(new DruidCalciteSchemaModule());
       binder.install(new CalcitePlannerModule());

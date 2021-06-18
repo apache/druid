@@ -91,7 +91,7 @@ druid.emitter.dropwizard.reporters=[{"type":"console","emitIntervalInSecs":30}"}
 ```
 
 ### Default Metrics Mapping
-Latest default metrics mapping can be found [here] (https://github.com/apache/druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json)
+Latest default metrics mapping can be found [here] (https://github.com/apache/druid/blob/master/extensions-contrib/dropwizard-emitter/src/main/resources/defaultMetricDimensions.json)
 ```json
 {
   "query/time": {

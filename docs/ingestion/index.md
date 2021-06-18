@@ -22,19 +22,18 @@ title: "Ingestion"
   ~ under the License.
   -->
 
-## Overview
-
-All data in Druid is organized into _segments_, which are data files that generally have up to a few million rows each.
-Loading data in Druid is called _ingestion_ or _indexing_ and consists of reading data from a source system and creating
+All data in Druid is organized into _segments_, which are data files each of which may have up to a few million rows.
+Loading data in Druid is called _ingestion_ or _indexing_, and consists of reading data from a source system and creating
 segments based on that data.
 
-In most ingestion methods, the work of loading data is done by Druid [MiddleManager](../design/middlemanager.md) processes
-(or the [Indexer](../design/indexer.md) processes). One exception is
+In most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes
+(or the [Indexer](../design/indexer.md) processes) load your source data. One exception is
 Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce job on YARN (although MiddleManager or Indexer
-processes are still involved in starting and monitoring the Hadoop jobs). Once segments have been generated and stored
-in [deep storage](../dependencies/deep-storage.md), they will be loaded by Historical processes. For more details on
-how this works under the hood, see the [Storage design](../design/architecture.md#storage-design) section of Druid's design
-documentation.
+processes are still involved in starting and monitoring the Hadoop jobs). 
+
+Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.md), they are loaded by Historical processes. 
+For more details on how this works, see the [Storage design](../design/architecture.md#storage-design) section 
+of Druid's design documentation.
 
 ## How to use this documentation
 
@@ -57,17 +56,17 @@ page.
 ### Streaming
 
 The most recommended, and most popular, method of streaming ingestion is the
-[Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. The Kinesis
-indexing service also works well if you prefer Kinesis.
+[Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. Alternatively, the Kinesis
+indexing service works with Amazon Kinesis Data Streams.
 
-This table compares the major available options:
+This table compares the options:
 
-| **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) | [Tranquility](tranquility.md) |
-|---|-----|--------------|------------|
-| **Supervisor type** | `kafka` | `kinesis` | N/A |
-| **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis. | Tranquility, a library that ships separately from Druid, is used to push data into Druid. |
-| **Can ingest late data?** | Yes | Yes | No (late data is dropped based on the `windowPeriod` config) |
-| **Exactly-once guarantees?** | Yes | Yes | No |
+| **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) |
+|---|-----|--------------|
+| **Supervisor type** | `kafka` | `kinesis`|
+| **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis.|
+| **Can ingest late data?** | Yes | Yes |
+| **Exactly-once guarantees?** | Yes | Yes |
 
 ### Batch
 
@@ -196,7 +195,7 @@ that datasource leads to much faster query times. This can often be done with ju
 footprint, since abbreviated datasources tend to be substantially smaller.
 - If you are using a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect
 rollup, you can potentially improve your rollup ratio by switching to a guaranteed perfect rollup option, or by
-[reindexing](data-management.md#compaction-and-reindexing) your data in the background after initial ingestion.
+[reindexing](data-management.md#reingesting-data) or [compacting](compaction.md) your data in the background after initial ingestion.
 
 ### Perfect rollup vs Best-effort rollup
 
@@ -258,7 +257,7 @@ storage size decreases - and it also tends to improve query performance as well.
 
 Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of
 flexibility. As of current Druid versions, If you are doing initial ingestion through a less-flexible method (like
-Kafka) then you can use [reindexing techniques](data-management.md#compaction-and-reindexing) to repartition your data after it
+Kafka) then you can use [reindexing](data-management.md#reingesting-data) or [compaction](compaction.md) to repartition your data after it
 is initially ingested. This is a powerful technique: you can use it to ensure that any data older than a certain
 threshold is optimally partitioned, even as you continuously add new data from a stream.
 
@@ -268,8 +267,8 @@ The following table shows how each ingestion method handles partitioning:
 |------|------------|
 |[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
 |[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#compaction-and-reindexing) to repartition after initial ingestion.|
+|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
+|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
 
 > Note that, of course, one way to partition data is to load it into separate datasources. This is a perfectly viable
 > approach and works very well when the number of datasources does not lead to excessive per-datasource overheads. If
@@ -480,6 +479,7 @@ Dimension objects can have the following components:
 | type | Either `string`, `long`, `float`, or `double`. | `string` |
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br><br>Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
+| multiValueHandling | Specify the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `sorted_array`, `sorted_set`, and `array`. `sorted_array` and `sorted_set` order the array upon ingestion. `sorted_set` removes duplicates. `array` ingests data as-is | `sorted_array` |
 
 #### Inclusions and exclusions
 
@@ -489,12 +489,13 @@ Normal interpretation occurs when either `dimensions` or `spatialDimensions` is 
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 
-1. First, start from the set of all input fields from the [`inputFormat`](./data-formats.md) (or the [`flattenSpec`](./data-formats.md#flattenspec), if one is being used).
-2. Any field listed in `dimensionExclusions` is excluded.
-3. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
-4. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
-5. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
-6. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
+1. First, start from the set of all root-level fields from the input record, as determined by the [`inputFormat`](./data-formats.md). "Root-level" includes all fields at the top level of a data structure, but does not included fields nested within maps or lists. To extract these, you must use a [`flattenSpec`](./data-formats.md#flattenspec). All fields of non-nested data formats, such as CSV and delimited text, are considered root-level.
+2. If a [`flattenSpec`](./data-formats.md#flattenspec) is being used, the set of root-level fields includes any fields generated by the flattenSpec. The useFieldDiscovery parameter determines whether the original root-level fields will be retained or discarded.
+3. Any field listed in `dimensionExclusions` is excluded.
+4. The field listed as `column` in the [`timestampSpec`](#timestampspec) is excluded.
+5. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
+6. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
+7. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
 
 > Note: Fields generated by a [`transformSpec`](#transformspec) are not currently considered candidates for
 > schemaless dimension interpretation.
@@ -720,7 +721,8 @@ is:
 |-----|-----------|-------|
 |type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
 |maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
-|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).<br /><br />Setting maxBytesInMemory to -1 disables this check, meaning Druid will rely entirely on maxRowsInMemory to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set maxBytesInMemory to -1 and rely on maxRowsInMemory instead.|One-sixth of max JVM heap size|
+|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decreases, and task will fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.<br /><br />Setting maxBytesInMemory to -1 disables this check, meaning Druid will rely entirely on maxRowsInMemory to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set maxBytesInMemory to -1 and rely on maxRowsInMemory instead.|One-sixth of max JVM heap size|
+|skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Tune how data is indexed. See below for more information.|See table below|
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-ingestion.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 

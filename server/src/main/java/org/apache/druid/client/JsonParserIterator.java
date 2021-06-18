@@ -169,7 +169,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           throw timeoutQuery();
         } else {
           // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
-          throw new ResourceLimitExceededException(
+          throw ResourceLimitExceededException.withMessage(
               "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
               url
           );
@@ -187,7 +187,10 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           );
         }
       }
-      catch (IOException | InterruptedException | ExecutionException | CancellationException e) {
+      catch (ExecutionException | CancellationException e) {
+        throw convertException(e.getCause() == null ? e : e.getCause());
+      }
+      catch (IOException | InterruptedException e) {
         throw convertException(e);
       }
       catch (TimeoutException e) {
@@ -210,7 +213,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
    *   based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
    *   by {@link #host}.
    */
-  private QueryException convertException(Exception cause)
+  private QueryException convertException(Throwable cause)
   {
     LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
     if (cause instanceof QueryException) {

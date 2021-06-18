@@ -224,6 +224,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
+        } else {
+          // If the segment is already downloaded on disk, we just update the current usage
+          loc.maybeReserve(storageDir, segment);
         }
         return new File(loc.getPath(), storageDir);
       }

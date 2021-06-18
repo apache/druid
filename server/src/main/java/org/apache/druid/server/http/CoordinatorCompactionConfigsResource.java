@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -27,6 +28,9 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -46,6 +50,9 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -53,12 +60,24 @@ import java.util.stream.Collectors;
 @ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
+  private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
+  private static final long UPDATE_RETRY_DELAY = 1000;
+  static final int UPDATE_NUM_RETRY = 5;
+
   private final JacksonConfigManager manager;
+  private final MetadataStorageConnector connector;
+  private final MetadataStorageTablesConfig connectorConfig;
 
   @Inject
-  public CoordinatorCompactionConfigsResource(JacksonConfigManager manager)
+  public CoordinatorCompactionConfigsResource(
+      JacksonConfigManager manager,
+      MetadataStorageConnector connector,
+      MetadataStorageTablesConfig connectorConfig
+  )
   {
     this.manager = manager;
+    this.connector = connector;
+    this.connectorConfig = connectorConfig;
   }
 
   @GET
@@ -79,27 +98,23 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
+    Callable<SetResult> callable = () -> {
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
+          current,
+          compactionTaskSlotRatio,
+          maxCompactionTaskSlots
+      );
 
-    final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
-        current,
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots
-    );
-
-    final SetResult setResult = manager.set(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        newCompactionConfig,
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    );
-
-    if (setResult.isOk()) {
-      return Response.ok().build();
-    } else {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException()))
-                     .build();
-    }
+      return manager.set(
+          CoordinatorCompactionConfig.CONFIG_KEY,
+          currentBytes,
+          newCompactionConfig,
+          new AuditInfo(author, comment, req.getRemoteAddr())
+      );
+    };
+    return updateConfigHelper(callable);
   }
 
   @POST
@@ -111,26 +126,25 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
-    final CoordinatorCompactionConfig newCompactionConfig;
-    final Map<String, DataSourceCompactionConfig> newConfigs = current
-        .getCompactionConfigs()
-        .stream()
-        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-    newConfigs.put(newConfig.getDataSource(), newConfig);
-    newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
+    Callable<SetResult> callable = () -> {
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final CoordinatorCompactionConfig newCompactionConfig;
+      final Map<String, DataSourceCompactionConfig> newConfigs = current
+          .getCompactionConfigs()
+          .stream()
+          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+      newConfigs.put(newConfig.getDataSource(), newConfig);
+      newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
-    final SetResult setResult = manager.set(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        newCompactionConfig,
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    );
-
-    if (setResult.isOk()) {
-      return Response.ok().build();
-    } else {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
+      return manager.set(
+          CoordinatorCompactionConfig.CONFIG_KEY,
+          currentBytes,
+          newCompactionConfig,
+          new AuditInfo(author, comment, req.getRemoteAddr())
+      );
+    };
+    return updateConfigHelper(callable);
   }
 
   @GET
@@ -162,27 +176,85 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
-    final Map<String, DataSourceCompactionConfig> configs = current
-        .getCompactionConfigs()
-        .stream()
-        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+    Callable<SetResult> callable = () -> {
+      final byte[] currentBytes = getCurrentConfigInByteFromDb();
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final Map<String, DataSourceCompactionConfig> configs = current
+          .getCompactionConfigs()
+          .stream()
+          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
 
-    final DataSourceCompactionConfig config = configs.remove(dataSource);
-    if (config == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      final DataSourceCompactionConfig config = configs.remove(dataSource);
+      if (config == null) {
+        return SetResult.fail(new NoSuchElementException("datasource not found"), false);
+      }
+
+      return manager.set(
+          CoordinatorCompactionConfig.CONFIG_KEY,
+          currentBytes,
+          CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
+          new AuditInfo(author, comment, req.getRemoteAddr())
+      );
+    };
+    return updateConfigHelper(callable);
+  }
+
+  @VisibleForTesting
+  Response updateConfigHelper(Callable<SetResult> updateMethod)
+  {
+    int attemps = 0;
+    SetResult setResult = null;
+    try {
+      while (attemps < UPDATE_NUM_RETRY) {
+        setResult = updateMethod.call();
+        if (setResult.isOk() || !setResult.isRetryable()) {
+          break;
+        }
+        attemps++;
+        updateRetryDelay();
+      }
     }
-
-    final SetResult setResult = manager.set(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    );
+    catch (Exception e) {
+      LOG.warn(e, "Update compaction config failed");
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                     .entity(ImmutableMap.of("error", createErrorMessage(e)))
+                     .build();
+    }
 
     if (setResult.isOk()) {
       return Response.ok().build();
+    } else if (setResult.getException() instanceof NoSuchElementException) {
+      LOG.warn(setResult.getException(), "Update compaction config failed");
+      return Response.status(Response.Status.NOT_FOUND).build();
     } else {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      LOG.warn(setResult.getException(), "Update compaction config failed");
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", createErrorMessage(setResult.getException())))
+                     .build();
+    }
+  }
+
+  private void updateRetryDelay()
+  {
+    try {
+      Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+    }
+    catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
+    }
+  }
+
+  private byte[] getCurrentConfigInByteFromDb()
+  {
+    return CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+  }
+
+  private String createErrorMessage(Exception e)
+  {
+    if (e.getMessage() == null) {
+      return "Unknown Error";
+    } else {
+      return e.getMessage();
     }
   }
 }
