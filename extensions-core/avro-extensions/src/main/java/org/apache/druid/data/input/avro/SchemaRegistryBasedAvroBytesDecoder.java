@@ -130,15 +130,15 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   {
     HashMap<String, Object> registryConfig = new HashMap<>();
     if (config != null) {
-      for (String key : config.keySet()) {
-        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(key)) {
-          registryConfig.put(key, config.get(key));
+      for (Map.Entry<String, Object> entry : config.entrySet()) {
+        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(entry.getKey())) {
+          registryConfig.put(entry.getKey(), entry.getValue());
         }
       }
       if (config.containsKey(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY)) {
         Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
-        for (String key : dynamicConfig.keySet()) {
-          registryConfig.put(key, dynamicConfig.get(key));
+        for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
+          registryConfig.put(entry.getKey(), entry.getValue());
         }
       }
     }
