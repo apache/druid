@@ -54,7 +54,8 @@ See [Setting up a manual compaction task](#setting-up-manual-compaction) for mor
 ## Data handling with compaction
 During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
-For compaction tasks, `dropExisting` in `ioConfig` can be set to "true" for Druid to drop (mark unused) all existing segments fully contained by the interval of the compaction task. For an example of why this is important, see the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations). WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the compaction task interval.
+You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to mark all existing segments fully contained by the interval of the compaction task as unused (drop the segments). See the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations) for an example.
+> WARNING: `dropExisting` in `ioConfig` is a beta feature. It may cause data within the compaction task interval to become  temporarily unavailable.
 
 If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjustment the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
 
@@ -111,7 +112,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one.|No|
 |`metricsSpec`|Custom metrics spec. The compaction task uses the specified metrics spec rather than generating one.|No|
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
-|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). Note that your tuning config cannot contain a non-zero value for `awaitSegmentAvailabilityTimeoutMillis` because it is not supported by compaction tasks at this time.|No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
 |`context`|[Task context](./tasks.md#context)|No|
 |`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` and `queryGranularity` for the compacted segments. See [Compaction granularitySpec](#compaction-granularity-spec).|No|
 
@@ -123,10 +124,9 @@ To control the number of result segments per time chunk, you can set [maxRowsPer
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [DruidInputSource](native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
-Compaction tasks would exit without doing anything and issue a failure status code:
-- if the interval you specify has no data segments loaded<br>
-OR
-- if the interval you specify is empty.
+Compaction tasks exit without doing anything and issue a failure status code in either of the following cases:
+- If the interval you specify has no data segments loaded<br>
+- If the interval you specify is empty.
 
 Note that the metadata between input segments and the resulting compacted segments may differ if the metadata among the input segments differs as well. If all input segments have the same metadata, however, the resulting output segment will have the same metadata as all input segments.
 
@@ -160,26 +160,26 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 
 |Field|Description|Default|Required?|
 |-----|-----------|-------|--------|
-|`type`|Task type. Should be `compact`|none|Yes|
+|`type`|Task type: `compact`|none|Yes|
 |`inputSpec`|Input specification|none|Yes|
-|`dropExisting`|If `true`, then the compaction task drops (mark unused) all existing segments fully contained by either the `interval` in the `interval` type `inputSpec` or the umbrella interval of the `segments` in the `segment` type `inputSpec` when the task publishes new compacted segments. If compaction fails, Druid does not drop or mark unused any segments. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the compaction task interval.|false|no|
+|`dropExisting`|If `true`, when the task publishes newly compacted segments the compaction, it marks all existing segments fully contained by either of the following as unused (drops the segments):<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does not drop or mark unused any segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. It may cause data within the compaction task interval to become  temporarily unavailable.|false|no|
 
 
-There are two supported `inputSpec`s for now.
+Druid supports two supported `inputSpec` formats:
 
-The interval `inputSpec` is:
+#### Interval `inputSpec`:
 
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `interval`|Yes|
-|`interval`|Interval to compact|Yes|
+     |Field|Description|Required|
+     |-----|-----------|--------|
+     |`type`|Task type. Should be `interval`|Yes|
+     |`interval`|Interval to compact|Yes|
 
-The segments `inputSpec` is:
+#### Segments `inputSpec`:
 
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Should be `segments`|Yes|
-|`segments`|A list of segment IDs|Yes|
+     |Field|Description|Required|
+     |-----|-----------|--------|
+     |`type`|Task type. Should be `segments`|Yes|
+     |`segments`|A list of segment IDs|Yes|
 
 ### Compaction granularity spec
 
@@ -227,5 +227,5 @@ For example, to set the segment granularity to "day" and the query granularity t
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
 - [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
-- See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
+- [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
 and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic compaction configuration information.

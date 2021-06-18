@@ -57,7 +57,8 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
               ),
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
               )
           )
       )

@@ -1438,9 +1438,11 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
+
       if (NullHandling.sqlCompatible() && value1.isNumericNull()) {
         return ExprEval.of(null);
       }
+
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
         throw new IAE(
             "The first argument to the function[%s] should be integer or double type but got the type: %s",
@@ -2720,6 +2722,9 @@ public interface Function
     @Override
     protected ExprEval eval(String x, int y)
     {
+      if (x == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
     }
   }

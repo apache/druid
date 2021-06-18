@@ -49,7 +49,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -7917,7 +7916,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -7985,7 +7984,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8052,7 +8051,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8582,7 +8581,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -11183,28 +11182,35 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "v",
                 "qualityDouble * qualityLong",
                 ValueType.LONG,
-                ExprMacroTable.nil()
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "two",
+                "2",
+                null,
+                TestExprMacroTable.INSTANCE
             )
         )
         .setDimensions(
             new DefaultDimensionSpec("v", "v", ValueType.LONG)
         )
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("twosum", null, "1 + two", TestExprMacroTable.INSTANCE))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .setLimit(5)
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(query, "2011-04-01", "v", 10000000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 12100000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L)
+        makeRow(query, "2011-04-01", "v", 10000000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 12100000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L, "twosum", 18L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
+
 
   @Test
   public void testGroupByWithExpressionAggregator()

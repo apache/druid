@@ -25,6 +25,8 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -42,7 +44,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoordinatorCompactionConfigsResourceTest
@@ -58,6 +59,8 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       ImmutableMap.of("key", "val")
   );
+  private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
+
   private static final CoordinatorCompactionConfig ORIGINAL_CONFIG = CoordinatorCompactionConfig.from(ImmutableList.of(OLD_CONFIG));
 
   @Mock
@@ -66,24 +69,41 @@ public class CoordinatorCompactionConfigsResourceTest
   @Mock
   private HttpServletRequest mockHttpServletRequest;
 
+  @Mock
+  private MetadataStorageConnector mockConnector;
+
+  @Mock
+  private MetadataStorageTablesConfig mockConnectorConfig;
+
   private CoordinatorCompactionConfigsResource coordinatorCompactionConfigsResource;
 
   @Before
   public void setup()
   {
-    Mockito.when(mockJacksonConfigManager.watch(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+    Mockito.when(mockConnector.lookup(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq("name"),
+        ArgumentMatchers.eq("payload"),
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+    ).thenReturn(OLD_CONFIG_IN_BYTES);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+        ArgumentMatchers.eq(OLD_CONFIG_IN_BYTES),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(new AtomicReference<>(ORIGINAL_CONFIG));
-    coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(mockJacksonConfigManager);
+    ).thenReturn(ORIGINAL_CONFIG);
+    Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
+    coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
+        mockJacksonConfigManager,
+        mockConnector,
+        mockConnectorConfig
+    );
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
   }
 
   @Test
   public void testSetCompactionTaskLimitWithExistingConfig()
   {
-    final ArgumentCaptor<CoordinatorCompactionConfig> oldConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -105,7 +125,7 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), ORIGINAL_CONFIG);
+    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
     Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
@@ -114,7 +134,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testAddOrUpdateCompactionConfigWithExistingConfig()
   {
-    final ArgumentCaptor<CoordinatorCompactionConfig> oldConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -144,7 +164,7 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), ORIGINAL_CONFIG);
+    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(2, newConfigCaptor.getValue().getCompactionConfigs().size());
     Assert.assertEquals(OLD_CONFIG, newConfigCaptor.getValue().getCompactionConfigs().get(0));
@@ -154,7 +174,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testDeleteCompactionConfigWithExistingConfig()
   {
-    final ArgumentCaptor<CoordinatorCompactionConfig> oldConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -175,11 +195,11 @@ public class CoordinatorCompactionConfigsResourceTest
         ImmutableMap.of("key", "val")
     );
     final CoordinatorCompactionConfig originalConfig = CoordinatorCompactionConfig.from(ImmutableList.of(toDelete));
-    Mockito.when(mockJacksonConfigManager.watch(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+        ArgumentMatchers.eq(OLD_CONFIG_IN_BYTES),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(new AtomicReference<>(originalConfig));
+    ).thenReturn(originalConfig);
 
     String author = "maytas";
     String comment = "hello";
@@ -191,7 +211,7 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
     Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), originalConfig);
+    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(0, newConfigCaptor.getValue().getCompactionConfigs().size());
   }
@@ -223,12 +243,18 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testSetCompactionTaskLimitWithoutExistingConfig()
   {
-    Mockito.when(mockJacksonConfigManager.watch(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+    Mockito.when(mockConnector.lookup(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq("name"),
+        ArgumentMatchers.eq("payload"),
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+    ).thenReturn(null);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+        ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty()));
-    final ArgumentCaptor<CoordinatorCompactionConfig> oldConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    ).thenReturn(CoordinatorCompactionConfig.empty());
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -258,12 +284,18 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testAddOrUpdateCompactionConfigWithoutExistingConfig()
   {
-    Mockito.when(mockJacksonConfigManager.watch(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+    Mockito.when(mockConnector.lookup(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq("name"),
+        ArgumentMatchers.eq("payload"),
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+    ).thenReturn(null);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+        ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty()));
-    final ArgumentCaptor<CoordinatorCompactionConfig> oldConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    ).thenReturn(CoordinatorCompactionConfig.empty());
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -301,11 +333,17 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testDeleteCompactionConfigWithoutExistingConfigShouldFailAsDatasourceNotExist()
   {
-    Mockito.when(mockJacksonConfigManager.watch(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+    Mockito.when(mockConnector.lookup(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq("name"),
+        ArgumentMatchers.eq("payload"),
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+    ).thenReturn(null);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+        ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty()));
+    ).thenReturn(CoordinatorCompactionConfig.empty());
     String author = "maytas";
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
