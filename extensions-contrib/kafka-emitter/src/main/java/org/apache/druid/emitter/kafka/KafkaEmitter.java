@@ -105,8 +105,14 @@ public class KafkaEmitter implements Emitter
       props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
       props.putAll(config.getKafkaProducerConfig());
+      if (config.getKafkaProducerConfigProvider() != null) {
+        Map<String, String> dynamicConfig = config.getKafkaProducerConfigProvider().getConfig();
+        for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
+          props.setProperty(e.getKey(), e.getValue());
+        }
+      }
 
-      return new KafkaProducer<>(props);
+      return new KafkaProducer<>(props).;
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

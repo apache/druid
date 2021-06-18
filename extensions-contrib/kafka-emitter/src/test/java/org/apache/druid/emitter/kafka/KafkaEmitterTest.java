@@ -82,7 +82,7 @@ public class KafkaEmitterTest
         requestTopic == null ? totalEventsExcludingRequestLogEvents : totalEvents);
     final KafkaProducer<String, String> producer = EasyMock.createStrictMock(KafkaProducer.class);
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
-        new KafkaEmitterConfig("", "metrics", "alerts", requestTopic, "test-cluster", null),
+        new KafkaEmitterConfig("", "metrics", "alerts", requestTopic, "test-cluster", null, null),
         new ObjectMapper()
     )
     {
