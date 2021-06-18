@@ -73,7 +73,7 @@ public class RedisClusterCacheTest
     // some methods must be overriden for test cases
     cache = new RedisClusterCache(new MockJedisCluster(Collections.singleton(new HostAndPort("localhost", 6379)))
     {
-      final Map<String, byte[]> cacheStorage = new ConcurrentHashMap<>();
+      final ConcurrentHashMap<String, byte[]> cacheStorage = new ConcurrentHashMap<>();
 
       @Override
       public String setex(final byte[] key, final int seconds, final byte[] value)

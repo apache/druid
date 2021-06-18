@@ -80,7 +80,7 @@ public class RedisClusterCache extends AbstractRedisCache
       slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(cachableKey);
     }
 
-    Map<NamedKey, byte[]> results = new ConcurrentHashMap<>();
+    ConcurrentHashMap<NamedKey, byte[]> results = new ConcurrentHashMap<>();
     slot2Keys.keySet()
              .parallelStream()
              .forEach(slot -> {
