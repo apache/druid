@@ -16,22 +16,32 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.explain-dialog {
+  &.bp3-dialog {
+    width: 600px;
+  }
 
-import { QueryPlanDialog } from './query-plan-dialog';
+  .bp3-dialog-body {
+    min-height: 70vh;
+  }
 
-describe('query plan dialog', () => {
-  it('matches snapshot', () => {
-    const queryPlanDialog = (
-      <QueryPlanDialog
-        setQueryString={() => null}
-        explainResult="test"
-        explainError={undefined}
-        onClose={() => {}}
-      />
-    );
-    render(queryPlanDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
-  });
-});
+  textarea {
+    width: 100%;
+  }
+
+  .one-query {
+    textarea {
+      height: 50vh !important;
+    }
+  }
+
+  .two-queries {
+    textarea {
+      height: 25vh !important;
+    }
+  }
+
+  .generic-result {
+    overflow: scroll;
+  }
+}

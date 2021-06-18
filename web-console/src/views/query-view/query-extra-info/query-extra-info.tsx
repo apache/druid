@@ -16,17 +16,9 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  Intent,
-  Menu,
-  MenuDivider,
-  MenuItem,
-  Popover,
-  Position,
-  Tooltip,
-} from '@blueprintjs/core';
+import { Button, Intent, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2, Tooltip2 } from '@blueprintjs/popover2';
 import copy from 'copy-to-clipboard';
 import { QueryResult } from 'druid-query-toolkit';
 import React, { MouseEvent } from 'react';
@@ -103,14 +95,14 @@ export const QueryExtraInfo = React.memo(function QueryExtraInfo(props: QueryExt
     <div className="query-extra-info">
       {typeof queryResult.queryDuration !== 'undefined' && (
         <div className="query-info" onClick={handleQueryInfoClick}>
-          <Tooltip content={tooltipContent} hoverOpenDelay={500}>
+          <Tooltip2 content={tooltipContent} hoverOpenDelay={500} placement="top-start">
             {`${resultCount} in ${(queryResult.queryDuration / 1000).toFixed(2)}s`}
-          </Tooltip>
+          </Tooltip2>
         </div>
       )}
-      <Popover className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
+      <Popover2 className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
         <Button icon={IconNames.DOWNLOAD} minimal />
-      </Popover>
+      </Popover2>
     </div>
   );
 });
