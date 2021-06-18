@@ -59,6 +59,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   protected final boolean storeDoubleAsFloat;
   protected final Supplier<Expr> fieldExpression;
 
+
   public SimpleDoubleAggregatorFactory(
       ExprMacroTable macroTable,
       String name,

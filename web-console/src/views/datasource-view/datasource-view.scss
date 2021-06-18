@@ -29,24 +29,19 @@
 
   .ReactTable {
     position: absolute;
+    top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
   }
 
-  &.show-chart {
-    .chart-container {
+  &.show-segment-timeline {
+    .segment-timeline {
       height: calc(50% - 55px);
       margin-top: 10px;
     }
 
     .ReactTable {
       top: 50%;
-    }
-  }
-
-  &.no-chart {
-    .ReactTable {
-      top: $view-control-bar-height + $standard-padding;
     }
   }
 }

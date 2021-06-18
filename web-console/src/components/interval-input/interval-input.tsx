@@ -17,39 +17,12 @@
  */
 
 import { Button, InputGroup, Intent, Position } from '@blueprintjs/core';
-import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
+import { DateRange, DateRangePicker, TimePrecision } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
-const CURRENT_YEAR = new Date().getUTCFullYear();
-
-function removeLocalTimezone(localDate: Date): Date {
-  // Function removes the local timezone of the date and displays it in UTC
-  return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
-}
-
-function parseInterval(interval: string): DateRange {
-  const dates = interval.split('/');
-  if (dates.length !== 2) {
-    return [null, null];
-  }
-  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : null;
-  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : null;
-  // Must check if the start and end dates are within range
-  return [
-    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? null : startDate,
-    endDate && endDate.getFullYear() > CURRENT_YEAR ? null : endDate,
-  ];
-}
-function stringifyDateRange(localRange: DateRange): string {
-  // This function takes in the dates selected from datepicker in local time, and displays them in UTC
-  // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
-  const [localStartDate, localEndDate] = localRange;
-  return `${
-    localStartDate ? removeLocalTimezone(localStartDate).toISOString().substring(0, 19) : ''
-  }/${localEndDate ? removeLocalTimezone(localEndDate).toISOString().substring(0, 19) : ''}`;
-}
+import { intervalToLocalDateRange, localDateRangeToInterval } from '../../utils';
 
 export interface IntervalInputProps {
   interval: string;
@@ -71,11 +44,12 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
             popoverClassName="calendar"
             content={
               <DateRangePicker
-                timePrecision="second"
-                value={parseInterval(interval)}
+                timePrecision={TimePrecision.SECOND}
+                value={intervalToLocalDateRange(interval)}
                 contiguousCalendarMonths={false}
+                reverseMonthAndYearMenus
                 onChange={(selectedRange: DateRange) => {
-                  onValueChange(stringifyDateRange(selectedRange));
+                  onValueChange(localDateRangeToInterval(selectedRange));
                 }}
               />
             }

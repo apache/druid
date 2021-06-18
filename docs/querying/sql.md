@@ -303,7 +303,7 @@ columns in this mode are not nullable; any null or missing values will be treate
 In SQL compatible mode (`false`), NULLs are treated more closely to the SQL standard. The property affects both storage
 and querying, so for correct behavior, it should be set on all Druid service types to be available at both ingestion
 time and query time. There is some overhead associated with the ability to handle NULLs; see
-the [segment internals](../design/segments.md#sql-compatible-null-handling)documentation for more details.
+the [segment internals](../design/segments.md#sql-compatible-null-handling) documentation for more details.
 
 ## Aggregation functions
 

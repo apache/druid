@@ -16,30 +16,12 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.date-range-selector {
+  .bp3-popover-target {
+    display: block;
+  }
 
-import { BarUnit } from './bar-unit';
-import { ChartAxis } from './chart-axis';
-
-describe('Visualization', () => {
-  it('BarUnit', () => {
-    const barGroup = (
-      <svg>
-        <BarUnit x={10} y={10} width={10} height={10} />
-      </svg>
-    );
-    const { container } = render(barGroup);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('action barGroup', () => {
-    const barGroup = (
-      <svg>
-        <ChartAxis transform="value" scale={() => null} />
-      </svg>
-    );
-    const { container } = render(barGroup);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  * {
+    cursor: pointer;
+  }
+}

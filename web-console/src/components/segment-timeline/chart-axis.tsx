@@ -20,7 +20,7 @@ import { select } from 'd3-selection';
 import React from 'react';
 
 interface ChartAxisProps {
-  transform: string;
+  transform?: string;
   scale: any;
   className?: string;
 }

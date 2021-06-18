@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-.bar-chart {
-  .hovered-bar {
-    fill: transparent;
-    stroke: #ffffff;
-    stroke-width: 1.5px;
-    transform: translateX(65px);
-  }
+import { render } from '@testing-library/react';
+import React from 'react';
 
-  .gridline-x {
-    line {
-      stroke-dasharray: 5, 5;
-      opacity: 0.5;
-    }
-  }
-}
+import { BarUnit } from './bar-unit';
+
+describe('BarUnit', () => {
+  it('matches snapshot', () => {
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
+    );
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

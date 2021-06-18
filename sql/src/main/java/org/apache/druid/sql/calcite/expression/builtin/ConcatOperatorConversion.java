@@ -22,29 +22,22 @@ package org.apache.druid.sql.calcite.expression.builtin;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class ConcatOperatorConversion implements SqlOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = new SqlFunction(
-      "CONCAT",
-      SqlKind.OTHER_FUNCTION,
-      ReturnTypes.explicit(
-          factory -> Calcites.createSqlType(factory, SqlTypeName.VARCHAR)
-      ),
-      null,
-      OperandTypes.SAME_VARIADIC,
-      SqlFunctionCategory.STRING
-  );
+  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+      .operatorBuilder("CONCAT")
+      .operandTypeChecker(OperandTypes.SAME_VARIADIC)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+      .functionCategory(SqlFunctionCategory.STRING)
+      .build();
 
   @Override
   public SqlFunction calciteOperator()
