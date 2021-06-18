@@ -91,7 +91,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
