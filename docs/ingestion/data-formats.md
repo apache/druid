@@ -281,6 +281,8 @@ The `inputFormat` to load data of Thrift format in stream ingestion. An example 
     "type": "thrift",
     "flattenSpec": {
       "useFieldDiscovery": true,
+      "jarPath": "book.jar",
+      "thriftClass": "org.apache.druid.data.input.thrift.Book",
       "fields": [
         {
           "type": "path",
@@ -300,8 +302,8 @@ The `inputFormat` to load data of Thrift format in stream ingestion. An example 
 |type| String| This should be set to `thrift` to read Thrift serialized data| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Thrift record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 | binaryAsString | Boolean | Specifies if the bytes Thrift column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
-| thriftJar   | String      | path of thrift jar, if not provided, it will try to find the thrift class in classpath. Thrift jar in batch ingestion should be uploaded to HDFS first and configure `jobProperties` with `"tmpjars":"/path/to/your/thrift.jar"` | no       |
-| thriftClass | String      | classname of thrift                      | yes      |
+| thriftJar   | String      | path of Thrift jar, if not provided, it will try to find the Thrift class in classpath.| no       |
+| thriftClass | String      | classname of Thrift                      | yes      |
 
 ##### Avro Bytes Decoder
 
