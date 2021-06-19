@@ -16,16 +16,22 @@
  * limitations under the License.
  */
 
-export function jsonEscape(str: string): string {
-  if (typeof str !== 'string') throw new TypeError(`must be a string`);
-
-  const json = JSON.stringify(str);
-  return json.substr(1, json.length - 2).replace(/\\"/g, '"');
+export interface Formatter<T> {
+  stringify: (thing: T) => string;
+  parse: (str: string) => T;
 }
 
-export function jsonUnescape(str: string): string {
-  // Replace every " (and \") with \" so that parsing `"hi" there` would not fail as a string
-  str = str.replace(/\\?"/g, '\\"');
+export const JSON_STRING: Formatter<string> = {
+  stringify: (str: string) => {
+    if (typeof str !== 'string') throw new TypeError(`must be a string`);
 
-  return JSON.parse('"' + str + '"');
-}
+    const json = JSON.stringify(str);
+    return json.substr(1, json.length - 2).replace(/\\"/g, '"');
+  },
+  parse: (str: string) => {
+    // Replace every " (and \") with \" so that parsing `"hi" there` would not fail as a string
+    str = str.replace(/\\?"/g, '\\"');
+
+    return JSON.parse('"' + str + '"');
+  },
+};

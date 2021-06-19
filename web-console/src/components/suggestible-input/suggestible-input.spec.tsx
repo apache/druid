@@ -21,7 +21,7 @@ import React from 'react';
 
 import { SuggestibleInput } from './suggestible-input';
 
-describe('suggestible input', () => {
+describe('SuggestibleInput', () => {
   it('matches snapshot', () => {
     const suggestibleInput = (
       <SuggestibleInput onValueChange={() => {}} suggestions={['a', 'b', 'c']} />
