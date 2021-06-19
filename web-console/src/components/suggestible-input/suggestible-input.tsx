@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useRef } from 'react';
 
@@ -75,8 +76,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
       }}
       rightElement={
         suggestions && (
-          <Popover
-            boundary="window"
+          <Popover2
             content={
               <Menu>
                 {suggestions.map(suggestion => {
@@ -116,7 +116,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
             autoFocus={false}
           >
             <Button icon={IconNames.CARET_DOWN} minimal />
-          </Popover>
+          </Popover2>
         )
       }
       {...rest}

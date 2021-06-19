@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent, Popover, Position } from '@blueprintjs/core';
+import { Button, InputGroup, Intent, Position } from '@blueprintjs/core';
 import { DateRange, DateRangePicker, TimePrecision } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
 import { intervalToLocalDateRange, localDateRangeToInterval } from '../../utils';
-
-import './interval-input.scss';
 
 export interface IntervalInputProps {
   interval: string;
@@ -41,7 +40,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
       placeholder={placeholder}
       rightElement={
         <div>
-          <Popover
+          <Popover2
             popoverClassName="calendar"
             content={
               <DateRangePicker
@@ -57,7 +56,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
             position={Position.BOTTOM_RIGHT}
           >
             <Button rightIcon={IconNames.CALENDAR} />
-          </Popover>
+          </Popover2>
         </div>
       }
       onChange={(e: any) => {
