@@ -57,6 +57,20 @@ public class KafkaEmitterConfigTest
   }
 
   @Test
+  public void testSerDeserKafkaEmitterConfigNullDynamicConfigProvider() throws IOException
+  {
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
+        "alertTest", "requestTest",
+        "clusterNameTest", ImmutableMap.<String, String>builder()
+        .put("testKey", "testValue").build(), null
+    );
+    String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
+        .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+  }
+
+  @Test
   public void testSerDeserKafkaEmitterConfigNullRequestTopic() throws IOException
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
@@ -76,7 +90,8 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
         "alertTest", null,
-        "clusterNameTest", null, null
+        "clusterNameTest", null, new MapStringDynamicConfigProvider(
+        ImmutableMap.of("testKey2", "testValue2"))
     );
     try {
       @SuppressWarnings("unused")
