@@ -21,7 +21,7 @@ export interface Formatter<T> {
   parse: (str: string) => T;
 }
 
-export const JSON_STRING: Formatter<string> = {
+export const JSON_STRING_FORMATTER: Formatter<string> = {
   stringify: (str: string) => {
     if (typeof str !== 'string') throw new TypeError(`must be a string`);
 

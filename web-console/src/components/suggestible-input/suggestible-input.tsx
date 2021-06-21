@@ -22,7 +22,7 @@ import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useRef } from 'react';
 
-import { JSON_STRING } from '../../utils';
+import { JSON_STRING_FORMATTER } from '../../utils';
 import {
   FormattedInputGroup,
   FormattedInputGroupProps,
@@ -62,7 +62,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   return (
     <FormattedInputGroup
       className={classNames('suggestible-input', className)}
-      formatter={JSON_STRING}
+      formatter={JSON_STRING_FORMATTER}
       value={value}
       onValueChange={onValueChange}
       onFocus={e => {
@@ -92,7 +92,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
                     return (
                       <MenuItem
                         key={suggestion}
-                        text={JSON_STRING.stringify(suggestion)}
+                        text={JSON_STRING_FORMATTER.stringify(suggestion)}
                         onClick={() => handleSuggestionSelect(suggestion)}
                       />
                     );

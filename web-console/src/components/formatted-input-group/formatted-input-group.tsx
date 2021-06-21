@@ -38,7 +38,11 @@ export const FormattedInputGroup = React.memo(function FormattedInputGroup(
     <InputGroup
       className={classNames('formatted-input-group', className)}
       value={
-        typeof intermediateValue !== 'undefined' ? intermediateValue : formatter.stringify(value!)
+        typeof intermediateValue !== 'undefined'
+          ? intermediateValue
+          : typeof value !== 'undefined'
+          ? formatter.stringify(value)
+          : undefined
       }
       defaultValue={
         typeof defaultValue !== 'undefined' ? formatter.stringify(defaultValue) : undefined

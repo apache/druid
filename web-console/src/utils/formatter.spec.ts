@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { JSON_STRING } from './formatter';
+import { JSON_STRING_FORMATTER } from './formatter';
 
 describe('Formatter', () => {
   describe('JSON_STRING', () => {
     it('has a working stringify', () => {
       expect(
         new Array(38).fill(0).map((_, i) => {
-          return JSON_STRING.stringify(
+          return JSON_STRING_FORMATTER.stringify(
             i + ' : `' + String.fromCharCode(i) + '` : `' + String.fromCharCode(i) + '`',
           );
         }),
@@ -68,16 +68,16 @@ describe('Formatter', () => {
         '37 : `%` : `%`',
       ]);
 
-      expect(JSON_STRING.stringify(`hello "world"`)).toEqual(`hello "world"`);
+      expect(JSON_STRING_FORMATTER.stringify(`hello "world"`)).toEqual(`hello "world"`);
     });
 
     it('has a working parse', () => {
       new Array(38).fill(0).forEach((_, i) => {
         const str = i + ' : `' + String.fromCharCode(i) + '` : `' + String.fromCharCode(i) + '`';
-        expect(JSON_STRING.parse(JSON_STRING.stringify(str))).toEqual(str);
+        expect(JSON_STRING_FORMATTER.parse(JSON_STRING_FORMATTER.stringify(str))).toEqual(str);
       });
 
-      expect(JSON_STRING.parse(`hello "world"`)).toEqual(`hello "world"`);
+      expect(JSON_STRING_FORMATTER.parse(`hello "world"`)).toEqual(`hello "world"`);
     });
   });
 });
