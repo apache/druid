@@ -475,7 +475,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
-    tsqa = new TaskStorageQueryAdapter(taskStorage);
+    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     return taskStorage;
   }
 
