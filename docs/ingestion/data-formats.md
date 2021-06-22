@@ -380,8 +380,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry | no |
-| headers | Json | To send headers to the Schema Registry | no |
+| config | Json | To send additional configurations, configured for Schema Registry.  User can implement a `DynamicConfigProvider` to supply some properties at runtime, by adding `"druid.dynamic.config.provider"`:`{"type": "<registered_dynamic_config_provider_name>", ...}` in json. | no |
+| headers | Json | To send headers to the Schema Registry.  User can implement a `DynamicConfigProvider` to supply some properties at runtime, by adding `"druid.dynamic.config.provider"`:`{"type": "<registered_dynamic_config_provider_name>", ...}` in json. | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -1223,8 +1223,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry | no |
-| headers | Json | To send headers to the Schema Registry | no |
+| config | Json | To send additional configurations, configured for Schema Registry. User can implement a `DynamicConfigProvider` to supply some properties at runtime, by adding `"druid.dynamic.config.provider"`:`{"type": "<registered_dynamic_config_provider_name>", ...}` in json.  | no |
+| headers | Json | To send headers to the Schema Registry.  User can implement a `DynamicConfigProvider` to supply some properties at runtime, by adding `"druid.dynamic.config.provider"`:`{"type": "<registered_dynamic_config_provider_name>", ...}` in json. | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
