@@ -19,7 +19,7 @@
 import { JSON_STRING_FORMATTER } from './formatter';
 
 describe('Formatter', () => {
-  describe('JSON_STRING', () => {
+  describe('JSON_STRING_FORMATTER', () => {
     it('has a working stringify', () => {
       expect(
         new Array(38).fill(0).map((_, i) => {
@@ -62,22 +62,24 @@ describe('Formatter', () => {
         '31 : `\\u001f` : `\\u001f`',
         '32 : ` ` : ` `',
         '33 : `!` : `!`',
-        '34 : `"` : `"`',
+        '34 : `\\"` : `\\"`',
         '35 : `#` : `#`',
         '36 : `$` : `$`',
         '37 : `%` : `%`',
       ]);
 
-      expect(JSON_STRING_FORMATTER.stringify(`hello "world"`)).toEqual(`hello "world"`);
+      expect(JSON_STRING_FORMATTER.stringify(`hello "world"`)).toEqual(`hello \\"world\\"`);
     });
 
     it('has a working parse', () => {
+      expect(JSON_STRING_FORMATTER.parse(`h\u0065llo\t"world"\\`)).toEqual(`hello\t"world"\\`);
+    });
+
+    it('parses back and forth', () => {
       new Array(38).fill(0).forEach((_, i) => {
         const str = i + ' : `' + String.fromCharCode(i) + '` : `' + String.fromCharCode(i) + '`';
         expect(JSON_STRING_FORMATTER.parse(JSON_STRING_FORMATTER.stringify(str))).toEqual(str);
       });
-
-      expect(JSON_STRING_FORMATTER.parse(`hello "world"`)).toEqual(`hello "world"`);
     });
   });
 });
