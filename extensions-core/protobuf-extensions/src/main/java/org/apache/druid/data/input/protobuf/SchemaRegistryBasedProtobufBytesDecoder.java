@@ -132,14 +132,14 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   {
     HashMap<String, String> registryHeader = new HashMap<>();
     if (headers != null) {
-      for (String key : headers.keySet()) {
-        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(key)) {
-          registryHeader.put(key, headers.get(key).toString());
+      for (Map.Entry<String, Object> entry : headers.entrySet()) {
+        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(entry.getKey())) {
+          registryHeader.put(entry.getKey(), entry.getValue().toString());
         }
       }
       Map<String, String> dynamicConfig = extraConfigFromProvider(headers.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
-      for (String key : dynamicConfig.keySet()) {
-        registryHeader.put(key, dynamicConfig.get(key));
+      for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
+        registryHeader.put(entry.getKey(), entry.getValue());
       }
     }
     return registryHeader;
