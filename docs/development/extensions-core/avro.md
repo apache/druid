@@ -26,7 +26,7 @@ title: "Apache Avro"
 
 This Apache Druid extension enables Druid to ingest and understand the Apache Avro data format. This extension provides 
 two Avro Parsers for stream ingestion and Hadoop batch ingestion. 
-See [Avro Hadoop Parser](../../ingestion/data-formats.md#avro-hadoop-parser) and [Avro Stream Parser](../../ingestion/c.md#avro-stream-parser)
+See [Avro Hadoop Parser](../../ingestion/data-formats.md#avro-hadoop-parser) and [Avro Stream Parser](../../ingestion/data-formats.md#avro-stream-parser)
 for more details about how to use these in an ingestion spec.
 
 Additionally, it provides an InputFormat for reading Avro OCF files when using
