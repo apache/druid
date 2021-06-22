@@ -21,7 +21,7 @@ import React from 'react';
 
 import { QueryHistoryDialog } from './query-history-dialog';
 
-describe('query plan dialog', () => {
+describe('QueryHistoryDialog', () => {
   it('matches snapshot', () => {
     const queryPlanDialog = (
       <QueryHistoryDialog setQueryString={() => null} queryRecords={[]} onClose={() => {}} />

@@ -244,7 +244,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.2
+version: 2.10.5
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -350,7 +350,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3.2
+version: 2.7.1
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -4931,6 +4931,15 @@ version: 3.26.1
 
 ---
 
+name: "@blueprintjs/popover2"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 0.10.1
+
+---
+
 name: "@hypnosphi/create-react-context"
 license_category: binary
 module: web-console
@@ -4938,6 +4947,16 @@ license_name: MIT License
 copyright: James Kyle
 version: 0.3.1
 license_file_path: licenses/bin/@hypnosphi-create-react-context.MIT
+
+---
+
+name: "@popperjs/core"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Federico Zivolo
+version: 2.9.2
+license_file_path: licenses/bin/@popperjs-core.MIT
 
 ---
 
@@ -5495,6 +5514,16 @@ license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
 version: 16.14.0
 license_file_path: licenses/bin/react-dom.MIT
+
+---
+
+name: "react-fast-compare"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Chris Bolin
+version: 3.2.0
+license_file_path: licenses/bin/react-fast-compare.MIT
 
 ---
 

@@ -227,6 +227,20 @@ public class OverlordResource
     }
   }
 
+  @POST
+  @Path("/lockedIntervals")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    if (minTaskPriority == null || minTaskPriority.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+  }
+
   @GET
   @Path("/task/{taskid}")
   @Produces(MediaType.APPLICATION_JSON)

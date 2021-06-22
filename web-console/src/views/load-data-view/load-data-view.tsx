@@ -34,11 +34,11 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
   Switch,
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -2696,25 +2696,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         {reorderDimensionMenu && (
           <FormGroup>
-            <Popover content={reorderDimensionMenu}>
+            <Popover2 content={reorderDimensionMenu}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         {selectedDimensionSpecIndex !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
           <FormGroup>
-            <Popover content={convertToMetricMenu}>
+            <Popover2 content={convertToMetricMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to metric"
                 rightIcon={IconNames.CARET_DOWN}
                 disabled={dimensions.length <= 1}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         <div className="control-buttons">
@@ -2806,13 +2806,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         {selectedMetricSpecIndex !== -1 && dimensionMode === 'specific' && (
           <FormGroup>
-            <Popover content={convertToDimensionMenu}>
+            <Popover2 content={convertToDimensionMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         <div className="control-buttons">

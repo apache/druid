@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
+import { ResizeEntry } from '@blueprintjs/core';
+import { ResizeSensor2 } from '@blueprintjs/popover2';
 import ace, { Editor } from 'brace';
 import escape from 'lodash.escape';
 import React from 'react';
@@ -198,7 +199,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     }
   }
 
-  private readonly handleAceContainerResize = (entries: IResizeEntry[]) => {
+  private readonly handleAceContainerResize = (entries: ResizeEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
@@ -228,7 +229,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return (
       <div className="query-input">
-        <ResizeSensor onResize={this.handleAceContainerResize}>
+        <ResizeSensor2 onResize={this.handleAceContainerResize}>
           <div className="ace-container">
             <AceEditor
               mode={runeMode ? 'hjson' : 'dsql'}
@@ -259,7 +260,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               }}
             />
           </div>
-        </ResizeSensor>
+        </ResizeSensor2>
       </div>
     );
   }

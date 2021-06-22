@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, ITreeNode, Menu, MenuItem, Popover, Position, Tree } from '@blueprintjs/core';
+import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import {
   SqlComparison,
   SqlExpression,
@@ -115,8 +116,8 @@ export interface ColumnTreeProps {
 
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
-  columnTree?: ITreeNode[];
-  currentSchemaSubtree?: ITreeNode[];
+  columnTree?: TreeNodeInfo[];
+  currentSchemaSubtree?: TreeNodeInfo[];
   selectedTreeIndex: number;
 }
 
@@ -150,18 +151,17 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
-        (metadata, schemaName): ITreeNode => ({
+        (metadata, schemaName): TreeNodeInfo => ({
           id: schemaName,
           label: schemaName,
           childNodes: groupBy(
             metadata,
             r => r.TABLE_NAME,
-            (metadata, tableName): ITreeNode => ({
+            (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
               label: (
-                <Popover
-                  boundary="window"
+                <Popover2
                   position={Position.RIGHT}
                   content={
                     <Deferred
@@ -306,19 +306,17 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   }
                 >
                   {tableName}
-                </Popover>
+                </Popover2>
               ),
               childNodes: metadata
                 .map(
-                  (columnData): ITreeNode => ({
+                  (columnData): TreeNodeInfo => ({
                     id: columnData.COLUMN_NAME,
                     icon: dataTypeToIcon(columnData.DATA_TYPE),
                     label: (
-                      <Popover
-                        boundary="window"
+                      <Popover2
                         position={Position.RIGHT}
                         autoFocus={false}
-                        targetClassName="bp3-popover-open"
                         content={
                           <Deferred
                             content={() => {
@@ -384,7 +382,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         }
                       >
                         {columnData.COLUMN_NAME}
-                      </Popover>
+                      </Popover2>
                     ),
                   }),
                 )
@@ -441,7 +439,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     };
   }
 
-  renderSchemaSelector() {
+  private renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
 
@@ -465,10 +463,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   private readonly handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const { columnTree } = this.state;
+    if (!columnTree) return;
 
     const selectedTreeIndex = Number(e.target.value);
-
-    if (!columnTree) return;
 
     const currentSchemaSubtree =
       columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
@@ -479,23 +476,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
-  private readonly handleNodeCollapse = (nodeData: ITreeNode) => {
+  private readonly handleNodeCollapse = (nodeData: TreeNodeInfo) => {
     nodeData.isExpanded = false;
-    this.bounceState();
+    this.forceUpdate();
   };
 
-  private readonly handleNodeExpand = (nodeData: ITreeNode) => {
+  private readonly handleNodeExpand = (nodeData: TreeNodeInfo) => {
     nodeData.isExpanded = true;
-    this.bounceState();
+    this.forceUpdate();
   };
-
-  bounceState() {
-    const { columnTree } = this.state;
-    if (!columnTree) return;
-    this.setState(prevState => ({
-      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
-    }));
-  }
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
