@@ -140,7 +140,6 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
-        null,
         rowIngestionMeters,
         parseExceptionHandler
     );

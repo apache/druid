@@ -108,7 +108,6 @@ public class BatchAppenderator implements Appenderator
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
-  private final Cache cache;
   /**
    * This map needs to be concurrent because it's accessed and mutated from multiple threads: both the thread from where
    * this Appenderator is used (and methods like {@link #add(SegmentIdWithShardSpec, InputRow, Supplier, boolean)} are
@@ -121,8 +120,7 @@ public class BatchAppenderator implements Appenderator
 
   /**
    * The following sinks metadata map and associated class are the way to retain metadata now that sinks
-   * are being completely removed from memory after each incremental persist. For now, {@link SinkMetadata} only
-   * contains a single memeber {@link SinkMetadata#numRowsInSegment} but we can add more in the future as needed
+   * are being completely removed from memory after each incremental persist.
    */
   private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
@@ -218,7 +216,6 @@ public class BatchAppenderator implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
@@ -236,7 +233,6 @@ public class BatchAppenderator implements Appenderator
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
-    this.cache = cache;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
 
@@ -865,8 +861,6 @@ public class BatchAppenderator implements Appenderator
 
       final long pushFinishTime = System.nanoTime();
 
-      //objectMapper.writeValue(descriptorFile, segment);
-
       log.info(
           "Segment[%s] of %,d bytes "
           + "built from %d incremental persist(s) in %,dms; "
@@ -1144,7 +1138,6 @@ public class BatchAppenderator implements Appenderator
           hydrants
       );
       currSink.finishWriting(); // this sink is not writable
-      //sinks.put(identifier, currSink);
       return new Pair<>(identifier, currSink);
     }
     catch (IOException e) {
@@ -1193,13 +1186,6 @@ public class BatchAppenderator implements Appenderator
             }
 
             metrics.setSinkCount(sinks.size());
-
-            for (FireHydrant hydrant : sink) {
-              if (cache != null) {
-                cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
-              }
-              hydrant.swapSegment(null);
-            }
 
             if (removeOnDiskData) {
               removeDirectory(computePersistDir(identifier));
