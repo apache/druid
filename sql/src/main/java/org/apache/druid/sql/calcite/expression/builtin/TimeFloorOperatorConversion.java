@@ -155,7 +155,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
                 return Expressions.toDruidExpression(plannerContext, rowSignature, operand);
               }
             },
-            DruidExpression.fromExpression(DruidExpression.nullLiteral())
+            DruidExpression.fromExpression(DruidExpression.emptyLiteral())
         )
     );
 

@@ -93,6 +93,11 @@ public class DruidExpression
     return "null";
   }
 
+  public static String emptyLiteral()
+  {
+    return "''";
+  }
+
   public static String functionCall(final String functionName, final List<DruidExpression> args)
   {
     Preconditions.checkNotNull(functionName, "functionName");
