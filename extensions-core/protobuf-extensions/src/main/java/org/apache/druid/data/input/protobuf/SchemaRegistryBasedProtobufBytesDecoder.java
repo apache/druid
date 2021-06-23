@@ -34,14 +34,13 @@ import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.metadata.DynamicConfigProvider;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 
 import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,9 +76,9 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.headers = headers;
     this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), createRegistryConfig(), createRegistryHeader());
+      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper));
     } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), createRegistryConfig(), createRegistryHeader());
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper));
     }
   }
 
@@ -129,51 +128,6 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.headers = null;
     this.registry = registry;
     this.jsonMapper = new ObjectMapper();
-  }
-
-  protected Map<String, String> createRegistryHeader()
-  {
-    HashMap<String, String> registryHeader = new HashMap<>();
-    if (headers != null) {
-      for (Map.Entry<String, Object> entry : headers.entrySet()) {
-        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(entry.getKey())) {
-          registryHeader.put(entry.getKey(), entry.getValue().toString());
-        }
-      }
-      Map<String, String> dynamicConfig = extraConfigFromProvider(headers.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
-      for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
-        registryHeader.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return registryHeader;
-  }
-
-  protected Map<String, Object> createRegistryConfig()
-  {
-    HashMap<String, Object> registryConfig = new HashMap<>();
-    if (config != null) {
-      for (Map.Entry<String, Object> entry : config.entrySet()) {
-        if (!DRUID_DYNAMIC_CONFIG_PROVIDER_KEY.equals(entry.getKey())) {
-          registryConfig.put(entry.getKey(), entry.getValue());
-        }
-      }
-      if (config.containsKey(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY)) {
-        Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(DRUID_DYNAMIC_CONFIG_PROVIDER_KEY));
-        for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
-          registryConfig.put(entry.getKey(), entry.getValue());
-        }
-      }
-    }
-    return registryConfig;
-  }
-
-  private Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson)
-  {
-    if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = jsonMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
-      return dynamicConfigProvider.getConfig();
-    }
-    return Collections.emptyMap();
   }
 
   @Override

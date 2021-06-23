@@ -38,6 +38,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.metadata.DynamicConfigProvider;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -76,9 +77,9 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.headers = headers;
     this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, createRegistryConfig(), createRegistryHeader());
+      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper));
     } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, createRegistryConfig(), createRegistryHeader());
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper));
     }
   }
 

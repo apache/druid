@@ -35,6 +35,7 @@ import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -190,7 +191,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
         .readerFor(AvroBytesDecoder.class)
         .readValue(json);
 
-    Map<String, String> heaeder = decoder.createRegistryHeader();
+    Map<String, String> heaeder = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
     Assert.assertEquals(3, heaeder.size());
@@ -212,12 +213,12 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
         .readerFor(AvroBytesDecoder.class)
         .readValue(json);
 
-    Map<String, ?> heaeder = decoder.createRegistryConfig();
+    Map<String, ?> config = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getConfig(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
-    Assert.assertEquals(3, heaeder.size());
-    Assert.assertEquals("value.1", heaeder.get("registry.config.prop.1"));
-    Assert.assertEquals("value.2", heaeder.get("registry.config.prop.2"));
-    Assert.assertEquals("value.3", heaeder.get("registry.config.prop.3"));
+    Assert.assertEquals(3, config.size());
+    Assert.assertEquals("value.1", config.get("registry.config.prop.1"));
+    Assert.assertEquals("value.2", config.get("registry.config.prop.2"));
+    Assert.assertEquals("value.3", config.get("registry.config.prop.3"));
   }
 }

@@ -30,6 +30,7 @@ import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
@@ -184,7 +185,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
-    Map<String, String> heaeder = decoder.createRegistryHeader();
+    Map<String, String> heaeder = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedProtobufBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
     Assert.assertEquals(3, heaeder.size());
@@ -206,7 +207,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
-    Map<String, ?> heaeder = decoder.createRegistryConfig();
+    Map<String, ?> heaeder = DynamicConfigProviderUtils.extraConfigAndSetObjectMap(decoder.getConfig(), SchemaRegistryBasedProtobufBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
     Assert.assertEquals(3, heaeder.size());
