@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +31,7 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -55,7 +57,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private final List<String> urls;
   private final Map<String, Object> config;
   private final Map<String, Object> headers;
-  private final ObjectMapper mapper;
+  private final ObjectMapper jsonMapper;
   public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
@@ -64,7 +66,8 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       @JsonProperty("capacity") Integer capacity,
       @JsonProperty("urls") @Nullable List<String> urls,
       @JsonProperty("config") @Nullable Map<String, Object> config,
-      @JsonProperty("headers") @Nullable Map<String, Object> headers
+      @JsonProperty("headers") @Nullable Map<String, Object> headers,
+      @JacksonInject @Json ObjectMapper jsonMapper
   )
   {
     this.url = url;
@@ -72,7 +75,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.urls = urls;
     this.config = config;
     this.headers = headers;
-    this.mapper = new ObjectMapper();
+    this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
       this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), createRegistryConfig(), createRegistryHeader());
     } else {
@@ -125,7 +128,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.config = null;
     this.headers = null;
     this.registry = registry;
-    this.mapper = new ObjectMapper();
+    this.jsonMapper = new ObjectMapper();
   }
 
   protected Map<String, String> createRegistryHeader()
@@ -167,7 +170,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson)
   {
     if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = mapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
+      DynamicConfigProvider dynamicConfigProvider = jsonMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
       return dynamicConfigProvider.getConfig();
     }
     return Collections.emptyMap();

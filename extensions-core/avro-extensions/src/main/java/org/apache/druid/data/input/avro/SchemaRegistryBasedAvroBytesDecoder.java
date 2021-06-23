@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,7 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -54,7 +56,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   private final List<String> urls;
   private final Map<String, Object> config;
   private final Map<String, Object> headers;
-  private final ObjectMapper mapper;
+  private final ObjectMapper jsonMapper;
   public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
@@ -63,7 +65,8 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       @JsonProperty("capacity") Integer capacity,
       @JsonProperty("urls") @Nullable List<String> urls,
       @JsonProperty("config") @Nullable Map<String, Object> config,
-      @JsonProperty("headers") @Nullable Map<String, Object> headers
+      @JsonProperty("headers") @Nullable Map<String, Object> headers,
+      @JacksonInject @Json ObjectMapper jsonMapper
   )
   {
     this.url = url;
@@ -71,7 +74,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.urls = urls;
     this.config = config;
     this.headers = headers;
-    this.mapper = new ObjectMapper();
+    this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
       this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, createRegistryConfig(), createRegistryHeader());
     } else {
@@ -148,7 +151,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   private Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson)
   {
     if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = mapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
+      DynamicConfigProvider dynamicConfigProvider = jsonMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
       return dynamicConfigProvider.getConfig();
     }
     return Collections.emptyMap();
@@ -164,7 +167,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.config = null;
     this.headers = null;
     this.registry = registry;
-    this.mapper = new ObjectMapper();
+    this.jsonMapper = new ObjectMapper();
   }
 
   @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.DynamicMessage;
@@ -27,6 +28,7 @@ import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -95,7 +97,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testDefaultCapacity()
   {
     // Given
-    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null, null, null, null);
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null, null, null, null, null);
     // When
     Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), Integer.MAX_VALUE);
   }
@@ -105,7 +107,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   {
     int capacity = 100;
     // Given
-    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity, null, null, null);
+    SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity, null, null, null, null);
     // When
     Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), capacity);
   }
@@ -122,7 +124,10 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testMultipleUrls() throws Exception
   {
     String json = "{\"urls\":[\"http://localhost\"],\"type\": \"schema_registry\"}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
     decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
         .readerFor(ProtobufBytesDecoder.class)
@@ -136,7 +141,10 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testUrl() throws Exception
   {
     String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\"}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
     decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
         .readerFor(ProtobufBytesDecoder.class)
@@ -150,7 +158,10 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testConfig() throws Exception
   {
     String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\", \"config\":{}}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
     decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
         .readerFor(ProtobufBytesDecoder.class)
@@ -164,7 +175,10 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testParseHeader() throws JsonProcessingException
   {
     String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{},\"headers\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.header.prop.2\":\"value.2\", \"registry.header.prop.3\":\"value.3\"}},\"registry.header.prop.1\":\"value.1\",\"registry.header.prop.2\":\"value.4\"}}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
     decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
         .readerFor(ProtobufBytesDecoder.class)
@@ -183,7 +197,10 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   public void testParseConfig() throws JsonProcessingException
   {
     String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.config.prop.2\":\"value.2\", \"registry.config.prop.3\":\"value.3\"}},\"registry.config.prop.1\":\"value.1\",\"registry.config.prop.2\":\"value.4\"},\"headers\":{}}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
     decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
         .readerFor(ProtobufBytesDecoder.class)

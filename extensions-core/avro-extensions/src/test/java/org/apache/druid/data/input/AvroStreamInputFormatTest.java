@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -109,6 +110,9 @@ public class AvroStreamInputFormatTest
     for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
   }
 
   @Test
@@ -134,7 +138,7 @@ public class AvroStreamInputFormatTest
   {
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
-        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null),
+        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null, null),
         false,
         false
     );
