@@ -1498,7 +1498,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         0,
         0,
         null,

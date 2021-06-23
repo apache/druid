@@ -251,7 +251,6 @@ public class HadoopDruidIndexerConfigTest
           false,
           null,
           null,
-          null,
           false,
           false,
           null,

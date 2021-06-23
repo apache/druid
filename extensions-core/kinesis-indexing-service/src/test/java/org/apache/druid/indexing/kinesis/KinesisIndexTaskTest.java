@@ -2766,7 +2766,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
