@@ -35,14 +35,17 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -100,6 +103,42 @@ public class Grouping
       if (!seen.contains(field)) {
         throw new ISE("Missing field in rowOrder: %s", field);
       }
+    }
+  }
+
+  public static Grouping replaceDimensions(
+      final Grouping grouping,
+      final Projection projection
+  )
+  {
+    if (grouping == null || projection == null || projection.getFdsExpressionMap() == null) {
+      return grouping;
+    }
+
+    List<DimensionExpression> dimensions = grouping.getDimensions();
+    List<DimensionExpression> newDimensions = new ArrayList<>(dimensions.size());
+
+    Map<String, Function<String, DruidExpression>> fdsExpressionMap = projection.getFdsExpressionMap();
+    for (DimensionExpression dimension : dimensions) {
+      newDimensions.add(replaceDimensions(fdsExpressionMap, dimension));
+    }
+    return Grouping.create(newDimensions, grouping.getSubtotals(), grouping.getAggregations(), grouping.getHavingFilter(), grouping.getOutputRowSignature());
+  }
+
+  private static DimensionExpression replaceDimensions(
+      Map<String, Function<String, DruidExpression>> fdsExpressionMap,
+      DimensionExpression dimension
+  )
+  {
+    if (fdsExpressionMap == null) {
+      return dimension;
+    }
+
+    if (fdsExpressionMap.containsKey(dimension.getOutputName())) {
+      DruidExpression expression = fdsExpressionMap.get(dimension.getOutputName()).apply(dimension.getDruidExpression().getSimpleExtraction().getColumn());
+      return DimensionExpression.ofSimpleColumn(dimension.getOutputName(), expression, dimension.getOutputType());
+    } else {
+      return dimension;
     }
   }
 
@@ -195,7 +234,7 @@ public class Grouping
         newDimIndexes[i] = -1;
       } else {
         newDimIndexes[i] = newDimensions.size();
-        newDimensions.add(dimension);
+        newDimensions.add(replaceDimensions(postAggregationProjection.getFdsExpressionMap(), dimension));
       }
     }
 

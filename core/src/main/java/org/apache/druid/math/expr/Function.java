@@ -3539,4 +3539,120 @@ public interface Function
       throw new RE("Unable to slice to unknown type %s", expr.type());
     }
   }
+
+  class PrefixFilterFunction implements Function
+  {
+
+    @Override
+    public String name()
+    {
+      return "prefix_filter";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return null;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return null;
+    }
+  }
+
+  class RegexFilterFunction implements Function
+  {
+
+    @Override
+    public String name()
+    {
+      return "regex_filter";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return null;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return null;
+    }
+  }
+
+  class ListFilterFunction implements Function
+  {
+
+    @Override
+    public String name()
+    {
+      return "list_filter";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return null;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return null;
+    }
+  }
+
+  class NotListFilterFunction implements Function
+  {
+
+    @Override
+    public String name()
+    {
+      return "not_list_filter";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return null;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return null;
+    }
+  }
 }

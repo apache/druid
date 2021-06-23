@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
@@ -38,16 +39,20 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
+import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Used to represent projections (Calcite "Project"). These are embedded in {@link Sorting} and {@link Grouping} to
@@ -64,6 +69,9 @@ public class Projection
   private final List<PostAggregator> postAggregators;
 
   @Nullable
+  private final Map<String, Function<String, DruidExpression>> fdsExpressionMap;
+
+  @Nullable
   private final List<VirtualColumn> virtualColumns;
 
   private final RowSignature outputRowSignature;
@@ -71,6 +79,7 @@ public class Projection
   private Projection(
       @Nullable final List<PostAggregator> postAggregators,
       @Nullable final List<VirtualColumn> virtualColumns,
+      @Nullable final Map<String, Function<String, DruidExpression>> fdsExpressionMap,
       final RowSignature outputRowSignature
   )
   {
@@ -82,6 +91,7 @@ public class Projection
 
     this.postAggregators = postAggregators;
     this.virtualColumns = virtualColumns;
+    this.fdsExpressionMap = fdsExpressionMap;
     this.outputRowSignature = outputRowSignature;
   }
 
@@ -113,6 +123,67 @@ public class Projection
         postAggregatorVisitor,
         postAggregatorExpression
     );
+  }
+
+  private static boolean findFilteredDimensionSpaceOperator(
+      final PlannerContext plannerContext,
+      final RowSignature inputRowSignature,
+      final RexNode postAggregatorRexNode,
+      final Map<String, Function<String, DruidExpression>> fdsExpressionMap,
+      final List<String> rowOrder
+  )
+  {
+    DruidExpression expression = findFilteredDimensionSpaceOperatorExpression(
+        plannerContext,
+        inputRowSignature,
+        postAggregatorRexNode
+    );
+
+    if (expression != null) {
+      fdsExpressionMap.put(
+          expression.getDirectColumn(),
+          (column) -> DruidExpression.of(new SimpleExtraction(column, expression.getSimpleExtraction().getExtractionFn(), expression.getSimpleExtraction().getFdsOperands()), expression.getExpression())
+      );
+
+      if (plannerContext.getOperatorTable().isFilteredDimensionSpaceOperator(((RexCall) postAggregatorRexNode).getOperator())) {
+        rowOrder.add(expression.getDirectColumn());
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Recursively find a function or its operands are filtered-dimensionSpace functions
+   *
+   */
+  @Nullable
+  public static DruidExpression findFilteredDimensionSpaceOperatorExpression(
+      final PlannerContext plannerContext,
+      final RowSignature inputRowSignature,
+      final RexNode rexNode
+  )
+  {
+    if (rexNode.getKind() != SqlKind.OTHER_FUNCTION) {
+      return null;
+    }
+
+    RexCall call = (RexCall) rexNode;
+    if (plannerContext.getOperatorTable().isFilteredDimensionSpaceOperator(call.getOperator())) {
+      return Expressions.toDruidExpression(
+              plannerContext,
+              inputRowSignature,
+              call
+      );
+    }
+
+    for (RexNode operand : call.getOperands()) {
+      DruidExpression expression = findFilteredDimensionSpaceOperatorExpression(plannerContext, inputRowSignature, operand);
+      if (expression != null) {
+        return expression;
+      }
+    }
+    return null;
   }
 
   private static void postAggregationHandleOtherKinds(
@@ -201,6 +272,7 @@ public class Projection
     final List<String> rowOrder = new ArrayList<>();
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits(basePrefix, inputRowSignature.getColumnNames());
     final PostAggregatorVisitor postAggVisitor = new PostAggregatorVisitor(outputNamePrefix);
+    final Map<String, Function<String, DruidExpression>> filteredDimensionSpaceFunctionMap = new HashMap<>();
 
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
       if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF || postAggregatorRexNode.getKind() == SqlKind.LITERAL) {
@@ -213,6 +285,17 @@ public class Projection
             postAggVisitor
         );
       } else {
+        boolean findFDSO = findFilteredDimensionSpaceOperator(
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode,
+            filteredDimensionSpaceFunctionMap,
+            rowOrder
+        );
+        if (findFDSO) {
+          continue;
+        }
+
         postAggregationHandleOtherKinds(
             project,
             plannerContext,
@@ -227,6 +310,7 @@ public class Projection
     return new Projection(
         postAggVisitor.getPostAggs(),
         null,
+        filteredDimensionSpaceFunctionMap,
         RowSignatures.fromRelDataType(rowOrder, project.getRowType())
     );
   }
@@ -280,6 +364,7 @@ public class Projection
     return new Projection(
         null,
         ImmutableList.copyOf(virtualColumns),
+        null,
         RowSignatures.fromRelDataType(rowOrder, project.getRowType())
     );
   }
@@ -368,6 +453,12 @@ public class Projection
     // If you ever see this error, it probably means a Projection was created in post-aggregation mode, but then
     // used in a pre-aggregation context. This is likely a bug somewhere in DruidQuery. See class-level Javadocs.
     return Preconditions.checkNotNull(virtualColumns, "virtualColumns");
+  }
+
+  @Nullable
+  public Map<String, Function<String, DruidExpression>> getFdsExpressionMap()
+  {
+    return fdsExpressionMap;
   }
 
   public RowSignature getOutputRowSignature()

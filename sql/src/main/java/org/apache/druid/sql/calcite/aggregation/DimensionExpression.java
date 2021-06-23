@@ -83,6 +83,11 @@ public class DimensionExpression
     return outputName;
   }
 
+  public ValueType getOutputType()
+  {
+    return outputType;
+  }
+
   public DruidExpression getDruidExpression()
   {
     return expression;

@@ -222,7 +222,7 @@ public class DruidQuery
         plannerContext,
         filter,
         selectProjection,
-        grouping,
+        sorting == null ? grouping : Grouping.replaceDimensions(grouping, sorting.getProjection()),
         sorting,
         sourceRowSignature,
         outputRowType,

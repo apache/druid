@@ -81,12 +81,16 @@ import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ListFilteredDimensionSpecsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.NotInListFilteredDimensionSpecsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.PrefixFilteredDimensionSpecsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexFilteredDimensionSpecsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
@@ -268,6 +272,14 @@ public class DruidOperatorTable implements SqlOperatorTable
                    )
                    .build();
 
+  private static final List<SqlOperatorConversion> FILTERED_DIMENSIONSPACE_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new PrefixFilteredDimensionSpecsOperatorConversion())
+          .add(new ListFilteredDimensionSpecsOperatorConversion())
+          .add(new NotInListFilteredDimensionSpecsOperatorConversion())
+          .add(new RegexFilteredDimensionSpecsOperatorConversion())
+          .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -339,6 +351,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(REDUCTION_OPERATOR_CONVERSIONS)
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
+                   .addAll(FILTERED_DIMENSIONSPACE_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.
@@ -448,6 +461,16 @@ public class DruidOperatorTable implements SqlOperatorTable
     if (convertletOperator != null) {
       operatorList.add(convertletOperator);
     }
+  }
+
+  public boolean isFilteredDimensionSpaceOperator(SqlOperator sqlFunction)
+  {
+    for (SqlOperatorConversion conversion : FILTERED_DIMENSIONSPACE_OPERATOR_CONVERSIONS) {
+      if (conversion.calciteOperator().equals(sqlFunction)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
