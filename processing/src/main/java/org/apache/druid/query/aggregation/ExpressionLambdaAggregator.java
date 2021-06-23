@@ -29,19 +29,19 @@ public class ExpressionLambdaAggregator implements Aggregator
   private final Expr lambda;
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
-  private boolean uninitializedNullValue;
+  private boolean hasValue;
 
   public ExpressionLambdaAggregator(
       final Expr lambda,
       final ExpressionLambdaAggregatorInputBindings bindings,
-      final boolean initiallyNull,
+      final boolean isNullUnlessAggregated,
       final int maxSizeBytes
   )
   {
     this.lambda = lambda;
     this.bindings = bindings;
     this.maxSizeBytes = maxSizeBytes;
-    this.uninitializedNullValue = initiallyNull;
+    this.hasValue = !isNullUnlessAggregated;
   }
 
   @Override
@@ -50,14 +50,14 @@ public class ExpressionLambdaAggregator implements Aggregator
     final ExprEval<?> eval = lambda.eval(bindings);
     ExprEval.estimateAndCheckMaxBytes(eval, maxSizeBytes);
     bindings.accumulate(eval);
-    uninitializedNullValue = false;
+    hasValue = true;
   }
 
   @Nullable
   @Override
   public Object get()
   {
-    return uninitializedNullValue ? null : bindings.getAccumulator().value();
+    return hasValue ? bindings.getAccumulator().value() : null;
   }
 
   @Override

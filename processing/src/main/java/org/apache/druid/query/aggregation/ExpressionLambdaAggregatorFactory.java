@@ -75,7 +75,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final String foldExpressionString;
   private final String initialValueExpressionString;
   private final String initialCombineValueExpressionString;
-  private final boolean initiallyNull;
+  private final boolean isNullUnlessAggregated;
 
   private final String combineExpressionString;
   @Nullable
@@ -107,7 +107,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       @JsonProperty("accumulatorIdentifier") @Nullable final String accumulatorIdentifier,
       @JsonProperty("initialValue") final String initialValue,
       @JsonProperty("initialCombineValue") @Nullable final String initialCombineValue,
-      @JsonProperty("initiallyNull") @Nullable final Boolean initiallyNull,
+      @JsonProperty("isNullUnlessAggregated") @Nullable final Boolean isNullUnlessAggregated,
       @JsonProperty("fold") final String foldExpression,
       @JsonProperty("combine") @Nullable final String combineExpression,
       @JsonProperty("compare") @Nullable final String compareExpression,
@@ -124,7 +124,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
     this.initialValueExpressionString = initialValue;
     this.initialCombineValueExpressionString = initialCombineValue == null ? initialValue : initialCombineValue;
-    this.initiallyNull = initiallyNull == null ? NullHandling.sqlCompatible() : initiallyNull;
+    this.isNullUnlessAggregated = isNullUnlessAggregated == null ? NullHandling.sqlCompatible() : isNullUnlessAggregated;
     this.foldExpressionString = foldExpression;
     if (combineExpression != null) {
       this.combineExpressionString = combineExpression;
@@ -200,9 +200,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty("initiallyNull")
-  public boolean getInitiallyNull()
+  public boolean getNullUnlessAggregated()
   {
-    return initiallyNull;
+    return isNullUnlessAggregated;
   }
 
   @JsonProperty("fold")
@@ -259,7 +259,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     return new ExpressionLambdaAggregator(
         thePlan.getExpression(),
         thePlan.getBindings(),
-        initiallyNull,
+        isNullUnlessAggregated,
         maxSizeBytes.getBytesInInt()
     );
   }
@@ -272,7 +272,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         thePlan.getExpression(),
         thePlan.getInitialValue(),
         thePlan.getBindings(),
-        initiallyNull,
+        isNullUnlessAggregated,
         maxSizeBytes.getBytesInInt()
     );
   }
@@ -341,7 +341,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         accumulatorId,
         initialValueExpressionString,
         initialCombineValueExpressionString,
-        initiallyNull,
+        isNullUnlessAggregated,
         foldExpressionString,
         combineExpressionString,
         compareExpressionString,
@@ -361,7 +361,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
             accumulatorId,
             initialValueExpressionString,
             initialCombineValueExpressionString,
-            initiallyNull,
+            isNullUnlessAggregated,
             foldExpressionString,
             combineExpressionString,
             compareExpressionString,
@@ -421,7 +421,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
            && foldExpressionString.equals(that.foldExpressionString)
            && initialValueExpressionString.equals(that.initialValueExpressionString)
            && initialCombineValueExpressionString.equals(that.initialCombineValueExpressionString)
-           && initiallyNull == that.initiallyNull
+           && isNullUnlessAggregated == that.isNullUnlessAggregated
            && combineExpressionString.equals(that.combineExpressionString)
            && Objects.equals(compareExpressionString, that.compareExpressionString)
            && Objects.equals(finalizeExpressionString, that.finalizeExpressionString);
@@ -437,7 +437,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         foldExpressionString,
         initialValueExpressionString,
         initialCombineValueExpressionString,
-        initiallyNull,
+        isNullUnlessAggregated,
         combineExpressionString,
         compareExpressionString,
         finalizeExpressionString,
@@ -455,7 +455,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
            ", foldExpressionString='" + foldExpressionString + '\'' +
            ", initialValueExpressionString='" + initialValueExpressionString + '\'' +
            ", initialCombineValueExpressionString='" + initialCombineValueExpressionString + '\'' +
-           ", nullUnlessAggregated='" + initiallyNull + '\'' +
+           ", nullUnlessAggregated='" + isNullUnlessAggregated + '\'' +
            ", combineExpressionString='" + combineExpressionString + '\'' +
            ", compareExpressionString='" + compareExpressionString + '\'' +
            ", finalizeExpressionString='" + finalizeExpressionString + '\'' +

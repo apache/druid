@@ -38,7 +38,6 @@ import java.util.Objects;
  */
 public abstract class ExprEval<T>
 {
-  private static final byte TYPE_MASK = 0x0F;
   private static final int NULL_LENGTH = -1;
 
   /**
@@ -48,9 +47,18 @@ public abstract class ExprEval<T>
    */
   public static ExprEval deserialize(ByteBuffer buffer, int position)
   {
-    // | expression type (byte) | expression bytes |
-    ExprType type = ExprType.fromByte((byte) (buffer.get(position) & TYPE_MASK));
-    int offset = position + 1;
+    final ExprType type = ExprType.fromByte(buffer.get(position));
+    return deserialize(buffer, position + 1, type);
+  }
+
+  /**
+   * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
+   *
+   * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
+   */
+  public static ExprEval deserialize(ByteBuffer buffer, int offset, ExprType type)
+  {
+    // | expression bytes |
     switch (type) {
       case LONG:
         // | expression type (byte) | is null (byte) | long bytes |

@@ -297,9 +297,23 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     ExprEval.serialize(buffer, position, expected, maxSizeBytes);
     if (ExprType.isArray(expected.type())) {
-      Assert.assertArrayEquals(expected.asArray(), ExprEval.deserialize(buffer, position).asArray());
+      Assert.assertArrayEquals(
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).asArray()
+      );
+      Assert.assertArrayEquals(
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position).asArray()
+      );
     } else {
-      Assert.assertEquals(expected.value(), ExprEval.deserialize(buffer, position).value());
+      Assert.assertEquals(
+          expected.value(),
+          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).value()
+      );
+      Assert.assertEquals(
+          expected.value(),
+          ExprEval.deserialize(buffer, position).value()
+      );
     }
     assertEstimatedBytes(expected, maxSizeBytes);
   }
