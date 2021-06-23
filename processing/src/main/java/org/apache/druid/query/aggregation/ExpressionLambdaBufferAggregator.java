@@ -30,13 +30,11 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
 {
   private static final short NOT_AGGREGATED_BIT = 1 << 7;
   private static final short IS_AGGREGATED_MASK = 0x3F;
-  private static final byte TYPE_MASK = 0x0F;
   private final Expr lambda;
   private final ExprEval<?> initialValue;
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
   private final boolean isNullUnlessAggregated;
-
 
   public ExpressionLambdaBufferAggregator(
       Expr lambda,
@@ -110,6 +108,6 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
 
   private static ExprType getType(ByteBuffer buf, int position)
   {
-    return ExprType.fromByte((byte) (buf.get(position) & TYPE_MASK));
+    return ExprType.fromByte((byte) (buf.get(position) & IS_AGGREGATED_MASK));
   }
 }

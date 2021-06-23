@@ -199,8 +199,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     return initialCombineValueExpressionString;
   }
 
-  @JsonProperty("initiallyNull")
-  public boolean getNullUnlessAggregated()
+  @JsonProperty("isNullUnlessAggregated")
+  public boolean getIsNullUnlessAggregated()
   {
     return isNullUnlessAggregated;
   }
