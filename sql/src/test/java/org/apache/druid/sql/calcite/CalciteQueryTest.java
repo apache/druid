@@ -17612,17 +17612,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * see {@link org.apache.druid.sql.calcite.util.CalciteTests#RAW_ROWS1_WITH_NUMERIC_DIMS} for the input data source of this test
+   */
   @Test
   public void testHumanReadableFormatFunction() throws Exception
   {
+    // For the row where dim1 = '1', m1 = 4.0 and l1 is null
     testQuery(
         "SELECT m1, "
         + "HUMAN_READABLE_BINARY_BYTE_FORMAT(45678),"
         + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345),"
         + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345, 0), "
         + "HUMAN_READABLE_DECIMAL_BYTE_FORMAT(m1*12345), "
-        + "HUMAN_READABLE_DECIMAL_FORMAT(m1*12345) "
-        + "FROM numfoo WHERE f1 = 0.1 LIMIT 1",
+        + "HUMAN_READABLE_DECIMAL_FORMAT(m1*12345), "
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(l1),"
+        + "HUMAN_READABLE_DECIMAL_BYTE_FORMAT(l1), "
+        + "HUMAN_READABLE_DECIMAL_FORMAT(l1) "
+        + "FROM numfoo WHERE dim1 = '1' LIMIT 1",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -17635,21 +17642,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 expressionVirtualColumn("v1", "human_readable_binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
                                 expressionVirtualColumn("v2", "human_readable_binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
                                 expressionVirtualColumn("v3", "human_readable_decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
-                                expressionVirtualColumn("v4", "human_readable_decimal_format((\"m1\" * 12345))", ValueType.STRING))
-                .columns("m1", "v0", "v1", "v2", "v3", "v4")
-                .filters(selector("f1", "0.1", null))
+                                expressionVirtualColumn("v4", "human_readable_decimal_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v5", "human_readable_binary_byte_format(\"l1\")", ValueType.STRING),
+                                expressionVirtualColumn("v6", "human_readable_decimal_byte_format(\"l1\")", ValueType.STRING),
+                                expressionVirtualColumn("v7", "human_readable_decimal_format(\"l1\")", ValueType.STRING)
+                )
+                .columns("m1", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+                .filters(selector("dim1", "1", null))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{(float) 2.0,
+            new Object[]{(float) 4.0,
                          "44.61 KiB", // 45678 / 1024
-                         "24.11 KiB", // = m1(2.0) * 12345 / 1024
-                         "24 KiB", // = m1(2.0) * 12345 / 1024, precision = 0
-                         "24.69 KB", // decimal byte format, m1(2.0) * 12345 / 1000,
-                         "24.69 K" // decimal format, m1(2.0) * 12345 / 1000,
+                         "48.22 KiB", // = m1(4.0) * 12345 / 1024
+                         "48 KiB", // = m1(4.0) * 12345 / 1024, precision = 0
+                         "49.38 KB", // decimal byte format, m1(4.0) * 12345 / 1000,
+                         "49.38 K", // decimal format, m1(4.0) * 12345 / 1000,
+                         NullHandling.replaceWithDefault() ? "0 B" : null,
+                         NullHandling.replaceWithDefault() ? "0 B" : null,
+                         NullHandling.replaceWithDefault() ? "0" : null
             }
         )
     );
