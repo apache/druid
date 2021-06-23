@@ -1312,7 +1312,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',null,'UTC')"),
+        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
@@ -1324,7 +1324,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'America/Los_Angeles')"),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
@@ -1340,7 +1340,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y',null,'UTC')"),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y','','UTC')"),
         DateTimes.of("2000").getMillis()
     );
   }
@@ -1354,7 +1354,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        DruidExpression.fromExpression("timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
+        DruidExpression.fromExpression("timestamp_ceil(949550706000,'PT1H','','UTC')"),
         DateTimes.of("2000-02-03T05:00:00").getMillis()
     );
 
@@ -1366,7 +1366,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
+        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1D','','America/Los_Angeles')"),
         DateTimes.of("2000-02-03T08:00:00").getMillis()
     );
   }
@@ -1382,7 +1382,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y',null,'UTC')"),
+        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y','','UTC')"),
         DateTimes.of("2001").getMillis()
     );
   }

@@ -615,7 +615,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                           .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
                                           .build()),
                                 "j0.",
-                                "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                "((timestamp_floor(\"__time\",'PT1H','','UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
                                 JoinType.INNER
                             )
                         )
@@ -664,7 +664,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 .setVirtualColumns(
                                                     expressionVirtualColumn(
                                                         "v0",
-                                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 0)",
+                                                        "(timestamp_floor(\"__time\",'PT1H','','UTC') + 0)",
                                                         ValueType.LONG
                                                     )
                                                 )
@@ -677,7 +677,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 .setContext(QUERY_CONTEXT_DEFAULT)
                                                 .build()),
                                 "j0.",
-                                "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                "((timestamp_floor(\"__time\",'PT1H','','UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
                                 JoinType.INNER
                             )
                         )
@@ -7417,7 +7417,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setVirtualColumns(
-                    expressionVirtualColumn("v0", "timestamp_floor(\"cnt\",'P1Y',null,'UTC')", ValueType.LONG)
+                    expressionVirtualColumn("v0", "timestamp_floor(\"cnt\",'P1Y','','UTC')", ValueType.LONG)
                 )
                 .setDimFilter(
                     bound(
@@ -7946,7 +7946,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(expressionVirtualColumn(
                                                 "v0",
-                                                "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                 ValueType.LONG
                                             ))
                                             .setDimensions(dimensions(
@@ -8146,7 +8146,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(\"a0\",'PT1H',null,'UTC')",
+                                "timestamp_floor(\"a0\",'PT1H','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -10038,7 +10038,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(\"__time\",'P1Y',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1Y','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -12234,7 +12234,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(timestamp_shift(\"__time\",'P1D',-1,'UTC'),'P1M',null,'UTC')",
+                                "timestamp_floor(timestamp_shift(\"__time\",'P1D',-1,'UTC'),'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -12282,7 +12282,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor((\"__time\" + -86400000),'P1M',null,'UTC')",
+                                "timestamp_floor((\"__time\" + -86400000),'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13010,7 +13010,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'UTC'),'YEAR','UTC')",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y','','UTC'),'YEAR','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13048,7 +13048,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'America/Los_Angeles'),'YEAR','America/Los_Angeles')",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y','','America/Los_Angeles'),'YEAR','America/Los_Angeles')",
                                 ValueType.LONG
                             )
                         )
@@ -13143,7 +13143,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13203,7 +13203,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13272,7 +13272,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13338,7 +13338,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13490,7 +13490,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13544,7 +13544,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             ),
                             expressionVirtualColumn(
@@ -13606,7 +13606,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13667,7 +13667,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v2",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13729,7 +13729,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13785,7 +13785,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13858,7 +13858,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -13927,7 +13927,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -17126,7 +17126,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
@@ -17193,7 +17193,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
                                 ValueType.LONG
                             )
                         )
