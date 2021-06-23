@@ -51,7 +51,7 @@ public class HumanReadableFormatOperatorConversion implements SqlOperatorConvers
         .operatorBuilder(StringUtils.toUpperCase(name))
         .operandTypeChecker(new HumanReadableFormatOperandTypeChecker())
         .functionCategory(SqlFunctionCategory.STRING)
-        .returnTypeNonNull(SqlTypeName.VARCHAR)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
         .build();
 
     this.name = name;
