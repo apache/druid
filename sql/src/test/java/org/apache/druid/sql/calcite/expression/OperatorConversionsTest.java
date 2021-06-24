@@ -31,12 +31,14 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.expression.OperatorConversions.DefaultOperandTypeChecker;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -276,6 +278,69 @@ public class OperatorConversionsTest
     }
 
     @Test
+    public void testNullForNullableOperandNonNullOutput()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullForNullableNonnull")
+          .operandTypes(SqlTypeFamily.CHARACTER)
+          .requiredOperands(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      SqlCallBinding binding = mockCallBinding(
+          function,
+          ImmutableList.of(
+              new OperandSpec(SqlTypeName.CHAR, false, true)
+          )
+      );
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
+      RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
+      Assert.assertFalse(returnType.isNullable());
+    }
+
+    @Test
+    public void testNullForNullableOperandCascadeNullOutput()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullForNullableCascade")
+          .operandTypes(SqlTypeFamily.CHARACTER)
+          .requiredOperands(1)
+          .returnTypeCascadeNullable(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      SqlCallBinding binding = mockCallBinding(
+          function,
+          ImmutableList.of(
+              new OperandSpec(SqlTypeName.CHAR, false, true)
+          )
+      );
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
+      RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
+      Assert.assertTrue(returnType.isNullable());
+    }
+
+    @Test
+    public void testNullForNullableOperandAlwaysNullableOutput()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullForNullableNonnull")
+          .operandTypes(SqlTypeFamily.CHARACTER)
+          .requiredOperands(1)
+          .returnTypeNullable(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      SqlCallBinding binding = mockCallBinding(
+          function,
+          ImmutableList.of(
+              new OperandSpec(SqlTypeName.CHAR, false, false)
+          )
+      );
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
+      RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
+      Assert.assertTrue(returnType.isNullable());
+    }
+
+    @Test
     public void testNullForNonNullableOperand()
     {
       SqlFunction function = OperatorConversions
@@ -359,6 +424,7 @@ public class OperatorConversionsTest
     )
     {
       SqlValidator validator = Mockito.mock(SqlValidator.class);
+      Mockito.when(validator.getTypeFactory()).thenReturn(new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE));
       List<SqlNode> operands = new ArrayList<>(actualOperands.size());
       for (OperandSpec operand : actualOperands) {
         final SqlNode node;
@@ -368,6 +434,12 @@ public class OperatorConversionsTest
           node = Mockito.mock(SqlNode.class);
         }
         RelDataType relDataType = Mockito.mock(RelDataType.class);
+
+        if (operand.isNullable) {
+          Mockito.when(relDataType.isNullable()).thenReturn(true);
+        } else {
+          Mockito.when(relDataType.isNullable()).thenReturn(false);
+        }
         Mockito.when(validator.deriveType(ArgumentMatchers.any(), ArgumentMatchers.eq(node)))
                .thenReturn(relDataType);
         Mockito.when(relDataType.getSqlTypeName()).thenReturn(operand.type);
@@ -394,11 +466,18 @@ public class OperatorConversionsTest
     {
       private final SqlTypeName type;
       private final boolean isLiteral;
+      private final boolean isNullable;
 
       private OperandSpec(SqlTypeName type, boolean isLiteral)
       {
+        this(type, isLiteral, type == SqlTypeName.NULL);
+      }
+
+      private OperandSpec(SqlTypeName type, boolean isLiteral, boolean isNullable)
+      {
         this.type = type;
         this.isLiteral = isLiteral;
+        this.isNullable = isNullable;
       }
     }
   }

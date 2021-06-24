@@ -16,28 +16,19 @@
  * limitations under the License.
  */
 
-.query-plan-dialog {
-  &.bp3-dialog {
-    width: 600px;
-  }
+import { render } from '@testing-library/react';
+import React from 'react';
 
-  textarea {
-    width: 100%;
-  }
+import { BarUnit } from './bar-unit';
 
-  .one-query {
-    textarea {
-      height: 50vh !important;
-    }
-  }
-
-  .two-queries {
-    textarea {
-      height: 25vh !important;
-    }
-  }
-
-  .generic-result {
-    overflow: scroll;
-  }
-}
+describe('BarUnit', () => {
+  it('matches snapshot', () => {
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
+    );
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

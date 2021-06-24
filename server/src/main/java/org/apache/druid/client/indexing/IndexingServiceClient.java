@@ -66,5 +66,17 @@ public interface IndexingServiceClient
   @Nullable
   TaskPayloadResponse getTaskPayload(String taskId);
 
+  /**
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   *
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks higher than this
+   *                        priority are returned. Tasks for datasources that
+   *                        are not present in this Map are not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority strictly greater than the {@code minTaskPriority} for that datasource.
+   */
+  Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority);
+
   SamplerResponse sample(SamplerSpec samplerSpec);
 }

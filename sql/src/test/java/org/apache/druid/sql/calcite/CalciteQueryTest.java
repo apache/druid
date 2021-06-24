@@ -16929,6 +16929,45 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT druid.broadcast.dim4, COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
+        + "GROUP BY 1 ORDER BY 1 DESC LIMIT 4",
+        queryContext,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
+                        "j0.",
+                        equalsCondition(
+                            DruidExpression.fromColumn("dim4"),
+                            DruidExpression.fromColumn("j0.dim4")
+                        ),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("j0.dim4", "_d0", ValueType.STRING))
+                .threshold(4)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(queryContext)
+                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", 9L},
+            new Object[]{"a", 9L}
+        )
+    );
+  }
+
+  @Test
   public void testTimeStampAddZeroDayPeriod() throws Exception
   {
     testQuery(
@@ -17522,5 +17561,54 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(new Object[]{6L}));
+  }
+
+  @Test
+  public void testExpressionCounts() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT\n"
+        + " COUNT(reverse(dim2)),\n"
+        + " COUNT(left(dim2, 5)),\n"
+        + " COUNT(strpos(dim2, 'a'))\n"
+        + "FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "reverse(\"dim2\")", ValueType.STRING),
+                      expressionVirtualColumn("v1", "left(\"dim2\",5)", ValueType.STRING),
+                      expressionVirtualColumn("v2", "(strpos(\"dim2\",'a') + 1)", ValueType.LONG)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(selector("v0", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a1"),
+                              not(selector("v1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a2"),
+                              not(selector("v2", null, null))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            // in default mode strpos is 6 because the '+ 1' of the expression (no null numbers in
+            // default mode so is 0 + 1 for null rows)
+            ? new Object[]{3L, 3L, 6L}
+            : new Object[]{4L, 4L, 4L}
+        )
+    );
   }
 }

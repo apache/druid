@@ -16,22 +16,32 @@
  * limitations under the License.
  */
 
-import { select } from 'd3-selection';
-import React from 'react';
+.explain-dialog {
+  &.bp3-dialog {
+    width: 600px;
+  }
 
-interface ChartAxisProps {
-  transform: string;
-  scale: any;
-  className?: string;
+  .bp3-dialog-body {
+    min-height: 70vh;
+  }
+
+  textarea {
+    width: 100%;
+  }
+
+  .one-query {
+    textarea {
+      height: 50vh !important;
+    }
+  }
+
+  .two-queries {
+    textarea {
+      height: 25vh !important;
+    }
+  }
+
+  .generic-result {
+    overflow: scroll;
+  }
 }
-
-export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
-  const { transform, scale, className } = props;
-  return (
-    <g
-      className={`chart-axis ${className}`}
-      transform={transform}
-      ref={node => select(node).call(scale)}
-    />
-  );
-});

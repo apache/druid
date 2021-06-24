@@ -483,7 +483,6 @@ public class BatchDeltaIngestionTest
                 false,
                 null,
                 null,
-                null,
                 false,
                 false,
                 null,

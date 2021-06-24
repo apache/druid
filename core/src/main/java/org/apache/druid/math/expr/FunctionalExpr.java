@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("ClassName")
 class LambdaExpr implements Expr
 {
   private final ImmutableList<IdentifierExpr> args;
@@ -150,6 +151,7 @@ class LambdaExpr implements Expr
  * list of arguments that are passed to the {@link Function} along with the {@link Expr.ObjectBinding} when it is
  * evaluated.
  */
+@SuppressWarnings("ClassName")
 class FunctionExpr implements Expr
 {
   final Function function;
@@ -247,6 +249,7 @@ class FunctionExpr implements Expr
  * {@link LambdaExpr} and the list of {@link Expr} arguments that are combined with {@link Expr.ObjectBinding} to
  * evaluate the {@link LambdaExpr}.
  */
+@SuppressWarnings("ClassName")
 class ApplyFunctionExpr implements Expr
 {
   final ApplyFunction function;
