@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DefaultQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -126,7 +127,7 @@ public class TaskToolboxTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         mockHandoffNotifierFactory,
         () -> mockQueryRunnerFactoryConglomerate,
-        mockQueryExecutorService,
+        new DefaultQueryProcessingPool(mockQueryExecutorService),
         NoopJoinableFactory.INSTANCE,
         () -> mockMonitorScheduler,
         mockSegmentLoaderFactory,

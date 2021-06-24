@@ -112,10 +112,10 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        exec,
+        new DefaultQueryProcessingPool(exec),
         watcher,
         Lists.newArrayList(
-         runners
+            runners
         )
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -236,7 +236,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        exec,
+        new DefaultQueryProcessingPool(exec),
         watcher,
         Lists.newArrayList(
             runners

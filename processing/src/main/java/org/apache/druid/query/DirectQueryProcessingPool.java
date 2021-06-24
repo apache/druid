@@ -17,20 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.query;
 
-import com.google.inject.BindingAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.java.util.common.concurrent.Execs;
 
 /**
+ * {@link QueryProcessingPool} wrapper over {@link Execs#directExecutor()}
  */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Processing
+public class DirectQueryProcessingPool implements QueryProcessingPool
 {
+  public static DirectQueryProcessingPool INSTANCE = new DirectQueryProcessingPool();
+
+  private DirectQueryProcessingPool()
+  {
+
+  }
+
+  @Override
+  public <T, V> ListenableFuture<T> submit(PrioritizedQueryRunnerCallable<T, V> task)
+  {
+    return Execs.directExecutor().submit(task);
+  }
+
+  @Override
+  public ListeningExecutorService asExecutorService()
+  {
+    return Execs.directExecutor();
+  }
 }

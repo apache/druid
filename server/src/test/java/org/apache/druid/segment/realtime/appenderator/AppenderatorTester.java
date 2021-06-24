@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryProcessingPool;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -284,7 +285,7 @@ public class AppenderatorTester implements AutoCloseable
         ),
         new NoopDataSegmentAnnouncer(),
         emitter,
-        queryExecutor,
+        new DefaultQueryProcessingPool(queryExecutor),
         NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
