@@ -528,13 +528,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         throw new UnsupportedOperationException();
       }
 
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
-
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
       {
@@ -1181,13 +1174,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     dataSegmentPusher = new DataSegmentPusher()
     {
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String s)
-      {
-        return getPathForHadoop();
-      }
-
       @Override
       public String getPathForHadoop()
       {

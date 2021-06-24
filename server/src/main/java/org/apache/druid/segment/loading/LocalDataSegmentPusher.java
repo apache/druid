@@ -54,13 +54,6 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     return config.getStorageDirectory().getAbsoluteFile().toURI().toString();
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
   @Override
   public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
       throws IOException

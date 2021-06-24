@@ -37,13 +37,6 @@ public class NoopDataSegmentPusher implements DataSegmentPusher
     return "noop";
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
   @Override
   public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
   {

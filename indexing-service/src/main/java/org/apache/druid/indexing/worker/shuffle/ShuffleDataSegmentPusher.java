@@ -50,12 +50,6 @@ public class ShuffleDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public String getPathForHadoop()
   {
     throw new UnsupportedOperationException();

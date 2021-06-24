@@ -322,7 +322,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_getPathForHadoop_noArgsWithoutPrefix_succeeds()
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
-    String hadoopPath = pusher.getPathForHadoop("");
+    String hadoopPath = pusher.getPathForHadoop();
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
   }
 
@@ -330,7 +330,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_getPathForHadoop_noArgsWithPrefix_succeeds()
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
-    String hadoopPath = pusher.getPathForHadoop("");
+    String hadoopPath = pusher.getPathForHadoop();
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/prefix/", hadoopPath);
   }
 

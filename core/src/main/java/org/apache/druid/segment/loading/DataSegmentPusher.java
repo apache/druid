@@ -39,9 +39,6 @@ public interface DataSegmentPusher
 {
   Joiner JOINER = Joiner.on("/").skipNulls();
 
-  @Deprecated
-  String getPathForHadoop(String dataSource);
-
   String getPathForHadoop();
 
   /**
@@ -70,16 +67,6 @@ public interface DataSegmentPusher
 
   //use map instead of LoadSpec class to avoid dependency pollution.
   Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
-
-  /**
-   * @deprecated backward-compatibiliy shim that should be removed on next major release;
-   * use {@link #getStorageDir(DataSegment, boolean)} instead.
-   */
-  @Deprecated
-  default String getStorageDir(DataSegment dataSegment)
-  {
-    return getStorageDir(dataSegment, false);
-  }
 
   default String getStorageDir(DataSegment dataSegment, boolean useUniquePath)
   {

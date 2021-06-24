@@ -85,13 +85,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
   @Override
   public String getPathForHadoop()
   {

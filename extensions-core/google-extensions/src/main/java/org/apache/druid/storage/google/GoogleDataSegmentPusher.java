@@ -57,13 +57,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     this.config = config;
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
   @Override
   public String getPathForHadoop()
   {

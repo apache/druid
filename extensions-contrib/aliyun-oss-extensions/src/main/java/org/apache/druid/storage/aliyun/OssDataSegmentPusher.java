@@ -60,13 +60,6 @@ public class OssDataSegmentPusher implements DataSegmentPusher
     return StringUtils.format("%s/%s", config.getBucket(), config.getPrefix());
   }
 
-  @Deprecated
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return getPathForHadoop();
-  }
-
   @Override
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
