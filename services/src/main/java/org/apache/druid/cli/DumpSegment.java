@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -477,7 +478,8 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private static <T> Sequence<T> executeQuery(final Injector injector, final QueryableIndex index, final Query<T> query)
+  @VisibleForTesting
+  static <T> Sequence<T> executeQuery(final Injector injector, final QueryableIndex index, final Query<T> query)
   {
     final QueryRunnerFactoryConglomerate conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);

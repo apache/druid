@@ -74,7 +74,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -267,11 +266,6 @@ public class TaskToolbox
   public QueryRunnerFactoryConglomerate getQueryRunnerFactoryConglomerate()
   {
     return queryRunnerFactoryConglomerateProvider.get();
-  }
-
-  public ExecutorService getQueryExecutorService()
-  {
-    return queryProcessingPool.asExecutorService();
   }
 
   public QueryProcessingPool getQueryProcessingPool()
