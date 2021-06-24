@@ -83,7 +83,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
-                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                                     ValueType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
@@ -190,7 +190,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
-                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                                     ValueType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
@@ -277,7 +277,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
-                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                                     ValueType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
@@ -358,7 +358,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
-                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                                     ValueType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
@@ -445,7 +445,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
-                                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                                     ValueType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
