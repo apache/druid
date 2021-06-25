@@ -38,6 +38,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.appenderator.TestUsedSegmentChecker;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -100,7 +101,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     driver = new BatchAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestUsedSegmentChecker(appenderatorTester),
+        new TestUsedSegmentChecker(appenderatorTester.getPushedSegments()),
         dataSegmentKiller
     );
 
@@ -230,18 +231,16 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
         final boolean skipSegmentLineageCheck
     )
     {
-      synchronized (counters) {
-        DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());
-        final long timestampTruncated = dateTimeTruncated.getMillis();
-        counters.putIfAbsent(timestampTruncated, new AtomicInteger());
-        final int partitionNum = counters.get(timestampTruncated).getAndIncrement();
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            granularity.bucket(dateTimeTruncated),
-            VERSION,
-            new NumberedShardSpec(partitionNum, 0)
-        );
-      }
+      DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());
+      final long timestampTruncated = dateTimeTruncated.getMillis();
+      counters.putIfAbsent(timestampTruncated, new AtomicInteger());
+      final int partitionNum = counters.get(timestampTruncated).getAndIncrement();
+      return new SegmentIdWithShardSpec(
+          dataSource,
+          granularity.bucket(dateTimeTruncated),
+          VERSION,
+          new NumberedShardSpec(partitionNum, 0)
+      );
     }
   }
 

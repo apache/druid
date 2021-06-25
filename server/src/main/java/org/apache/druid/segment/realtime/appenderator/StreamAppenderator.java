@@ -166,7 +166,16 @@ public class StreamAppenderator implements Appenderator
 
   private volatile Throwable persistError;
 
+
+  /**
+   * Flag to tell internals whether appenderator is working on behalf of a real time task.
+   * This is to manage certain aspects as needed. For example, for batch, non-real time tasks,
+   * physical segments (i.e. hydrants) do not need to memory map their persisted
+   * files. In this case, the code will avoid memory mapping them thus ameliorating the occurance
+   * of OOMs.
+   */
   private final boolean isRealTime;
+
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -1077,12 +1086,10 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
-  @Override
-  public boolean isRealTime()
+  private boolean isRealTime()
   {
     return isRealTime;
   }
-
 
   private void lockBasePersistDirectory()
   {

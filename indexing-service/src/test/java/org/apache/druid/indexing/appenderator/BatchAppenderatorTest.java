@@ -44,7 +44,6 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class BatchAppenderatorTest extends InitializedNullHandlingTest
@@ -60,10 +59,9 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      boolean thrown;
 
       // startJob
-      Assert.assertEquals(null, appenderator.startJob());
+      Assert.assertNull(appenderator.startJob());
 
       // getDataSource
       Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
@@ -154,7 +152,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
         true
     )) {
       final Appenderator appenderator = tester.getAppenderator();
-      boolean thrown;
 
       // startJob
       Assert.assertEquals(null, appenderator.startJob());
@@ -283,7 +280,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
         )
     ) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
@@ -306,7 +302,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(100, 15000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
@@ -385,7 +380,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     try (final BatchAppenderatorTester tester =
              new BatchAppenderatorTester(100, 5180, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
     }
@@ -406,7 +400,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
         )
     ) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
@@ -430,7 +423,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     try (final BatchAppenderatorTester tester =
              new BatchAppenderatorTester(100, 10000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
@@ -458,7 +450,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     try (final BatchAppenderatorTester tester =
              new BatchAppenderatorTester(1000, 28748, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       appenderator.startJob();
       // next records are 182 bytes
@@ -578,7 +569,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     try (final BatchAppenderatorTester tester =
              new BatchAppenderatorTester(100, -1, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
@@ -611,7 +601,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
@@ -644,7 +633,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(1, false)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
@@ -685,7 +673,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
-      final AtomicInteger eventCount = new AtomicInteger(0);
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
@@ -763,12 +750,14 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
     List<File> segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
+    Assert.assertNotNull(segmentPaths);
     Assert.assertEquals(3, segmentPaths.size());
 
 
     appenderator.push(IDENTIFIERS, null, false).get();
 
     segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
+    Assert.assertNotNull(segmentPaths);
     Assert.assertEquals(0, segmentPaths.size());
 
     appenderator.close();
@@ -786,29 +775,31 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null);
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
-    Assert.assertEquals(2, ((BatchAppenderator) appenderator).getTotalRowCount());
+    Assert.assertEquals(2, appenderator.getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "baz", 3), null);
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null);
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
-    Assert.assertEquals(4, ((BatchAppenderator) appenderator).getTotalRowCount());
+    Assert.assertEquals(4, appenderator.getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "bob", 5), null);
     Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
     appenderator.persistAll(null).get();
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
-    Assert.assertEquals(5, ((BatchAppenderator) appenderator).getTotalRowCount());
+    Assert.assertEquals(5, appenderator.getTotalRowCount());
 
     List<File> segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
+    Assert.assertNotNull(segmentPaths);
     Assert.assertEquals(3, segmentPaths.size());
 
     appenderator.close();
 
     segmentPaths = ((BatchAppenderator) appenderator).getPersistedidentifierPaths();
+    Assert.assertNotNull(segmentPaths);
     Assert.assertEquals(0, segmentPaths.size());
 
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
-    Assert.assertEquals(0, ((BatchAppenderator) appenderator).getTotalRowCount());
+    Assert.assertEquals(0, appenderator.getTotalRowCount());
 
   }
 
@@ -875,8 +866,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
     }
   }
-
-
+  
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(

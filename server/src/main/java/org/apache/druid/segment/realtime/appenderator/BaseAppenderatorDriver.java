@@ -260,6 +260,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     );
   }
 
+  @VisibleForTesting
   public Map<String, SegmentsForSequence> getSegments()
   {
     return segments;

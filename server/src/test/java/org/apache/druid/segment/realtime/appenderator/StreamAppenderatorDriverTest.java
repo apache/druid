@@ -115,7 +115,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         appenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new TestUsedSegmentChecker(appenderatorTester),
+        new TestUsedSegmentChecker(appenderatorTester.getPushedSegments()),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()

@@ -51,6 +51,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -119,7 +120,7 @@ public class BatchAppenderatorTester implements AutoCloseable
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
-      final File basePersistDirectory,
+      @Nullable final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
