@@ -22,21 +22,31 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigProvider
+public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigProvider<String>
 {
-  private final ImmutableMap<String, String> variables;
+
+  private static final Logger log = new Logger(EnvironmentVariableDynamicConfigProvider.class);
+
+  private ImmutableMap<String, String> variables;
 
   @JsonCreator
   public EnvironmentVariableDynamicConfigProvider(
       @JsonProperty("variables") Map<String, String> config
   )
   {
-    this.variables = ImmutableMap.copyOf(config);
+    try {
+      this.variables = ImmutableMap.copyOf(config);
+    }
+    catch (NullPointerException e) {
+      log.error(e, "Can not parse config by EnvironmentVariableDynamicConfigProvider! Please check your config file.");
+      throw e;
+    }
   }
 
   @JsonProperty("variables")
@@ -46,7 +56,7 @@ public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigPr
   }
 
   @Override
-  public Map getConfig()
+  public Map<String, String> getConfig()
   {
     HashMap<String, String> map = new HashMap<>();
     for (Map.Entry<String, String> entry : variables.entrySet()) {
@@ -82,8 +92,7 @@ public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigPr
   @Override
   public int hashCode()
   {
-    return variables != null ? variables.hashCode() : 0;
+    return variables.hashCode();
   }
-
 
 }
