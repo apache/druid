@@ -22,6 +22,7 @@ import copy from 'copy-to-clipboard';
 import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
+import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -380,5 +381,17 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
   } else {
     // do nothing
     return items.slice();
+  }
+}
+
+export function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSONBig.stringify(value);
+
+    default:
+      return String(value);
   }
 }

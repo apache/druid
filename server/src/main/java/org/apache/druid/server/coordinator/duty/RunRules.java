@@ -55,7 +55,8 @@ public class RunRules implements CoordinatorDuty
     this(
         new ReplicationThrottler(
             coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime()
+            coordinator.getDynamicConfigs().getReplicantLifetime(),
+            false
         ),
         coordinator
     );
@@ -72,7 +73,8 @@ public class RunRules implements CoordinatorDuty
   {
     replicatorThrottler.updateParams(
         coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-        coordinator.getDynamicConfigs().getReplicantLifetime()
+        coordinator.getDynamicConfigs().getReplicantLifetime(),
+        false
     );
 
     CoordinatorStats stats = new CoordinatorStats();
@@ -128,6 +130,18 @@ public class RunRules implements CoordinatorDuty
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
+          if (
+              stats.getGlobalStat(
+                  "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
+                                                                                   .getMaxNonPrimaryReplicantsToLoad()
+              && !paramsWithReplicationManager.getReplicationManager().isLoadPrimaryReplicantsOnly()
+          ) {
+            log.info(
+                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on for this coordinator run cycle.",
+                paramsWithReplicationManager.getCoordinatorDynamicConfig().getMaxNonPrimaryReplicantsToLoad()
+            );
+            paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
+          }
           stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
           break;

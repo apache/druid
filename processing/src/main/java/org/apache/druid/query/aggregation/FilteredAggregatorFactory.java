@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -166,7 +168,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return delegate.requiredFields();
+    return ImmutableList.copyOf(
+        // use a set to get rid of dupes
+        ImmutableSet.<String>builder().addAll(delegate.requiredFields()).addAll(filter.getRequiredColumns()).build()
+    );
   }
 
   @Override

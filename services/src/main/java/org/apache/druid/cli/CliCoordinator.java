@@ -73,6 +73,10 @@ import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.KillAuditLog;
+import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
+import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
+import org.apache.druid.server.coordinator.duty.KillRules;
+import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
@@ -252,9 +256,29 @@ public class CliCoordinator extends ServerRunnable
                 CoordinatorMetadataStoreManagementDuty.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.supervisor.on",
+                Predicates.equalTo("true"),
+                KillSupervisors.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.audit.on",
                 Predicates.equalTo("true"),
                 KillAuditLog.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.rule.on",
+                Predicates.equalTo("true"),
+                KillRules.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.datasource.on",
+                Predicates.equalTo("true"),
+                KillDatasourceMetadata.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.compaction.on",
+                Predicates.equalTo("true"),
+                KillCompactionConfig.class
             );
 
             bindNodeRoleAndAnnouncer(

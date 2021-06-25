@@ -125,8 +125,28 @@ public class Calcites
 
   }
 
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
+   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
+   *
+   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
+   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   */
   @Nullable
   public static ValueType getValueTypeForRelDataType(final RelDataType type)
+  {
+    ValueType valueType = getValueTypeForRelDataTypeFull(type);
+    if (ValueType.isArray(valueType)) {
+      return ValueType.STRING;
+    }
+    return valueType;
+  }
+
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   */
+  @Nullable
+  public static ValueType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
@@ -142,15 +162,12 @@ public class Calcites
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       SqlTypeName componentType = type.getComponentType().getSqlTypeName();
       if (isDoubleType(componentType)) {
-        // in the future return ValueType.DOUBLE_ARRAY;
-        return ValueType.STRING;
+        return ValueType.DOUBLE_ARRAY;
       }
       if (isLongType(componentType)) {
-        // in the future we will return ValueType.LONG_ARRAY;
-        return ValueType.STRING;
+        return ValueType.LONG_ARRAY;
       }
-      // in the future we will return ValueType.STRING_ARRAY;
-      return ValueType.STRING;
+      return ValueType.STRING_ARRAY;
     } else {
       return null;
     }

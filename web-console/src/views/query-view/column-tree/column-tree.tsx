@@ -16,16 +16,17 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, ITreeNode, Menu, MenuItem, Popover, Position, Tree } from '@blueprintjs/core';
+import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import {
-  SqlAlias,
   SqlComparison,
   SqlExpression,
   SqlFunction,
   SqlJoinPart,
   SqlQuery,
   SqlRef,
+  SqlTableRef,
 } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
@@ -62,39 +63,40 @@ interface HandleColumnClickOptions {
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
-function handleColumnClick(options: HandleColumnClickOptions): void {
+function handleColumnShow(options: HandleColumnClickOptions): void {
   const { columnSchema, columnTable, columnName, columnType, parsedQuery, onQueryChange } = options;
 
-  let query: SqlQuery;
-  const columnRef = SqlRef.column(columnName);
-  if (columnSchema === 'druid') {
-    if (columnType === 'TIMESTAMP') {
-      query = TIME_QUERY.fillPlaceholders([columnRef, SqlRef.table(columnTable)]) as SqlQuery;
-    } else {
-      query = STRING_QUERY.fillPlaceholders([columnRef, SqlRef.table(columnTable)]) as SqlQuery;
-    }
-  } else {
-    query = STRING_QUERY.fillPlaceholders([
-      columnRef,
-      SqlRef.table(columnTable, columnSchema),
-    ]) as SqlQuery;
-  }
-
+  let from: SqlExpression;
   let where: SqlExpression | undefined;
-  let aggregates: SqlAlias[] = [];
+  let aggregates: SqlExpression[] = [];
   if (parsedQuery && parsedQuery.getFirstTableName() === columnTable) {
+    from = parsedQuery.getFirstFromExpression()!;
     where = parsedQuery.getWhereExpression();
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
+    from = SqlTableRef.create(columnTable);
     where = LAST_DAY;
+  } else {
+    from = SqlTableRef.create(columnTable, columnSchema);
   }
+
   if (!aggregates.length) {
     aggregates.push(COUNT_STAR);
   }
 
+  const columnRef = SqlRef.column(columnName);
+  let query: SqlQuery;
+  if (columnSchema === 'druid' && columnType === 'TIMESTAMP') {
+    query = TIME_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+  } else {
+    query = STRING_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+  }
+
   let newSelectExpressions = query.selectExpressions;
-  for (const aggregate of aggregates) {
-    newSelectExpressions = newSelectExpressions.append(aggregate);
+  if (newSelectExpressions) {
+    for (const aggregate of aggregates) {
+      newSelectExpressions = newSelectExpressions.append(aggregate);
+    }
   }
 
   onQueryChange(
@@ -114,8 +116,8 @@ export interface ColumnTreeProps {
 
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
-  columnTree?: ITreeNode[];
-  currentSchemaSubtree?: ITreeNode[];
+  columnTree?: TreeNodeInfo[];
+  currentSchemaSubtree?: TreeNodeInfo[];
   selectedTreeIndex: number;
 }
 
@@ -126,11 +128,11 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
     const firstOnExpression = parsedQuery.fromClause.joinParts.first().onExpression;
     if (firstOnExpression instanceof SqlComparison && firstOnExpression.op === '=') {
       const { lhs, rhs } = firstOnExpression;
-      if (lhs instanceof SqlRef && lhs.namespace === 'lookup') {
-        lookupColumn = lhs.column;
+      if (lhs instanceof SqlRef && lhs.getNamespace() === 'lookup') {
+        lookupColumn = lhs.getColumn();
       }
       if (rhs instanceof SqlRef) {
-        originalTableColumn = rhs.column;
+        originalTableColumn = rhs.getColumn();
       }
     }
   }
@@ -149,24 +151,23 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
-        (metadata, schemaName): ITreeNode => ({
+        (metadata, schemaName): TreeNodeInfo => ({
           id: schemaName,
           label: schemaName,
           childNodes: groupBy(
             metadata,
             r => r.TABLE_NAME,
-            (metadata, tableName): ITreeNode => ({
+            (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
               label: (
-                <Popover
-                  boundary="window"
+                <Popover2
                   position={Position.RIGHT}
                   content={
                     <Deferred
                       content={() => {
                         const parsedQuery = props.getParsedQuery();
-                        const tableRef = SqlRef.table(tableName).as();
+                        const tableRef = SqlTableRef.create(tableName);
                         const prettyTableRef = prettyPrintSql(tableRef);
                         return (
                           <Menu>
@@ -174,7 +175,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               icon={IconNames.FULLSCREEN}
                               text={`SELECT ... FROM ${tableName}`}
                               onClick={() => {
-                                const tableRef = SqlRef.table(
+                                const tableRef = SqlTableRef.create(
                                   tableName,
                                   schemaName === 'druid' ? undefined : schemaName,
                                 );
@@ -189,7 +190,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 onQueryChange(
                                   SqlQuery.create(tableRef)
                                     .changeSelectExpressions(
-                                      metadata.map(child => SqlRef.column(child.COLUMN_NAME).as()),
+                                      metadata.map(child => SqlRef.column(child.COLUMN_NAME)),
                                     )
                                     .changeWhereExpression(where),
                                   true,
@@ -228,7 +229,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                         .addJoin(
                                           SqlJoinPart.create(
                                             'LEFT',
-                                            SqlRef.column(tableName, schemaName).upgrade(),
+                                            SqlTableRef.create(tableName, schemaName),
                                             SqlRef.column(lookupColumn, tableName, 'lookup').equal(
                                               SqlRef.column(
                                                 originalTableColumn,
@@ -253,7 +254,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       parsedQuery.addJoin(
                                         SqlJoinPart.create(
                                           'INNER',
-                                          SqlRef.column(tableName, schemaName).upgrade(),
+                                          SqlTableRef.create(tableName, schemaName),
                                           SqlRef.column(lookupColumn, tableName, 'lookup').equal(
                                             SqlRef.column(
                                               originalTableColumn,
@@ -284,7 +285,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   icon={IconNames.FUNCTION}
                                   text="Aggregate COUNT(*)"
                                   onClick={() =>
-                                    onQueryChange(parsedQuery.addSelectExpression(COUNT_STAR), true)
+                                    onQueryChange(parsedQuery.addSelect(COUNT_STAR), true)
                                   }
                                 />
                               )}
@@ -305,19 +306,17 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   }
                 >
                   {tableName}
-                </Popover>
+                </Popover2>
               ),
               childNodes: metadata
                 .map(
-                  (columnData): ITreeNode => ({
+                  (columnData): TreeNodeInfo => ({
                     id: columnData.COLUMN_NAME,
                     icon: dataTypeToIcon(columnData.DATA_TYPE),
                     label: (
-                      <Popover
-                        boundary="window"
+                      <Popover2
                         position={Position.RIGHT}
                         autoFocus={false}
-                        targetClassName="bp3-popover-open"
                         content={
                           <Deferred
                             content={() => {
@@ -328,7 +327,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     icon={IconNames.FULLSCREEN}
                                     text={`Show: ${columnData.COLUMN_NAME}`}
                                     onClick={() => {
-                                      handleColumnClick({
+                                      handleColumnShow({
                                         columnSchema: schemaName,
                                         columnTable: tableName,
                                         columnName: columnData.COLUMN_NAME,
@@ -383,7 +382,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         }
                       >
                         {columnData.COLUMN_NAME}
-                      </Popover>
+                      </Popover2>
                     ),
                   }),
                 )
@@ -440,7 +439,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     };
   }
 
-  renderSchemaSelector() {
+  private renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
 
@@ -464,10 +463,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   private readonly handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const { columnTree } = this.state;
+    if (!columnTree) return;
 
     const selectedTreeIndex = Number(e.target.value);
-
-    if (!columnTree) return;
 
     const currentSchemaSubtree =
       columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
@@ -478,23 +476,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
-  private readonly handleNodeCollapse = (nodeData: ITreeNode) => {
+  private readonly handleNodeCollapse = (nodeData: TreeNodeInfo) => {
     nodeData.isExpanded = false;
-    this.bounceState();
+    this.forceUpdate();
   };
 
-  private readonly handleNodeExpand = (nodeData: ITreeNode) => {
+  private readonly handleNodeExpand = (nodeData: TreeNodeInfo) => {
     nodeData.isExpanded = true;
-    this.bounceState();
+    this.forceUpdate();
   };
-
-  bounceState() {
-    const { columnTree } = this.state;
-    if (!columnTree) return;
-    this.setState(prevState => ({
-      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
-    }));
-  }
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;

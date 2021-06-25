@@ -2766,7 +2766,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -2868,6 +2867,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
+        false,
         false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();

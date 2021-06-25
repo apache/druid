@@ -20,10 +20,12 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -54,24 +56,29 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public DoublesSketchAggregatorTest(final GroupByQueryConfig config)
+  public DoublesSketchAggregatorTest(final GroupByQueryConfig config, final String vectorize)
   {
     DoublesSketchModule.registerSerde();
     DoublesSketchModule module = new DoublesSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+        module.getJacksonModules(),
+        config,
+        tempFolder
+    ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         module.getJacksonModules(),
         tempFolder
-    );
+    ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "groupByConfig = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      for (String vectorize : new String[]{"false", "true", "force"}) {
+        constructors.add(new Object[]{config, vectorize});
+      }
     }
     return constructors;
   }
@@ -381,7 +388,11 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     // post agg with nulls
     Object quantileObjectWithNulls = row.get(5);
     Assert.assertTrue(quantileObjectWithNulls instanceof Double);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.4 : 7.5, (double) quantileObjectWithNulls, 0.1); // median value
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? 7.4 : 7.5,
+        (double) quantileObjectWithNulls,
+        0.1
+    ); // median value
 
     // post agg with nulls
     Object quantilesObjectWithNulls = row.get(6);

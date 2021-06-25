@@ -215,6 +215,15 @@ public interface Appenderator extends QuerySegmentWalker
   void closeNow();
 
   /**
+   * Flag to tell internals whether appenderator is working on behalf of a real time task.
+   * This is to manage certain aspects as needed. For example, for batch, non-real time tasks,
+   * physical segments (i.e. hydrants) do not need to memory map their persisted
+   * files. In this case, the code will avoid memory mapping them thus ameliorating the occurance
+   * of OOMs.
+   */
+  boolean isRealTime();
+
+  /**
    * Result of {@link Appenderator#add} containing following information
    * - {@link SegmentIdWithShardSpec} - identifier of segment to which rows are being added
    * - int - positive number indicating how many summarized rows exist in this segment so far and
@@ -242,7 +251,8 @@ public interface Appenderator extends QuerySegmentWalker
       return segmentIdentifier;
     }
 
-    int getNumRowsInSegment()
+    @VisibleForTesting
+    public int getNumRowsInSegment()
     {
       return numRowsInSegment;
     }

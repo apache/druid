@@ -843,7 +843,6 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        true,
         0,
         0,
         reportParseExceptions,
@@ -898,6 +897,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        false,
         false
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);

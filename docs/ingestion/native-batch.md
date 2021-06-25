@@ -605,8 +605,7 @@ An example of the result is
         "logParseExceptions": false,
         "maxParseExceptions": 2147483647,
         "maxSavedParseExceptions": 0,
-        "forceGuaranteedRollup": false,
-        "buildV9Directly": true
+        "forceGuaranteedRollup": false
       }
     }
   },
@@ -864,7 +863,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "prefixes": ["s3://foo/bar", "s3://bar/foo"]
+        "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -885,6 +884,47 @@ Sample specs:
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
         ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd",
+          "assumeRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
+        }
       },
       "inputFormat": {
         "type": "json"
@@ -917,6 +957,8 @@ Properties Object:
 |--------|-----------|-------|---------|
 |accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
 |secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
+|assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
+|assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 **Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 
@@ -954,7 +996,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "prefixes": ["gs://foo/bar", "gs://bar/foo"]
+        "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -1031,7 +1073,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "prefixes": ["azure://container/prefix1", "azure://container/prefix2"]
+        "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
         "type": "json"

@@ -127,7 +127,7 @@ The Audit table is used to store the audit history for configuration changes
 e.g rule changes done by [Coordinator](../design/coordinator.md) and other
 config changes.
 
-##Accessed by: ##
+## Accessed by
 
 The Metadata Storage is accessed only by:
 

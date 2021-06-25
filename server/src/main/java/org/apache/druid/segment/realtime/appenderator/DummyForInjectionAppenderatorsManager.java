@@ -90,7 +90,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean batchMemoryMappedIndex
   )
   {
     throw new UOE(ERROR_MSG);

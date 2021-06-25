@@ -134,6 +134,9 @@
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
       },
+      "development/extensions-contrib/prometheus": {
+        "title": "Prometheus Emitter"
+      },
       "development/extensions-contrib/redis-cache": {
         "title": "Druid Redis Cache"
       },
@@ -500,6 +503,9 @@
       "querying/topnquery": {
         "title": "TopN queries",
         "sidebar_label": "TopN"
+      },
+      "querying/using-caching": {
+        "title": "Using query caching"
       },
       "querying/virtual-columns": {
         "title": "Virtual columns"

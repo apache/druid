@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -78,37 +79,7 @@ public class AvgSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final String fieldName;
-    final String expression;
-    final DruidExpression arg = Iterables.getOnlyElement(arguments);
-
-    if (arg.isDirectColumnAccess()) {
-      fieldName = arg.getDirectColumn();
-      expression = null;
-    } else {
-      fieldName = null;
-      expression = arg.getExpression();
-    }
-
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
-
-    final ValueType sumType;
-    // Use 64-bit sum regardless of the type of the AVG aggregator.
-    if (SqlTypeName.INT_TYPES.contains(aggregateCall.getType().getSqlTypeName())) {
-      sumType = ValueType.LONG;
-    } else {
-      sumType = ValueType.DOUBLE;
-    }
-
-    final String sumName = Calcites.makePrefixedName(name, "sum");
     final String countName = Calcites.makePrefixedName(name, "count");
-    final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
-        sumType,
-        sumName,
-        fieldName,
-        expression,
-        macroTable
-    );
     final AggregatorFactory count = CountSqlAggregator.createCountAggregatorFactory(
         countName,
         plannerContext,
@@ -117,6 +88,38 @@ public class AvgSqlAggregator implements SqlAggregator
         rexBuilder,
         aggregateCall,
         project
+    );
+
+    final String fieldName;
+    final String expression;
+    final DruidExpression arg = Iterables.getOnlyElement(arguments);
+
+
+    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ValueType sumType;
+    // Use 64-bit sum regardless of the type of the AVG aggregator.
+    if (SqlTypeName.INT_TYPES.contains(aggregateCall.getType().getSqlTypeName())) {
+      sumType = ValueType.LONG;
+    } else {
+      sumType = ValueType.DOUBLE;
+    }
+
+    if (arg.isDirectColumnAccess()) {
+      fieldName = arg.getDirectColumn();
+      expression = null;
+    } else {
+      // if the filter or anywhere else defined a virtual column for us, re-use it
+      VirtualColumn vc = virtualColumnRegistry.getVirtualColumnByExpression(arg.getExpression());
+      fieldName = vc != null ? vc.getOutputName() : null;
+      expression = vc != null ? null : arg.getExpression();
+    }
+    final String sumName = Calcites.makePrefixedName(name, "sum");
+    final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
+        sumType,
+        sumName,
+        fieldName,
+        expression,
+        macroTable
     );
 
     return Aggregation.create(

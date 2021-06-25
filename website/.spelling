@@ -22,8 +22,10 @@
 500MiB
 64-bit
 ACL
+ACLs
 APIs
 AvroStorage
+ARN
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -194,6 +196,8 @@ aggregator
 aggregators
 ambari
 analytics
+assumeRoleArn
+assumeRoleExternalId
 async
 authorizer
 authorizers
@@ -458,6 +462,8 @@ druid-s3-extensions
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
 LeadershipLatch
+3.5.x
+3.4.x
  - ../docs/design/auth.md
 AllowAll
 AuthenticationResult
@@ -581,6 +587,7 @@ longSum
 movingAverage
 postAggregations
 postAveragers
+pull-deps
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
 namespacePrefix
@@ -1497,6 +1504,7 @@ file2
  - ../docs/querying/sql.md
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
+ARRAY_AGG
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -1786,6 +1794,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicants
 resultsets
 roundRobin
 runtime.properties
@@ -1878,3 +1887,4 @@ TiB
 PiB
 protobuf
 Golang
+multiValueHandling

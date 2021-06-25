@@ -69,3 +69,15 @@ Putting these together, if you wish to build the source and binary distributions
 ```bash
 mvn clean install -Papache-release,dist,rat -DskipTests
 ```
+#### Potential issues
+
+##### Issue
+You are building Druid from source following the instructions on this page but you get
+```
+[ERROR] Failed to execute goal org.codehaus.mojo:exec-maven-plugin:1.6.0:exec (generate-binary-license) on project distribution: Command execution failed.: Process exited with an error: 1 (Exit value: 1) -> [Help 1]
+```
+
+Resolution: Make sure you have Python installed as well as the `yaml` module:
+```
+pip install pyyaml
+```

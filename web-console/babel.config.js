@@ -19,19 +19,7 @@
 module.exports = function (api) {
   api.cache(false);
 
-  const presets = [
-    [
-      '@babel/preset-env',
-      {
-        useBuiltIns: 'entry',
-        corejs: 3,
-        forceAllTransforms: true,
-        targets: {
-          ie: '11',
-        },
-      },
-    ],
-  ];
+  const presets = [['@babel/preset-env', { useBuiltIns: 'entry', corejs: 3 }]];
   const plugins = [];
 
   return {
