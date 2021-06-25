@@ -124,7 +124,7 @@ public class BatchAppenderatorTester implements AutoCloseable
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
-      final boolean batchMemoryMappedIndex
+      final boolean batchFallback
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -249,7 +249,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexMerger,
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        batchMemoryMappedIndex
+        batchFallback
     );
   }
 

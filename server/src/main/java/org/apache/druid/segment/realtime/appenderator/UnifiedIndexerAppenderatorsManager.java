@@ -210,7 +210,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      boolean batchFallback
   )
   {
     synchronized (this) {
@@ -230,7 +230,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          batchMemoryMappedIndex
+          batchFallback
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;

@@ -105,10 +105,10 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      boolean batchFallback
   )
   {
-    if (batchMemoryMappedIndex) {
+    if (batchFallback) {
       // fallback to code known to be working, this is just a fallback option in case new
       // batch appenderator has some early bugs but we will remove this fallback as soon as
       // we determine that batch appenderator code is stable
