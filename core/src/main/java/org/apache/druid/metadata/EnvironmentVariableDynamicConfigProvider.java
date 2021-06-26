@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,9 +30,6 @@ import java.util.Objects;
 
 public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigProvider<String>
 {
-
-  private static final Logger log = new Logger(EnvironmentVariableDynamicConfigProvider.class);
-
   private final ImmutableMap<String, String> variables;
 
   @JsonCreator
