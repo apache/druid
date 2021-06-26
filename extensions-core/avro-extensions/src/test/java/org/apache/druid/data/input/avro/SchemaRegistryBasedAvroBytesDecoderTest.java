@@ -191,13 +191,13 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
         .readerFor(AvroBytesDecoder.class)
         .readValue(json);
 
-    Map<String, String> heaeder = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
+    Map<String, String> header = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
-    Assert.assertEquals(3, heaeder.size());
-    Assert.assertEquals("value.1", heaeder.get("registry.header.prop.1"));
-    Assert.assertEquals("value.2", heaeder.get("registry.header.prop.2"));
-    Assert.assertEquals("value.3", heaeder.get("registry.header.prop.3"));
+    Assert.assertEquals(3, header.size());
+    Assert.assertEquals("value.1", header.get("registry.header.prop.1"));
+    Assert.assertEquals("value.2", header.get("registry.header.prop.2"));
+    Assert.assertEquals("value.3", header.get("registry.header.prop.3"));
   }
 
   @Test
