@@ -16,19 +16,17 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  HTMLInputProps,
-  InputGroup,
-  Intent,
-  Menu,
-  MenuItem,
-  Position,
-} from '@blueprintjs/core';
+import { Button, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useRef } from 'react';
+
+import { JSON_STRING_FORMATTER } from '../../utils';
+import {
+  FormattedInputGroup,
+  FormattedInputGroupProps,
+} from '../formatted-input-group/formatted-input-group';
 
 export interface SuggestionGroup {
   group: string;
@@ -37,22 +35,19 @@ export interface SuggestionGroup {
 
 export type Suggestion = undefined | string | SuggestionGroup;
 
-export interface SuggestibleInputProps extends HTMLInputProps {
-  onValueChange: (newValue: undefined | string) => void;
+export interface SuggestibleInputProps extends Omit<FormattedInputGroupProps, 'formatter'> {
   onFinalize?: () => void;
   suggestions?: Suggestion[];
-  large?: boolean;
-  intent?: Intent;
 }
 
 export const SuggestibleInput = React.memo(function SuggestibleInput(props: SuggestibleInputProps) {
   const {
     className,
     value,
-    defaultValue,
     onValueChange,
     onFinalize,
     onBlur,
+    onFocus,
     suggestions,
     ...rest
   } = props;
@@ -65,20 +60,19 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   }
 
   return (
-    <InputGroup
+    <FormattedInputGroup
       className={classNames('suggestible-input', className)}
-      value={value as string}
-      defaultValue={defaultValue as string}
-      onChange={(e: any) => {
-        onValueChange(e.target.value);
-      }}
-      onFocus={(e: any) => {
+      formatter={JSON_STRING_FORMATTER}
+      value={value}
+      onValueChange={onValueChange}
+      onFocus={e => {
         lastFocusValue.current = e.target.value;
+        onFocus?.(e);
       }}
-      onBlur={(e: any) => {
-        if (onBlur) onBlur(e);
+      onBlur={e => {
+        onBlur?.(e);
         if (lastFocusValue.current === e.target.value) return;
-        if (onFinalize) onFinalize();
+        onFinalize?.();
       }}
       rightElement={
         suggestions && (
@@ -98,7 +92,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
                     return (
                       <MenuItem
                         key={suggestion}
-                        text={suggestion}
+                        text={JSON_STRING_FORMATTER.stringify(suggestion)}
                         onClick={() => handleSuggestionSelect(suggestion)}
                       />
                     );
