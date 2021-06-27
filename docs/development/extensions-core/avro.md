@@ -42,7 +42,7 @@ Druid supports most Avro types natively, there are however some exceptions which
 #### Unions
 Druid has two modes for supporting `union` types.
 
-The default mode will treat unions as a single value regardless of the type it is poulated with.
+The default mode will treat unions as a single value regardless of the type it is populated with.
 
 If you wish to operate on each different member of a union however you can set `extractUnionsByType` on the Avro parser in which case unions will be expanded into nested objects according to the following rules:
 * Primitive types and unnamed complex types are keyed their type name. i.e `int`, `string`
