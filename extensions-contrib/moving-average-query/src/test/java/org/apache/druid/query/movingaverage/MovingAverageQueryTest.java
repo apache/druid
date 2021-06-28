@@ -60,6 +60,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
@@ -139,9 +140,21 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
             {
               return (queryPlus, responseContext) -> {
                 if (query instanceof GroupByQuery) {
-                  return (Sequence<T>) Sequences.simple(groupByResults);
+                  return Sequences.map(
+                      (Sequence<T>) Sequences.simple(groupByResults),
+                      warehouse.getToolChest(query).makePreComputeManipulatorFn(
+                          query,
+                          MetricManipulatorFns.deserializing()
+                      )
+                  );
                 } else if (query instanceof TimeseriesQuery) {
-                  return (Sequence<T>) Sequences.simple(timeseriesResults);
+                  return Sequences.map(
+                      (Sequence<T>) Sequences.simple(timeseriesResults),
+                      warehouse.getToolChest(query).makePreComputeManipulatorFn(
+                          query,
+                          MetricManipulatorFns.deserializing()
+                      )
+                  );
                 }
                 throw new UnsupportedOperationException("unexpected query type " + query.getType());
               };
