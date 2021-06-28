@@ -40,6 +40,12 @@ exports[`segments-view matches snapshot 1`] = `
           text="View SQL query for table"
         />
       </Memo(MoreButton)>
+      <Blueprint3.Switch
+        checked={false}
+        disabled={false}
+        label="Show segment timeline"
+        onChange={[Function]}
+      />
       <Memo(TableColumnSelector)
         columns={
           Array [

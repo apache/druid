@@ -87,14 +87,14 @@
         <datasketches.memory.version>1.3.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
+        <errorprone.version>2.7.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.40.v20210413</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <jackson.version>2.10.2</jackson.version>
-        <jackson.databind.version>2.10.5.1</jackson.databind.version>
+        <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <mysql.version>5.1.48</mysql.version>
@@ -420,7 +420,7 @@
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
-                <version>2.3.2</version>
+                <version>${errorprone.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -448,53 +448,11 @@
                 <version>1.3.3-1</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.databind.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-guava</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-joda</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <!--
-                  ~ This is a transitive dependency of com.amazonaws:aws-java-sdk-core. Override the version here so
-                  ~ that it is the same as the other jackson dependencies.
-                  -->
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-cbor</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-smile</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                <artifactId>jackson-jaxrs-json-provider</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                <artifactId>jackson-jaxrs-smile-provider</artifactId>
-                <version>${jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -1210,21 +1168,6 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.module</groupId>
-                <artifactId>jackson-module-guice</artifactId>
-                <version>${jackson.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
@@ -1777,17 +1720,20 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
+          </profile>
+          <profile>
             <id>strict</id>
+            <activation>
+              <property>
+                <name>strictCompile</name>
+              </property>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
-                            <compilerId>javac-with-errorprone</compilerId>
-                            <forceJavacCompilerUse>true</forceJavacCompilerUse>
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
@@ -1795,56 +1741,79 @@
                             <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
-                                <arg>-XepDisableWarningsInGeneratedCode</arg>
-
-                                <arg>-Xep:ClassCanBeStatic:ERROR</arg>
-                                <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
-                                <arg>-Xep:MissingOverride:ERROR</arg>
-                                <arg>-Xep:DefaultCharset:ERROR</arg>
-                                <arg>-Xep:QualifierOrScopeOnInjectMethod:ERROR</arg>
-
-                                <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
-                                <arg>-Xep:AutoFactoryAtInject</arg>
-                                <arg>-Xep:ClassName</arg>
-                                <arg>-Xep:ComparisonContractViolated</arg>
-                                <arg>-Xep:DepAnn</arg>
-                                <arg>-Xep:DivZero</arg>
-                                <arg>-Xep:EmptyIf</arg>
-                                <arg>-Xep:InjectInvalidTargetingOnScopingAnnotation</arg>
-                                <arg>-Xep:InjectMoreThanOneQualifier</arg>
-                                <arg>-Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass</arg>
-                                <arg>-Xep:InjectScopeOrQualifierAnnotationRetention</arg>
-                                <arg>-Xep:InjectedConstructorAnnotations</arg>
-                                <arg>-Xep:InsecureCryptoUsage</arg>
-                                <arg>-Xep:JMockTestWithoutRunWithOrRuleAnnotation</arg>
-                                <arg>-Xep:JavaxInjectOnFinalField</arg>
-                                <arg>-Xep:LockMethodChecker</arg>
-                                <arg>-Xep:LongLiteralLowerCaseSuffix</arg>
-                                <arg>-Xep:NoAllocation</arg>
-                                <arg>-Xep:NonRuntimeAnnotation</arg>
-                                <arg>-Xep:NumericEquality</arg>
-                                <arg>-Xep:ParameterPackage</arg>
-                                <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
-                                <arg>-Xep:UnlockMethod</arg>
-                            </compilerArgs>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <!-- disable LongFloatConversion until https://github.com/google/error-prone/issues/2396 is fixed -->
+                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:DivZero -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JMockTestWithoutRunWithOrRuleAnnotation -Xep:JavaxInjectOnFinalField -Xep:LockMethodChecker -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:UnlockMethod -Xep:LongFloatConversion:OFF</arg>
+                              </compilerArgs>
+                              <annotationProcessorPaths>
+                                <path>
+                                  <groupId>com.google.errorprone</groupId>
+                                  <artifactId>error_prone_core</artifactId>
+                                  <version>${errorprone.version}</version>
+                                </path>
+                              </annotationProcessorPaths>
                         </configuration>
-                        <dependencies>
-                            <dependency>
-                                <groupId>org.codehaus.plexus</groupId>
-                                <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                <version>2.8.5</version>
-                            </dependency>
-                            <!-- override plexus-compiler-javac-errorprone's dependency on
-                                 Error Prone with the latest version -->
-                            <dependency>
-                                <groupId>com.google.errorprone</groupId>
-                                <artifactId>error_prone_core</artifactId>
-                                <version>2.3.2</version>
-                            </dependency>
-                        </dependencies>
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+          <id>strict-java-15+</id>
+          <activation>
+            <jdk>[15,)</jdk>
+            <property>
+              <name>strictCompile</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                  <release>${java.version}</release>
+                  <compilerArgs combine.children="append">
+                    <!-- Error Prone requires exemptions for Java 16, see https://errorprone.info/docs/installation#jdk-16 -->
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                  </compilerArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
+        </profile>
+        <!-- using github.com/google/error-prone-javac is required when running on JDK 8
+             see https://errorprone.info/docs/installation#jdk-8 -->
+        <profile>
+          <id>strict-java-8</id>
+          <activation>
+            <jdk>1.8</jdk>
+            <property>
+              <name>strictCompile</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                  <fork>true</fork>
+                  <compilerArgs combine.children="append">
+                    <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/9+181-r4173-1/javac-9+181-r4173-1.jar</arg>
+                  </compilerArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
         </profile>
         <profile>
             <id>parallel-test</id>

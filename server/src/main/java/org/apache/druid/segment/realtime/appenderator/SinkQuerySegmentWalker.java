@@ -152,9 +152,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
-    analysis.getBaseTableDataSource()
-            .filter(ds -> dataSource.equals(ds.getName()))
-            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+    if (!analysis.getBaseTableDataSource().filter(ds -> dataSource.equals(ds.getName())).isPresent()) {
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
+    }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {

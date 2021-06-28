@@ -133,6 +133,12 @@ public abstract class DruidCoordinatorConfig
     return 1;
   }
 
+  @Config("druid.coordinator.compaction.skipLockedIntervals")
+  public boolean getCompactionSkipLockedIntervals()
+  {
+    return true;
+  }
+
   @Config("druid.coordinator.guildReplication.on")
   @Default("false")
   public abstract boolean isGuildReplicationOn();

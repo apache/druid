@@ -476,7 +476,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
-    tsqa = new TaskStorageQueryAdapter(taskStorage);
+    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     return taskStorage;
   }
 
@@ -1493,7 +1493,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
-        null,
         null,
         null,
         null,

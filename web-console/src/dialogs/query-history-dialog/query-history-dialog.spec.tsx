@@ -16,28 +16,17 @@
  * limitations under the License.
  */
 
-.query-plan-dialog {
-  &.bp3-dialog {
-    width: 600px;
-  }
+import { render } from '@testing-library/react';
+import React from 'react';
 
-  textarea {
-    width: 100%;
-  }
+import { QueryHistoryDialog } from './query-history-dialog';
 
-  .one-query {
-    textarea {
-      height: 50vh !important;
-    }
-  }
-
-  .two-queries {
-    textarea {
-      height: 25vh !important;
-    }
-  }
-
-  .generic-result {
-    overflow: scroll;
-  }
-}
+describe('QueryHistoryDialog', () => {
+  it('matches snapshot', () => {
+    const queryPlanDialog = (
+      <QueryHistoryDialog setQueryString={() => null} queryRecords={[]} onClose={() => {}} />
+    );
+    render(queryPlanDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});
