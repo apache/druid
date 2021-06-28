@@ -49,7 +49,9 @@ public class MetadataStorageConnectorConfig
   @JsonProperty("dbcp")
   private Properties dbcpProperties;
 
-  @JsonProperty
+  @JsonProperty("dynamicConfigProvider")
+  private DynamicConfigProvider dynamicConfigProvider;
+
   public boolean isCreateTables()
   {
     return createTables;
@@ -79,13 +81,17 @@ public class MetadataStorageConnectorConfig
   @JsonProperty
   public String getUser()
   {
-    return user;
+    return (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("user") != null) ? dynamicConfigProvider.getConfig().get("user").toString() : user;
   }
 
   @JsonProperty
   public String getPassword()
   {
-    return passwordProvider == null ? null : passwordProvider.getPassword();
+    if (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("passward") != null) {
+      return dynamicConfigProvider.getConfig().get("passward").toString();
+    } else {
+      return passwordProvider == null ? null : passwordProvider.getPassword();
+    }
   }
 
   @JsonProperty("dbcp")
@@ -100,7 +106,7 @@ public class MetadataStorageConnectorConfig
     return "DbConnectorConfig{" +
            "createTables=" + createTables +
            ", connectURI='" + getConnectURI() + '\'' +
-           ", user='" + user + '\'' +
+           ", user='" + getUser() + '\'' +
            ", passwordProvider=" + passwordProvider +
            ", dbcpProperties=" + dbcpProperties +
            '}';
@@ -153,6 +159,7 @@ public class MetadataStorageConnectorConfig
     result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
     result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
     result = 31 * result + (dbcpProperties != null ? dbcpProperties.hashCode() : 0);
+    result = 31 * result + (dynamicConfigProvider != null ? dynamicConfigProvider.hashCode() : 0);
     return result;
   }
 }

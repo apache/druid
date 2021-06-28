@@ -21,6 +21,7 @@ package org.apache.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
+import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.PasswordProvider;
@@ -57,6 +58,9 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
     return type;
   }
 
+  @JsonProperty("dynamicConfigProvider")
+  private DynamicConfigProvider dynamicConfigProvider;
+
   @Override
   public MetadataStorageConnectorConfig get()
   {
@@ -71,13 +75,17 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
       @Override
       public String getUser()
       {
-        return user;
+        return (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("user") != null) ? dynamicConfigProvider.getConfig().get("user").toString() : user;
       }
 
       @Override
       public String getPassword()
       {
-        return passwordProvider == null ? null : passwordProvider.getPassword();
+        if (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("passward") != null) {
+          return dynamicConfigProvider.getConfig().get("passward").toString();
+        } else {
+          return passwordProvider == null ? null : passwordProvider.getPassword();
+        }
       }
     };
   }

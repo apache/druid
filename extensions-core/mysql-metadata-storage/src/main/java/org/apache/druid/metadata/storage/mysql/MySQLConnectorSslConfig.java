@@ -20,6 +20,7 @@
 package org.apache.druid.metadata.storage.mysql;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 
 import java.util.List;
@@ -56,6 +57,9 @@ public class MySQLConnectorSslConfig
   @JsonProperty
   private boolean verifyServerCertificate = false;
 
+  @JsonProperty("dynamicConfigProvider")
+  private DynamicConfigProvider dynamicConfigProvider;
+
   public boolean isUseSSL()
   {
     return useSSL;
@@ -73,7 +77,11 @@ public class MySQLConnectorSslConfig
 
   public String getTrustCertificateKeyStorePassword()
   {
-    return trustCertificateKeyStorePasswordProvider == null ? null : trustCertificateKeyStorePasswordProvider.getPassword();
+    if (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("trustCertificateKeyStorePassword") != null) {
+      return dynamicConfigProvider.getConfig().get("trustCertificateKeyStorePassword").toString();
+    } else {
+      return trustCertificateKeyStorePasswordProvider == null ? null : trustCertificateKeyStorePasswordProvider.getPassword();
+    }
   }
 
   public String getClientCertificateKeyStoreUrl()
@@ -88,7 +96,11 @@ public class MySQLConnectorSslConfig
 
   public String getClientCertificateKeyStorePassword()
   {
-    return clientCertificateKeyStorePasswordProvider == null ? null : clientCertificateKeyStorePasswordProvider.getPassword();
+    if (dynamicConfigProvider != null && dynamicConfigProvider.getConfig().get("clientCertificateKeyStorePassword") != null) {
+      return dynamicConfigProvider.getConfig().get("clientCertificateKeyStorePassword").toString();
+    } else {
+      return clientCertificateKeyStorePasswordProvider == null ? null : clientCertificateKeyStorePasswordProvider.getPassword();
+    }
   }
 
   public List<String> getEnabledSSLCipherSuites()
