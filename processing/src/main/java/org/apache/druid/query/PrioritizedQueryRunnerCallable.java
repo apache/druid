@@ -20,12 +20,18 @@
 package org.apache.druid.query;
 
 /**
- * An implementation of {@link PrioritizedCallable} that also let's caller get access to associated {@link QueryRunner}
+ * An implementation of {@link PrioritizedCallable} that also lets caller get access to associated {@link QueryRunner}
  * It is used in implementations of {@link QueryRunnerFactory}
- * @param <T>
- * @param <V>
+ * @param <T> - Type of result of {@link #call()} method
+ * @param <V> - Type of {@link org.apache.druid.java.util.common.guava.Sequence} of rows returned by {@link QueryRunner}
  */
 public interface PrioritizedQueryRunnerCallable<T, V> extends PrioritizedCallable<T>
 {
+  /**
+   * This method can be used by the extensions to get the runner that the given query execution task corresponds to.
+   * That in turn can be used to fetch any state associated with the QueryRunner such as the segment info for example.
+   * Extensions can carry any state from custom implementation of QuerySegmentWalker to a
+   * custom implementation of {@link QueryProcessingPool#submit(PrioritizedQueryRunnerCallable)}
+   */
   QueryRunner<V> getRunner();
 }
