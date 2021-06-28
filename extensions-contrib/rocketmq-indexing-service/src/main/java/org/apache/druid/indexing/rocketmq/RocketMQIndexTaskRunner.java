@@ -21,6 +21,7 @@ package org.apache.druid.indexing.rocketmq;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -46,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * RocketMQ indexing task runner supporting incremental segments publishing
@@ -124,7 +128,36 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Strin
       Set<StreamPartition<String>> assignment
   )
   {
-    // do nothing
+    if (!task.getTuningConfig().isSkipSequenceNumberAvailabilityCheck()) {
+      final ConcurrentMap<String, Long> currOffsets = getCurrentOffsets();
+      for (final StreamPartition<String> streamPartition : assignment) {
+        long sequence = currOffsets.get(streamPartition.getPartitionId());
+        long earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
+        if (earliestSequenceNumber == 0L
+            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+          if (task.getTuningConfig().isResetOffsetAutomatically()) {
+            log.info("Attempting to reset sequences automatically for all partitions");
+            try {
+              sendResetRequestAndWait(
+                  assignment.stream()
+                      .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
+                  toolbox
+              );
+            }
+            catch (IOException e) {
+              throw new ISE(e, "Exception while attempting to automatically reset sequences");
+            }
+          } else {
+            throw new ISE(
+                "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
+                sequence,
+                streamPartition.getPartitionId(),
+                earliestSequenceNumber
+            );
+          }
+        }
+      }
+    }
   }
 
   @Override
