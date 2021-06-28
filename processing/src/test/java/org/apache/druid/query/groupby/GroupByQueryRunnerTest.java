@@ -7916,7 +7916,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -7984,7 +7984,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8051,7 +8051,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8581,7 +8581,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -11228,6 +11228,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0",
                 null,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -11240,6 +11241,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of("index"),
                 null,
                 "0.0",
+                null,
                 null,
                 "__acc + index",
                 null,
@@ -11463,6 +11465,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0",
                 null,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -11476,6 +11479,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0.0",
                 null,
+                true,
                 "__acc + index",
                 null,
                 null,
@@ -11488,6 +11492,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
                 "acc",
                 "[]",
+                null,
                 null,
                 "array_set_add(acc, market)",
                 "array_set_add_all(acc, array_agg_distinct)",
@@ -11746,6 +11751,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION),
                 "acc",
                 "[]",
+                null,
                 null,
                 "array_set_add(acc, placementish)",
                 "array_set_add_all(acc, array_agg_distinct)",

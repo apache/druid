@@ -81,6 +81,11 @@
             <artifactId>fastutil</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

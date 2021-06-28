@@ -98,9 +98,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   @Inject
   private DruidClusterAdminClient druidClusterAdminClient;
 
-  @Inject
-  private IntegrationTestingConfig config;
-
   private StreamAdminClient streamAdminClient;
 
   abstract StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception;
@@ -171,7 +168,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return map;
   }
 
-  private Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
+  protected Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
   {
     return Closer.create().register(() -> doMethodTeardown(generatedTestConfig));
   }
@@ -647,7 +644,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  private class GeneratedTestConfig
+  protected class GeneratedTestConfig
   {
     private final String streamName;
     private final String fullDatasourceName;
@@ -655,7 +652,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     private Function<String, String> streamIngestionPropsTransform;
     private Function<String, String> streamQueryPropsTransform;
 
-    GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();

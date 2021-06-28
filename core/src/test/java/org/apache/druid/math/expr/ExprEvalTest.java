@@ -273,6 +273,16 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testEmptyArrayFromList()
+  {
+    // empty arrays will materialize from JSON into an empty list, which coerce list to array will make into Object[]
+    // make sure we can handle it
+    ExprEval someEmptyArray = ExprEval.bestEffortOf(new ArrayList<>());
+    Assert.assertTrue(someEmptyArray.isArray());
+    Assert.assertEquals(0, someEmptyArray.asArray().length);
+  }
+
   private void assertExpr(int position, Object expected)
   {
     assertExpr(position, ExprEval.bestEffortOf(expected));
@@ -287,9 +297,23 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     ExprEval.serialize(buffer, position, expected, maxSizeBytes);
     if (ExprType.isArray(expected.type())) {
-      Assert.assertArrayEquals(expected.asArray(), ExprEval.deserialize(buffer, position).asArray());
+      Assert.assertArrayEquals(
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).asArray()
+      );
+      Assert.assertArrayEquals(
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position).asArray()
+      );
     } else {
-      Assert.assertEquals(expected.value(), ExprEval.deserialize(buffer, position).value());
+      Assert.assertEquals(
+          expected.value(),
+          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).value()
+      );
+      Assert.assertEquals(
+          expected.value(),
+          ExprEval.deserialize(buffer, position).value()
+      );
     }
     assertEstimatedBytes(expected, maxSizeBytes);
   }

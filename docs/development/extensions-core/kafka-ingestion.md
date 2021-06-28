@@ -268,7 +268,7 @@ For such consumer properties, user can implement a [DynamicConfigProvider](../..
 `druid.dynamic.config.provider`=`{"type": "<registered_dynamic_config_provider_name>", ...}`
 in consumerProperties map.
 
-Note: In 0.20.0 or older Druid versions, for SSL connections, the `keystore`, `truststore` and `key` passwords can also be provided as a [Password Provider](../../operations/password-provider.md). This is deprecated.
+Note: SSL connections may also be supplied using the deprecated [Password Provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`. This functionality might be removed in a future release.
 
 #### Specifying data format
 
@@ -278,10 +278,8 @@ but unfortunately, it doesn't support all data formats supported by the legacy `
 (They will be supported in the future.)
 
 The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
-[`delimited`](../../ingestion/data-formats.md#tsv-delimited), and [`json`](../../ingestion/data-formats.md#json).
-You can also read [`avro_stream`](../../ingestion/data-formats.md#avro-stream-parser),
-[`protobuf`](../../ingestion/data-formats.md#protobuf-parser),
-and [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
+[`delimited`](../../ingestion/data-formats.md#tsv-delimited), [`json`](../../ingestion/data-formats.md#json), [`avro_stream`](../../ingestion/data-formats.md#avro-stream), [`protobuf`](../../ingestion/data-formats.md#protobuf).
+You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
 

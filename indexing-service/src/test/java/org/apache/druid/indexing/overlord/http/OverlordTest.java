@@ -216,7 +216,7 @@ public class OverlordTest
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
 
-    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage);
+    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(

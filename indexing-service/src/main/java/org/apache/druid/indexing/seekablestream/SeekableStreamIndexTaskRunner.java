@@ -1279,8 +1279,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PAUSED;
         hasPaused.signalAll();
 
+        log.debug("Received pause command, pausing ingestion until resumed.");
         while (pauseRequested) {
-          log.debug("Received pause command, pausing ingestion until resumed.");
           shouldResume.await();
         }
 

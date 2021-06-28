@@ -17,13 +17,17 @@
  */
 
 .form-group-with-info {
+  .bp3-text-muted .bp3-popover2-target {
+    margin-top: 0;
+  }
+
   .bp3-form-content {
     position: relative;
 
-    & > .bp3-popover-wrapper {
+    & > .bp3-popover2-target {
       position: absolute;
       right: 0;
-      top: 7px;
+      top: 5px;
     }
   }
 }

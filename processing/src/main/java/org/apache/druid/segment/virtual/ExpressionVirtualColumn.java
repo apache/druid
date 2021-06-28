@@ -60,6 +60,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Nullable
   private final ValueType outputType;
   private final Supplier<Expr> parsedExpression;
+  private final Supplier<byte[]> cacheKey;
 
   @JsonCreator
   public ExpressionVirtualColumn(
@@ -73,6 +74,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.outputType = outputType;
     this.parsedExpression = Parser.lazyParse(expression, macroTable);
+    this.cacheKey = makeCacheKeySupplier();
   }
 
   /**
@@ -90,6 +92,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.expression = parsedExpression.toString();
     this.outputType = outputType;
     this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+    this.cacheKey = makeCacheKeySupplier();
   }
 
   @JsonProperty("name")
@@ -259,14 +262,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public byte[] getCacheKey()
   {
-    CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
-        .appendString(name)
-        .appendString(expression);
-
-    if (outputType != null) {
-      builder.appendString(outputType.toString());
-    }
-    return builder.build();
+    return cacheKey.get();
   }
 
   @Override
@@ -298,5 +294,19 @@ public class ExpressionVirtualColumn implements VirtualColumn
            ", expression='" + expression + '\'' +
            ", outputType=" + outputType +
            '}';
+  }
+
+  private Supplier<byte[]> makeCacheKeySupplier()
+  {
+    return Suppliers.memoize(() -> {
+      CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
+          .appendString(name)
+          .appendCacheable(parsedExpression.get());
+
+      if (outputType != null) {
+        builder.appendString(outputType.toString());
+      }
+      return builder.build();
+    });
   }
 }

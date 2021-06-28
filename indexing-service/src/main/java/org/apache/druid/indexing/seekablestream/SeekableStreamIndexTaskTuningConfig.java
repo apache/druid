@@ -73,8 +73,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Integer maxPendingPersists,
       @Nullable IndexSpec indexSpec,
       @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @Nullable Boolean reportParseExceptions,
       @Nullable Long handoffConditionTimeout,
       @Nullable Boolean resetOffsetAutomatically,
@@ -221,16 +219,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
-  }
-
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public boolean getBuildV9Directly()
-  {
-    return true;
   }
 
   @Override
