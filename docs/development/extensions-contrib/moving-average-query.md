@@ -124,16 +124,18 @@ These are properties which are common to all Averagers:
   * longSum
   * longMax
   * longMin
+  * default
 
 #### Standard averagers
 
-These averagers offer four functions:
+These averagers offer six functions:
 
 * Mean (Average)
 * MeanNoNulls (Ignores empty buckets).
 * Sum
 * Max
 * Min
+* Druid Aggregators (The `default` type averager will use the same aggregator of its dependent aggregation field to do trailing aggregate)
 
 **Ignoring nulls**:
 Using a MeanNoNulls averager is useful when the interval starts at the dataset beginning time.
@@ -362,3 +364,89 @@ Query syntax:
   ]
 }
 ```
+
+### Default type averager example
+
+Query syntax:
+
+```json
+{
+    "queryType": "movingAverage",
+    "dataSource": "wikipedia",
+    "granularity": {
+        "type": "period",
+        "period": "PT1H"
+    },
+    "dimensions": [],
+    "intervals": [
+        "2016-06-27T08:00:00.000Z/2016-06-27T11:00:00.000Z"
+    ],
+    "aggregations": [
+        {
+            "name": "deltaHourChanges",
+            "fieldName": "delta",
+            "type": "longSum"
+        },
+        {
+            "type": "cardinality",
+            "name": "deltaHourUniqueUsers",
+            "fields": [
+                "user"
+            ],
+            "round": true
+        }
+    ],
+    "averagers": [
+        {
+            "name": "trailing7HourChangesSum",
+            "fieldName": "deltaHourChanges",
+            "type": "default",
+            "buckets": 7
+        },
+        {
+            "name": "trailing7HourUniqueUsers",
+            "fieldName": "deltaHourUniqueUsers",
+            "type": "default",
+            "buckets": 7
+        }
+    ]
+}
+```
+
+Result:
+
+```json
+[
+    {
+        "version": "v1",
+        "timestamp": "2016-06-27T08:00:00.000Z",
+        "event": {
+            "deltaHourChanges": 459861,
+            "deltaHourUniqueUsers": 492,
+            "trailing7HourUniqueUsers": 2249,
+            "trailing7HourChangesSum": 3200366
+        }
+    },
+    {
+        "version": "v1",
+        "timestamp": "2016-06-27T09:00:00.000Z",
+        "event": {
+            "deltaHourChanges": 526043,
+            "deltaHourUniqueUsers": 527,
+            "trailing7HourUniqueUsers": 2385,
+            "trailing7HourChangesSum": 3390380
+        }
+    },
+    {
+        "version": "v1",
+        "timestamp": "2016-06-27T10:00:00.000Z",
+        "event": {
+            "deltaHourChanges": 501710,
+            "deltaHourUniqueUsers": 609,
+            "trailing7HourUniqueUsers": 2587,
+            "trailing7HourChangesSum": 3502582
+        }
+    }
+]
+```
+
