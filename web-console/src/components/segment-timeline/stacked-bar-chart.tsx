@@ -19,12 +19,36 @@
 import { axisBottom, axisLeft, AxisScale } from 'd3-axis';
 import React, { useState } from 'react';
 
-import { BarChartMargin, BarUnitData } from '../components/segment-timeline/segment-timeline';
-
 import { BarGroup } from './bar-group';
 import { ChartAxis } from './chart-axis';
 
 import './stacked-bar-chart.scss';
+
+export interface BarUnitData {
+  x: number;
+  y: number;
+  y0?: number;
+  width: number;
+  datasource: string;
+  color: string;
+}
+
+export interface BarChartMargin {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export interface HoveredBarInfo {
+  xCoordinate?: number;
+  yCoordinate?: number;
+  height?: number;
+  width?: number;
+  datasource?: string;
+  xValue?: number;
+  yValue?: number;
+}
 
 interface StackedBarChartProps {
   svgWidth: number;
@@ -39,21 +63,12 @@ interface StackedBarChartProps {
   barWidth: number;
 }
 
-export interface HoveredBarInfo {
-  xCoordinate?: number;
-  yCoordinate?: number;
-  height?: number;
-  width?: number;
-  datasource?: string;
-  xValue?: number;
-  yValue?: number;
-}
-
 export const StackedBarChart = React.memo(function StackedBarChart(props: StackedBarChartProps) {
   const {
     activeDataType,
     svgWidth,
     svgHeight,
+    margin,
     formatTick,
     xScale,
     yScale,
@@ -63,84 +78,87 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
   } = props;
   const [hoverOn, setHoverOn] = useState<HoveredBarInfo>();
 
-  const width = props.svgWidth - props.margin.left - props.margin.right;
-  const height = props.svgHeight - props.margin.bottom - props.margin.top;
+  const width = svgWidth - margin.left - margin.right;
+  const height = svgHeight - margin.top - margin.bottom;
 
   function renderBarChart() {
     return (
-      <div className="bar-chart-container">
-        <svg
-          width={width}
-          height={height}
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          preserveAspectRatio="xMinYMin meet"
-          style={{ marginTop: '20px' }}
+      <svg
+        width={svgWidth}
+        height={svgHeight}
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        preserveAspectRatio="xMinYMin meet"
+      >
+        <g
+          transform={`translate(${margin.left}, ${margin.top})`}
+          onMouseLeave={() => setHoverOn(undefined)}
         >
           <ChartAxis
             className="gridline-x"
-            transform="translate(60, 0)"
+            transform="translate(0, 0)"
             scale={axisLeft(yScale)
               .ticks(5)
               .tickSize(-width)
               .tickFormat(() => '')
               .tickSizeOuter(0)}
           />
+          <BarGroup
+            dataToRender={dataToRender}
+            changeActiveDatasource={changeActiveDatasource}
+            formatTick={formatTick}
+            xScale={xScale}
+            yScale={yScale}
+            onHoverBar={(e: HoveredBarInfo) => setHoverOn(e)}
+            hoverOn={hoverOn}
+            barWidth={barWidth}
+          />
           <ChartAxis
-            className="axis--x"
-            transform={`translate(65, ${height})`}
+            className="axis-x"
+            transform={`translate(0, ${height})`}
             scale={axisBottom(xScale)}
           />
           <ChartAxis
-            className="axis--y"
-            transform="translate(60, 0)"
+            className="axis-y"
             scale={axisLeft(yScale)
               .ticks(5)
               .tickFormat((e: number) => formatTick(e))}
           />
-          <g className="bars-group" onMouseLeave={() => setHoverOn(undefined)}>
-            <BarGroup
-              dataToRender={dataToRender}
-              changeActiveDatasource={changeActiveDatasource}
-              formatTick={formatTick}
-              xScale={xScale}
-              yScale={yScale}
-              onHoverBar={(e: HoveredBarInfo) => setHoverOn(e)}
-              hoverOn={hoverOn}
-              barWidth={barWidth}
-            />
-            {hoverOn && (
-              <g
-                className="hovered-bar"
-                onClick={() => {
-                  setHoverOn(undefined);
-                  changeActiveDatasource(hoverOn.datasource ?? null);
-                }}
-              >
-                <rect
-                  x={hoverOn.xCoordinate}
-                  y={hoverOn.yCoordinate}
-                  width={barWidth}
-                  height={hoverOn.height}
-                />
-              </g>
-            )}
-          </g>
-        </svg>
-      </div>
+          {hoverOn && (
+            <g
+              className="hovered-bar"
+              onClick={() => {
+                setHoverOn(undefined);
+                changeActiveDatasource(hoverOn.datasource ?? null);
+              }}
+            >
+              <rect
+                x={hoverOn.xCoordinate}
+                y={hoverOn.yCoordinate}
+                width={barWidth}
+                height={hoverOn.height}
+              />
+            </g>
+          )}
+        </g>
+      </svg>
     );
   }
 
   return (
-    <div className="bar-chart">
-      <div className="bar-chart-tooltip">
-        <div>Datasource: {hoverOn ? hoverOn.datasource : ''}</div>
-        <div>Time: {hoverOn ? hoverOn.xValue : ''}</div>
-        <div>
-          {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${
-            hoverOn ? formatTick(hoverOn.yValue!) : ''
-          }`}
-        </div>
-      </div>
+    <div className="stacked-bar-chart">
+      {hoverOn && (
+        <>
+          <div className="bar-chart-tooltip">
+            <div>Datasource: {hoverOn.datasource}</div>
+            <div>Time: {hoverOn.xValue}</div>
+            <div>
+              {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${formatTick(
+                hoverOn.yValue!,
+              )}`}
+            </div>
+          </div>
+        </>
+      )}
       {renderBarChart()}
     </div>
   );

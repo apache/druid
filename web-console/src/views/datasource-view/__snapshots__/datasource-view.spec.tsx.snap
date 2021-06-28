@@ -2,7 +2,7 @@
 
 exports[`data source view matches snapshot 1`] = `
 <div
-  className="datasource-view app-view no-chart"
+  className="datasource-view app-view"
 >
   <Memo(ViewControlBar)
     label="Datasources"
@@ -47,13 +47,13 @@ exports[`data source view matches snapshot 1`] = `
     <Blueprint3.Switch
       checked={false}
       disabled={false}
-      label="Show segment timeline"
+      label="Show unused"
       onChange={[Function]}
     />
     <Blueprint3.Switch
       checked={false}
       disabled={false}
-      label="Show unused"
+      label="Show segment timeline"
       onChange={[Function]}
     />
     <Memo(TableColumnSelector)

@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -112,6 +114,40 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageInternal();
     Assert.assertTrue(task2.isDone());
+  }
+
+  @Test
+  public void testShutdownReleasesTaskLock() throws Exception
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        new SimpleTaskRunner(actionClientFactory),
+        actionClientFactory,
+        getLockbox(),
+        new NoopServiceEmitter()
+    );
+    taskQueue.setActive(true);
+
+    // Create a Task and add it to the TaskQueue
+    final TestTask task = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task);
+
+    // Acquire a lock for the Task
+    getLockbox().lock(
+        task,
+        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task, task.interval, null)
+    );
+    final List<TaskLock> locksForTask = getLockbox().findLocksForTask(task);
+    Assert.assertEquals(1, locksForTask.size());
+    Assert.assertEquals(task.interval, locksForTask.get(0).getInterval());
+
+    // Verify that locks are removed on calling shutdown
+    taskQueue.shutdown(task.getId(), "Shutdown Task");
+    Assert.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
   }
 
   @Test

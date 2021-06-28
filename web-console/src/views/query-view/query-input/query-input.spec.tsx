@@ -21,7 +21,7 @@ import React from 'react';
 
 import { QueryInput } from './query-input';
 
-describe('query input', () => {
+describe('QueryInput', () => {
   it('matches snapshot', () => {
     const sqlControl = (
       <QueryInput queryString="hello world" onQueryStringChange={() => {}} runeMode={false} />

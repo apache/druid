@@ -843,7 +843,6 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        true,
         0,
         0,
         reportParseExceptions,

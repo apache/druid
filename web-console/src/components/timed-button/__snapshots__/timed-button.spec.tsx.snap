@@ -7,8 +7,8 @@ exports[`TimedButton matches snapshot 1`] = `
   <Blueprint3.Button
     onClick={[Function]}
   />
-  <Blueprint3.Popover
-    boundary="scrollParent"
+  <Blueprint3.Popover2
+    boundary="clippingParents"
     captureDismiss={false}
     content={
       <Blueprint3.Menu>
@@ -35,16 +35,15 @@ exports[`TimedButton matches snapshot 1`] = `
     inheritDarkTheme={true}
     interactionKind="click"
     minimal={false}
-    modifiers={Object {}}
     openOnTargetFocus={true}
+    positioningStrategy="absolute"
     targetTagName="span"
     transitionDuration={300}
     usePortal={true}
-    wrapperTagName="span"
   >
     <Blueprint3.Button
       rightIcon="caret-down"
     />
-  </Blueprint3.Popover>
+  </Blueprint3.Popover2>
 </Blueprint3.ButtonGroup>
 `;

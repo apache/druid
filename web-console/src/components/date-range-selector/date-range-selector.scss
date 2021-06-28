@@ -16,22 +16,12 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.date-range-selector {
+  .bp3-popover-target {
+    display: block;
+  }
 
-import { QueryPlanDialog } from './query-plan-dialog';
-
-describe('query plan dialog', () => {
-  it('matches snapshot', () => {
-    const queryPlanDialog = (
-      <QueryPlanDialog
-        setQueryString={() => null}
-        explainResult="test"
-        explainError={undefined}
-        onClose={() => {}}
-      />
-    );
-    render(queryPlanDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
-  });
-});
+  * {
+    cursor: pointer;
+  }
+}

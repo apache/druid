@@ -540,7 +540,6 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                true,
                 null,
                 forceExtendableShardSpecs,
                 false,

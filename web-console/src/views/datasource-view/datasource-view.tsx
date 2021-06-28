@@ -252,9 +252,7 @@ export interface DatasourcesViewState {
   useUnuseInterval: string;
   showForceCompact: boolean;
   hiddenColumns: LocalStorageBackedArray<string>;
-  showChart: boolean;
-  chartWidth: number;
-  chartHeight: number;
+  showSegmentTimeline: boolean;
 
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -356,9 +354,7 @@ ORDER BY 1`;
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
-      showChart: false,
-      chartWidth: window.innerWidth * 0.85,
-      chartHeight: window.innerHeight * 0.4,
+      showSegmentTimeline: false,
 
       actions: [],
     };
@@ -482,13 +478,6 @@ ORDER BY 1`;
     });
   }
 
-  private readonly handleResize = () => {
-    this.setState({
-      chartWidth: window.innerWidth * 0.85,
-      chartHeight: window.innerHeight * 0.4,
-    });
-  };
-
   private readonly refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
@@ -504,7 +493,6 @@ ORDER BY 1`;
     const { capabilities } = this.props;
     this.fetchDatasourceData();
     this.tiersQueryManager.runQuery(capabilities);
-    window.addEventListener('resize', this.handleResize);
   }
 
   componentWillUnmount(): void {
@@ -1399,16 +1387,16 @@ ORDER BY 1`;
     const {
       showUnused,
       hiddenColumns,
-      showChart,
-      chartHeight,
-      chartWidth,
+      showSegmentTimeline,
       datasourceTableActionDialogId,
       actions,
     } = this.state;
 
     return (
       <div
-        className={classNames('datasource-view app-view', showChart ? 'show-chart' : 'no-chart')}
+        className={classNames('datasource-view app-view', {
+          'show-segment-timeline': showSegmentTimeline,
+        })}
       >
         <ViewControlBar label="Datasources">
           <RefreshButton
@@ -1419,16 +1407,16 @@ ORDER BY 1`;
           />
           {this.renderBulkDatasourceActions()}
           <Switch
-            checked={showChart}
-            label="Show segment timeline"
-            onChange={() => this.setState({ showChart: !showChart })}
-            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
-          />
-          <Switch
             checked={showUnused}
             label="Show unused"
             onChange={() => this.toggleUnused(showUnused)}
             disabled={!capabilities.hasCoordinatorAccess()}
+          />
+          <Switch
+            checked={showSegmentTimeline}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <TableColumnSelector
             columns={tableColumns[capabilities.getMode()]}
@@ -1444,15 +1432,7 @@ ORDER BY 1`;
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
-        {showChart && (
-          <div className="chart-container">
-            <SegmentTimeline
-              capabilities={capabilities}
-              chartHeight={chartHeight}
-              chartWidth={chartWidth}
-            />
-          </div>
-        )}
+        {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
         {this.renderDatasourceTable()}
         {datasourceTableActionDialogId && (
           <DatasourceTableActionDialog
