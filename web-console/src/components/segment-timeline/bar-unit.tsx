@@ -16,6 +16,32 @@
  * limitations under the License.
  */
 
-.bar-chart-unit {
-  transform: translateX(65px);
+import React from 'react';
+
+interface BarChartUnitProps {
+  x: number | undefined;
+  y: number;
+  width: number;
+  height: number;
+  style?: any;
+  onClick?: () => void;
+  onHover?: () => void;
+  offHover?: () => void;
+}
+
+export function BarUnit(props: BarChartUnitProps) {
+  const { x, y, width, height, style, onClick, onHover, offHover } = props;
+  return (
+    <rect
+      className="bar-unit"
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      style={style}
+      onClick={onClick}
+      onMouseOver={onHover}
+      onMouseLeave={offHover}
+    />
+  );
 }

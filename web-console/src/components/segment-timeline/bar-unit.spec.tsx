@@ -16,8 +16,19 @@
  * limitations under the License.
  */
 
-.calendar {
-  .bp3-popover-content {
-    right: 310px;
-  }
-}
+import { render } from '@testing-library/react';
+import React from 'react';
+
+import { BarUnit } from './bar-unit';
+
+describe('BarUnit', () => {
+  it('matches snapshot', () => {
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
+    );
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

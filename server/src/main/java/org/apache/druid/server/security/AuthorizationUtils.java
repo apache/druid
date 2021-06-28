@@ -359,6 +359,51 @@ public class AuthorizationUtils
     return filteredResources;
   }
 
+  public static List<ResourceAction> makeSuperUserPermissions()
+  {
+    ResourceAction datasourceR = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.READ
+    );
+
+    ResourceAction datasourceW = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.WRITE
+    );
+
+    ResourceAction viewR = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.READ
+    );
+
+    ResourceAction viewW = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.WRITE
+    );
+
+    ResourceAction configR = new ResourceAction(
+        new Resource(".*", ResourceType.CONFIG),
+        Action.READ
+    );
+
+    ResourceAction configW = new ResourceAction(
+        new Resource(".*", ResourceType.CONFIG),
+        Action.WRITE
+    );
+
+    ResourceAction stateR = new ResourceAction(
+        new Resource(".*", ResourceType.STATE),
+        Action.READ
+    );
+
+    ResourceAction stateW = new ResourceAction(
+        new Resource(".*", ResourceType.STATE),
+        Action.WRITE
+    );
+
+    return Lists.newArrayList(datasourceR, datasourceW, viewR, viewW, configR, configW, stateR, stateW);
+  }
+
   /**
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the
    * datasource name.

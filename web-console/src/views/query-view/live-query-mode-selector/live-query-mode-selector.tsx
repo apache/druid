@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuItem, Popover, PopoverPosition } from '@blueprintjs/core';
+import { Button, Menu, MenuItem, PopoverPosition } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React from 'react';
 
@@ -43,7 +44,7 @@ export const LiveQueryModeSelector = React.memo(function LiveQueryModeSelector(
   const { liveQueryMode, onLiveQueryModeChange, autoLiveQueryModeShouldRun } = props;
 
   return (
-    <Popover
+    <Popover2
       portalClassName="live-query-mode-selector-portal"
       minimal
       position={PopoverPosition.BOTTOM_LEFT}
@@ -72,6 +73,6 @@ export const LiveQueryModeSelector = React.memo(function LiveQueryModeSelector(
           {LIVE_QUERY_MODE_TITLE[liveQueryMode]}
         </span>
       </Button>
-    </Popover>
+    </Popover2>
   );
 });

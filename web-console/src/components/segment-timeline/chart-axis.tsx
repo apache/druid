@@ -16,30 +16,22 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { select } from 'd3-selection';
 import React from 'react';
 
-import { BarUnit } from './bar-unit';
-import { ChartAxis } from './chart-axis';
+interface ChartAxisProps {
+  transform?: string;
+  scale: any;
+  className?: string;
+}
 
-describe('Visualization', () => {
-  it('BarUnit', () => {
-    const barGroup = (
-      <svg>
-        <BarUnit x={10} y={10} width={10} height={10} />
-      </svg>
-    );
-    const { container } = render(barGroup);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('action barGroup', () => {
-    const barGroup = (
-      <svg>
-        <ChartAxis transform="value" scale={() => null} />
-      </svg>
-    );
-    const { container } = render(barGroup);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
+  const { transform, scale, className } = props;
+  return (
+    <g
+      className={`chart-axis ${className}`}
+      transform={transform}
+      ref={node => select(node).call(scale)}
+    />
+  );
 });
