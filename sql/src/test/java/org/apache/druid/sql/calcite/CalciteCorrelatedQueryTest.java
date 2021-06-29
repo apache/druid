@@ -121,7 +121,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     "a0:a"
                                                                 )))
                                                                 .setContext(withTimestampResultContext(
-                                                                    queryContext, "d0", P1D
+                                                                    queryContext,
+                                                                    "d0",
+                                                                    P1D
                                                                 ))
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -216,7 +218,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                                 .setContext(withTimestampResultContext(
-                                                                    queryContext, "d0", P1D
+                                                                    queryContext,
+                                                                    "d0",
+                                                                    P1D
                                                                 ))
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -305,7 +309,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                                 .setContext(withTimestampResultContext(
-                                                                    queryContext, "d0", P1D
+                                                                    queryContext,
+                                                                    "d0",
+                                                                    P1D
                                                                 ))
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -394,7 +400,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     not(selector("country", null, null))
                                                                 ))
                                                                 .setContext(withTimestampResultContext(
-                                                                    queryContext, "d0", P1D
+                                                                    queryContext,
+                                                                    "d0",
+                                                                    P1D
                                                                 ))
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -483,7 +491,9 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     not(selector("country", null, null))
                                                                 ))
                                                                 .setContext(withTimestampResultContext(
-                                                                    queryContext, "d0", P1D
+                                                                    queryContext,
+                                                                    "d0",
+                                                                    P1D
                                                                 ))
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
