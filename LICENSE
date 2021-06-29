@@ -279,6 +279,18 @@ SOURCE/JAVA-CORE
     This product contains lpad and rpad methods adapted from Apache Flink.
       * core/src/main/java/org/apache/druid/java/util/common/StringUtils.java
 
+    This product contains Scala logging and serializable Hadoop configuration utilities adapted from Apache Spark.
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/mixins/Logging
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/configuration/SerializableHadoopConfiguration
+
+    This product contains a Druid client wrapper adapted from Imply Data's druid-hadoop-input-format.
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/clients/DruidClient
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/clients/HttpClientHolder
+
+    This product contains hash partitioning logic for a Spark data frame adapted from MetaMarkets druid-spark-batch project.
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/partitioners/HashedNUmberedSegmentPartitioner
+      * extensions-core/spark-extensions/src/main/scala/org/apache/druid/spark/v2/writer/DruidDataWriter
+
 
 MIT License
 ================================

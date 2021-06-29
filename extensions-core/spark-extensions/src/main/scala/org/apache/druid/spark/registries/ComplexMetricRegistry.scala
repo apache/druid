@@ -21,7 +21,7 @@ package org.apache.druid.spark.registries
 
 import org.apache.datasketches.hll.HllSketch
 import org.apache.datasketches.quantiles.DoublesSketch
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule
 import org.apache.druid.query.aggregation.datasketches.theta.{SketchHolder, SketchModule}

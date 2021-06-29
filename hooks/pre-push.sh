@@ -15,3 +15,4 @@
 # limitations under the License.
 
 mvn checkstyle:checkstyle --fail-at-end
+mvn scalastyle:check -pl extensions-core/spark-extensions/ --fail-at-end

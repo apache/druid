@@ -5735,3 +5735,57 @@ copyright: Berkeley Martinez
 version: 4.0.3
 license_file_path: licenses/bin/warning.MIT
 # Web console modules end
+
+---
+
+name: Apache Spark
+license_category: binary
+module: extensions/druid-spark-extensions
+license_name: Apache License version 2.0
+version: 2.4.7
+libraries:
+  - org.apache.spark: spark-core_2.12
+  - org.apache.spark: spark-sql_2.12
+notice: |
+  Apache Spark
+  Copyright 2014 and onwards The Apache Software Foundation.
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
+
+
+  Export Control Notice
+  ---------------------
+
+  This distribution includes cryptographic software. The country in which you currently reside may have
+  restrictions on the import, possession, use, and/or re-export to another country, of encryption software.
+  BEFORE using any encryption software, please check your country's laws, regulations and policies concerning
+  the import, possession, or use, and re-export of encryption software, to see if this is permitted. See
+  <http://www.wassenaar.org/> for more information.
+
+  The U.S. Government Department of Commerce, Bureau of Industry and Security (BIS), has classified this
+  software as Export Commodity Control Number (ECCN) 5D002.C.1, which includes information security software
+  using or performing cryptographic functions with asymmetric algorithms. The form and manner of this Apache
+  Software Foundation distribution makes it eligible for export under the License Exception ENC Technology
+  Software Unrestricted (TSU) exception (see the BIS Export Administration Regulations, Section 740.13) for
+  both object code and source code.
+
+  The following provides more details on the included cryptographic software:
+
+  This software uses Apache Commons Crypto (https://commons.apache.org/proper/commons-crypto/) to
+  support authentication, and encryption and decryption of data sent across the network between
+  services.
+
+---
+
+name: Scala Library
+license_category: binary
+module: extensions/druid-spark-extensions
+license_name: Apache License version 2.0
+version: 2.12.12
+libraries:
+  - org.scala-lang: scala-library
+  - org.scala-lang: scala-reflect
+  - org.scala-lang: scalap
+
+---
