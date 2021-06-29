@@ -63,7 +63,7 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
   @Deprecated
   default QueryRunner<T> mergeRunners(ExecutorService queryExecutor, Iterable<QueryRunner<T>> queryRunners)
   {
-    return mergeRunners(new DefaultQueryProcessingPool(queryExecutor), queryRunners);
+    return mergeRunners(new ForwardingQueryProcessingPool(queryExecutor), queryRunners);
   }
 
   /**

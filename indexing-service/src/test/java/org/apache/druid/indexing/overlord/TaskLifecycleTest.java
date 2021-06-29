@@ -104,7 +104,7 @@ import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.query.DefaultQueryProcessingPool;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
@@ -1337,7 +1337,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final ExecutorService exec = Executors.newFixedThreadPool(8);
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
-        new DefaultQueryProcessingPool(exec),
+        new ForwardingQueryProcessingPool(exec),
         NoopJoinableFactory.INSTANCE,
         new WorkerConfig(),
         MapCache.create(2048),

@@ -45,7 +45,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.DefaultQueryProcessingPool;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -190,7 +190,7 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        new DefaultQueryProcessingPool(serverManagerExec),
+        new ForwardingQueryProcessingPool(serverManagerExec),
         new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),

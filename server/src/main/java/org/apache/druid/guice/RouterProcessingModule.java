@@ -31,7 +31,7 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DefaultQueryProcessingPool;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.QueryProcessingPool;
@@ -64,7 +64,7 @@ public class RouterProcessingModule implements Module
     if (config.getNumThreadsConfigured() != ExecutorServiceConfig.DEFAULT_NUM_THREADS) {
       log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreadsConfigured());
     }
-    return new DefaultQueryProcessingPool(Execs.dummy());
+    return new ForwardingQueryProcessingPool(Execs.dummy());
   }
 
   @Provides

@@ -28,7 +28,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
  * In a most straightforward implementation, each unit will be submitted to an {@link PrioritizedExecutorService}. Extensions,
  * however, can implement their own logic for picking which unit to pick first for execution.
  * <p>
- * This interface is convertible to a regular {@link java.util.concurrent.ExecutorService} as well. It has a separate
+ * This interface extends {@link ListeningExecutorService} as well. It has a separate
  * method to submit query execution tasks so that implementations can differentiate those tasks from any regular async
  * tasks. One example is {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
  * where different kind of tasks are submitted to same processing pool.
@@ -37,7 +37,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
  * of a unit can be carried forward with the corresponding {@link QueryRunner}.
  */
 @ExtensionPoint
-public interface QueryProcessingPool
+public interface QueryProcessingPool extends ListeningExecutorService
 {
   /**
    * Submits the query execution unit task for asynchronous execution.
@@ -47,10 +47,5 @@ public interface QueryProcessingPool
    * @param <V>  - Query runner sequence type
    * @return - Future object for tracking the task completion.
    */
-  <T, V> ListenableFuture<T> submit(PrioritizedQueryRunnerCallable<T, V> task);
-
-  /**
-   * @return - Returns this pool as an executor service that can be used for other asynchronous operations.
-   */
-  ListeningExecutorService asExecutorService();
+  <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task);
 }

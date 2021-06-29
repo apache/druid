@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
@@ -89,7 +88,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private final GroupByQueryConfig config;
   private final Iterable<QueryRunner<ResultRow>> queryables;
   private final QueryProcessingPool queryProcessingPool;
-  private final ListeningExecutorService executorService;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
@@ -100,7 +98,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
       QueryProcessingPool queryProcessingPool,
-      ListeningExecutorService executorService,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
       int concurrencyHint,
@@ -112,7 +109,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   {
     this.config = config;
     this.queryProcessingPool = queryProcessingPool;
-    this.executorService = executorService;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.concurrencyHint = concurrencyHint;
@@ -205,7 +201,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                       concurrencyHint,
                       temporaryStorage,
                       spillMapper,
-                      executorService,
+                      queryProcessingPool, // Passed as executor service
                       priority,
                       hasTimeout,
                       timeoutAt,
@@ -231,7 +227,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                                 throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                               }
 
-                              ListenableFuture<AggregateResult> future = queryProcessingPool.submit(
+                              ListenableFuture<AggregateResult> future = queryProcessingPool.submitRunnerTask(
                                   new AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow>(priority, input)
                                   {
                                     @Override

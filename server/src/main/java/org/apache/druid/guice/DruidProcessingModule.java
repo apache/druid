@@ -42,10 +42,9 @@ import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
-import org.apache.druid.query.DefaultQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
-import org.apache.druid.query.MetricsEmittingExecutorService;
+import org.apache.druid.query.MetricsEmittingQueryProcessingPool;
 import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.metrics.MetricsModule;
@@ -101,14 +100,13 @@ public class DruidProcessingModule implements Module
       Lifecycle lifecycle
   )
   {
-    return new DefaultQueryProcessingPool(
-        new MetricsEmittingExecutorService(
-            PrioritizedExecutorService.create(
-                lifecycle,
-                config
-            ),
-            executorServiceMonitor
-        ));
+    return new MetricsEmittingQueryProcessingPool(
+        PrioritizedExecutorService.create(
+            lifecycle,
+            config
+        ),
+        executorServiceMonitor
+    );
   }
 
   @Provides

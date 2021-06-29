@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -26,26 +27,28 @@ import com.google.common.util.concurrent.MoreExecutors;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Default implementation of {@link QueryProcessingPool} that just delegates operations to processing {@link ExecutorService}
+ * Default implementation of {@link QueryProcessingPool} that just forwards operations, including query execution tasks,
+ * to an underlying {@link ExecutorService}
  */
-public class DefaultQueryProcessingPool implements QueryProcessingPool
+public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorService implements QueryProcessingPool
 {
-  private final ListeningExecutorService listeningExecutorService;
+  private final ListeningExecutorService delegate;
 
-  public DefaultQueryProcessingPool(ExecutorService executorService)
+  public ForwardingQueryProcessingPool(ExecutorService executorService)
   {
-    this.listeningExecutorService = MoreExecutors.listeningDecorator(executorService);
+    this.delegate = MoreExecutors.listeningDecorator(executorService);
   }
 
   @Override
-  public <T, V> ListenableFuture<T> submit(PrioritizedQueryRunnerCallable<T, V> task)
+  public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
-    return listeningExecutorService.submit(task);
+    return delegate().submit(task);
   }
 
   @Override
-  public ListeningExecutorService asExecutorService()
+  protected ListeningExecutorService delegate()
   {
-    return listeningExecutorService;
+    return delegate;
   }
+
 }

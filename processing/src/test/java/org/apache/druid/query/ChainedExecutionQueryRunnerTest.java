@@ -120,7 +120,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        new DefaultQueryProcessingPool(exec),
+        new ForwardingQueryProcessingPool(exec),
         watcher,
         Lists.newArrayList(
             runners
@@ -244,7 +244,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        new DefaultQueryProcessingPool(exec),
+        new ForwardingQueryProcessingPool(exec),
         watcher,
         Lists.newArrayList(
             runners
@@ -335,10 +335,10 @@ public class ChainedExecutionQueryRunnerTest
         runners
     );
 
-    Mockito.when(queryProcessingPool.submit(ArgumentMatchers.any())).thenReturn(Futures.immediateFuture(Collections.singletonList(123)));
+    Mockito.when(queryProcessingPool.submitRunnerTask(ArgumentMatchers.any())).thenReturn(Futures.immediateFuture(Collections.singletonList(123)));
     chainedRunner.run(QueryPlus.wrap(query)).toList();
     ArgumentCaptor<PrioritizedQueryRunnerCallable> captor = ArgumentCaptor.forClass(PrioritizedQueryRunnerCallable.class);
-    Mockito.verify(queryProcessingPool, Mockito.times(2)).submit(captor.capture());
+    Mockito.verify(queryProcessingPool, Mockito.times(2)).submitRunnerTask(captor.capture());
     List<QueryRunner> actual = captor.getAllValues().stream().map(PrioritizedQueryRunnerCallable::getRunner).collect(Collectors.toList());
     Assert.assertEquals(runners, actual);
   }

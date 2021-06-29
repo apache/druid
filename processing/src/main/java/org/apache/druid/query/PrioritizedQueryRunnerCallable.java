@@ -31,7 +31,7 @@ public interface PrioritizedQueryRunnerCallable<T, V> extends PrioritizedCallabl
    * This method can be used by the extensions to get the runner that the given query execution task corresponds to.
    * That in turn can be used to fetch any state associated with the QueryRunner such as the segment info for example.
    * Extensions can carry any state from custom implementation of QuerySegmentWalker to a
-   * custom implementation of {@link QueryProcessingPool#submit(PrioritizedQueryRunnerCallable)}
+   * custom implementation of {@link QueryProcessingPool#submitRunnerTask(PrioritizedQueryRunnerCallable)}
    */
   QueryRunner<V> getRunner();
 }

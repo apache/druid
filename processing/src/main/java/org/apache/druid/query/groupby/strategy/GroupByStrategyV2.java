@@ -564,7 +564,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
         queryProcessingPool,
-        queryProcessingPool.asExecutorService(),
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),

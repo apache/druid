@@ -97,7 +97,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                             throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                           }
 
-                          return queryProcessingPool.submit(
+                          return queryProcessingPool.submitRunnerTask(
                               new AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T>(priority, input)
                               {
                                 @Override

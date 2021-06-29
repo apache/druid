@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -26,7 +27,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 /**
  * {@link QueryProcessingPool} wrapper over {@link Execs#directExecutor()}
  */
-public class DirectQueryProcessingPool implements QueryProcessingPool
+public class DirectQueryProcessingPool extends ForwardingListeningExecutorService implements QueryProcessingPool
 {
   public static DirectQueryProcessingPool INSTANCE = new DirectQueryProcessingPool();
 
@@ -36,13 +37,13 @@ public class DirectQueryProcessingPool implements QueryProcessingPool
   }
 
   @Override
-  public <T, V> ListenableFuture<T> submit(PrioritizedQueryRunnerCallable<T, V> task)
+  public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
-    return Execs.directExecutor().submit(task);
+    return delegate().submit(task);
   }
 
   @Override
-  public ListeningExecutorService asExecutorService()
+  public ListeningExecutorService delegate()
   {
     return Execs.directExecutor();
   }

@@ -106,7 +106,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                       throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                     }
 
-                    ListenableFuture<Void> future = queryProcessingPool.submit(
+                    ListenableFuture<Void> future = queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<Void, T>(priority, input)
                         {
                           @Override
