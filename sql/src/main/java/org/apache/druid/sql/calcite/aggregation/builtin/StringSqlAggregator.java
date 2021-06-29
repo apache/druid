@@ -197,7 +197,7 @@ public class StringSqlAggregator implements SqlAggregator
                   OperandTypes.sequence(
                       StringUtils.format("'%s'(expr, separator)", NAME),
                       OperandTypes.ANY,
-                      OperandTypes.LITERAL
+                      OperandTypes.STRING
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
               ),
@@ -205,7 +205,7 @@ public class StringSqlAggregator implements SqlAggregator
                   OperandTypes.sequence(
                       StringUtils.format("'%s'(expr, separator, maxSizeBytes)", NAME),
                       OperandTypes.ANY,
-                      OperandTypes.LITERAL,
+                      OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC)

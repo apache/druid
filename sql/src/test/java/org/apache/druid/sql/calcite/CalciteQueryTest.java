@@ -12681,7 +12681,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a6\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new FilteredAggregatorFactory(
@@ -12696,7 +12696,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a7\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, '|'))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("dim3", null, null))
@@ -12713,7 +12713,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 "bitwiseAnd(\"__acc\", \"a8\")",
                                 null,
                                 null,
-                                new HumanReadableBytes(1024),
+                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                 TestExprMacroTable.INSTANCE
                             ),
                             not(selector("l1", null, null))
@@ -12730,7 +12730,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseOr(\"__acc\", \"a9\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -12747,7 +12747,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseXor(\"__acc\", \"a10\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -12953,7 +12953,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "array_set_add_all(\"__acc\", \"a6\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     selector("dim1", "nonexistent", null)
@@ -12970,7 +12970,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "array_set_add_all(\"__acc\", \"a7\")",
                                         null,
                                         "if(array_length(o) == 0, null, array_to_string(o, '|'))",
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(
@@ -12990,7 +12990,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseAnd(\"__acc\", \"a8\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
@@ -13007,7 +13007,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseOr(\"__acc\", \"a9\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
@@ -13024,7 +13024,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseXor(\"__acc\", \"a10\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
@@ -17790,7 +17790,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseAnd(\"__acc\", \"a0\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -17807,7 +17807,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseOr(\"__acc\", \"a1\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -17824,7 +17824,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseXor(\"__acc\", \"a2\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -17873,7 +17873,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseAnd(\"__acc\", \"a0\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -17890,7 +17890,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseOr(\"__acc\", \"a1\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -17907,7 +17907,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseXor(\"__acc\", \"a2\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -17969,7 +17969,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("dim1", null, null))
@@ -17986,7 +17986,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("dim1", null, null))
@@ -18003,7 +18003,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a2\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               and(
@@ -18049,7 +18049,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("dim3", null, null))
@@ -18066,7 +18066,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("dim3", null, null))
@@ -18109,7 +18109,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -18126,7 +18126,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -18143,7 +18143,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_concat(\"__acc\", \"a2\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("d1", null, null))
@@ -18160,7 +18160,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a3\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("d1", null, null))
@@ -18177,7 +18177,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_concat(\"__acc\", \"a4\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("f1", null, null))
@@ -18194,7 +18194,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a5\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("f1", null, null))
@@ -18231,7 +18231,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), ',') FROM foo",
+        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), ','), STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', '|')) FROM foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -18254,7 +18254,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a0\")",
                                   null,
                                   "if(array_length(o) == 0, null, array_to_string(o, ','))",
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("v0", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("v0"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"v0\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, '||'))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("v0", null, null))
@@ -18265,8 +18282,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            useDefault ? new Object[]{"1a,a,2,abc,10.1,defabc"} : new Object[]{"1a,a,2,defabc"}
+            useDefault ? new Object[]{"1a,a,2,abc,10.1,defabc", "1a||a||2||abc||10.1||defabc"} : new Object[]{"1a,a,2,defabc", "1a||a||2||defabc"}
         )
+    );
+  }
+
+  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  public void testStringAggExpressionNonConstantSeparator() throws Exception
+  {
+    testQuery(
+        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', dim1)) FROM foo",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
