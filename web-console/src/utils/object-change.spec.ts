@@ -40,7 +40,7 @@ describe('object-change', () => {
     const thing = {
       hello: {
         'consumer.props': 'lol',
-        wow: ['a', { test: 'moon' }],
+        'wow': ['a', { test: 'moon' }],
       },
       zetrix: null,
     };

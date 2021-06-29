@@ -294,7 +294,7 @@ Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to u
 Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
 when an overwriting task changes the segment granularity.
 Also, the segment locking is supported by only native indexing tasks and Kafka/Kinesis indexing tasks.
-Hadoop indexing tasks and `index_realtime` tasks (used by [Tranquility](tranquility.md)) don't support it yet.
+Hadoop indexing tasks don't support it.
 
 `forceTimeChunkLock` in the task context is only applied to individual tasks.
 If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.md#overlord-operations).
@@ -347,9 +347,10 @@ The task context is used for various individual task configuration. The followin
 
 |property|default|description|
 |--------|-------|-----------|
-|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|forceTimeChunkLock|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
-|priority|Different based on task types. See [Priority](#priority).|Task priority|
+|`taskLockTimeout`|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
+|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
+|`priority`|Different based on task types. See [Priority](#priority).|Task priority|
+|`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
 
 > When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
 > As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.
@@ -384,12 +385,12 @@ Submitted automatically, on your behalf, by a
 
 ### `index_realtime`
 
-Submitted automatically, on your behalf, by [Tranquility](tranquility.md).
+Submitted automatically, on your behalf, by [Tranquility](tranquility.md). 
 
 ### `compact`
 
 Compaction tasks merge all segments of the given interval. See the documentation on
-[compaction](data-management.md#compaction-and-reindexing) for details.
+[compaction](compaction.md) for details.
 
 ### `kill`
 

@@ -43,6 +43,8 @@ public class TestNGGroup
 
   public static final String COMPACTION = "compaction";
 
+  public static final String UPGRADE = "upgrade";
+
   public static final String APPEND_INGESTION = "append-ingestion";
 
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
@@ -53,6 +55,8 @@ public class TestNGGroup
   public static final String QUERY = "query";
 
   public static final String QUERY_RETRY = "query-retry";
+
+  public static final String QUERY_ERROR = "query-error";
 
   public static final String CLI_INDEXER = "cli-indexer";
 

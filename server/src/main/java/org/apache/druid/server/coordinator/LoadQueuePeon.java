@@ -37,6 +37,8 @@ public abstract class LoadQueuePeon
 
   public abstract Set<DataSegment> getSegmentsToDrop();
 
+  public abstract Set<DataSegment> getTimedOutSegments();
+
   public abstract void unmarkSegmentToDrop(DataSegment segmentToLoad);
 
 

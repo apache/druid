@@ -32,8 +32,16 @@ public class ConfigManagerConfig
   @NotNull
   private Period pollDuration = new Period("PT1M");
 
+  @JsonProperty
+  private boolean enableCompareAndSwap = true;
+
   public Period getPollDuration()
   {
     return pollDuration;
+  }
+
+  public boolean isEnableCompareAndSwap()
+  {
+    return enableCompareAndSwap;
   }
 }

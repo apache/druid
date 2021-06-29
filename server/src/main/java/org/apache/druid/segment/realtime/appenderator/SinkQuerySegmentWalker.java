@@ -59,6 +59,7 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -66,7 +67,6 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -152,9 +152,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
-    analysis.getBaseTableDataSource()
-            .filter(ds -> dataSource.equals(ds.getName()))
-            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+    if (!analysis.getBaseTableDataSource().filter(ds -> dataSource.equals(ds.getName())).isPresent()) {
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
+    }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
@@ -172,6 +172,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
@@ -185,15 +186,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
         descriptor -> {
-          final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
+          final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
               descriptor.getInterval(),
-              descriptor.getVersion()
+              descriptor.getVersion(),
+              descriptor.getPartitionNumber()
           );
-          if (holder == null) {
-            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-          }
 
-          final PartitionChunk<Sink> chunk = holder.getChunk(descriptor.getPartitionNumber());
           if (chunk == null) {
             return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
           }

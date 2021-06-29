@@ -22,6 +22,7 @@ import copy from 'copy-to-clipboard';
 import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
+import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -56,7 +57,7 @@ export function addFilterRaw(filters: Filter[], id: string, value: string): Filt
 }
 
 export function makeTextFilter(placeholder = ''): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function TextFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <InputGroup
@@ -73,7 +74,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
 }
 
 export function makeBooleanFilter(): FilterRender {
-  return ({ filter, onChange, key }) => {
+  return function BooleanFilter({ filter, onChange, key }) {
     const filterValue = filter ? filter.value : '';
     return (
       <HTMLSelect
@@ -98,7 +99,8 @@ interface NeedleAndMode {
   mode: 'exact' | 'includes';
 }
 
-function getNeedleAndMode(input: string): NeedleAndMode {
+export function getNeedleAndMode(filter: Filter): NeedleAndMode {
+  const input = filter.value.toLowerCase();
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
@@ -114,7 +116,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
   const haystack = String(value).toLowerCase();
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
@@ -123,13 +125,13 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
   } else {
     return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
-      SqlLiteral.create(`%${needle.toLowerCase()}%`),
+      SqlLiteral.create(`%${needle}%`),
     );
   }
 }
@@ -317,7 +319,7 @@ export function sortWithPrefixSuffix(
 // ----------------------------
 
 export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType: string = '';
+  let blobType;
   switch (type) {
     case 'json':
       blobType = 'application/json';
@@ -379,5 +381,17 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
   } else {
     // do nothing
     return items.slice();
+  }
+}
+
+export function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSONBig.stringify(value);
+
+    default:
+      return String(value);
   }
 }

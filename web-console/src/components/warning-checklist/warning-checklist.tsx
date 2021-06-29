@@ -29,7 +29,7 @@ export const WarningChecklist = React.memo(function WarningChecklist(props: Warn
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   function doCheck(check: string) {
-    const newChecked = Object.assign({}, checked);
+    const newChecked = { ...checked };
     newChecked[check] = !newChecked[check];
     setChecked(newChecked);
 

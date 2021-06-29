@@ -98,7 +98,7 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil</artifactId>
+      <artifactId>fastutil-core</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -132,6 +132,11 @@
       <artifactId>druid-server</artifactId>
       <scope>provided</scope>
       <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <scope>provided</scope>
     </dependency>
     
     <!-- Test Dependencies -->

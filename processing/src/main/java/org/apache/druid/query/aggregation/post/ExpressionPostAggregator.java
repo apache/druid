@@ -31,6 +31,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -74,6 +75,7 @@ public class ExpressionPostAggregator implements PostAggregator
 
   private final Supplier<Expr> parsed;
   private final Supplier<Set<String>> dependentFields;
+  private final Supplier<byte[]> cacheKey;
 
   /**
    * Constructor for serialization.
@@ -92,7 +94,7 @@ public class ExpressionPostAggregator implements PostAggregator
         ordering,
         macroTable,
         ImmutableMap.of(),
-        Suppliers.memoize(() -> Parser.parse(expression, macroTable))
+        Parser.lazyParse(expression, macroTable)
     );
   }
 
@@ -143,6 +145,12 @@ public class ExpressionPostAggregator implements PostAggregator
 
     this.parsed = parsed;
     this.dependentFields = dependentFields;
+    this.cacheKey = Suppliers.memoize(() -> {
+      return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
+          .appendCacheable(parsed.get())
+          .appendString(ordering)
+          .build();
+    });
   }
 
 
@@ -170,7 +178,7 @@ public class ExpressionPostAggregator implements PostAggregator
         }
     );
 
-    return parsed.get().eval(Parser.withMap(finalizedValues)).value();
+    return parsed.get().eval(InputBindings.withMap(finalizedValues)).value();
   }
 
   @Override
@@ -228,10 +236,7 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-        .appendString(expression)
-        .appendString(ordering)
-        .build();
+    return cacheKey.get();
   }
 
   public enum Ordering implements Comparator<Comparable>

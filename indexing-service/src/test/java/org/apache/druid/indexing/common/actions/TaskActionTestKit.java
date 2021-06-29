@@ -84,7 +84,14 @@ public class TaskActionTestKit extends ExternalResource
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector
-    );
+    )
+    {
+      @Override
+      public int getSqlMetadataMaxRetry()
+      {
+        return 2;
+      }
+    };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,

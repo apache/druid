@@ -52,8 +52,8 @@ export const QueryHistoryDialog = React.memo(function QueryHistoryDialog(
         id={index}
         key={index}
         title={record.version}
-        panel={<TextArea readOnly value={record.queryString} className={'text-area'} />}
-        panelClassName={'panel'}
+        panel={<TextArea readOnly value={record.queryString} className="text-area" />}
+        panelClassName="panel"
       />
     ));
 
@@ -62,7 +62,7 @@ export const QueryHistoryDialog = React.memo(function QueryHistoryDialog(
         animate
         renderActiveTabPanelOnly
         vertical
-        className={'tab-area'}
+        className="tab-area"
         selectedTabId={activeTab}
         onChange={(t: number) => setActiveTab(t)}
       >

@@ -33,6 +33,7 @@ import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -137,18 +138,27 @@ public class JoinFilterAnalyzer
     return preAnalysisBuilder.withCorrelations(correlations).build();
   }
 
-  /**
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   *
-   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
-   */
   public static JoinFilterSplit splitFilter(
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
+    return splitFilter(joinFilterPreAnalysis, null);
+  }
+
+  /**
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param baseFilter - Filter on base table that was specified in the query itself
+   *
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
+   */
+  public static JoinFilterSplit splitFilter(
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      @Nullable Filter baseFilter
+  )
+  {
     if (joinFilterPreAnalysis.getOriginalFilter() == null || !joinFilterPreAnalysis.isEnableFilterPushDown()) {
       return new JoinFilterSplit(
-          null,
+          baseFilter,
           joinFilterPreAnalysis.getOriginalFilter(),
           ImmutableSet.of()
       );
@@ -158,6 +168,10 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs = new HashMap<>();
+
+    if (null != baseFilter) {
+      leftFilters.add(baseFilter);
+    }
 
     for (Filter baseTableFilter : joinFilterPreAnalysis.getNormalizedBaseTableClauses()) {
       if (!Filters.filterMatchesNull(baseTableFilter)) {

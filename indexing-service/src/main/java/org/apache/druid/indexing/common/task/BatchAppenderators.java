@@ -80,7 +80,8 @@ public final class BatchAppenderators
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9(),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        toolbox.getConfig().getBatchMemoryMappedIndex()
     );
   }
 

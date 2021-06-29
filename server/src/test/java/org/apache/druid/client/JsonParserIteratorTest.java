@@ -23,8 +23,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
@@ -44,6 +48,9 @@ import org.mockito.Mockito;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(Enclosed.class)
 public class JsonParserIteratorTest
@@ -188,7 +195,7 @@ public class JsonParserIteratorTest
     public ExpectedException expectedException = ExpectedException.none();
 
     @Test
-    public void testConvertQueryExceptionToQueryInterruptedException() throws JsonProcessingException
+    public void testConvertQueryExceptionWithNullErrorCodeToQueryInterruptedException() throws JsonProcessingException
     {
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
@@ -201,6 +208,108 @@ public class JsonParserIteratorTest
       expectedException.expect(QueryInterruptedException.class);
       expectedException.expectMessage("query exception test");
       iterator.hasNext();
+    }
+
+    @Test
+    public void testConvertQueryExceptionWithNonNullErrorCodeToQueryInterruptedException()
+        throws JsonProcessingException
+    {
+      JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Futures.immediateFuture(
+              mockErrorResponse(new QueryException("test error", "query exception test", null, null))
+          ),
+          URL,
+          null,
+          HOST,
+          OBJECT_MAPPER
+      );
+      expectedException.expect(QueryInterruptedException.class);
+      expectedException.expectMessage("query exception test");
+      iterator.hasNext();
+    }
+  }
+
+  public static class TimeoutExceptionConversionTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testTimeoutBeforeCallingFuture()
+    {
+      JsonParserIterator<?> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Mockito.mock(Future.class),
+          URL,
+          mockQuery("qid", 0L), // should always timeout
+          HOST,
+          OBJECT_MAPPER
+      );
+      expectedException.expect(QueryTimeoutException.class);
+      expectedException.expectMessage(StringUtils.format("url[%s] timed out", URL));
+      iterator.hasNext();
+    }
+
+    @Test
+    public void testTimeoutWhileCallingFuture()
+    {
+      Future<InputStream> future = new AbstractFuture<InputStream>()
+      {
+        @Override
+        public InputStream get(long timeout, TimeUnit unit)
+            throws InterruptedException
+        {
+          Thread.sleep(2000); // Sleep longer than timeout
+          return null; // should return null so that JsonParserIterator checks timeout
+        }
+      };
+      JsonParserIterator<?> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          future,
+          URL,
+          mockQuery("qid", System.currentTimeMillis() + 500L), // timeout in 500 ms
+          HOST,
+          OBJECT_MAPPER
+      );
+      expectedException.expect(QueryTimeoutException.class);
+      expectedException.expectMessage(StringUtils.format("url[%s] timed out", URL));
+      iterator.hasNext();
+    }
+
+    @Test
+    public void testTimeoutAfterCallingFuture()
+    {
+      ExecutorService service = Execs.singleThreaded("timeout-test");
+      try {
+        JsonParserIterator<?> iterator = new JsonParserIterator<>(
+            JAVA_TYPE,
+            service.submit(() -> {
+              Thread.sleep(2000); // Sleep longer than timeout
+              return null;
+            }),
+            URL,
+            mockQuery("qid", System.currentTimeMillis() + 500L), // timeout in 500 ms
+            HOST,
+            OBJECT_MAPPER
+        );
+        expectedException.expect(QueryTimeoutException.class);
+        expectedException.expectMessage("Query [qid] timed out");
+        iterator.hasNext();
+
+      }
+      finally {
+        service.shutdownNow();
+      }
+    }
+
+    private Query<?> mockQuery(String queryId, long timeoutAt)
+    {
+      Query<?> query = Mockito.mock(Query.class);
+      Mockito.when(query.getId()).thenReturn(queryId);
+      Mockito.when(query.getContextValue(ArgumentMatchers.eq(DirectDruidClient.QUERY_FAIL_TIME), ArgumentMatchers.eq(-1L)))
+             .thenReturn(timeoutAt);
+      return query;
     }
   }
 

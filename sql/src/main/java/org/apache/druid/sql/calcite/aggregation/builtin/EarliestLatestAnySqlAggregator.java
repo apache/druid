@@ -64,9 +64,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
@@ -209,9 +207,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        Stream.of(virtualColumnRegistry.getVirtualColumn(fieldName))
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList()),
         Collections.singletonList(
             aggregatorType.createAggregatorFactory(
                 aggregatorName,

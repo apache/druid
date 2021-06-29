@@ -41,18 +41,18 @@ public class ITHdfsToHdfsParallelIndexTest extends AbstractHdfsInputSourceParall
   @Test(dataProvider = "resources")
   public void testHdfsIndexJsonData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource, InputFormatDetails.JSON);
+    doTest(hdfsInputSource, InputFormatDetails.JSON, new Pair<>(false, false));
   }
 
   @Test(dataProvider = "resources")
   public void testHdfsIndexOrcData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource, InputFormatDetails.ORC);
+    doTest(hdfsInputSource, InputFormatDetails.ORC, new Pair<>(false, false));
   }
 
   @Test(dataProvider = "resources")
   public void testHdfsIndexParquetData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource, InputFormatDetails.PARQUET);
+    doTest(hdfsInputSource, InputFormatDetails.PARQUET, new Pair<>(false, false));
   }
 }

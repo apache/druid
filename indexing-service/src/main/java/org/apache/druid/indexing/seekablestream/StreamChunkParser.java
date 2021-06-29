@@ -90,10 +90,14 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk) throws IOException
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
-      rowIngestionMeters.incrementThrownAway();
+      if (!isEndOfShard) {
+        // We do not count end of shard record as thrown away event since this is a record created by Druid
+        // Note that this only applies to Kinesis
+        rowIngestionMeters.incrementThrownAway();
+      }
       return Collections.emptyList();
     } else {
       if (byteEntityReader != null) {

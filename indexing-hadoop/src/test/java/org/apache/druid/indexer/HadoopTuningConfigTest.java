@@ -57,9 +57,9 @@ public class HadoopTuningConfigTest
         true,
         null,
         null,
+        true,
+        true,
         null,
-        true,
-        true,
         null,
         null,
         null,
@@ -86,6 +86,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(0, actual.getNumBackgroundPersistThreads());
     Assert.assertEquals(true, actual.isForceExtendableShardSpecs());
     Assert.assertEquals(true, actual.isUseExplicitVersion());
+    Assert.assertEquals(0, actual.getAwaitSegmentAvailabilityTimeoutMillis());
   }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)

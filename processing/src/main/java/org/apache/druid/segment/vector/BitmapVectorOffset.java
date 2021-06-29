@@ -33,6 +33,7 @@ public class BitmapVectorOffset implements VectorOffset
   private BatchIterator iterator;
   private boolean pastEnd;
   private int currentVectorSize;
+  private boolean isContiguous;
 
   public BitmapVectorOffset(
       final int vectorSize,
@@ -60,6 +61,7 @@ public class BitmapVectorOffset implements VectorOffset
   public void advance()
   {
     currentVectorSize = 0;
+    isContiguous = false;
 
     if (pastEnd) {
       return;
@@ -85,6 +87,14 @@ public class BitmapVectorOffset implements VectorOffset
 
       currentVectorSize = to;
     }
+
+    if (currentVectorSize > 1) {
+      final int adjusted = currentVectorSize - 1;
+      // for example:
+      //  [300, 301, 302, 303]: 4 - 1 == 3 == 303 - 300
+      //  [300, 301, 303, 304]: 4 - 1 == 3 != 304 - 300
+      isContiguous = offsets[adjusted] - offsets[0] == adjusted;
+    }
   }
 
   @Override
@@ -96,7 +106,7 @@ public class BitmapVectorOffset implements VectorOffset
   @Override
   public boolean isContiguous()
   {
-    return false;
+    return isContiguous;
   }
 
   @Override
@@ -114,12 +124,18 @@ public class BitmapVectorOffset implements VectorOffset
   @Override
   public int getStartOffset()
   {
+    if (isContiguous) {
+      return offsets[0];
+    }
     throw new UnsupportedOperationException("not contiguous");
   }
 
   @Override
   public int[] getOffsets()
   {
+    if (isContiguous) {
+      throw new UnsupportedOperationException("is contiguous");
+    }
     return offsets;
   }
 
@@ -129,6 +145,7 @@ public class BitmapVectorOffset implements VectorOffset
     iterator = bitmap.batchIterator();
     currentVectorSize = 0;
     pastEnd = false;
+    isContiguous = false;
     advance();
   }
 }

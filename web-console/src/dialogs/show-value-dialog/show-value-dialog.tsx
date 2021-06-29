@@ -45,8 +45,8 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
     <Dialog className="show-value-dialog" isOpen onClose={onClose} title="Full value">
       <TextArea value={str} />
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-        <Button icon={IconNames.DUPLICATE} text={'Copy'} onClick={handleCopy} />
-        <Button text={'Close'} intent={Intent.PRIMARY} onClick={onClose} />
+        <Button icon={IconNames.DUPLICATE} text="Copy" onClick={handleCopy} />
+        <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
       </div>
     </Dialog>
   );

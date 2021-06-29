@@ -166,7 +166,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
         <p>The format of the data in the lookup files.</p>
         <p>
           The <Code>simpleJson</Code> lookupParseSpec does not take any parameters. It is simply a
-          line delimited JSON file where the field is the key, and the field's value is the value.
+          line delimited JSON file where the field is the key, and the field&apos;s value is the
+          value.
         </p>
       </>
     ),
@@ -262,7 +263,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.pollPeriod',
     type: 'string',
     defaultValue: '0',
-    defined: (model: LookupSpec) => deepGet(model, 'extractionNamespace.type') === 'uri',
+    defined: (model: LookupSpec) =>
+      oneOf(deepGet(model, 'extractionNamespace.type'), 'uri', 'jdbc'),
     info: `Period between polling for updates`,
   },
 

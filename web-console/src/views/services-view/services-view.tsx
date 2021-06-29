@@ -20,8 +20,7 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -68,7 +67,7 @@ const allColumns: string[] = [
 ];
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: allColumns,
+  'full': allColumns,
   'no-sql': allColumns,
   'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
 };
@@ -114,6 +113,7 @@ interface ServiceQueryResultRow {
   service: string;
   service_type: string;
   tier: string;
+  is_leader: number;
   curr_size: number;
   host: string;
   max_size: number;
@@ -151,7 +151,7 @@ interface ServiceResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8
@@ -164,7 +164,7 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   //   peon => 1
 
   static SERVICE_SQL = `SELECT
-  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size", "is_leader",
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -437,14 +437,15 @@ ORDER BY "rank" DESC, "service" DESC`;
             },
             Aggregated: row => {
               switch (row.row._pivotVal) {
-                case 'historical':
+                case 'historical': {
                   const originalHistoricals = row.subRows.map(r => r._original);
                   const totalCurr = sum(originalHistoricals, s => s.curr_size);
                   const totalMax = sum(originalHistoricals, s => s.max_size);
                   return fillIndicator(totalCurr / totalMax);
+                }
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
@@ -455,6 +456,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
+                }
 
                 default:
                   return '';
@@ -468,7 +470,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   return fillIndicator(row.value);
 
                 case 'indexer':
-                case 'middle_manager':
+                case 'middle_manager': {
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
@@ -476,6 +478,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   } else {
                     return '- / -';
                   }
+                }
 
                 default:
                   return '';
@@ -484,7 +487,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Detail',
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
+            show: hiddenColumns.exists('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
@@ -500,6 +503,8 @@ ORDER BY "rank" DESC, "service" DESC`;
                   details.push(`Blacklisted until: ${row.blacklistedUntil}`);
                 }
                 return details.join(' ');
+              } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
+                return (row.is_leader || 0) === 1 ? 'leader' : '';
               } else {
                 return (row.segmentsToLoad || 0) + (row.segmentsToDrop || 0);
               }
@@ -508,7 +513,7 @@ ORDER BY "rank" DESC, "service" DESC`;
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
-                case 'historical':
+                case 'historical': {
                   const {
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -521,9 +526,14 @@ ORDER BY "rank" DESC, "service" DESC`;
                     segmentsToDrop,
                     segmentsToDropSize,
                   );
+                }
 
                 case 'indexer':
                 case 'middle_manager':
+                  return row.value;
+
+                case 'coordinator':
+                case 'overlord':
                   return row.value;
 
                 default:
@@ -552,12 +562,14 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
-            Cell: ({ value }) => {
+            Cell: ({ value, aggregated }) => {
+              if (aggregated) return '';
               if (!value) return null;
               const disabled = value.version === '';
               const workerActions = this.getWorkerActions(value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
+            Aggregated: () => '',
           },
         ]}
       />

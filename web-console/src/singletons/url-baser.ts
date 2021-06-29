@@ -17,7 +17,7 @@
  */
 
 export class UrlBaser {
-  static baseUrl: string = '';
+  static baseUrl = '';
 
   static base(url: string): string {
     if (!url.startsWith('/')) return url;

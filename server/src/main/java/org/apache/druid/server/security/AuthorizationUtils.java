@@ -271,6 +271,9 @@ public class AuthorizationUtils
           if (resourceActions == null) {
             return false;
           }
+          if (authorizer instanceof AllowAllAuthorizer) {
+            return true;
+          }
           for (ResourceAction resourceAction : resourceActions) {
             Access access = resultCache.computeIfAbsent(
                 resourceAction,
@@ -354,6 +357,51 @@ public class AuthorizationUtils
 
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     return filteredResources;
+  }
+
+  public static List<ResourceAction> makeSuperUserPermissions()
+  {
+    ResourceAction datasourceR = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.READ
+    );
+
+    ResourceAction datasourceW = new ResourceAction(
+        new Resource(".*", ResourceType.DATASOURCE),
+        Action.WRITE
+    );
+
+    ResourceAction viewR = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.READ
+    );
+
+    ResourceAction viewW = new ResourceAction(
+        new Resource(".*", ResourceType.VIEW),
+        Action.WRITE
+    );
+
+    ResourceAction configR = new ResourceAction(
+        new Resource(".*", ResourceType.CONFIG),
+        Action.READ
+    );
+
+    ResourceAction configW = new ResourceAction(
+        new Resource(".*", ResourceType.CONFIG),
+        Action.WRITE
+    );
+
+    ResourceAction stateR = new ResourceAction(
+        new Resource(".*", ResourceType.STATE),
+        Action.READ
+    );
+
+    ResourceAction stateW = new ResourceAction(
+        new Resource(".*", ResourceType.STATE),
+        Action.WRITE
+    );
+
+    return Lists.newArrayList(datasourceR, datasourceW, viewR, viewW, configR, configW, stateR, stateW);
   }
 
   /**

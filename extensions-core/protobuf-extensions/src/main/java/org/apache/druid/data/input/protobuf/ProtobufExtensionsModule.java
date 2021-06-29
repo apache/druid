@@ -37,7 +37,8 @@ public class ProtobufExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("ProtobufInputRowParserModule")
             .registerSubtypes(
-                new NamedType(ProtobufInputRowParser.class, "protobuf")
+                new NamedType(ProtobufInputRowParser.class, "protobuf"),
+                new NamedType(ProtobufInputFormat.class, "protobuf")
             )
     );
   }

@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Hours;
@@ -221,36 +220,64 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   }
 
   @Test
-  public void testFindEntry()
+  public void testFindChunk()
   {
-    Assert.assertEquals(
-        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
-        timeline.findEntry(Intervals.of("2011-10-01/2011-10-02"), "1")
+    assertSingleElementChunks(
+        makeSingle("1", 1),
+        timeline.findChunk(Intervals.of("2011-10-01/2011-10-02"), "1", 0)
     );
 
-    Assert.assertEquals(
-        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
-        timeline.findEntry(Intervals.of("2011-10-01/2011-10-01T10"), "1")
+    assertSingleElementChunks(
+        makeSingle("1", 1),
+        timeline.findChunk(Intervals.of("2011-10-01/2011-10-01T10"), "1", 0)
     );
 
-    Assert.assertEquals(
-        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
-        timeline.findEntry(Intervals.of("2011-10-01T02/2011-10-02"), "1")
+    assertSingleElementChunks(
+        makeSingle("1", 1),
+        timeline.findChunk(Intervals.of("2011-10-01T02/2011-10-02"), "1", 0)
     );
 
+    assertSingleElementChunks(
+        makeSingle("1", 1),
+        timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-01T17"), "1", 0)
+    );
+
+    IntegerPartitionChunk<OvershadowableInteger> expected = IntegerPartitionChunk.make(
+        10,
+        null,
+        1,
+        new OvershadowableInteger(
+            "3",
+            1,
+            21
+        )
+    );
+    IntegerPartitionChunk<OvershadowableInteger> actual = (IntegerPartitionChunk<OvershadowableInteger>) timeline.findChunk(
+        Intervals.of("2011-10-02/2011-10-03"),
+        "3",
+        1
+    );
+    Assert.assertEquals(expected, actual);
+    Assert.assertEquals(expected.getObject(), actual.getObject());
+
     Assert.assertEquals(
-        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
-        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "1")
+        null,
+        timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-01T17"), "1", 1)
     );
 
     Assert.assertEquals(
         null,
-        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "2")
+        timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-01T17"), "2", 0)
     );
 
     Assert.assertEquals(
         null,
-        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-02T17"), "1")
+        timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-02T17"), "1", 0)
+    );
+
+    Assert.assertEquals(
+        null,
+        timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-02T17"), "1", 0)
     );
   }
 

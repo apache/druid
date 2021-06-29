@@ -47,6 +47,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
+import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -76,6 +77,7 @@ import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -149,6 +151,7 @@ public class DruidCoordinator
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
+  private final Set<CoordinatorDuty> metadataStoreManagementDuties;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
@@ -157,11 +160,13 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+  private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
   private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
@@ -180,6 +185,7 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
+      @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
@@ -204,6 +210,7 @@ public class DruidCoordinator
         self,
         new ConcurrentHashMap<>(),
         indexingServiceDuties,
+        metadataStoreManagementDuties,
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
@@ -228,6 +235,7 @@ public class DruidCoordinator
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<CoordinatorDuty> indexingServiceDuties,
+      Set<CoordinatorDuty> metadataStoreManagementDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
@@ -253,6 +261,7 @@ public class DruidCoordinator
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
     this.indexingServiceDuties = indexingServiceDuties;
+    this.metadataStoreManagementDuties = metadataStoreManagementDuties;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -280,7 +289,16 @@ public class DruidCoordinator
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
   {
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-    return computeUnderReplicationCountsPerDataSourcePerTierForSegments(dataSegments);
+    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, false);
+  }
+
+  /**
+   * @return tier -> { dataSource -> underReplicationCount } map
+   */
+  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()
+  {
+    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
+    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, true);
   }
 
   /**
@@ -295,37 +313,22 @@ public class DruidCoordinator
       Iterable<DataSegment> dataSegments
   )
   {
-    final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
+    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, false);
+  }
 
-    if (segmentReplicantLookup == null) {
-      return underReplicationCountsPerDataSourcePerTier;
-    }
-
-    final DateTime now = DateTimes.nowUtc();
-
-    for (final DataSegment segment : dataSegments) {
-      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
-
-      for (final Rule rule : rules) {
-        if (!rule.appliesTo(segment, now)) {
-          // Rule did not match. Continue to the next Rule.
-          continue;
-        }
-        if (!rule.canLoadSegments()) {
-          // Rule matched but rule does not and cannot load segments.
-          // Hence, there is no need to update underReplicationCountsPerDataSourcePerTier map
-          break;
-        }
-
-        rule.updateUnderReplicated(underReplicationCountsPerDataSourcePerTier, segmentReplicantLookup, segment);
-
-        // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
-        // and match each segment with the first rule that applies. Each segment may only match a single rule.
-        break;
-      }
-    }
-
-    return underReplicationCountsPerDataSourcePerTier;
+  /**
+   * segmentReplicantLookup or cluster use in this method could potentially be stale since it is only updated on coordinator runs.
+   * However, this is ok as long as the {@param dataSegments} is refreshed/latest as this would at least still ensure
+   * that the stale data in segmentReplicantLookup and cluster would be under counting replication levels,
+   * rather than potentially falsely reporting that everything is available.
+   *
+   * @return tier -> { dataSource -> underReplicationCount } map
+   */
+  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(
+      Iterable<DataSegment> dataSegments
+  )
+  {
+    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, true);
   }
 
   public Object2IntMap<String> computeNumsUnavailableUsedSegmentsPerDataSource()
@@ -584,6 +587,58 @@ public class DruidCoordinator
     compactSegmentsDuty.run();
   }
 
+  private Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(
+      Iterable<DataSegment> dataSegments,
+      boolean computeUsingClusterView
+  )
+  {
+    final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
+
+    if (segmentReplicantLookup == null) {
+      return underReplicationCountsPerDataSourcePerTier;
+    }
+
+    if (computeUsingClusterView && cluster == null) {
+      throw new ServiceUnavailableException(
+          "coordinator hasn't populated information about cluster yet, try again later");
+    }
+
+    final DateTime now = DateTimes.nowUtc();
+
+    for (final DataSegment segment : dataSegments) {
+      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
+
+      for (final Rule rule : rules) {
+        if (!rule.appliesTo(segment, now)) {
+          // Rule did not match. Continue to the next Rule.
+          continue;
+        }
+        if (!rule.canLoadSegments()) {
+          // Rule matched but rule does not and cannot load segments.
+          // Hence, there is no need to update underReplicationCountsPerDataSourcePerTier map
+          break;
+        }
+
+        if (computeUsingClusterView) {
+          rule.updateUnderReplicatedWithClusterView(
+              underReplicationCountsPerDataSourcePerTier,
+              segmentReplicantLookup,
+              cluster,
+              segment
+          );
+        } else {
+          rule.updateUnderReplicated(underReplicationCountsPerDataSourcePerTier, segmentReplicantLookup, segment);
+        }
+
+        // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
+        // and match each segment with the first rule that applies. Each segment may only match a single rule.
+        break;
+      }
+    }
+
+    return underReplicationCountsPerDataSourcePerTier;
+  }
+
   private void becomeLeader()
   {
     synchronized (lock) {
@@ -617,6 +672,12 @@ public class DruidCoordinator
             )
         );
       }
+      dutiesRunnables.add(
+          Pair.of(
+              new DutiesRunnable(makeMetadataStoreManagementDuties(), startingLeaderCounter, METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP),
+              config.getCoordinatorMetadataStoreManagementPeriod()
+          )
+      );
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
         // CompactSegmentsDuty can takes a non trival amount of time to complete.
@@ -697,6 +758,19 @@ public class DruidCoordinator
 
     log.debug(
         "Done making indexing service duties %s",
+        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
+    );
+    return ImmutableList.copyOf(duties);
+  }
+
+  private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
+  {
+    List<CoordinatorDuty> duties = ImmutableList.<CoordinatorDuty>builder()
+                                                .addAll(metadataStoreManagementDuties)
+                                                .build();
+
+    log.debug(
+        "Done making metadata store management duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(duties);
@@ -852,8 +926,8 @@ public class DruidCoordinator
 
       startPeonsForNewServers(currentServers);
 
-      final DruidCluster cluster = prepareCluster(params, currentServers);
-      segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+      cluster = prepareCluster(params, currentServers);
+      segmentReplicantLookup = SegmentReplicantLookup.make(cluster, getDynamicConfigs().getReplicateAfterLoadTimeout());
 
       stopPeonsForDisappearedServers(currentServers);
 

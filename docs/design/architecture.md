@@ -235,9 +235,6 @@ transaction.
 metadata in a single transaction after the subtasks are finished. In simple (single-task) mode, the single task
 publishes all segment metadata in a single transaction after it is complete.
 
-[Tranquility](../ingestion/tranquility.md), a streaming ingestion method that is no longer recommended, does not perform
-transactional loading.
-
 Additionally, some ingestion methods offer an _idempotency_ guarantee. This means that repeated executions of the same
 ingestion will not cause duplicate data to be ingested:
 

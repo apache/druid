@@ -22,11 +22,11 @@ title: "Tranquility"
   ~ under the License.
   -->
 
-[Tranquility](https://github.com/druid-io/tranquility/) is a package for pushing
-streams to Druid in real-time. Druid does not come bundled with Tranquility; it is available as a separate download.
+[Tranquility](https://github.com/druid-io/tranquility/) is a separately distributed package for pushing
+streams to Druid in real-time. 
 
-Note that as of this writing, the latest available version of Tranquility is built against the rather old Druid 0.9.2
-release. It will still work with the latest Druid servers, but not all features and functionality will be available
+Tranquility has not been built against a version of Druid later than Druid 0.9.2
+release. It may still work with the latest Druid servers, but not all features and functionality will be available
 due to limitations of older Druid APIs on the Tranquility side.
 
 For new projects that require streaming ingestion, we recommend using Druid's native support for

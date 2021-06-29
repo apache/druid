@@ -56,6 +56,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private static final boolean SKIP_NULL = true;
 
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final Map<Interval, PartitionBoundaries> intervalToPartitions;
@@ -67,6 +68,8 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
       @JsonProperty("groupId") String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("supervisorTaskId") String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
@@ -83,6 +86,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema), !SKIP_NULL)
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -124,6 +128,13 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
+  }
+
+  @JsonProperty
   public Map<Interval, PartitionBoundaries> getIntervalToPartitions()
   {
     return intervalToPartitions;
@@ -155,7 +166,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
         getDataSource(),
-        getId(),
+        getSubtaskSpecId(),
         ingestionSchema.getDataSchema().getGranularitySpec(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         partitionAnalysis

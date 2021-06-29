@@ -37,7 +37,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
 {
   private static final Logger LOG = new Logger(GoogleDataSegmentPuller.class);
 
-  private final GoogleStorage storage;
+  protected final GoogleStorage storage;
 
   @Inject
   public GoogleDataSegmentPuller(final GoogleStorage storage)

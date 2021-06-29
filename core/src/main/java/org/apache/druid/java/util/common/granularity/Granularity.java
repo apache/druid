@@ -132,7 +132,11 @@ public abstract class Granularity implements Cacheable
 
   public abstract DateTimeFormatter getFormatter(Formatter type);
 
+  public abstract long increment(long time);
+
   public abstract DateTime increment(DateTime time);
+
+  public abstract long bucketStart(long time);
 
   public abstract DateTime bucketStart(DateTime time);
 

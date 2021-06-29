@@ -123,7 +123,7 @@ public class SketchAggregationTest
         groupByQuery
     );
 
-    final String expectedSummary = "\n### HeapCompactOrderedSketch SUMMARY: \n"
+    final String expectedSummary = "\n### HeapCompactSketch SUMMARY: \n"
                                    + "   Estimate                : 50.0\n"
                                    + "   Upper Bound, 95% conf   : 50.0\n"
                                    + "   Lower Bound, 95% conf   : 50.0\n"
@@ -527,6 +527,21 @@ public class SketchAggregationTest
     Assert.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
     Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
     Assert.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+  }
+
+  @Test
+  public void testUpdateUnionWithDouble()
+  {
+    Double[] columnValues = new Double[]{2.0};
+    final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
+    final Aggregator agg = new SketchAggregator(selector, 4096);
+    agg.aggregate();
+    Assert.assertFalse(agg.isNull());
+    Assert.assertNotNull(agg.get());
+    Assert.assertTrue(agg.get() instanceof SketchHolder);
+    Assert.assertEquals(1, ((SketchHolder) agg.get()).getEstimate(), 0);
+    Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
+    Assert.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

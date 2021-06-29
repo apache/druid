@@ -47,6 +47,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
+    Assert.assertTrue(config.getCompactionSkipLockedIntervals());
 
     //with non-defaults
     Properties props = new Properties();
@@ -60,6 +61,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
     props.setProperty("druid.coordinator.load.timeout", "PT1s");
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
+    props.setProperty("druid.coordinator.compaction.skipLockedIntervals", "false");
 
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);
@@ -72,5 +74,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
+    Assert.assertFalse(config.getCompactionSkipLockedIntervals());
   }
 }

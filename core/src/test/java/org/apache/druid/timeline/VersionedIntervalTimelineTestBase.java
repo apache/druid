@@ -98,6 +98,16 @@ public class VersionedIntervalTimelineTestBase
     Assert.assertEquals(expected, actualSet);
   }
 
+  static void assertSingleElementChunks(
+      PartitionChunk<OvershadowableInteger> expected,
+      PartitionChunk<OvershadowableInteger> actual
+  )
+  {
+    SingleElementPartitionChunk<OvershadowableInteger> expectedSingle = (SingleElementPartitionChunk<OvershadowableInteger>) expected;
+    SingleElementPartitionChunk<OvershadowableInteger> actualSingle = (SingleElementPartitionChunk<OvershadowableInteger>) actual;
+    Assert.assertEquals(expectedSingle.getObject(), actualSingle.getObject());
+  }
+
   static VersionedIntervalTimeline<String, OvershadowableInteger> makeStringIntegerTimeline()
   {
     return new VersionedIntervalTimeline<>(Ordering.natural());

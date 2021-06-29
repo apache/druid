@@ -80,8 +80,8 @@ public class K8sDruidNodeAnnouncerTest
         ),
         ImmutableMap.of(
             "op", "add",
-            "path", "/metadata/labels/druidDiscoveryAnnouncement-id",
-            "value", "test-host-80"
+            "path", "/metadata/labels/druidDiscoveryAnnouncement-id-hash",
+            "value", "1429561393"
         ),
         ImmutableMap.of(
             "op", "add",
@@ -127,7 +127,7 @@ public class K8sDruidNodeAnnouncerTest
         ),
         ImmutableMap.of(
             "op", "remove",
-            "path", "/metadata/labels/druidDiscoveryAnnouncement-id"
+            "path", "/metadata/labels/druidDiscoveryAnnouncement-id-hash"
         ),
         ImmutableMap.of(
             "op", "remove",

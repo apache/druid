@@ -22,6 +22,8 @@ import React from 'react';
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 
+import { TIME_COLUMN } from './timestamp-spec';
+
 export interface TransformSpec {
   transforms?: Transform[];
   filter?: Record<string, any>;
@@ -75,6 +77,7 @@ export function getTimestampExpressionFields(transforms: Transform[]): Field<Tra
         `timestamp_parse(concat("date", ' ', "time"))`,
         `timestamp_parse(concat("date", ' ', "time"), 'M/d/yyyy H:mm:ss')`,
         `timestamp_parse(concat("year", '-', "month", '-', "day"))`,
+        `timestamp_parse("west_coast_time", 'yyyy-MM-dd\\'T\\'HH:mm:ss.SSS', 'America/Los_Angeles')`,
         `timestamp_parse("local_time", 'yyyy-MM-dd HH:mm:ss', "timezone")`,
       ],
       info: (
@@ -92,7 +95,7 @@ export function getTimestampExpressionFields(transforms: Transform[]): Field<Tra
 export function addTimestampTransform(transforms: Transform[]): Transform[] {
   return [
     {
-      name: '__time',
+      name: TIME_COLUMN,
       type: 'expression',
       expression: '',
     },
@@ -100,6 +103,10 @@ export function addTimestampTransform(transforms: Transform[]): Transform[] {
 }
 
 export function removeTimestampTransform(transforms: Transform[]): Transform[] | undefined {
-  const newTransforms = transforms.filter(transform => transform.name !== '__time');
+  const newTransforms = transforms.filter(transform => transform.name !== TIME_COLUMN);
   return newTransforms.length ? newTransforms : undefined;
+}
+
+export function getDimensionNamesFromTransforms(transforms: Transform[]): string[] {
+  return transforms.map(t => t.name).filter(n => n !== TIME_COLUMN);
 }

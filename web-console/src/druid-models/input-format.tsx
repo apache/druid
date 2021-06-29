@@ -42,7 +42,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'type',
     label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf', 'avro_stream'],
     required: true,
     info: (
       <>
@@ -113,21 +113,23 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'delimiter',
     type: 'string',
     defaultValue: '\t',
+    suggestions: ['\t', '|', '#'],
     defined: (p: InputFormat) => p.type === 'tsv',
     info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'listDelimiter',
     type: 'string',
+    defaultValue: '\x01',
+    suggestions: ['\x01', '\x00'],
     defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv', 'regex'),
-    placeholder: '(optional, default = ctrl+A)',
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf'),
+    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf', 'avro_stream'),
     info: (
       <>
         Specifies if the binary column which is not logically marked as a string should be treated
@@ -142,5 +144,5 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 }
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf');
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream');
 }

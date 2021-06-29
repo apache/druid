@@ -27,9 +27,9 @@ describe('tasks view', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
+        openDialog="test"
+        taskGroupId="test"
+        datasourceId="datasource"
         goToDatasource={() => {}}
         goToQuery={() => {}}
         goToLoadData={() => {}}

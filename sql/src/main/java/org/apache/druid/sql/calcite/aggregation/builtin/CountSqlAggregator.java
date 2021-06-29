@@ -134,7 +134,7 @@ public class CountSqlAggregator implements SqlAggregator
     } else {
       // Not COUNT(*), not distinct
       // COUNT(x) should count all non-null values of x.
-      return Aggregation.create(createCountAggregatorFactory(
+      AggregatorFactory theCount = createCountAggregatorFactory(
             name,
             plannerContext,
             rowSignature,
@@ -142,7 +142,9 @@ public class CountSqlAggregator implements SqlAggregator
             rexBuilder,
             aggregateCall,
             project
-      ));
+      );
+
+      return Aggregation.create(theCount);
     }
   }
 }
