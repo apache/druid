@@ -36,6 +36,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -70,6 +71,7 @@ import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -213,8 +215,34 @@ public class GroupByStrategyV2 implements GroupByStrategy
     context.put("finalize", false);
     context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
-    if (query.getUniversalTimestamp() != null) {
-      context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(query.getUniversalTimestamp().getMillis()));
+
+    DateTime universalTimestamp = query.getUniversalTimestamp();
+    Granularity granularity = query.getGranularity();
+    List<DimensionSpec> dimensionSpecs = query.getDimensions();
+    final String timestampResultField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final boolean hasTimestampResultField = (timestampResultField != null && timestampResultField.length() != 0)
+                                            && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
+                                            && !query.isApplyLimitPushDown();
+    if (hasTimestampResultField) {
+      // sql like "group by city_id,time_floor(__time to day)",
+      // the original translated query is granularity=all and dimensions:[d0, d1]
+      // the better plan is granularity=day and dimensions:[d0]
+      // but the ResultRow structure is changed from [d0, d1] to [__time, d0]
+      // this structure should be fixed as [d0, d1] (actually it is [d0, __time]) before postAggs are called
+      final Granularity timestampResultFieldGranularity
+          = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+      dimensionSpecs =
+          query.getDimensions()
+               .stream()
+               .filter(dimensionSpec -> !dimensionSpec.getOutputName().equals(timestampResultField))
+               .collect(Collectors.toList());
+      granularity = timestampResultFieldGranularity;
+      universalTimestamp = null;
+      int timestampResultFieldIndexInOriginalDimensions = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, timestampResultFieldIndexInOriginalDimensions > 0);
+    }
+    if (universalTimestamp != null) {
+      context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(universalTimestamp.getMillis()));
     }
 
     // The having spec shouldn't be passed down, so we need to convey the existing limit push down status
@@ -228,8 +256,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query.getQuerySegmentSpec(),
         query.getVirtualColumns(),
         query.getDimFilter(),
-        query.getGranularity(),
-        query.getDimensions(),
+        granularity,
+        dimensionSpecs,
         query.getAggregatorSpecs(),
         query.getPostAggregatorSpecs(),
         // Don't do "having" clause until the end of this method.
@@ -251,10 +279,30 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
 
     if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)
-        || query.getPostAggregatorSpecs().isEmpty()
         || query.getContextBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
       return mergedResults;
+    } else if (query.getPostAggregatorSpecs().isEmpty()) {
+      if (!hasTimestampResultField) {
+        return mergedResults;
+      }
+      final int timestampResultFieldIndexInOriginalDimensions = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      return Sequences.map(
+          mergedResults,
+          row -> {
+            final ResultRow resultRow = ResultRow.create(query.getResultRowPostAggregatorStart());
+            fixResultRowWithTimestampResultField(
+                query,
+                timestampResultFieldIndexInOriginalDimensions,
+                row,
+                resultRow
+            );
+
+            return resultRow;
+          }
+      );
     } else {
+      int timestampResultFieldIndexInOriginalDimensions =
+          hasTimestampResultField ? query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
       return Sequences.map(
           mergedResults,
           row -> {
@@ -263,8 +311,17 @@ public class GroupByStrategyV2 implements GroupByStrategy
             final ResultRow rowWithPostAggregations = ResultRow.create(query.getResultRowSizeWithPostAggregators());
 
             // Copy everything that comes before the postaggregations.
-            for (int i = 0; i < query.getResultRowPostAggregatorStart(); i++) {
-              rowWithPostAggregations.set(i, row.get(i));
+            if (hasTimestampResultField) {
+              fixResultRowWithTimestampResultField(
+                  query,
+                  timestampResultFieldIndexInOriginalDimensions,
+                  row,
+                  rowWithPostAggregations
+              );
+            } else {
+              for (int i = 0; i < query.getResultRowPostAggregatorStart(); i++) {
+                rowWithPostAggregations.set(i, row.get(i));
+              }
             }
 
             // Compute postaggregations. We need to do this with a result-row map because PostAggregator.compute
@@ -282,6 +339,34 @@ public class GroupByStrategyV2 implements GroupByStrategy
             return rowWithPostAggregations;
           }
       );
+    }
+  }
+
+  private void fixResultRowWithTimestampResultField(
+      GroupByQuery query,
+      int timestampResultFieldIndexInOriginalDimensions,
+      ResultRow before,
+      ResultRow after
+  )
+  {
+    // d1 is the __time
+    // when query.granularity=all:  convert [__time, d0] to [d0, d1] (actually, [d0, __time])
+    // when query.granularity!=all: convert [__time, d0] to [__time, d0, d1] (actually, [__time, d0, __time])
+    // overall, insert the removed d1 at the position where it is removed and remove the first __time if granularity=all
+    Object theTimestamp = before.get(0);
+    int expectedDimensionStartInAfterRow = 0;
+    if (query.getResultRowHasTimestamp()) {
+      expectedDimensionStartInAfterRow = 1;
+      after.set(0, theTimestamp);
+    }
+    int timestampResultFieldIndexInAfterRow = timestampResultFieldIndexInOriginalDimensions + expectedDimensionStartInAfterRow;
+    for (int i = expectedDimensionStartInAfterRow; i < timestampResultFieldIndexInAfterRow; i++) {
+      // 0 in beforeRow is the timestamp, so plus 1 is the start of dimension in beforeRow
+      after.set(i, before.get(i + 1));
+    }
+    after.set(timestampResultFieldIndexInAfterRow, theTimestamp);
+    for (int i = timestampResultFieldIndexInAfterRow + 1; i < before.length() + expectedDimensionStartInAfterRow; i++) {
+      after.set(i, before.get(i - expectedDimensionStartInAfterRow));
     }
   }
 
@@ -389,7 +474,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           )
           .withVirtualColumns(VirtualColumns.EMPTY)
           .withDimFilter(null)
-          .withSubtotalsSpec(null);
+          .withSubtotalsSpec(null)
+          .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
 
       resultSupplierOne = GroupByRowProcessor.process(
           baseSubtotalQuery,
