@@ -109,18 +109,18 @@ public class LdapUserPrincipal implements Principal
   public boolean isExpired(int duration, int maxDuration)
   {
     long now = System.currentTimeMillis();
-
     long maxCutoff = now - (maxDuration * 1000L);
     if (this.createdAt.toEpochMilli() < maxCutoff) {
+      // max cutoff is up...so expired
+      return true;
+    } else {
       long cutoff = now - (duration * 1000L);
       if (this.lastVerified.get().toEpochMilli() < cutoff) {
+        // max cutoff not reached yet but cutoff since verified is up, so expired
         return true;
-      } else {
-        return false;
       }
-    } else {
-      return false;
     }
+    return false;
   }
 
   @Override
