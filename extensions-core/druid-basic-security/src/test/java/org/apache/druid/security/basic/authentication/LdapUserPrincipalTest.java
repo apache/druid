@@ -25,6 +25,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.junit.Assert;
 
 import javax.naming.directory.SearchResult;
+import java.time.Instant;
 
 public class LdapUserPrincipalTest extends TestCase
 {
@@ -33,33 +34,39 @@ public class LdapUserPrincipalTest extends TestCase
       new BasicAuthenticatorCredentialUpdate("helloworld", 20)
   );
 
+  private static final long CREATED_MILLIS = 10000;
+
   // this will create a cache with createdAt now():
-  private static final LdapUserPrincipal principal = new LdapUserPrincipal(
+  private static final LdapUserPrincipal PRINCIPAL = new LdapUserPrincipal(
       "foo",
       USER_CREDENTIALS,
-      new SearchResult("foo", null, null)
+      new SearchResult("foo", null, null),
+      Instant.ofEpochMilli(CREATED_MILLIS)
   );
 
   public void testIsNotExpired()
   {
-    Assert.assertFalse(principal.isExpired(1000, 1000));
+    Assert.assertFalse(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 500));
+  }
+
+  public void testIsObviouslyExpired()
+  {
+    // real clock now should be so much bigger than CREATED_MILLIS....so it must have expired...
+    Assert.assertTrue(PRINCIPAL.isExpired(100, 1000));
   }
 
   public void testIsExpiredWhenMaxDurationIsSmall() throws InterruptedException
   {
-    Thread.sleep(1000);
-    Assert.assertTrue(principal.isExpired(10, 1));
+    Assert.assertTrue(PRINCIPAL.isExpired(10, 1, CREATED_MILLIS + 1001));
   }
 
   public void testIsExpiredWhenDurationIsSmall() throws InterruptedException
   {
-    Thread.sleep(2000);
-    Assert.assertTrue(principal.isExpired(1, 10));
+    Assert.assertTrue(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 1001));
   }
 
   public void testIsExpiredWhenDurationsAreSmall() throws InterruptedException
   {
-    Thread.sleep(1000);
-    Assert.assertTrue(principal.isExpired(1, 1));
+    Assert.assertTrue(PRINCIPAL.isExpired(1, 1, CREATED_MILLIS + 1001));
   }
 }
