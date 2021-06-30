@@ -210,17 +210,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
 
-    List<String> dimensionNames = this.dimensions
-        .stream()
-        .map(DimensionSpec::getOutputName)
-        .collect(Collectors.toList());
-    String timestampField = getContextValue(CTX_TIMESTAMP_RESULT_FIELD);
-    if (timestampField != null) {
-      dimensionNames.add(timestampField);
-    }
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
-        dimensionNames,
+        this.dimensions.stream().map(DimensionSpec::getOutputName).collect(Collectors.toList()),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );

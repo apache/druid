@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -270,7 +271,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         granularity,
         dimensionSpecs,
         query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs(),
+        // Don't apply postaggregators on compute nodes
+        ImmutableList.of(),
         // Don't do "having" clause until the end of this method.
         null,
         // Potentially pass limit down the stack (i.e. limit pushdown). Notes:
