@@ -31,3 +31,16 @@ Users can create custom extension of the `DynamicConfigProvider` interface that 
 
 For more information, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
+## EnvironmentVariableDynamicConfigProvider
+
+`EnvironmentVariableDynamicConfigProvider` can be used to replace `EnvironmentVariablePasswordProvider`. This class allow users to avoid exposing passwords or other secret information in the runtime.properties file. You can set environment variables in the following example:
+```json
+druid.metadata.storage.connector.dynamicConfigProvider={"type": "environment","variables":{"user": "MY_USER_NAME_VAR","password": "MY_PASSWORD_VAR"}
+```
+The values are described below.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|dynamic config provider type|Yes: `environment`|
+|`variables`|Map|environment variables to get information from|Yes|
+
