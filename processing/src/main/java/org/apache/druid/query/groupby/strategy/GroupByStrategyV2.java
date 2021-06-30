@@ -93,6 +93,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
+  private static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
+  private static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
+  private static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
+
   // see countRequiredMergeBufferNumWithoutSubtotal() for explanation
   private static final int MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL = 2;
 
@@ -229,7 +233,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     DateTime universalTimestamp = query.getUniversalTimestamp();
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
-    final String timestampResultField = (String) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final String timestampResultField = (String) timestampFieldContext.get(CTX_TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && timestampResultField.length() != 0)
                                             && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
                                             && !query.isApplyLimitPushDown();
@@ -241,7 +245,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // but the ResultRow structure is changed from [d0, d1] to [__time, d0]
       // this structure should be fixed as [d0, d1] (actually it is [d0, __time]) before postAggs are called
       final Granularity timestampResultFieldGranularity
-          = (Granularity) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+          = (Granularity) timestampFieldContext.get(CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
       dimensionSpecs =
           query.getDimensions()
                .stream()
@@ -249,7 +253,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                .collect(Collectors.toList());
       granularity = timestampResultFieldGranularity;
       universalTimestamp = null;
-      timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      timestampResultFieldIndex = (int) timestampFieldContext.get(CTX_TIMESTAMP_RESULT_FIELD_INDEX);
       context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, timestampResultFieldIndex > 0);
     }
     final int timestampResultFieldIndexInOriginalDimensions = timestampResultFieldIndex;
@@ -376,9 +380,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
         break;
       }
       queryGranularity = granularity;
-      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionSpec.getOutputName());
-      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
-      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, i);
+      context.put(CTX_TIMESTAMP_RESULT_FIELD, dimensionSpec.getOutputName());
+      context.put(CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+      context.put(CTX_TIMESTAMP_RESULT_FIELD_INDEX, i);
     }
     return context;
   }
@@ -515,8 +519,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           )
           .withVirtualColumns(VirtualColumns.EMPTY)
           .withDimFilter(null)
-          .withSubtotalsSpec(null)
-          .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
+          .withSubtotalsSpec(null);
 
       resultSupplierOne = GroupByRowProcessor.process(
           baseSubtotalQuery,
