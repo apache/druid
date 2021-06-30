@@ -148,7 +148,7 @@ import java.util.concurrent.TimeUnit;
 public class CachingClusteredClientBenchmark
 {
   private static final Logger LOG = new Logger(CachingClusteredClientBenchmark.class);
-  private static final int PROCESSING_BUFFER_SIZE = 10 * 1024 * 1024; // ~10MB
+  private static final int PROCESSING_BUFFER_SIZE = 10 * 1024 * 1024; // ~10MiB
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
