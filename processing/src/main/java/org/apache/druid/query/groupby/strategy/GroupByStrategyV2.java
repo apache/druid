@@ -57,6 +57,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
@@ -70,12 +71,15 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -215,14 +219,20 @@ public class GroupByStrategyV2 implements GroupByStrategy
     context.put("finalize", false);
     context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
+    Map<String, Object> timestampFieldContext = findTimestampResultField(
+        query.getDimensions(),
+        query.getVirtualColumns()
+    );
+    context.putAll(timestampFieldContext);
 
     DateTime universalTimestamp = query.getUniversalTimestamp();
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
-    final String timestampResultField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final String timestampResultField = (String) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && timestampResultField.length() != 0)
                                             && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
                                             && !query.isApplyLimitPushDown();
+    int timestampResultFieldIndex = 0;
     if (hasTimestampResultField) {
       // sql like "group by city_id,time_floor(__time to day)",
       // the original translated query is granularity=all and dimensions:[d0, d1]
@@ -230,7 +240,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // but the ResultRow structure is changed from [d0, d1] to [__time, d0]
       // this structure should be fixed as [d0, d1] (actually it is [d0, __time]) before postAggs are called
       final Granularity timestampResultFieldGranularity
-          = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+          = (Granularity) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
       dimensionSpecs =
           query.getDimensions()
                .stream()
@@ -238,9 +248,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
                .collect(Collectors.toList());
       granularity = timestampResultFieldGranularity;
       universalTimestamp = null;
-      int timestampResultFieldIndexInOriginalDimensions = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
-      context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, timestampResultFieldIndexInOriginalDimensions > 0);
+      timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, timestampResultFieldIndex > 0);
     }
+    final int timestampResultFieldIndexInOriginalDimensions = timestampResultFieldIndex;
     if (universalTimestamp != null) {
       context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(universalTimestamp.getMillis()));
     }
@@ -285,7 +296,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
       if (!hasTimestampResultField) {
         return mergedResults;
       }
-      final int timestampResultFieldIndexInOriginalDimensions = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
       return Sequences.map(
           mergedResults,
           row -> {
@@ -301,8 +311,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
           }
       );
     } else {
-      int timestampResultFieldIndexInOriginalDimensions =
-          hasTimestampResultField ? query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
       return Sequences.map(
           mergedResults,
           row -> {
@@ -340,6 +348,37 @@ public class GroupByStrategyV2 implements GroupByStrategy
           }
       );
     }
+  }
+
+  private Map<String, Object> findTimestampResultField(List<DimensionSpec> dimensions, VirtualColumns virtualColumns) {
+    Map<String, Object> context = new HashMap<>();
+    if (dimensions.isEmpty()) {
+      return context;
+    }
+    Granularity queryGranularity = null;
+    for (int i = 0; i < dimensions.size(); i++) {
+      DimensionSpec dimensionSpec = dimensions.get(i);
+      VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimensionSpec.getDimension());
+      if (!(virtualColumn instanceof ExpressionVirtualColumn)) {
+        continue;
+      }
+      ExpressionVirtualColumn exprVirtualColumn = (ExpressionVirtualColumn) virtualColumn;
+      Granularity granularity = ExprUtils.toQueryGranularity(exprVirtualColumn.getParsedExpression().get());
+      if (granularity == null) {
+        continue;
+      }
+      if (queryGranularity != null) {
+        // group by more than one timestamp_floor
+        // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
+        context = new HashMap<>();
+        break;
+      }
+      queryGranularity = granularity;
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionSpec.getOutputName());
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, i);
+    }
+    return context;
   }
 
   private void fixResultRowWithTimestampResultField(

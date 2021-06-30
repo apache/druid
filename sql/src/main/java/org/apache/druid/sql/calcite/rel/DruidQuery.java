@@ -977,33 +977,6 @@ public class DruidQuery
       // Cannot handle zero or negative limits.
       return null;
     }
-    Map<String, Object> theContext = plannerContext.getQueryContext();
-
-    Granularity queryGranularity = null;
-
-    if (!grouping.getDimensions().isEmpty()) {
-      for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
-        Granularity granularity = Expressions.toQueryGranularity(
-            dimensionExpression.getDruidExpression(),
-            plannerContext.getExprMacroTable()
-        );
-        if (granularity == null) {
-          continue;
-        }
-        if (queryGranularity != null) {
-          // group by more than one timestamp_floor
-          // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
-          theContext = plannerContext.getQueryContext();
-          break;
-        }
-        queryGranularity = granularity;
-        int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
-        theContext = new HashMap<>(plannerContext.getQueryContext());
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
-      }
-    }
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
@@ -1041,7 +1014,7 @@ public class DruidQuery
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
-        ImmutableSortedMap.copyOf(theContext)
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
