@@ -101,6 +101,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -152,12 +153,12 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
-            return new SegmentForTesting(
+            return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
-            );
+            ), segment.getShardSpec());
           }
 
           @Override

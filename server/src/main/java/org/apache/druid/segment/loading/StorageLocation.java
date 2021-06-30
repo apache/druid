@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -117,6 +118,12 @@ public class StorageLocation
     return reserve(segmentDir, segment.getId().toString(), segment.getSize());
   }
 
+  public synchronized boolean isReserved(String segmentDir)
+  {
+    final File segmentFile = new File(path, segmentDir);
+    return files.contains(segmentFile);
+  }
+
   /**
    * Reserves space to store the given segment, only if it has not been done already. This can be used
    * when segment is already downloaded on the disk. Unlike {@link #reserve(String, DataSegment)}, this function
@@ -154,7 +161,8 @@ public class StorageLocation
   {
     final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
     if (files.contains(segmentFileToAdd)) {
-      return null;
+      //TODO: is this change ok?
+      return segmentFileToAdd;
     }
     if (canHandle(segmentId, segmentSize)) {
       files.add(segmentFileToAdd);

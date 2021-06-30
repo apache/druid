@@ -67,7 +67,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  private ReferenceCountingSegment(
+  protected ReferenceCountingSegment(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -171,5 +171,14 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Optional<Closeable> acquireReferences()
   {
     return incrementReferenceAndDecrementOnceCloseable();
+  }
+
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    if (isClosed()) {
+      return null;
+    }
+    return baseObject.as(clazz);
   }
 }

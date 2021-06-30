@@ -46,7 +46,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -598,7 +598,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           }
 
           @Override
-          public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+          public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
           {
             throw new UnsupportedOperationException("unused");
           }

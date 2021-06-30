@@ -21,6 +21,7 @@ package org.apache.druid.segment.loading;
 
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
@@ -47,9 +48,9 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+  public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
   {
-    return new Segment()
+    Segment baseSegment = new Segment()
     {
       @Override
       public SegmentId getId()
@@ -80,6 +81,7 @@ public class CacheTestSegmentLoader implements SegmentLoader
       {
       }
     };
+    return ReferenceCountingSegment.wrapSegment(baseSegment, segment.getShardSpec());
   }
 
   @Override
