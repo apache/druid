@@ -114,7 +114,7 @@ public class LdapUserPrincipal implements Principal
   }
 
   @VisibleForTesting
-  public boolean isExpired(int durationSeconds, int maxDurationSeconds, long nowMillis)
+  boolean isExpired(int durationSeconds, int maxDurationSeconds, long nowMillis)
   {
     long maxCutoffMillis = nowMillis - (maxDurationSeconds * 1000L);
     if (this.createdAt.toEpochMilli() < maxCutoffMillis) {
