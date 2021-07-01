@@ -1892,6 +1892,8 @@ multiValueHandling
 SaveModes
 partitioners
 dataframe
+dataframes
+DataFrames
 DataFrameWriter
 DataSourceReader
 DataSourceWriter

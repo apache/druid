@@ -256,7 +256,7 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     * @param properties
     * @return
     */
-  /* def createAzureCloudBlobIterableFactory(conf: Configuration): AzureCloudBlobIterableFactory = {
+  def createAzureCloudBlobIterableFactory(conf: Configuration): AzureCloudBlobIterableFactory = {
     // Taking advantage of the fact that java.net.URIs deviates from spec and dissallow spaces to use it as a separator.
     val prefixes = conf.getString(DruidConfigurationKeys.azurePrefixesKey)
       .split(" ")
@@ -274,13 +274,22 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     // The constructor for AzureCloudBlobIterator is protected, so no dice here
     val azureCloudBlobIteratorFactory = new AzureCloudBlobIteratorFactory {
       override def create(ignoredPrefixes: JIterable[URI], ignoredMaxListingLength: Int): AzureCloudBlobIterator = {
-        new AzureCloudBlobIterator(azureStorage, listBlobItemHolderFactory, accountConfig, prefixes, maxListingLength)
+        val constructor = classOf[AzureCloudBlobIterator]
+          .getDeclaredConstructors
+          .filter(_.getParameterCount == 5)
+          .head
+        constructor.setAccessible(true)
+        constructor
+          .newInstance(
+            azureStorage, listBlobItemHolderFactory, accountConfig, prefixes, maxListingLength.asInstanceOf[Integer]
+          )
+          .asInstanceOf[AzureCloudBlobIterator]
       }
     }
     (_: JIterable[URI], _: Int) => {
       new AzureCloudBlobIterable(azureCloudBlobIteratorFactory, prefixes, maxListingLength)
     }
-  }*/
+  }
 
   private def convertConfToInstance[T](conf: Configuration, clazz: Class[T]): T = {
     caseInsensitiveMapper.convertValue(conf.toMap, clazz)

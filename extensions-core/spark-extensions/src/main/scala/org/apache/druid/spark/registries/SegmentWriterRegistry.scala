@@ -221,18 +221,13 @@ object SegmentWriterRegistry extends Logging {
           },
           (conf: Configuration) => {
             val azureConf = conf.dive(DruidConfigurationKeys.azureDeepStorageKey)
-            /*val azureCloudBlobIterableFactory =
-              DeepStorageConstructorHelpers.createAzureCloudBlobIterableFactory(properties)*/
 
             new AzureDataSegmentKiller(
               DeepStorageConstructorHelpers.createAzureDataSegmentConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureInputDataConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureAccountConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureStorage(azureConf),
-              MAPPER.readValue[AzureCloudBlobIterableFactory](
-                conf.getString(DruidConfigurationKeys.azureCloudBlobIterableFactoryConfigKey),
-                new TypeReference[AzureCloudBlobIterableFactory] {}
-              )
+              DeepStorageConstructorHelpers.createAzureCloudBlobIterableFactory(azureConf)
             )
           }
         )
