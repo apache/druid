@@ -470,6 +470,9 @@
                     <excludes>
                         <!-- There are UTs for this class but it is very difficult to get required branch coverage -->
                         <exclude>org/apache/druid/metadata/BasicDataSourceExt.class</exclude>
+                        <!-- There are UTs for this class but current packaging is working against the coverage tool -->
+                        <!-- Class will be then excluded until packaging gets fixed -->
+                        <exclude>org/apache/druid/segment/realtime/appenderator/BatchAppenderator.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>
