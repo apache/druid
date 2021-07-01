@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.appenderator;
+package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -30,11 +30,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
-import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorTester;
-import org.apache.druid.segment.realtime.appenderator.BatchAppenderator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
