@@ -31,7 +31,7 @@ Users can create custom extension of the `DynamicConfigProvider` interface that 
 
 For more information, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
-## EnvironmentVariableDynamicConfigProvider
+## Environment variable dynamic config provider
 
 `EnvironmentVariableDynamicConfigProvider` can be used to replace `EnvironmentVariablePasswordProvider`. This class allow users to avoid exposing passwords or other secret information in the runtime.properties file. You can set environment variables in the following example:
 ```json
