@@ -48,4 +48,14 @@ public class DefaultAggregateAveragerFactoryTest
     );
   }
 
+  @Test(expected = UnsupportedOperationException.class)
+  public void testUnsuppportedCreateAverager()
+  {
+    AveragerFactory<?, ?> fac = new DefaultAggregateAveragerFactory("test", 5, 1, "field");
+    Assert.assertThat(
+        fac.createAverager(),
+        IsInstanceOf.instanceOf(DefaultAggregateAverager.class)
+    );
+  }
+
 }

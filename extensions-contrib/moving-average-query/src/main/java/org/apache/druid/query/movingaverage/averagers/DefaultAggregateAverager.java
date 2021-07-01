@@ -24,8 +24,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ObjectColumnSelector;
 
-import javax.annotation.Nullable;
-
+/**
+ * This `default` type averager will use the same aggregator of its dependent aggregation field to do trailing aggregate.
+ */
 public class DefaultAggregateAverager extends BaseAverager<Object, Object>
 {
 
@@ -48,6 +49,7 @@ public class DefaultAggregateAverager extends BaseAverager<Object, Object>
   @Override
   public boolean finalizeMetric()
   {
+    // we don't finalize metrics when adding them to the buckets to ensure aggregating complex metrics correctly
     return false;
   }
 
@@ -57,8 +59,9 @@ public class DefaultAggregateAverager extends BaseAverager<Object, Object>
     boolean reset = true;
     AggregateCombiner combiner = agg.makeAggregateCombiner();
     for (int i = 0; i < numBuckets; i += cycleSize) {
-      if (buckets[(i + startFrom) % numBuckets] != null) {
-        selector.setObject(buckets[(i + startFrom) % numBuckets]);
+      int index = (i + startFrom) % numBuckets;
+      if (buckets[index] != null) {
+        selector.setObject(buckets[index]);
         if (reset) {
           combiner.reset(selector);
           reset = false;
@@ -81,7 +84,6 @@ public class DefaultAggregateAverager extends BaseAverager<Object, Object>
     {
     }
 
-    @Nullable
     @Override
     public Object getObject()
     {

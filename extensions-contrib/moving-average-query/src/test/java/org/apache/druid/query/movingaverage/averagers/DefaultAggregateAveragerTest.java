@@ -20,6 +20,7 @@
 package org.apache.druid.query.movingaverage.averagers;
 
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class DefaultAggregateAveragerTest
         "test",
         "field",
         1,
-        new DoubleMaxAggregatorFactory("test1", "field1")
+        new DoubleMaxAggregatorFactory("field", "field1")
     );
 
     Assert.assertEquals(0.0, (Double) avg.computeResult(), 0.0);
@@ -59,4 +60,41 @@ public class DefaultAggregateAveragerTest
     avg.skip();
     Assert.assertEquals(3.0, (Double) avg.computeResult(), 0.0);
   }
+
+  @Test
+  public void testCycleSizeFunction()
+  {
+    // testing cycleSize functionality
+    BaseAverager<Object, Object> averager = new DefaultAggregateAverager(
+        Object.class,
+        14,
+        "test",
+        "field",
+        7,
+        new DoubleSumAggregatorFactory("field", "field1")
+    );
+
+    averager.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
+    Assert.assertEquals(2.0, (Double) averager.computeResult(), 0.0);
+
+    averager.addElement(Collections.singletonMap("field", 4.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 5.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 6.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 7.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 8.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 9.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", null), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 11.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 12.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 13.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 14.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 15.0), new HashMap<>());
+    averager.addElement(Collections.singletonMap("field", 16.0), new HashMap<>());
+
+    Assert.assertEquals(15.0, (Double) averager.computeResult(), 0.0);
+
+    averager.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
+    Assert.assertEquals(17.0, (Double) averager.computeResult(), 0.0);
+  }
+
 }

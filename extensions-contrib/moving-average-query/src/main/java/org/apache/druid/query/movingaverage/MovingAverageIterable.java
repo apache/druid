@@ -293,7 +293,7 @@ public class MovingAverageIterable implements Iterable<Row>
       if (!skip) {
         avg.forEach(af -> af.addElement(event, aggMap));
       } else {
-        avg.forEach(Averager::skip);
+        avg.forEach(af -> af.skip());
       }
 
       avg.forEach(af -> result.put(af.getName(), af.getResult()));

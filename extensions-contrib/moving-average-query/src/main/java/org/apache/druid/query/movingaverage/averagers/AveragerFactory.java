@@ -81,6 +81,13 @@ public interface AveragerFactory<R, F>
    */
   Averager<R> createAverager();
 
+  /**
+   * Create an Averager for a specific dimension combination.
+   *
+   * @param aggMap The Map of AggregatorFactory used to create averager.
+   *
+   * @return The {@link Averager}
+   */
   default Averager<R> createAverager(Map<String, AggregatorFactory> aggMap)
   {
     return createAverager();
@@ -104,11 +111,6 @@ public interface AveragerFactory<R, F>
    * @return A {@link Comparator}
    */
   Comparator<R> getComparator();
-
-  default Comparator getComparator(Map<String, AggregatorFactory> aggMap)
-  {
-    return getComparator();
-  }
 
   /**
    * Finalize result value.

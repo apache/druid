@@ -63,16 +63,9 @@ public class DefaultAggregateAveragerFactory extends BaseAveragerFactory<Object,
   }
 
   @Override
-  public Comparator<Object> getComparator()
+  public Comparator getComparator()
   {
-    throw new UnsupportedOperationException("Invalid operation for DefaultAggregateAveragerFactory.");
+    return Comparator.naturalOrder();
   }
-
-  @Override
-  public Comparator<Object> getComparator(Map<String, AggregatorFactory> aggMap)
-  {
-    return aggMap.get(fieldName).getComparator();
-  }
-
 
 }
