@@ -41,6 +41,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -218,6 +219,15 @@ public class DefaultLimitSpec implements LimitSpec
     if (!sortingNeeded) {
       // If granularity is ALL, sortByDimsFirst doesn't change the sorting order.
       sortingNeeded = !query.getGranularity().equals(Granularities.ALL) && query.getContextSortByDimsFirst();
+    }
+
+    if (!sortingNeeded) {
+      Map<String, Object> timestampFieldContext = GroupByQueryHelper.findTimestampResultField(query);
+      if (!timestampFieldContext.isEmpty()) {
+        int timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        // change the sorting order when timestampResultField is neither first nor last dimension
+        sortingNeeded = timestampResultFieldIndex != 0 && timestampResultFieldIndex != query.getDimensions().size() - 1;
+      }
     }
 
     final Function<Sequence<ResultRow>, Sequence<ResultRow>> sortAndLimitFn;

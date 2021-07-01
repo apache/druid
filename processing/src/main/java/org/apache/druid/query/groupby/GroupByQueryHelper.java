@@ -39,17 +39,22 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.expression.ExprUtils;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -245,5 +250,41 @@ public class GroupByQueryHelper
     }
 
     return resultRow;
+  }
+
+  public static Map<String, Object> findTimestampResultField(GroupByQuery query)
+  {
+    Map<String, Object> context = new HashMap<>();
+    if (!Granularities.ALL.equals(query.getGranularity())) {
+      return context;
+    }
+    // in this case, the timestampResult optimization is not neccessary
+    if (query.isApplyLimitPushDown()) {
+      return context;
+    }
+    Granularity queryGranularity = null;
+    for (int i = 0; i < query.getDimensions().size(); i++) {
+      DimensionSpec dimensionSpec = query.getDimensions().get(i);
+      VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(dimensionSpec.getDimension());
+      if (!(virtualColumn instanceof ExpressionVirtualColumn)) {
+        continue;
+      }
+      ExpressionVirtualColumn exprVirtualColumn = (ExpressionVirtualColumn) virtualColumn;
+      Granularity granularity = ExprUtils.toQueryGranularity(exprVirtualColumn.getParsedExpression().get());
+      if (granularity == null) {
+        continue;
+      }
+      if (queryGranularity != null) {
+        // group by more than one timestamp_floor
+        // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
+        context = new HashMap<>();
+        break;
+      }
+      queryGranularity = granularity;
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionSpec.getOutputName());
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+      context.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, i);
+    }
+    return context;
   }
 }
