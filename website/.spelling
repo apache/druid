@@ -1888,3 +1888,18 @@ PiB
 protobuf
 Golang
 multiValueHandling
+ - ../docs/development/extensions-core/spark.md
+SaveModes
+partitioners
+dataframe
+DataFrameWriter
+DataSourceReader
+DataSourceWriter
+PasswordProvider
+deserializable
+DimensionSchemas
+SegmentWriterRegistry
+keyId
+base-64
+DataSourceV2
+_or_
