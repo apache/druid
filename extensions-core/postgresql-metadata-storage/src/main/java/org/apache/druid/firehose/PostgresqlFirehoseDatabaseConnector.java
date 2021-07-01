@@ -23,16 +23,13 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.Sets;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
-import org.postgresql.Driver;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 
-import java.util.Properties;
 import java.util.Set;
 
 
@@ -68,19 +65,8 @@ public class PostgresqlFirehoseDatabaseConnector extends SQLFirehoseDatabaseConn
   }
 
   @Override
-  public Set<String> findPropertyKeysFromConnectURL(String connectUri)
+  public Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown)
   {
-    // This method should be in sync with
-    // - org.apache.druid.server.lookup.jdbc.JdbcDataFetcher.checkConnectionURL()
-    // - org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace.checkConnectionURL()
-
-    // Postgresql JDBC driver is embedded and thus must be loaded.
-    Properties properties = Driver.parseURL(connectUri, null);
-    if (properties == null) {
-      throw new IAE("Invalid URL format for PostgreSQL: [%s]", connectUri);
-    }
-    Set<String> keys = Sets.newHashSetWithExpectedSize(properties.size());
-    properties.forEach((k, v) -> keys.add((String) k));
-    return keys;
+    return ConnectionUriUtils.tryParseJdbcUriParameters(connectUri, allowUnknown);
   }
 }

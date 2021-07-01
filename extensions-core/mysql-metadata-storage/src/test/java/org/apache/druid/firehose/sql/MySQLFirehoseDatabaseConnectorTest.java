@@ -50,6 +50,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -70,6 +71,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -93,6 +95,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -115,6 +118,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -138,6 +142,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -161,6 +166,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -194,6 +200,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -215,6 +222,7 @@ public class MySQLFirehoseDatabaseConnectorTest
     expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         new JdbcAccessSecurityConfig()
     );
   }

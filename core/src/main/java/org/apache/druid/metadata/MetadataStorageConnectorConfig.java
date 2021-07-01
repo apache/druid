@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.util.Properties;
 
 /**
@@ -48,6 +49,10 @@ public class MetadataStorageConnectorConfig
 
   @JsonProperty("dbcp")
   private Properties dbcpProperties;
+
+  @Nullable
+  @JsonProperty("driverClassName")
+  private String driverClassName;
 
   public boolean isCreateTables()
   {
@@ -88,6 +93,13 @@ public class MetadataStorageConnectorConfig
     return dbcpProperties;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getDriverClassName()
+  {
+    return driverClassName;
+  }
+
   @Override
   public String toString()
   {
@@ -97,6 +109,7 @@ public class MetadataStorageConnectorConfig
            ", user='" + user + '\'' +
            ", passwordProvider=" + passwordProvider +
            ", dbcpProperties=" + dbcpProperties +
+           ", driverClassName='" + driverClassName + '\'' +
            '}';
   }
 
@@ -132,6 +145,12 @@ public class MetadataStorageConnectorConfig
         : !getDbcpProperties().equals(that.getDbcpProperties())) {
       return false;
     }
+
+    if (getDriverClassName() == null
+        ? that.getDriverClassName() != null
+        : !getDriverClassName().equals(that.getDriverClassName())) {
+      return false;
+    }
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
 
   }
@@ -146,6 +165,7 @@ public class MetadataStorageConnectorConfig
     result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
     result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
     result = 31 * result + (dbcpProperties != null ? dbcpProperties.hashCode() : 0);
+    result = 31 * result + (driverClassName != null ? driverClassName.hashCode() : 0);
     return result;
   }
 }

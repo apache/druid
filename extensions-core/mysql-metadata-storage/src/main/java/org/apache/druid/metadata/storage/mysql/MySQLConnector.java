@@ -33,7 +33,6 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.File;
@@ -46,7 +45,6 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
-  private static final String MYSQL_JDBC_DRIVER_CLASS_NAME = "com.mysql.jdbc.Driver";
 
   private final DBI dbi;
 
@@ -54,20 +52,20 @@ public class MySQLConnector extends SQLMetadataConnector
   public MySQLConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      MySQLConnectorConfig connectorConfig
+      MySQLConnectorSslConfig connectorSslConfig,
+      MySQLConnectorDriverConfig driverConfig
   )
   {
     super(config, dbTables);
-
     try {
-      Class.forName(MYSQL_JDBC_DRIVER_CLASS_NAME, false, getClass().getClassLoader());
+      Class.forName(driverConfig.getDriverClassName(), false, getClass().getClassLoader());
     }
     catch (ClassNotFoundException e) {
       throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                    + "distribution but is required to use MySQL. Please download a compatible library (for example "
                    + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                    + "https://druid.apache.org/downloads for more details.",
-                MYSQL_JDBC_DRIVER_CLASS_NAME
+                    driverConfig.getDriverClassName()
       );
     }
 
@@ -75,67 +73,67 @@ public class MySQLConnector extends SQLMetadataConnector
     // MySQL driver is classloader isolated as part of the extension
     // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName(MYSQL_JDBC_DRIVER_CLASS_NAME);
-    datasource.addConnectionProperty("useSSL", String.valueOf(connectorConfig.isUseSSL()));
-    if (connectorConfig.isUseSSL()) {
+    datasource.setDriverClassName(driverConfig.getDriverClassName());
+    datasource.addConnectionProperty("useSSL", String.valueOf(connectorSslConfig.isUseSSL()));
+    if (connectorSslConfig.isUseSSL()) {
       log.info("SSL is enabled on this MySQL connection. ");
 
       datasource.addConnectionProperty(
           "verifyServerCertificate",
-          String.valueOf(connectorConfig.isVerifyServerCertificate())
+          String.valueOf(connectorSslConfig.isVerifyServerCertificate())
       );
-      if (connectorConfig.isVerifyServerCertificate()) {
+      if (connectorSslConfig.isVerifyServerCertificate()) {
         log.info("Server certificate verification is enabled. ");
 
-        if (connectorConfig.getTrustCertificateKeyStoreUrl() != null) {
+        if (connectorSslConfig.getTrustCertificateKeyStoreUrl() != null) {
           datasource.addConnectionProperty(
               "trustCertificateKeyStoreUrl",
-              new File(connectorConfig.getTrustCertificateKeyStoreUrl()).toURI().toString()
+              new File(connectorSslConfig.getTrustCertificateKeyStoreUrl()).toURI().toString()
           );
         }
-        if (connectorConfig.getTrustCertificateKeyStoreType() != null) {
+        if (connectorSslConfig.getTrustCertificateKeyStoreType() != null) {
           datasource.addConnectionProperty(
               "trustCertificateKeyStoreType",
-              connectorConfig.getTrustCertificateKeyStoreType()
+              connectorSslConfig.getTrustCertificateKeyStoreType()
           );
         }
-        if (connectorConfig.getTrustCertificateKeyStorePassword() == null) {
+        if (connectorSslConfig.getTrustCertificateKeyStorePassword() == null) {
           log.warn(
               "Trust store password is empty. Ensure that the trust store has been configured with an empty password.");
         } else {
           datasource.addConnectionProperty(
               "trustCertificateKeyStorePassword",
-              connectorConfig.getTrustCertificateKeyStorePassword()
+              connectorSslConfig.getTrustCertificateKeyStorePassword()
           );
         }
       }
-      if (connectorConfig.getClientCertificateKeyStoreUrl() != null) {
+      if (connectorSslConfig.getClientCertificateKeyStoreUrl() != null) {
         datasource.addConnectionProperty(
             "clientCertificateKeyStoreUrl",
-            new File(connectorConfig.getClientCertificateKeyStoreUrl()).toURI().toString()
+            new File(connectorSslConfig.getClientCertificateKeyStoreUrl()).toURI().toString()
         );
       }
-      if (connectorConfig.getClientCertificateKeyStoreType() != null) {
+      if (connectorSslConfig.getClientCertificateKeyStoreType() != null) {
         datasource.addConnectionProperty(
             "clientCertificateKeyStoreType",
-            connectorConfig.getClientCertificateKeyStoreType()
+            connectorSslConfig.getClientCertificateKeyStoreType()
         );
       }
-      if (connectorConfig.getClientCertificateKeyStorePassword() != null) {
+      if (connectorSslConfig.getClientCertificateKeyStorePassword() != null) {
         datasource.addConnectionProperty(
             "clientCertificateKeyStorePassword",
-            connectorConfig.getClientCertificateKeyStorePassword()
+            connectorSslConfig.getClientCertificateKeyStorePassword()
         );
       }
       Joiner joiner = Joiner.on(",").skipNulls();
-      if (connectorConfig.getEnabledSSLCipherSuites() != null) {
+      if (connectorSslConfig.getEnabledSSLCipherSuites() != null) {
         datasource.addConnectionProperty(
             "enabledSSLCipherSuites",
-            joiner.join(connectorConfig.getEnabledSSLCipherSuites())
+            joiner.join(connectorSslConfig.getEnabledSSLCipherSuites())
         );
       }
-      if (connectorConfig.getEnabledTLSProtocols() != null) {
-        datasource.addConnectionProperty("enabledTLSProtocols", joiner.join(connectorConfig.getEnabledTLSProtocols()));
+      if (connectorSslConfig.getEnabledTLSProtocols() != null) {
+        datasource.addConnectionProperty("enabledTLSProtocols", joiner.join(connectorSslConfig.getEnabledTLSProtocols()));
       }
     }
 
@@ -220,24 +218,19 @@ public class MySQLConnector extends SQLMetadataConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(
-                StringUtils.format(
-                    "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
-                    tableName,
-                    keyColumn,
-                    valueColumn
-                )
-            )
-                  .bind("key", key)
-                  .bind("value", value)
-                  .execute();
-            return null;
-          }
+        handle -> {
+          handle.createStatement(
+              StringUtils.format(
+                  "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
+                  tableName,
+                  keyColumn,
+                  valueColumn
+              )
+          )
+                .bind("key", key)
+                .bind("value", value)
+                .execute();
+          return null;
         }
     );
   }
