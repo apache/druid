@@ -136,7 +136,6 @@ public class Appenderators
         metrics,
         dataSegmentPusher,
         objectMapper,
-        null,
         indexIO,
         indexMerger,
         rowIngestionMeters,

@@ -154,7 +154,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       final Appenderator appenderator = tester.getAppenderator();
 
       // startJob
-      Assert.assertEquals(null, appenderator.startJob());
+      Assert.assertNull(appenderator.startJob());
 
       // getDataSource
       Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
@@ -309,7 +309,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
           currentInMemoryIndexSize,
@@ -324,7 +324,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar_" + i, 1), null);
       }
-      sinkSizeOverhead = 1 * BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
+      sinkSizeOverhead = BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
@@ -430,7 +430,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead,
           ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory()

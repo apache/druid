@@ -46,6 +46,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -64,13 +65,11 @@ public class BatchAppenderatorTester implements AutoCloseable
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
-  private final IndexTask.IndexTuningConfig tuningConfig;
+  private final AppenderatorConfig tuningConfig;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
-  private final IndexIO indexIO;
-  private final IndexMerger indexMerger;
   private final ServiceEmitter emitter;
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
@@ -182,7 +181,7 @@ public class BatchAppenderatorTester implements AutoCloseable
 
     metrics = new FireDepartmentMetrics();
 
-    indexIO = new IndexIO(
+    IndexIO indexIO = new IndexIO(
         objectMapper,
         new ColumnConfig()
         {
@@ -193,7 +192,11 @@ public class BatchAppenderatorTester implements AutoCloseable
           }
         }
     );
-    indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    IndexMerger indexMerger = new IndexMergerV9(
+        objectMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
 
     emitter = new ServiceEmitter(
         "test",
@@ -263,7 +266,7 @@ public class BatchAppenderatorTester implements AutoCloseable
     return schema;
   }
 
-  public IndexTask.IndexTuningConfig getTuningConfig()
+  public AppenderatorConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -271,11 +274,6 @@ public class BatchAppenderatorTester implements AutoCloseable
   public FireDepartmentMetrics getMetrics()
   {
     return metrics;
-  }
-
-  public DataSegmentPusher getDataSegmentPusher()
-  {
-    return dataSegmentPusher;
   }
 
   public ObjectMapper getObjectMapper()

@@ -89,7 +89,6 @@ public class BatchAppenderator implements Appenderator
   public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
 
   private static final EmittingLogger log = new EmittingLogger(BatchAppenderator.class);
-  private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
 
   private final String myId;
@@ -180,15 +179,6 @@ public class BatchAppenderator implements Appenderator
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
 
-  /**
-   * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   * <p>
-   * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
-   * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   * <p>
-   * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
-   * Appenderators.
-   */
   BatchAppenderator(
       String id,
       DataSchema schema,
@@ -196,18 +186,12 @@ public class BatchAppenderator implements Appenderator
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
-      @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    Preconditions.checkArgument(
-        sinkQuerySegmentWalker == null,
-        "Batch appenderator does not use a versioned timeline"
-    );
-
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -463,7 +447,7 @@ public class BatchAppenderator implements Appenderator
   }
 
   @Override
-  public void clear() throws InterruptedException
+  public void clear()
   {
     clear(true);
   }
@@ -554,7 +538,6 @@ public class BatchAppenderator implements Appenderator
     if (indexesToPersist.isEmpty()) {
       log.info("No indexes will be peristed");
     }
-    final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
 
@@ -590,13 +573,6 @@ public class BatchAppenderator implements Appenderator
       metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
       persistStopwatch.stop();
     }
-
-    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
-    metrics.incrementPersistBackPressureMillis(startDelay);
-    if (startDelay > WARN_DELAY) {
-      log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
-    }
-    runExecStopwatch.stop();
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
@@ -634,7 +610,7 @@ public class BatchAppenderator implements Appenderator
         identifiersAndSinks = getIdentifierAndSinkForPersistedFile(identifier);
       }
       catch (IOException e) {
-        throw new ISE(e, "Failed to retrieve sinks for identifier", identifier);
+        throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
       }
       final DataSegment dataSegment = mergeAndPush(
           identifiersAndSinks.lhs,
@@ -693,7 +669,7 @@ public class BatchAppenderator implements Appenderator
       log.warn("Sink metadata not found just before merge for identifier [%s]", identifier);
     } else if (numHydrants != sm.getNumHydrants()) {
       throw new ISE("Number of restored hydrants[%d] for identifier[%s] does not match expected value[%d]",
-                    numHydrants, identifier, sinksMetadata.get(identifier).getNumHydrants());
+                    numHydrants, identifier, sm.getNumHydrants());
     }
 
     try {
@@ -929,7 +905,7 @@ public class BatchAppenderator implements Appenderator
         (dir, fileName) -> !(Ints.tryParse(fileName) == null)
     );
     if (sinkFiles == null) {
-      throw new ISE("Problem reading persisted sinks in path", identifierPath);
+      throw new ISE("Problem reading persisted sinks in path[%s]", identifierPath);
     }
 
     Arrays.sort(
@@ -1067,7 +1043,7 @@ public class BatchAppenderator implements Appenderator
         // to pull it from there....
         SinkMetadata sm = sinksMetadata.get(identifier);
         if (sm == null) {
-          throw new ISE("Sink must not be null for identifier when persisting hydrant", identifier);
+          throw new ISE("Sink must not be null for identifier when persisting hydrant[%s]", identifier);
         }
         final File persistDir = createPersistDirIfNeeded(identifier);
         indexMerger.persist(
