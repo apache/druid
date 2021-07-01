@@ -73,7 +73,8 @@ public class EnvironmentVariableDynamicConfigProviderTest
       theCaseInsensitiveEnvironmentField.setAccessible(true);
       Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvironmentField.get(null);
       cienv.putAll(newenv);
-    } catch (NoSuchFieldException e) {
+    }
+    catch (NoSuchFieldException e) {
       Class[] classes = Collections.class.getDeclaredClasses();
       Map<String, String> env = System.getenv();
       for (Class cl : classes) {
