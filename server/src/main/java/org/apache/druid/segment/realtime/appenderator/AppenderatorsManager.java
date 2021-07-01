@@ -25,6 +25,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
@@ -38,8 +39,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
-
-import java.util.concurrent.ExecutorService;
 
 /**
  * This interface defines entities that create and manage potentially multiple {@link Appenderator} instances.
@@ -76,7 +75,7 @@ public interface AppenderatorsManager
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
