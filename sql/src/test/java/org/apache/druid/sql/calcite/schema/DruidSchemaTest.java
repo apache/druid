@@ -28,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
@@ -76,6 +77,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -254,9 +256,13 @@ public class DruidSchemaTest extends CalciteTestBase
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
+        new MapJoinableFactory(
+            ImmutableSet.of(globalTableJoinable),
+            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
+        ),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig()
     )
     {
       @Override
@@ -269,16 +275,21 @@ public class DruidSchemaTest extends CalciteTestBase
     };
 
     schema2 = new DruidSchema(
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            serverView,
-            segmentManager,
-            new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
-            PLANNER_CONFIG_DEFAULT,
-            new NoopEscalator()
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(
+            ImmutableSet.of(globalTableJoinable),
+            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
+        ),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig()
     )
     {
 
       boolean throwException = true;
+
       @Override
       protected DruidTable buildDruidTable(String dataSource)
       {
@@ -496,9 +507,9 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(1L, metadata.isRealtime());
     // get the historical server
     final ImmutableDruidServer historicalServer = druidServers.stream()
-                                                        .filter(s -> s.getType().equals(ServerType.HISTORICAL))
-                                                        .findAny()
-                                                        .orElse(null);
+                                                              .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                              .findAny()
+                                                              .orElse(null);
 
     Assert.assertNotNull(historicalServer);
     final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();

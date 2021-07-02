@@ -1728,6 +1728,15 @@ line.
 
 See [general query configuration](#general-query-configuration).
 
+###### Broker Generated Query Configuration Supplementation
+
+The Broker generates queries internally. This configuration section describes how an operator can augment the configuration
+of these queries.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.broker.internal.query.config.context1|A string formatted `key:value` map query context to add to internally generated broker queries.|null|
+
 #### SQL
 
 The Druid SQL server is configured through the following properties on the Broker.
