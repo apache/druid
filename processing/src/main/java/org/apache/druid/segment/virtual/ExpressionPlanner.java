@@ -80,17 +80,13 @@ public class ExpressionPlanner
       //    SINGLE_INPUT_MAPPABLE
       // is set when a single input string column, which can be multi-valued, but if so, it must be implicitly mappable
       // (i.e. the expression is not treating its input as an array and not wanting to output an array)
-      if (capabilities != null) {
+      if (capabilities != null && !analysis.hasInputArrays() && !analysis.isOutputArray()) {
         boolean isSingleInputMappable = false;
-        boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse() &&
-                                      !analysis.hasInputArrays() &&
-                                      !analysis.isOutputArray();
+        boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse();
         if (capabilities.getType() == ValueType.STRING) {
           isSingleInputScalar &= capabilities.isDictionaryEncoded().isTrue();
           isSingleInputMappable = capabilities.isDictionaryEncoded().isTrue() &&
-                                  !capabilities.hasMultipleValues().isUnknown() &&
-                                  !analysis.hasInputArrays() &&
-                                  !analysis.isOutputArray();
+                                  !capabilities.hasMultipleValues().isUnknown();
         }
 
         // if satisfied, set single input output type and flags
