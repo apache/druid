@@ -5787,3 +5787,26 @@ libraries:
   - org.scala-lang: scala-library
   - org.scala-lang: scala-reflect
   - org.scala-lang: scalap
+
+---
+
+# Not sure why check-license finds these as well (they're not in mvn dependency:tree for the spark-extensions module)
+name: Paranamer
+license_category: binary
+module: extensions/druid-spark-extensions
+license_name: BSD-3-Clause License
+version: 2.8
+copyright: Paul Hammant & ThoughtWorks Inc
+license_file_path: licenses/bin/paranamer.BSD3
+libraries:
+  - com.thoughtworks.paranamer: paranamer
+
+---
+
+name: Jackson Paranamer
+license_category: binary
+module: extensions/druid-spark-extensions
+license_name: Apache License version 2.0
+version: 2.10.5
+libraries:
+  - com.fasterxml.jackson.module: jackson-module-paranamer
