@@ -242,11 +242,12 @@ public final class ConnectionUriUtils
         continue;
       }
       try {
-        if (!Objects.equal(field.get(configuration), field.get(defaultConfiguration))) {
+        final Method fieldGetter = configurationClass.getMethod(field.getName());
+        if (!Objects.equal(fieldGetter.invoke(configuration), fieldGetter.invoke(defaultConfiguration))) {
           keys.add(field.getName());
         }
       }
-      catch (IllegalAccessException ignored) {
+      catch (IllegalAccessException | NoSuchMethodException ignored) {
         // ignore stuff we aren't allowed to read
       }
     }

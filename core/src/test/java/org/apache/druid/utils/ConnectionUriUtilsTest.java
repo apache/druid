@@ -103,7 +103,7 @@ public class ConnectionUriUtilsTest
       Assert.assertEquals(7, props.size());
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
-      // though this would be 5 if mysql wasn't loaded in classpath because it would fall back to mariadb
+      // though this would be 4 if mysql wasn't loaded in classpath because it would fall back to mariadb
       Assert.assertEquals(9, props.size());
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
@@ -167,7 +167,25 @@ public class ConnectionUriUtilsTest
     public void testMariaDb3xDriver() throws Exception
     {
       // at the time of adding this test, mariadb connector/j 3.x does not actually parse jdbc:mysql uris
+      // so this would throw an IAE.class instead of ClassNotFoundException.class if the connector is swapped out
+      // in maven dependencies
       ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI);
+    }
+
+    @Test(expected = ClassNotFoundException.class)
+    public void testMariaDb3xDriverMariaUri() throws Exception
+    {
+      // mariadb 3.x driver cannot be loaded alongside 2.x, so this will fail with class not found
+      // however, if we swap out version in pom then we end up with 8 keys where
+      // "database", "addresses", "codecs", and "initialUrl" are added as extras
+      // we should perhaps consider adding them to built-in allowed lists in the future when this driver is no longer
+      // an alpha release
+      Set<String> props = ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI);
+      Assert.assertEquals(8, props.size());
+      Assert.assertTrue(props.contains("user"));
+      Assert.assertTrue(props.contains("password"));
+      Assert.assertTrue(props.contains("otherOptions"));
+      Assert.assertTrue(props.contains("keyonly"));
     }
   }
 }
