@@ -225,8 +225,9 @@ public class DefaultLimitSpec implements LimitSpec
       Map<String, Object> timestampFieldContext = GroupByQueryHelper.findTimestampResultField(query);
       if (!timestampFieldContext.isEmpty()) {
         int timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
-        // change the sorting order when timestampResultField is neither first nor last dimension
-        sortingNeeded = timestampResultFieldIndex != 0 && timestampResultFieldIndex != query.getDimensions().size() - 1;
+        sortingNeeded = query.getContextSortByDimsFirst()
+                        ? timestampResultFieldIndex != query.getDimensions().size() - 1
+                        : timestampResultFieldIndex != 0;
       }
     }
 
