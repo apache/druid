@@ -38,10 +38,11 @@ import java.util.Set;
 public class PostgresqlFirehoseDatabaseConnectorTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private static final JdbcAccessSecurityConfig INJECTABLE_CONFIG = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+  private static final JdbcAccessSecurityConfig INJECTED_CONF = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+
   static {
     MAPPER.registerModules(new PostgreSQLMetadataStorageModule().getJacksonModules());
-    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTABLE_CONFIG));
+    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF));
   }
 
   @Rule
@@ -61,7 +62,7 @@ public class PostgresqlFirehoseDatabaseConnectorTest
     };
     PostgresqlFirehoseDatabaseConnector connector = new PostgresqlFirehoseDatabaseConnector(
         connectorConfig,
-        INJECTABLE_CONFIG
+        INJECTED_CONF
     );
     PostgresqlFirehoseDatabaseConnector andBack = MAPPER.readValue(
         MAPPER.writeValueAsString(connector),

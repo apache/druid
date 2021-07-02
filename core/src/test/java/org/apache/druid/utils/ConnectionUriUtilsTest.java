@@ -117,7 +117,7 @@ public class ConnectionUriUtilsTest
       Assert.assertEquals(0, props.size());
 
       expectedException.expect(IAE.class);
-      props = ConnectionUriUtils.tryParseJdbcUriParameters(UNKNOWN_URI, false);
+      ConnectionUriUtils.tryParseJdbcUriParameters(UNKNOWN_URI, false);
     }
 
     @Test

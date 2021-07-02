@@ -39,11 +39,13 @@ import java.util.Set;
 public class MySQLFirehoseDatabaseConnectorTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private static final JdbcAccessSecurityConfig INJECTABLE_CONFIG = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+  private static final JdbcAccessSecurityConfig INJECTED_CONF = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+
   static {
     MAPPER.registerModules(new MySQLMetadataStorageModule().getJacksonModules());
-    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTABLE_CONFIG));
+    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF));
   }
+
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
@@ -61,7 +63,7 @@ public class MySQLFirehoseDatabaseConnectorTest
     MySQLFirehoseDatabaseConnector connector = new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        INJECTABLE_CONFIG
+        INJECTED_CONF
     );
     MySQLFirehoseDatabaseConnector andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
     Assert.assertEquals(connector, andBack);
@@ -70,7 +72,7 @@ public class MySQLFirehoseDatabaseConnectorTest
     connector = new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         "some.class.name.Driver",
-        INJECTABLE_CONFIG
+        INJECTED_CONF
     );
     andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
     Assert.assertEquals(connector, andBack);
