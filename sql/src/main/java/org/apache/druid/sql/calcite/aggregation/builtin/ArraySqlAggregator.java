@@ -53,7 +53,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -134,46 +133,43 @@ public class ArraySqlAggregator implements SqlAggregator
           break;
       }
     }
-    List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
       VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
-      virtualColumns.add(vc);
       fieldName = vc.getOutputName();
     }
 
     if (aggregateCall.isDistinct()) {
       return Aggregation.create(
-          virtualColumns,
           new ExpressionLambdaAggregatorFactory(
               name,
               ImmutableSet.of(fieldName),
               null,
               initialvalue,
               null,
+              true,
               StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
               null,
-              "if(array_length(o) == 0, null, o)",
+              null,
               maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
               macroTable
           )
       );
     } else {
       return Aggregation.create(
-          virtualColumns,
           new ExpressionLambdaAggregatorFactory(
               name,
               ImmutableSet.of(fieldName),
               null,
               initialvalue,
               null,
+              true,
               StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
               null,
-              "if(array_length(o) == 0, null, o)",
+              null,
               maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
               macroTable
           )

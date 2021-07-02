@@ -147,7 +147,7 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil</artifactId>
+      <artifactId>fastutil-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

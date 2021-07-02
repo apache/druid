@@ -65,6 +65,7 @@ public class QueryContexts
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   public static final String USE_CACHE_KEY = "useCache";
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
+  public static final String BY_SEGMENT_KEY = "bySegment";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -139,7 +140,7 @@ public class QueryContexts
 
   public static <T> boolean isBySegment(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "bySegment", defaultValue);
+    return parseBoolean(query, BY_SEGMENT_KEY, defaultValue);
   }
 
   public static <T> boolean isPopulateCache(Query<T> query)

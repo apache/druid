@@ -430,11 +430,14 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testRoundWithNullValue()
+  public void testRoundWithNullValueOrInvalid()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("null", "STRING"),
-        Pair.of("x", "STRING")
+        Pair.of("x", "STRING"),
+        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("c", "DOUBLE_ARRAY"),
+        Pair.of("a", "STRING_ARRAY")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       if (NullHandling.sqlCompatible()) {
@@ -446,41 +449,13 @@ public class FunctionTest extends InitializedNullHandlingTest
         }
         catch (IllegalArgumentException e) {
           Assert.assertEquals(
-              String.format(
-                  Locale.ENGLISH,
+              StringUtils.format(
                   "The first argument to the function[round] should be integer or double type but got the type: %s",
                   argAndType.rhs
               ),
               e.getMessage()
           );
         }
-      }
-    }
-  }
-
-  @Test
-  public void testRoundWithInvalidFirstArgument()
-  {
-    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
-        Pair.of("b", "LONG_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY"),
-        Pair.of("a", "STRING_ARRAY")
-
-    );
-    for (Pair<String, String> argAndType : invalidArguments) {
-      try {
-        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
-        Assert.fail("Did not throw IllegalArgumentException");
-      }
-      catch (IllegalArgumentException e) {
-        Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
-                "The first argument to the function[round] should be integer or double type but got the type: %s",
-                argAndType.rhs
-            ),
-            e.getMessage()
-        );
       }
     }
   }
@@ -502,8 +477,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       }
       catch (IllegalArgumentException e) {
         Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
+            StringUtils.format(
                 "The second argument to the function[round] should be integer type but got the type: %s",
                 argAndType.rhs
             ),
@@ -622,6 +596,16 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseConvertDoubleToLongBits(null)", null);
   }
 
+  @Test
+  public void testRepeat()
+  {
+    assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat(null, 10)", null);
+    assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
@@ -631,11 +615,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
 
+
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
@@ -652,5 +639,7 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

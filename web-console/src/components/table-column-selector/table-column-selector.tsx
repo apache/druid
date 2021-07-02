@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Menu, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
@@ -60,7 +61,7 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
   const counterText = `(${columns.filter(isColumnShown).length}/${columns.length})`;
 
   return (
-    <Popover
+    <Popover2
       className="table-column-selector"
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
@@ -73,6 +74,6 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
       <Button rightIcon={IconNames.CARET_DOWN}>
         Columns <span className="counter">{counterText}</span>
       </Button>
-    </Popover>
+    </Popover2>
   );
 });

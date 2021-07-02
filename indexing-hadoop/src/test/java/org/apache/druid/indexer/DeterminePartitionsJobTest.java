@@ -338,7 +338,6 @@ public class DeterminePartitionsJobTest
                 false,
                 null,
                 null,
-                null,
                 false,
                 false,
                 null,

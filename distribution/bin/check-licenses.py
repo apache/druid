@@ -330,7 +330,7 @@ def check_licenses(license_yaml, dependency_reports_root):
                 # Determine if it's druid core or an extension
                 druid_module_name = find_druid_module_name(dirpath)
                 print_log_to_stderr("Parsing {}".format(full_path))
-                with open(full_path) as report_file:
+                with open(full_path, encoding="utf-8") as report_file:
                     parser = DependencyReportParser(druid_module_name, compatible_license_names)
                     reported_dep_to_licenses.update(parser.parse(report_file))
 

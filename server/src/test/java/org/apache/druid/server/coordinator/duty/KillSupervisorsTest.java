@@ -68,6 +68,9 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         10,
         null
     );
@@ -90,6 +93,9 @@ public class KillSupervisorsTest
         null,
         new Duration("PT6S"),
         new Duration("PT1S"),
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -120,6 +126,9 @@ public class KillSupervisorsTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         10,
         null
     );
@@ -141,6 +150,9 @@ public class KillSupervisorsTest
         null,
         new Duration("PT6S"),
         new Duration("PT-1S"),
+        null,
+        null,
+        null,
         null,
         null,
         null,

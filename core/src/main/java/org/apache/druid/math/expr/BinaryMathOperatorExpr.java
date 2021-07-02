@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 
 // math operators live here
 
+@SuppressWarnings("ClassName")
 final class BinPlusExpr extends BinaryEvalOpExprBase
 {
   BinPlusExpr(String op, Expr left, Expr right)
@@ -81,6 +82,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinMinusExpr extends BinaryEvalOpExprBase
 {
   BinMinusExpr(String op, Expr left, Expr right)
@@ -119,6 +121,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinMulExpr extends BinaryEvalOpExprBase
 {
   BinMulExpr(String op, Expr left, Expr right)
@@ -157,6 +160,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 final class BinDivExpr extends BinaryEvalOpExprBase
 {
   BinDivExpr(String op, Expr left, Expr right)
@@ -195,6 +199,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 class BinPowExpr extends BinaryEvalOpExprBase
 {
   BinPowExpr(String op, Expr left, Expr right)
@@ -233,6 +238,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   }
 }
 
+@SuppressWarnings("ClassName")
 class BinModuloExpr extends BinaryEvalOpExprBase
 {
   BinModuloExpr(String op, Expr left, Expr right)

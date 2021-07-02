@@ -73,8 +73,11 @@ public class KillRulesTest
         null,
         null,
         null,
+        null,
         new Duration(Long.MAX_VALUE),
         new Duration("PT1S"),
+        null,
+        null,
         10,
         null
     );
@@ -99,8 +102,11 @@ public class KillRulesTest
         null,
         null,
         null,
+        null,
         new Duration("PT6S"),
         new Duration("PT1S"),
+        null,
+        null,
         10,
         null
     );
@@ -125,8 +131,11 @@ public class KillRulesTest
         null,
         null,
         null,
+        null,
         new Duration("PT3S"),
         new Duration("PT1S"),
+        null,
+        null,
         10,
         null
     );
@@ -150,8 +159,11 @@ public class KillRulesTest
         null,
         null,
         null,
+        null,
         new Duration("PT6S"),
         new Duration("PT-1S"),
+        null,
+        null,
         10,
         null
     );

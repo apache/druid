@@ -243,6 +243,46 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertNull(specs.get(0).getSpec());
   }
 
+  @Test
+  public void testGetLatestActiveOnly()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final String datasource1 = "datasource-1";
+    final String supervisor2 = "test-supervisor-2";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    // supervisor1 is terminated
+    supervisorManager.insert(supervisor1, new NoopSupervisorSpec(supervisor1, ImmutableList.of(datasource1)));
+    // supervisor2 is still active
+    supervisorManager.insert(supervisor2, new TestSupervisorSpec(supervisor2, data1rev1));
+    // get latest active should only return supervisor2
+    Map<String, SupervisorSpec> actual = supervisorManager.getLatestActiveOnly();
+    Assert.assertEquals(1, actual.size());
+    Assert.assertTrue(actual.containsKey(supervisor2));
+  }
+
+
+  @Test
+  public void testGetLatestTerminatedOnly()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final String datasource1 = "datasource-1";
+    final String supervisor2 = "test-supervisor-2";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    // supervisor1 is terminated
+    supervisorManager.insert(supervisor1, new NoopSupervisorSpec(supervisor1, ImmutableList.of(datasource1)));
+    // supervisor2 is still active
+    supervisorManager.insert(supervisor2, new TestSupervisorSpec(supervisor2, data1rev1));
+    // get latest terminated should only return supervisor1
+    Map<String, SupervisorSpec> actual = supervisorManager.getLatestTerminatedOnly();
+    Assert.assertEquals(1, actual.size());
+    Assert.assertTrue(actual.containsKey(supervisor1));
+  }
+
+
   private static class BadSupervisorSpec implements SupervisorSpec
   {
     private final String id;

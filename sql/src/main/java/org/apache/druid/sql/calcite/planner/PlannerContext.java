@@ -28,6 +28,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -54,6 +55,7 @@ public class PlannerContext
   public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // This context parameter is an undocumented parameter, used internally, to allow the web console to
   // apply a limit without having to rewrite the SQL query.
@@ -68,6 +70,7 @@ public class PlannerContext
   private final DateTime localNow;
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
+  private final boolean stringifyArrays;
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
@@ -83,6 +86,7 @@ public class PlannerContext
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
+      final boolean stringifyArrays,
       final Map<String, Object> queryContext
   )
   {
@@ -91,6 +95,7 @@ public class PlannerContext
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
+    this.stringifyArrays = stringifyArrays;
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -109,8 +114,10 @@ public class PlannerContext
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
+    final boolean stringifyArrays;
 
     if (queryContext != null) {
+      final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
       final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
       final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -125,9 +132,16 @@ public class PlannerContext
       } else {
         timeZone = plannerConfig.getSqlTimeZone();
       }
+
+      if (stringifyParam != null) {
+        stringifyArrays = Numbers.parseBoolean(stringifyParam);
+      } else {
+        stringifyArrays = true;
+      }
     } else {
       utcNow = new DateTime(DateTimeZone.UTC);
       timeZone = plannerConfig.getSqlTimeZone();
+      stringifyArrays = true;
     }
 
     return new PlannerContext(
@@ -135,6 +149,7 @@ public class PlannerContext
         macroTable,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
+        stringifyArrays,
         queryContext
     );
   }
@@ -167,6 +182,11 @@ public class PlannerContext
   public Map<String, Object> getQueryContext()
   {
     return queryContext;
+  }
+
+  public boolean isStringifyArrays()
+  {
+    return stringifyArrays;
   }
 
   public List<TypedValue> getParameters()

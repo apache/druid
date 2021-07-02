@@ -29,6 +29,9 @@ import java.util.Stack;
 
 public class Exprs
 {
+  public static final byte EXPR_CACHE_KEY = 0x00;
+  public static final byte LOOKUP_EXPR_CACHE_KEY = 0x01;
+
   public static UnsupportedOperationException cannotVectorize(Expr expr)
   {
     return new UOE("Unable to vectorize expression:[%s]", expr.stringify());

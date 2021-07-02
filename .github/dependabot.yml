@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "com.google.guava:guava"
+      # pin ZooKeeper dependencies to 3.5.x
+      - dependency-name: "org.apache.zookeeper"
+        versions: "[3.6,)"
+      # Keep commons-io at 2.6 until https://issues.apache.org/jira/browse/IO-741 is resolved
+      - dependency-name: "commons-io:commons-io"

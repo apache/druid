@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -46,9 +47,18 @@ public abstract class ExprEval<T>
    */
   public static ExprEval deserialize(ByteBuffer buffer, int position)
   {
-    // | expression type (byte) | expression bytes |
-    ExprType type = ExprType.fromByte(buffer.get(position));
-    int offset = position + 1;
+    final ExprType type = ExprType.fromByte(buffer.get(position));
+    return deserialize(buffer, position + 1, type);
+  }
+
+  /**
+   * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
+   *
+   * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
+   */
+  public static ExprEval deserialize(ByteBuffer buffer, int offset, ExprType type)
+  {
+    // | expression bytes |
     switch (type) {
       case LONG:
         // | expression type (byte) | is null (byte) | long bytes |
@@ -279,11 +289,70 @@ public abstract class ExprEval<T>
     }
   }
 
-  private static void checkMaxBytes(ExprType type, int sizeBytes, int maxSizeBytes)
+  public static void checkMaxBytes(ExprType type, int sizeBytes, int maxSizeBytes)
   {
     if (sizeBytes > maxSizeBytes) {
       throw new ISE("Unable to serialize [%s], size [%s] is larger than max [%s]", type, sizeBytes, maxSizeBytes);
     }
+  }
+
+  /**
+   * Used to estimate the size in bytes to {@link #serialize} the {@link ExprEval} value, checking against a maximum
+   * size and failing with an {@link ISE} if the estimate is over the maximum.
+   */
+  public static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
+  {
+    final int estimated;
+    switch (eval.type()) {
+      case STRING:
+        String stringValue = eval.asString();
+        estimated = 1 + Integer.BYTES + (stringValue == null ? 0 : StringUtils.estimatedBinaryLengthAsUTF8(stringValue));
+        break;
+      case LONG:
+      case DOUBLE:
+        estimated = 1 + (NullHandling.sqlCompatible() ? 1 + Long.BYTES : Long.BYTES);
+        break;
+      case STRING_ARRAY:
+        String[] stringArray = eval.asStringArray();
+        if (stringArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(stringArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(StringUtils::estimatedBinaryLengthAsUTF8)
+                                         .sum();
+          // since each value is variably sized, there is an integer per element
+          estimated = 1 + Integer.BYTES + (Integer.BYTES * stringArray.length) + elementsSize;
+        }
+        break;
+      case LONG_ARRAY:
+        Long[] longArray = eval.asLongArray();
+        if (longArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(longArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(x -> Long.BYTES)
+                                         .sum();
+          estimated = 1 + Integer.BYTES + (NullHandling.sqlCompatible() ? longArray.length : 0) + elementsSize;
+        }
+        break;
+      case DOUBLE_ARRAY:
+        Double[] doubleArray = eval.asDoubleArray();
+        if (doubleArray == null) {
+          estimated = 1 + Integer.BYTES;
+        } else {
+          final int elementsSize = Arrays.stream(doubleArray)
+                                         .filter(Objects::nonNull)
+                                         .mapToInt(x -> Long.BYTES)
+                                         .sum();
+          estimated = 1 + Integer.BYTES + (NullHandling.sqlCompatible() ? doubleArray.length : 0) + elementsSize;
+        }
+        break;
+      default:
+        throw new IllegalStateException("impossible");
+    }
+    checkMaxBytes(eval.type(), estimated, maxSizeBytes);
   }
 
   /**
@@ -318,7 +387,7 @@ public abstract class ExprEval<T>
       return new String[]{null};
     } else {
       if (val != null) {
-        return val.toArray();
+        return new String[0];
       }
       return null;
     }
@@ -567,7 +636,18 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * returns true if numeric primitive value for this ExprEval is null, otherwise false.
+   * The method returns true if numeric primitive value for this {@link ExprEval} is null, otherwise false.
+   *
+   * If this method returns false, then the values returned by {@link #asLong()}, {@link #asDouble()},
+   * and {@link #asInt()} are "valid", since this method is primarily used during {@link Expr} evaluation to decide
+   * if primitive numbers can be fetched to use.
+   *
+   * If a type cannot sanely convert into a primitive numeric value, then this method should always return true so that
+   * these primitive numeric getters are not called, since returning false is assumed to mean these values are valid.
+   *
+   * Note that all types must still return values for {@link #asInt()}, {@link #asLong()}}, and {@link #asDouble()},
+   * since this can still happen if {@link NullHandling#sqlCompatible()} is false, but it should be assumed that this
+   * can only happen in that mode and 0s are typical and expected for values that would otherwise be null.
    */
   public abstract boolean isNumericNull();
 
@@ -576,10 +656,25 @@ public abstract class ExprEval<T>
     return false;
   }
 
+  /**
+   * Get the primtive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return placeholder a value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract int asInt();
 
+  /**
+   * Get the primtive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract long asLong();
 
+  /**
+   * Get the primtive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract double asDouble();
 
   public abstract boolean asBoolean();
@@ -982,6 +1077,12 @@ public abstract class ExprEval<T>
       if (!isStringValueCached()) {
         if (value == null) {
           cacheStringValue(null);
+        } else if (value.length == 1) {
+          if (value[0] == null) {
+            cacheStringValue(null);
+          } else {
+            cacheStringValue(String.valueOf(value[0]));
+          }
         } else {
           cacheStringValue(Arrays.toString(value));
         }
@@ -993,7 +1094,11 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      return false;
+      if (isScalar()) {
+        return getScalarValue() == null;
+      }
+
+      return true;
     }
 
     @Override
@@ -1038,6 +1143,18 @@ public abstract class ExprEval<T>
     {
       return value == null ? null : value[index];
     }
+
+    protected boolean isScalar()
+    {
+      return value != null && value.length == 1;
+    }
+
+    @Nullable
+    protected T getScalarValue()
+    {
+      assert value != null && value.length == 1;
+      return value[0];
+    }
   }
 
   private static class LongArrayExprEval extends ArrayExprEval<Long>
@@ -1053,6 +1170,62 @@ public abstract class ExprEval<T>
     public ExprType type()
     {
       return ExprType.LONG_ARRAY;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
+          return false;
+        }
+        return Evals.asBoolean(scalarValue.longValue());
+      }
+      return super.asBoolean();
     }
 
     @Nullable
@@ -1083,6 +1256,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case LONG_ARRAY:
           return this;
         case DOUBLE_ARRAY:
@@ -1116,11 +1304,69 @@ public abstract class ExprEval<T>
       return ExprType.DOUBLE_ARRAY;
     }
 
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
+          return false;
+        }
+        return Evals.asBoolean(scalarValue.longValue());
+      }
+      return super.asBoolean();
+    }
+
     @Nullable
     @Override
     public String[] asStringArray()
     {
-      return value == null ? null : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
+      return value == null
+             ? null
+             : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
 
     @Nullable
@@ -1144,6 +1390,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case LONG_ARRAY:
           return ExprEval.ofLongArray(asLongArray());
         case DOUBLE_ARRAY:
@@ -1168,8 +1429,13 @@ public abstract class ExprEval<T>
 
     private boolean longValueValid = false;
     private boolean doubleValueValid = false;
+    @Nullable
     private Long[] longValues;
+    @Nullable
     private Double[] doubleValues;
+    @Nullable
+    private Number computedNumericScalar;
+    private boolean isScalarNumberValid;
 
     private StringArrayExprEval(@Nullable String[] value)
     {
@@ -1180,6 +1446,67 @@ public abstract class ExprEval<T>
     public ExprType type()
     {
       return ExprType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        return computedNumericScalar == null;
+      }
+      return true;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return computedNumericScalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0L;
+        }
+        return computedNumericScalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0.0;
+        }
+        return computedNumericScalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        return Evals.asBoolean(getScalarValue());
+      }
+      return super.asBoolean();
     }
 
     @Nullable
@@ -1218,6 +1545,21 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
         case STRING_ARRAY:
           return this;
         case LONG_ARRAY:
@@ -1241,6 +1583,9 @@ public abstract class ExprEval<T>
         return null;
       }
       return Arrays.stream(value).map(value -> {
+        if (value == null) {
+          return null;
+        }
         Long lv = GuavaUtils.tryParseLong(value);
         if (lv == null) {
           Double d = Doubles.tryParse(value);
@@ -1258,7 +1603,24 @@ public abstract class ExprEval<T>
       if (value == null) {
         return null;
       }
-      return Arrays.stream(value).map(Doubles::tryParse).toArray(Double[]::new);
+      return Arrays.stream(value).map(val -> {
+        if (val == null) {
+          return null;
+        }
+        return Doubles.tryParse(val);
+      }).toArray(Double[]::new);
+    }
+
+
+    /**
+     * must not be called unless array has a single element
+      */
+    private void computeScalarNumericIfNeeded()
+    {
+      if (!isScalarNumberValid) {
+        computedNumericScalar = computeNumber(getScalarValue());
+        isScalarNumberValid = true;
+      }
     }
   }
 }
