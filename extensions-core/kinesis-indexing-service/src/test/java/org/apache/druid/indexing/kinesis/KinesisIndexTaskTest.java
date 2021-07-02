@@ -89,6 +89,7 @@ import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -2970,7 +2971,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         this::makeTimeseriesOnlyConglomerate,
-        Execs.directExecutor(), // queryExecutorService
+        DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),

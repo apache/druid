@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
@@ -47,6 +46,7 @@ import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -557,13 +557,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   @Override
   public QueryRunner<ResultRow> mergeRunners(
-      final ListeningExecutorService exec,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
-        exec,
+        queryProcessingPool,
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
