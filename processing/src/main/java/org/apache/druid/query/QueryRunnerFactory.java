@@ -44,6 +44,7 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
   QueryRunner<T> createRunner(Segment segment);
 
   /**
+   * @deprecated Use {@link #mergeRunners(QueryProcessingPool, Iterable)} instead.
    * Runners generated with createRunner() and combined into an Iterable in (time,shardId) order are passed
    * along to this method with an {@link ExecutorService}.  The method should then return a {@link QueryRunner} that,
    * when asked, will use the {@link ExecutorService} to run the base QueryRunners in some fashion.
@@ -56,10 +57,38 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
    *
    * @param queryExecutor   {@link ExecutorService} to be used for parallel processing
    * @param queryRunners    Individual {@link QueryRunner} objects that produce some results
-   * @return                a {@link QueryRunner} that, when asked, will use the {@link ExecutorService} to run the base
+   * @return a {@link QueryRunner} that, when asked, will use the {@link ExecutorService} to run the base
    *                        {@link QueryRunner} collection.
    */
-  QueryRunner<T> mergeRunners(ExecutorService queryExecutor, Iterable<QueryRunner<T>> queryRunners);
+  @Deprecated
+  default QueryRunner<T> mergeRunners(ExecutorService queryExecutor, Iterable<QueryRunner<T>> queryRunners)
+  {
+    return mergeRunners(new ForwardingQueryProcessingPool(queryExecutor), queryRunners);
+  }
+
+  /**
+   * Runners generated with createRunner() and combined into an Iterable in (time,shardId) order are passed
+   * along to this method with an {@link QueryProcessingPool}.  The method should then return a {@link QueryRunner} that,
+   * when asked, will use the {@link QueryProcessingPool} to run the base QueryRunners in some fashion.
+   *
+   * The vast majority of the time, this should be implemented with {@link ChainedExecutionQueryRunner}:
+   *
+   *     return new ChainedExecutionQueryRunner<>(queryProcessingPool, toolChest.getOrdering(), queryWatcher, queryRunners);
+   *
+   * Which will allow for parallel execution up to the maximum number of processing threads allowed.
+   *
+   * Unlike {@link #mergeRunners(ExecutorService, Iterable)}, this method takes a {@link QueryProcessingPool} instead
+   * which allows custom implementations for prioritize query execution on segments.
+   *
+   * @param queryProcessingPool   {@link QueryProcessingPool} to be used for parallel processing
+   * @param queryRunners    Individual {@link QueryRunner} objects that produce some results
+   * @return a {@link QueryRunner} that, when asked, will use the {@link ExecutorService} to run the base
+   *                        {@link QueryRunner} collection.
+   */
+  QueryRunner<T> mergeRunners(
+      QueryProcessingPool queryProcessingPool,
+      Iterable<QueryRunner<T>> queryRunners
+  );
 
   /**
    * Provides access to the {@link QueryToolChest} for this specific {@link Query} type.

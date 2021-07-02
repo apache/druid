@@ -367,7 +367,7 @@ public class CompressionUtils
           {
             final int otherAvailable = super.available();
             // Hack. Docs say available() should return an estimate,
-            // so we estimate about 1KB to work around available == 0 bug in GZIPInputStream
+            // so we estimate about 1KiB to work around available == 0 bug in GZIPInputStream
             return otherAvailable == 0 ? 1 << 10 : otherAvailable;
           }
         }

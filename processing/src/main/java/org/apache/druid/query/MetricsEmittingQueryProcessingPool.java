@@ -19,53 +19,28 @@
 
 package org.apache.druid.query;
 
-import com.google.common.util.concurrent.ForwardingListeningExecutorService;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import java.util.concurrent.Callable;
-
-public class MetricsEmittingExecutorService extends ForwardingListeningExecutorService
+public class MetricsEmittingQueryProcessingPool extends ForwardingQueryProcessingPool
     implements ExecutorServiceMonitor.MetricEmitter
 {
-  private final ListeningExecutorService delegate;
 
-  public MetricsEmittingExecutorService(
+  public MetricsEmittingQueryProcessingPool(
       ListeningExecutorService delegate,
       ExecutorServiceMonitor executorServiceMonitor
   )
   {
-    super();
-    this.delegate = delegate;
+    super(delegate);
     executorServiceMonitor.add(this);
-  }
-
-  @Override
-  protected ListeningExecutorService delegate()
-  {
-    return delegate;
-  }
-
-  @SuppressWarnings("ParameterPackage")
-  @Override
-  public <T> ListenableFuture<T> submit(Callable<T> tCallable)
-  {
-    return delegate.submit(tCallable);
-  }
-
-  @Override
-  public void execute(Runnable runnable)
-  {
-    delegate.execute(runnable);
   }
 
   @Override
   public void emitMetrics(ServiceEmitter emitter, ServiceMetricEvent.Builder metricBuilder)
   {
-    if (delegate instanceof PrioritizedExecutorService) {
-      emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate).getQueueSize()));
+    if (delegate() instanceof PrioritizedExecutorService) {
+      emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate()).getQueueSize()));
     }
   }
 

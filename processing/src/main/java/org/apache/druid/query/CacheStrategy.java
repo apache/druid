@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Handles caching-related tasks for a particular query type.
@@ -42,7 +41,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
    *
    * @param query            the query to be cached
-   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} will be
+   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
    *                         called on the cached by-segment results
    *
    * @return true if the query is cacheable, otherwise false.
