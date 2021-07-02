@@ -189,7 +189,6 @@ public class BatchAppenderatorTester implements AutoCloseable
         null
     ).withBasePersistDirectory(basePersistDirectory != null ? basePersistDirectory : createNewBasePersistDirectory());
 
-
     metrics = new FireDepartmentMetrics();
 
     IndexIO indexIO = new IndexIO(

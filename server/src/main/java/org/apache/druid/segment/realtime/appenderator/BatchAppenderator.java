@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -362,7 +361,7 @@ public class BatchAppenderator implements Appenderator
         throw new RuntimeException(errorMessage);
       }
 
-      persistAllAndClear();
+      persistAllAndRemoveSinks();
 
     }
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, false);
@@ -482,21 +481,23 @@ public class BatchAppenderator implements Appenderator
     return Futures.immediateFuture(null);
   }
 
-  private void persistAllAndClear()
-  {
-    // make sure sinks are cleared before push is called
-    try {
-      persistAll(null).get();
-      clear(false);
-    }
-    catch (Throwable t) {
-      throw new RE(t, "Error while persisting");
-    }
-  }
-
   @Override
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
+    if (committer != null) {
+      throw new ISE("committer must be null for BatchAppenderator");
+    }
+    persistAllAndRemoveSinks();
+    return Futures.immediateFuture(null);
+  }
+
+  /**
+   * Persist all sinks & their hydrants, keep their metadata, and then remove them completely from
+   * memory (to be resurrected right before merge & push)
+   */
+  private void persistAllAndRemoveSinks()
+  {
+
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
@@ -511,36 +512,31 @@ public class BatchAppenderator implements Appenderator
       }
 
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
-      totalHydrantsCount.add(hydrants.size());
+      // Since everytime we persist we also get rid of the in-memory references to sinks & hydrants
+      // the invariant of exactly one, always swappable, sink with exactly one unpersisted hydrant must hold
+      int totalHydrantsForSink = hydrants.size();
+      if (totalHydrantsForSink != 1) {
+        throw new ISE("There should be only onw hydrant for identifier[%s] but there are[%s]",
+                      identifier, totalHydrantsForSink
+        );
+      }
+      totalHydrantsCount.add(totalHydrantsCount);
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
-      final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
-
-      // gather hydrants that have not been persisted:
-      for (FireHydrant hydrant : hydrants.subList(0, limit)) {
-        if (!hydrant.hasSwapped()) {
-          log.debug("Hydrant[%s] hasn't persisted yet, persisting. Segment[%s]", hydrant, identifier);
-          indexesToPersist.add(Pair.of(hydrant, identifier));
-          totalHydrantsPersistedAcrossSinks.add(1);
-        }
+      if (!sink.swappable()) {
+        throw new ISE("Sink is not swappable![%s]", identifier);
       }
-
-      if (sink.swappable()) {
-        // It is swappable. Get the old one to persist it and create a new one:
-        indexesToPersist.add(Pair.of(sink.swap(), identifier));
-        totalHydrantsPersistedAcrossSinks.add(1);
-      }
+      indexesToPersist.add(Pair.of(sink.swap(), identifier));
+      totalHydrantsPersistedAcrossSinks.add(1);
 
     }
-    log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
     if (indexesToPersist.isEmpty()) {
       log.info("No indexes will be peristed");
     }
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
-
     try {
       for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
         metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
@@ -578,9 +574,12 @@ public class BatchAppenderator implements Appenderator
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
     bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
 
-    log.info("Persisted rows[%,d] and bytes[%,d]", numPersistedRows, bytesPersisted);
+    // remove all sinks after persisting:
+    clear(false);
 
-    return Futures.immediateFuture(null);
+    log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory",
+             numPersistedRows, bytesPersisted);
+
   }
 
   @Override
@@ -595,8 +594,8 @@ public class BatchAppenderator implements Appenderator
       throw new ISE("There should be no committer for batch ingestion");
     }
 
-    // Any sinks not persisted so far will be persisted before push:
-    persistAllAndClear();
+    // Any sinks not persisted so far need to be persisted before push:
+    persistAllAndRemoveSinks();
 
     log.info("Preparing to push...");
     final List<DataSegment> dataSegments = new ArrayList<>();
@@ -1023,13 +1022,12 @@ public class BatchAppenderator implements Appenderator
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
   {
     synchronized (indexToPersist) {
+
       if (indexToPersist.hasSwapped()) {
-        log.info(
-            "Segment[%s] hydrant[%s] already swapped. Ignoring request to persist.",
+        throw new ISE("Segment[%s] hydrant[%s] already swapped. This cannot happen.",
             identifier,
             indexToPersist
         );
-        return 0;
       }
 
       log.debug("Segment[%s], persisting Hydrant[%s]", identifier, indexToPersist);
@@ -1064,7 +1062,7 @@ public class BatchAppenderator implements Appenderator
 
         indexToPersist.swapSegment(null);
         // remember hydrant count:
-        sinksMetadata.get(identifier).addHydrants(1);
+        sm.addHydrants(1);
 
         return numRows;
       }
