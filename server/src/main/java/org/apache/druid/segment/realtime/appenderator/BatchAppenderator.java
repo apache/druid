@@ -501,8 +501,7 @@ public class BatchAppenderator implements Appenderator
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    MutableInt totalHydrantsCount = new MutableInt();
-    MutableInt totalHydrantsPersistedAcrossSinks = new MutableInt();
+    int totalHydrantsCount = 0;
     final long totalSinks = sinks.size();
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
@@ -520,7 +519,7 @@ public class BatchAppenderator implements Appenderator
                       identifier, totalHydrantsForSink
         );
       }
-      totalHydrantsCount.add(totalHydrantsCount);
+      totalHydrantsCount += 1;
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
@@ -528,7 +527,6 @@ public class BatchAppenderator implements Appenderator
         throw new ISE("Sink is not swappable![%s]", identifier);
       }
       indexesToPersist.add(Pair.of(sink.swap(), identifier));
-      totalHydrantsPersistedAcrossSinks.add(1);
 
     }
 
@@ -536,7 +534,6 @@ public class BatchAppenderator implements Appenderator
       log.info("No indexes will be peristed");
     }
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
-    AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
     try {
       for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
         metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
@@ -551,12 +548,11 @@ public class BatchAppenderator implements Appenderator
                           .collect(Collectors.joining(", "))
       );
       log.info(
-          "Persisted stats: processed rows: [%d], persisted rows[%d], sinks: [%d], total fireHydrants (across sinks): [%d], persisted fireHydrants (across sinks): [%d]",
+          "Persisted stats: processed rows: [%d], persisted rows[%d], persisted sinks: [%d], persisted fireHydrants (across sinks): [%d]",
           rowIngestionMeters.getProcessed(),
-          totalPersistedRows.get(),
+          numPersistedRows,
           totalSinks,
-          totalHydrantsCount.longValue(),
-          totalHydrantsPersistedAcrossSinks.longValue()
+          totalHydrantsCount
       );
 
     }
