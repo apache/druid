@@ -305,7 +305,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return Sequences.map(
           mergedResults,
           row -> {
-            final ResultRow resultRow = ResultRow.create(query.getResultRowPostAggregatorStart());
+            final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
             fixResultRowWithTimestampResultField(
                 query,
                 timestampResultFieldIndexInOriginalDimensions,
