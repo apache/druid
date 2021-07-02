@@ -30,6 +30,7 @@ import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 
+import java.util.Objects;
 import java.util.Set;
 
 
@@ -68,5 +69,32 @@ public class PostgresqlFirehoseDatabaseConnector extends SQLFirehoseDatabaseConn
   public Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown)
   {
     return ConnectionUriUtils.tryParseJdbcUriParameters(connectUri, allowUnknown);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    PostgresqlFirehoseDatabaseConnector that = (PostgresqlFirehoseDatabaseConnector) o;
+    return connectorConfig.equals(that.connectorConfig);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PostgresqlFirehoseDatabaseConnector{" +
+           "connectorConfig=" + connectorConfig +
+           '}';
   }
 }

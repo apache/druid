@@ -54,12 +54,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.mariadb.jdbc</groupId>
-            <artifactId>mariadb-java-client</artifactId>
-            <version>2.7.3</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
             <scope>provided</scope>
@@ -97,6 +91,11 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

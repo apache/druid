@@ -19,10 +19,17 @@
 
 package org.apache.druid.firehose.sql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,8 +38,53 @@ import java.util.Set;
 
 public class MySQLFirehoseDatabaseConnectorTest
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final JdbcAccessSecurityConfig INJECTABLE_CONFIG = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+  static {
+    MAPPER.registerModules(new MySQLMetadataStorageModule().getJacksonModules());
+    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTABLE_CONFIG));
+  }
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mysql://localhost:3306/test";
+      }
+    };
+    MySQLFirehoseDatabaseConnector connector = new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
+        INJECTABLE_CONFIG
+    );
+    MySQLFirehoseDatabaseConnector andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    Assert.assertEquals(connector, andBack);
+
+    // test again with classname
+    connector = new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        "some.class.name.Driver",
+        INJECTABLE_CONFIG
+    );
+    andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    Assert.assertEquals(connector, andBack);
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(MySQLFirehoseDatabaseConnector.class)
+                  .usingGetClass()
+                  .withNonnullFields("connectorConfig")
+                  .withIgnoredFields("dbi")
+                  .verify();
+  }
 
   @Test
   public void testSuccessWhenNoPropertyInUriAndNoAllowlist()

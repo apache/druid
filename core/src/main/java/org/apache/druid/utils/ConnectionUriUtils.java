@@ -83,9 +83,15 @@ public final class ConnectionUriUtils
               notFoundMysql
           );
         }
+        catch (IllegalArgumentException iae) {
+          throw iae;
+        }
         catch (Throwable otherMaria2x) {
           throw new RuntimeException(otherMaria2x);
         }
+      }
+      catch (IllegalArgumentException iae) {
+        throw iae;
       }
       catch (Throwable otherMysql) {
         throw new RuntimeException(otherMysql);
@@ -104,9 +110,15 @@ public final class ConnectionUriUtils
               notFoundMaria2x
           );
         }
+        catch (IllegalArgumentException iae) {
+          throw iae;
+        }
         catch (Throwable otherMaria3x) {
           throw new RuntimeException(otherMaria3x);
         }
+      }
+      catch (IllegalArgumentException iae) {
+        throw iae;
       }
       catch (Throwable otherMaria2x) {
         throw new RuntimeException(otherMaria2x);
@@ -115,6 +127,9 @@ public final class ConnectionUriUtils
 
       try {
         return tryParsePostgresConnectionUri(connectionUri);
+      }
+      catch (IllegalArgumentException iae) {
+        throw iae;
       }
       catch (Throwable otherPostgres) {
         // no special handling for class not found because postgres driver is in distribution and should be available.

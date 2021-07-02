@@ -31,6 +31,7 @@ import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 
 
@@ -39,6 +40,8 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
 {
   private final DBI dbi;
   private final MetadataStorageConnectorConfig connectorConfig;
+  @Nullable
+  private final String driverClassName;
 
   @JsonCreator
   public MySQLFirehoseDatabaseConnector(
@@ -48,6 +51,7 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
   )
   {
     this.connectorConfig = connectorConfig;
+    this.driverClassName = driverClassName;
     final BasicDataSource datasource = getDatasource(connectorConfig, securityConfig);
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName(driverClassName != null ? driverClassName : "com.mysql.jdbc.Driver");
@@ -60,6 +64,13 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
     return connectorConfig;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getDriverClassName()
+  {
+    return driverClassName;
+  }
+
   @Override
   public DBI getDBI()
   {
@@ -70,5 +81,27 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
   public Set<String> findPropertyKeysFromConnectURL(String connectUrl, boolean allowUnknown)
   {
     return ConnectionUriUtils.tryParseJdbcUriParameters(connectUrl, allowUnknown);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MySQLFirehoseDatabaseConnector that = (MySQLFirehoseDatabaseConnector) o;
+    return connectorConfig.equals(that.connectorConfig) && Objects.equals(
+        driverClassName,
+        that.driverClassName
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig, driverClassName);
   }
 }
