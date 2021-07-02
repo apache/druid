@@ -63,6 +63,7 @@ $KUBECTL get svc
 # Temporary debug info
 $KUBECTL describe po postgres-0
 $KUBECTL describe svc postgres
+$KUBECTL get endpoints postgres
 
 for v in postgres-0 druid-tiny-cluster-coordinator1-0 druid-tiny-cluster-coordinator2-0 druid-tiny-cluster-overlord1-0 druid-tiny-cluster-overlord2-0 ; do
   echo "\n\n####### Printing Logs for $v #########"

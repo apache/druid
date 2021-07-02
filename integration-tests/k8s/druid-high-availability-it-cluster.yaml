@@ -79,7 +79,7 @@ spec:
 
     # Metadata Store
     druid.metadata.storage.type=postgresql
-    druid.metadata.storage.connector.connectURI=jdbc:postgresql://postgres:5432/druid
+    druid.metadata.storage.connector.connectURI=jdbc:postgresql://postgres.default.svc.cluster.local:5432/druid
     druid.metadata.storage.connector.user=druid
     druid.metadata.storage.connector.password=druid
     druid.metadata.storage.connector.createTables=true
