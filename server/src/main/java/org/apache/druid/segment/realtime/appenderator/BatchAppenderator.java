@@ -747,8 +747,6 @@ public class BatchAppenderator implements Appenderator
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
       // mapped file references
       // can generate OOMs during merge if enough of them are held back...
-      // agfixme: Since we cannot keep sinks due to memory growth then we have to add the sink metadata table and keep it up to date
-      //sinks.put(identifier,sink);
       for (FireHydrant fireHydrant : sink) {
         fireHydrant.swapSegment(null);
       }
