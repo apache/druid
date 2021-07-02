@@ -242,12 +242,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
       timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
-      if (timestampResultFieldIndex == query.getDimensions().size() - 1) {
+      if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }
       // when timestampResultField is the first dimension and sortByDimsFirst=true,
       // it is actually equals to sortByDimsFirst=false
-      if (timestampResultFieldIndex == 0) {
+      if (query.getContextSortByDimsFirst() && timestampResultFieldIndex == 0) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
       }
       // when hasTimestampResultField=true and timestampResultField is neither first nor last dimension,
