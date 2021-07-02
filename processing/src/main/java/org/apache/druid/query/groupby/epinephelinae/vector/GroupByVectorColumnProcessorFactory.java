@@ -129,7 +129,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
    * We do this even for things like virtual columns that have a single string input, because it allows deferring
    * accessing any of the actual string values, which involves at minimum reading utf8 byte values and converting
    * them to string form (if not already cached), and in the case of expressions, computing the expression output for
-   * the the string input.
+   * the string input.
    */
   @Override
   public boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)

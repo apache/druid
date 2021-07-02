@@ -44,7 +44,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
 {
   private final SingleValueDimensionVectorSelector selector;
   private final ExprVectorProcessor<String[]> stringProcessor;
-  private final StringVectorInputBindings inputBinding;
+  private final StringLookupVectorInputBindings inputBinding;
 
   public SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
       SingleValueDimensionVectorSelector selector,
@@ -60,7 +60,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
       );
     }
     this.selector = selector;
-    this.inputBinding = new StringVectorInputBindings();
+    this.inputBinding = new StringLookupVectorInputBindings();
     this.stringProcessor = expression.buildVectorized(inputBinding);
   }
 
@@ -109,7 +109,14 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     return selector.getCurrentVectorSize();
   }
 
-  private static final class StringVectorInputBindings implements Expr.VectorInputBinding
+  /**
+   * Special single element vector input bindings used for processing the string value for {@link #lookupName(int)}
+   *
+   * Vector size is fixed to 1 because {@link #lookupName} operates on a single dictionary value at a time. If a
+   * bulk lookup method is ever added, these vector bindings should be modified to process the results with actual
+   * vectors.
+   */
+  private static final class StringLookupVectorInputBindings implements Expr.VectorInputBinding
   {
     private final String[] currentValue = new String[1];
 
