@@ -5787,5 +5787,3 @@ libraries:
   - org.scala-lang: scala-library
   - org.scala-lang: scala-reflect
   - org.scala-lang: scalap
-
----

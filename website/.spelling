@@ -1889,6 +1889,7 @@ protobuf
 Golang
 multiValueHandling
  - ../docs/development/extensions-core/spark.md
+SaveMode
 SaveModes
 partitioners
 dataframe
@@ -1898,9 +1899,16 @@ DataFrameWriter
 DataSourceReader
 DataSourceWriter
 PasswordProvider
+PasswordProviderRegistry
+serializable
 deserializable
+Gradle
+DimensionSchema
 DimensionSchemas
+DataSegment
+LoadSpecs
 SegmentWriterRegistry
+IllegalArgumentException
 keyId
 base-64
 DataSourceV2
