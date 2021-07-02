@@ -44,6 +44,7 @@ import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.Interval;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -237,6 +238,31 @@ public class OverlordResourceTestClient
       return jsonMapper.readValue(
           response.getContent(),
           new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    try {
+      String jsonBody = jsonMapper.writeValueAsString(minTaskPriority);
+
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals"))
+              .setContent(
+                  "application/json",
+                  StringUtils.toUtf8(jsonBody)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Map<String, List<Interval>>>()
           {
           }
       );

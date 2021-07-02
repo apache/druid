@@ -78,7 +78,7 @@ public class JobHelper
   private static final Logger log = new Logger(JobHelper.class);
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
-  private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
+  private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KiB
   private static final Pattern SNAPSHOT_JAR = Pattern.compile(".*-SNAPSHOT(-selfcontained)?\\.jar$");
 
   public static Path distributedClassPath(String path)

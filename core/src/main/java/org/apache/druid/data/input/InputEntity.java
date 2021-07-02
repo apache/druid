@@ -43,7 +43,7 @@ public interface InputEntity
 {
   Logger LOG = new Logger(InputEntity.class);
 
-  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
+  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KiB
   int DEFAULT_MAX_NUM_FETCH_TRIES = 3; // 3 tries including the initial try
 
   /**

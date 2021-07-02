@@ -18,7 +18,13 @@
 
 import { sane } from 'druid-query-toolkit/build/test-utils';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
+import {
+  DruidError,
+  getDruidErrorMessage,
+  parseHtmlError,
+  parseQueryPlan,
+  trimSemicolon,
+} from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -224,6 +230,14 @@ describe('DruidQuery', () => {
 
     it('parseQueryPlan', () => {
       expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
+    });
+  });
+
+  describe('.trimSemicolon', () => {
+    it('works', () => {
+      expect(trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
+      expect(trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
+      expect(trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
     });
   });
 });

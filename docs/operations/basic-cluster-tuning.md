@@ -40,11 +40,11 @@ The biggest contributions to heap usage on Historicals are:
 - Partial unmerged query results from segments
 - The stored maps for [lookups](../querying/lookups.md).
 
-A general rule-of-thumb for sizing the Historical heap is `(0.5GB * number of CPU cores)`, with an upper limit of ~24GB.
+A general rule-of-thumb for sizing the Historical heap is `(0.5GiB * number of CPU cores)`, with an upper limit of ~24GiB.
 
 This rule-of-thumb scales using the number of CPU cores as a convenient proxy for hardware size and level of concurrency (note: this formula is not a hard rule for sizing Historical heaps).
 
-Having a heap that is too large can result in excessively long GC collection pauses, the ~24GB upper limit is imposed to avoid this.
+Having a heap that is too large can result in excessively long GC collection pauses, the ~24GiB upper limit is imposed to avoid this.
 
 If caching is enabled on Historicals, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
@@ -56,7 +56,7 @@ If you are using lookups, calculate the total size of the lookup maps being load
 
 Druid performs an atomic swap when updating lookup maps (both the old map and the new map will exist in heap during the swap), so the maximum potential heap usage from lookup maps will be (2 * total size of all loaded lookups).
 
-Be sure to add `(2 * total size of all loaded lookups)` to your heap size in addition to the `(0.5GB * number of CPU cores)` guideline.
+Be sure to add `(2 * total size of all loaded lookups)` to your heap size in addition to the `(0.5GiB * number of CPU cores)` guideline.
 
 #### Processing Threads and Buffers
 
@@ -65,7 +65,7 @@ Please see the [General Guidelines for Processing Threads and Buffers](#processi
 On Historicals:
 
 - `druid.processing.numThreads` should generally be set to `(number of cores - 1)`: a smaller value can result in CPU underutilization, while going over the number of cores can result in unnecessary CPU contention.
-- `druid.processing.buffer.sizeBytes` can be set to 500MB.
+- `druid.processing.buffer.sizeBytes` can be set to 500MiB.
 - `druid.processing.numMergeBuffers`, a 1:4 ratio of  merge buffers to processing threads is a reasonable choice for general use.
 
 #### Direct Memory Sizing
@@ -110,7 +110,7 @@ We recommend using SSDs for storage on the Historicals, as they handle segment d
 
 To estimate total memory usage of the Historical under these guidelines:
 
-- Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
+- Heap: `(0.5GiB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / total size of all `druid.segmentCache.locations`) ratio so that a greater proportion of segments can be kept in memory.
@@ -130,7 +130,7 @@ The biggest contributions to heap usage on Brokers are:
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments.
 
-The heap size will vary based on data size and usage patterns, but 4G to 8G is a good starting point for a small or medium cluster (~15 servers or less). For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GB-60GB.
+The heap size will vary based on data size and usage patterns, but 4GiB to 8GiB is a good starting point for a small or medium cluster (~15 servers or less). For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GiB-60GiB.
 
 If caching is enabled on the Broker, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
@@ -138,7 +138,7 @@ If caching is enabled on the Broker, the cache is stored on heap, sized by `drui
 
 On the Broker, the amount of direct memory needed depends on how many merge buffers (used for merging GroupBys) are configured. The Broker does not generally need processing threads or processing buffers, as query results are merged on-heap in the HTTP connection threads instead.
 
-- `druid.processing.buffer.sizeBytes` can be set to 500MB.
+- `druid.processing.buffer.sizeBytes` can be set to 500MiB.
 - `druid.processing.numThreads`: set this to 1 (the minimum allowed)
 - `druid.processing.numMergeBuffers`: set this to the same value as on Historicals or a bit higher
 
@@ -158,9 +158,9 @@ When retrieving query results from Historical processes or Tasks, the Broker can
 
 This buffer size is controlled by the `druid.broker.http.maxQueuedBytes` setting.
 
-The limit is divided across the number of Historicals/Tasks that a query would hit: suppose I have `druid.broker.http.maxQueuedBytes` set to 5MB, and the Broker receives a query that needs to be fanned out to 2 Historicals. Each per-historical channel would get a 2.5MB buffer in this case.
+The limit is divided across the number of Historicals/Tasks that a query would hit: suppose I have `druid.broker.http.maxQueuedBytes` set to 5MiB, and the Broker receives a query that needs to be fanned out to 2 Historicals. Each per-historical channel would get a 2.5MiB buffer in this case.
 
-You can generally set this to a value of approximately `2MB * number of Historicals`. As your cluster scales up with more Historicals and Tasks, consider increasing this buffer size and increasing the Broker heap accordingly.
+You can generally set this to a value of approximately `2MiB * number of Historicals`. As your cluster scales up with more Historicals and Tasks, consider increasing this buffer size and increasing the Broker heap accordingly.
 
 - If the buffer is too small, this can lead to inefficient queries due to the buffer filling up rapidly and stalling the channel
 - If the buffer is too large, this puts more memory pressure on the Broker due to more queued result data in the HTTP channels.
@@ -184,7 +184,7 @@ The MiddleManager is a lightweight task controller/manager that launches Task pr
 
 #### MiddleManager heap sizing
 
-The MiddleManager itself does not require much resources, you can set the heap to ~128MB generally.
+The MiddleManager itself does not require much resources, you can set the heap to ~128MiB generally.
 
 #### SSD storage
 
@@ -204,7 +204,7 @@ The following section below describes configuration for Tasks launched by the Mi
 
 ##### Task heap sizing
 
-A 1GB heap is usually enough for Tasks.
+A 1GiB heap is usually enough for Tasks.
 
 ###### Lookups
 
@@ -220,7 +220,7 @@ For Tasks, 1 or 2 processing threads are often enough, as the Tasks tend to hold
 
 - `druid.indexer.fork.property.druid.processing.numThreads`: set this to 1 or 2
 - `druid.indexer.fork.property.druid.processing.numMergeBuffers`: set this to 2
-- `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MB
+- `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MiB
 
 ##### Direct memory sizing
 
@@ -248,7 +248,7 @@ Tuning the cluster so that each Task can accept 50 queries and 10 non-queries is
 
 To estimate total memory usage of a Task under these guidelines:
 
-- Heap: `1GB + (2 * total size of lookup maps)`
+- Heap: `1GiB + (2 * total size of lookup maps)`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 The total memory usage of the MiddleManager + Tasks:
@@ -309,7 +309,7 @@ The Overlord tends to require less resources than the Coordinator or Broker. You
 
 The Router has light resource requirements, as it proxies requests to Brokers without performing much computational work itself.
 
-You can assign it 256MB heap as a starting point, growing it if needed.
+You can assign it 256MiB heap as a starting point, growing it if needed.
 
 <a name="processing-threads-buffers"></a>
 
@@ -323,7 +323,7 @@ The `druid.processing.numThreads` configuration controls the size of the process
 
 `druid.processing.buffer.sizeBytes` is a closely related property that controls the size of the off-heap buffers allocated to the processing threads.
 
-One buffer is allocated for each processing thread. A size between 500MB and 1GB is a reasonable choice for general use.
+One buffer is allocated for each processing thread. A size between 500MiB and 1GiB is a reasonable choice for general use.
 
 The TopN and GroupBy queries use these buffers to store intermediate computed results. As the buffer size increases, more data can be processed in a single pass.
 
@@ -371,9 +371,9 @@ As a starting point, allowing for 50 concurrent queries (requests that read segm
 
 ### Segment decompression
 
-When opening a segment for reading during segment merging or query processing, Druid allocates a 64KB off-heap decompression buffer for each column being read.
+When opening a segment for reading during segment merging or query processing, Druid allocates a 64KiB off-heap decompression buffer for each column being read.
 
-Thus, there is additional direct memory overhead of (64KB * number of columns read per segment * number of segments read) when reading segments.
+Thus, there is additional direct memory overhead of (64KiB * number of columns read per segment * number of segments read) when reading segments.
 
 ### Segment merging
 

@@ -46,6 +46,7 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -73,7 +74,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -99,7 +99,7 @@ public class TaskToolbox
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   @Nullable
   private final Provider<MonitorScheduler> monitorSchedulerProvider;
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final SegmentLoader segmentLoader;
   private final ObjectMapper jsonMapper;
@@ -141,7 +141,7 @@ public class TaskToolbox
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       @Nullable Provider<MonitorScheduler> monitorSchedulerProvider,
       SegmentLoader segmentLoader,
@@ -180,7 +180,7 @@ public class TaskToolbox
     this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
-    this.queryExecutorService = queryExecutorService;
+    this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.monitorSchedulerProvider = monitorSchedulerProvider;
     this.segmentLoader = segmentLoader;
@@ -268,9 +268,9 @@ public class TaskToolbox
     return queryRunnerFactoryConglomerateProvider.get();
   }
 
-  public ExecutorService getQueryExecutorService()
+  public QueryProcessingPool getQueryProcessingPool()
   {
-    return queryExecutorService;
+    return queryProcessingPool;
   }
 
   public JoinableFactory getJoinableFactory()

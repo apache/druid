@@ -32,14 +32,6 @@ describe('QueryView', () => {
     expect(sqlView).toMatchSnapshot();
   });
 
-  it('.trimSemicolon', () => {
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual(
-      'SELECT * FROM tbl --hello  ',
-    );
-  });
-
   it('.formatStr', () => {
     expect(QueryView.formatStr(null, 'csv')).toEqual('"null"');
     expect(QueryView.formatStr('hello\nworld', 'csv')).toEqual('"hello world"');

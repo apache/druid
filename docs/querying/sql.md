@@ -303,7 +303,7 @@ columns in this mode are not nullable; any null or missing values will be treate
 In SQL compatible mode (`false`), NULLs are treated more closely to the SQL standard. The property affects both storage
 and querying, so for correct behavior, it should be set on all Druid service types to be available at both ingestion
 time and query time. There is some overhead associated with the ability to handle NULLs; see
-the [segment internals](../design/segments.md#sql-compatible-null-handling)documentation for more details.
+the [segment internals](../design/segments.md#sql-compatible-null-handling) documentation for more details.
 
 ## Aggregation functions
 
@@ -360,6 +360,9 @@ Only the COUNT and ARRAY_AGG aggregations can accept the DISTINCT keyword.
 |`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|N/A|
 |`ARRAY_AGG(expr, [size])`|Collects all values of `expr` into an ARRAY, including null values, with `size` in bytes limit on aggregation size (default of 1024 bytes). Use of `ORDER BY` within the `ARRAY_AGG` expression is not currently supported, and the ordering of results within the output array may vary depending on processing order.|`null`|
 |`ARRAY_AGG(DISTINCT expr, [size])`|Collects all distinct values of `expr` into an ARRAY, including null values, with `size` in bytes limit on aggregation size (default of 1024 bytes) per aggregate. Use of `ORDER BY` within the `ARRAY_AGG` expression is not currently supported, and the ordering of results within the output array may vary depending on processing order.|`null`|
+|`BIT_AND(expr)`|Performs a bitwise AND operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
+|`BIT_OR(expr)`|Performs a bitwise OR operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
+|`BIT_XOR(expr)`|Performs a bitwise XOR operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
 
