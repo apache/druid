@@ -131,6 +131,19 @@ public class BatchAppenderatorTester implements AutoCloseable
       final long maxSizeInBytes,
       @Nullable final File basePersistDirectory,
       final boolean enablePushFailure,
+      final RowIngestionMeters rowIngestionMeters
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters,
+         false, false
+    );
+  }
+  
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      @Nullable final File basePersistDirectory,
+      final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
       final boolean batchFallback

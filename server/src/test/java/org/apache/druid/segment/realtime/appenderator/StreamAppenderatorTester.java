@@ -76,7 +76,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
-public class AppenderatorTester implements AutoCloseable
+public class StreamAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
@@ -93,14 +93,14 @@ public class AppenderatorTester implements AutoCloseable
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory
   )
   {
     this(maxRowsInMemory, -1, null, false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final boolean enablePushFailure
   )
@@ -108,7 +108,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, -1, null, enablePushFailure);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final boolean enablePushFailure
@@ -117,7 +117,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -127,7 +127,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -138,7 +138,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,

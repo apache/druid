@@ -72,7 +72,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -83,7 +83,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(null, appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add
       commitMetadata.put("x", "1");
@@ -157,7 +157,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             1024,
             null,
@@ -209,7 +209,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testMaxBytesInMemoryInMultipleSinksWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             1024,
             null,
@@ -257,7 +257,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 15000, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 15000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -363,7 +363,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test(expected = RuntimeException.class)
   public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 5180, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 5180, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -394,7 +394,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testTaskDoesNotFailAsExceededMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             10,
             null,
@@ -443,7 +443,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testTaskCleanupInMemoryCounterAfterCloseWithRowInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 10000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -488,7 +488,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxBytesInMemoryInMultipleSinks() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 31100, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 31100, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -628,7 +628,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testIgnoreMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, -1, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, -1, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -676,7 +676,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxRowsInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = new Supplier<Committer>()
@@ -727,7 +727,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxRowsInMemoryDisallowIncrementalPersists() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, false)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -774,7 +774,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testRestoreFromDisk() throws Exception
   {
     final RealtimeTuningConfig tuningConfig;
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       tuningConfig = tester.getTuningConfig();
 
@@ -816,7 +816,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 5), committerSupplier);
       appenderator.close();
 
-      try (final AppenderatorTester tester2 = new AppenderatorTester(
+      try (final StreamAppenderatorTester tester2 = new StreamAppenderatorTester(
           2,
           -1,
           tuningConfig.getBasePersistDirectory(),
@@ -833,7 +833,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test(timeout = 60_000L)
   public void testTotalRowCount() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
       final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
@@ -876,7 +876,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testVerifyRowIngestionMetrics() throws Exception
   {
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    try (final AppenderatorTester tester = new AppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
       final Appenderator appenderator = tester.getAppenderator();
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());
@@ -892,7 +892,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testQueryByIntervals() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -906,7 +906,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query1: 2000/2001
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001")))
                                            .aggregators(
                                                Arrays.asList(
@@ -932,7 +932,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query2: 2000/2002
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2002")))
                                            .aggregators(
                                                Arrays.asList(
@@ -962,7 +962,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query3: 2000/2001T01
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001T01")))
                                            .aggregators(
                                                Arrays.asList(
@@ -991,7 +991,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query4: 2000/2001T01, 2001T03/2001T04
       final TimeseriesQuery query4 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(
                                                ImmutableList.of(
                                                    Intervals.of("2000/2001T01"),
@@ -1028,7 +1028,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testQueryBySegments() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -1042,7 +1042,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query1: segment #2
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1078,7 +1078,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query2: segment #2, partial
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1114,7 +1114,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Query3: segment #2, two disjoint intervals
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1154,7 +1154,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       final ScanQuery query4 = Druids.newScanQueryBuilder()
-                                     .dataSource(AppenderatorTester.DATASOURCE)
+                                     .dataSource(StreamAppenderatorTester.DATASOURCE)
                                      .intervals(
                                          new MultipleSpecificSegmentSpec(
                                              ImmutableList.of(
@@ -1194,7 +1194,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
-        AppenderatorTester.DATASOURCE,
+        StreamAppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)

@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.FileUtils;
@@ -132,6 +131,8 @@ public class BatchAppenderator implements Appenderator
      * push time and also to remember the fire hydrant "count" when persisting it.
      */
     private int numHydrants;
+    /* Reference to directory that holds the persisted data */
+    File persistedFileDir;
 
     public SinkMetadata()
     {
@@ -162,6 +163,16 @@ public class BatchAppenderator implements Appenderator
     public int getNumHydrants()
     {
       return numHydrants;
+    }
+
+    public void setPersistedFileDir(File persistedFileDir)
+    {
+      this.persistedFileDir = persistedFileDir;
+    }
+
+    public File getPersistedFileDir()
+    {
+      return persistedFileDir;
     }
 
   }
@@ -368,7 +379,16 @@ public class BatchAppenderator implements Appenderator
   }
 
   @Override
+  /**
+   * Returns all active segments regardless whether they are in memory or persisted
+   */
   public List<SegmentIdWithShardSpec> getSegments()
+  {
+    return ImmutableList.copyOf(sinksMetadata.keySet());
+  }
+
+  @VisibleForTesting
+  public List<SegmentIdWithShardSpec> getInMemorySegments()
   {
     return ImmutableList.copyOf(sinks.keySet());
   }
@@ -590,16 +610,38 @@ public class BatchAppenderator implements Appenderator
       throw new ISE("There should be no committer for batch ingestion");
     }
 
+    if (useUniquePath) {
+      throw new ISE("Batch ingestion does not require uniquePath");
+    }
+
+
     // Any sinks not persisted so far need to be persisted before push:
     persistAllAndRemoveSinks();
 
     log.info("Preparing to push...");
-    final List<DataSegment> dataSegments = new ArrayList<>();
-    List<File> persistedIdentifiers = getPersistedidentifierPaths();
-    if (persistedIdentifiers == null) {
+
+    // get the dirs for the identfiers:
+    List<File> identifiersDirs = new ArrayList<>();
+    for (SegmentIdWithShardSpec identifier : identifiers) {
+      SinkMetadata sm = sinksMetadata.get(identifier);
+      if (sm == null) {
+        throw new ISE("No sink has been processed for identifier[%s]", identifier);
+      }
+      File persistedDir = sm.getPersistedFileDir();
+      if (persistedDir == null) {
+        throw new ISE("Sink for identifier[%s] not found in local file system[%s]", identifier);
+      }
+      identifiersDirs.add(persistedDir);
+    }
+    if (identifiersDirs == null) {
       throw new ISE("Identifiers were persisted but could not be retrieved");
     }
-    for (File identifier : persistedIdentifiers) {
+
+    // push all sinks for identifiers:
+    final List<DataSegment> dataSegments = new ArrayList<>();
+    for (File identifier : identifiersDirs) {
+
+      // retrieve sink from disk:
       Pair<SegmentIdWithShardSpec, Sink> identifiersAndSinks;
       try {
         identifiersAndSinks = getIdentifierAndSinkForPersistedFile(identifier);
@@ -607,16 +649,21 @@ public class BatchAppenderator implements Appenderator
       catch (IOException e) {
         throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
       }
+
+      // push it:
       final DataSegment dataSegment = mergeAndPush(
           identifiersAndSinks.lhs,
           identifiersAndSinks.rhs,
-          useUniquePath
+          false
       );
+
+      // record it:
       if (dataSegment != null) {
         dataSegments.add(dataSegment);
       } else {
         log.warn("mergeAndPush[%s] returned null, skipping.", identifiersAndSinks.lhs);
       }
+
     }
     log.info("Push complete...");
 
@@ -638,6 +685,7 @@ public class BatchAppenderator implements Appenderator
       final boolean useUniquePath
   )
   {
+
 
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
@@ -670,14 +718,8 @@ public class BatchAppenderator implements Appenderator
     try {
       if (descriptorFile.exists()) {
         // Already pushed.
-
         if (useUniquePath) {
-          // Don't reuse the descriptor, because the caller asked for a unique path. Leave the old one as-is, since
-          // it might serve some unknown purpose.
-          log.debug(
-              "Segment[%s] already pushed, but we want a unique path, so will push again with a new path.",
-              identifier
-          );
+          throw new ISE("Merge and push for batch appenderator does not use unique path");
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
           return objectMapper.readValue(descriptorFile, DataSegment.class);
@@ -728,9 +770,7 @@ public class BatchAppenderator implements Appenderator
 
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
-          // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
-          // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
-          // semantics.
+          // This appenderator is used only for the local indexing task so unique paths are not required
           () -> dataSegmentPusher.push(
               mergedFile,
               sink.getSegment()
@@ -1045,6 +1085,7 @@ public class BatchAppenderator implements Appenderator
             tuningConfig.getIndexSpecForIntermediatePersists(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
+        sm.setPersistedFileDir(persistDir);
 
         log.info(
             "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",

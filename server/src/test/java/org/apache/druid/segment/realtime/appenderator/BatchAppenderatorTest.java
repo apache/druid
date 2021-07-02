@@ -59,7 +59,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertNull(appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(BatchAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add #1
       Assert.assertEquals(
@@ -93,7 +93,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // above should be cleared now
       Assert.assertEquals(
           Collections.emptyList(),
-          appenderator.getSegments().stream().sorted().collect(Collectors.toList())
+          ((BatchAppenderator) appenderator).getInMemorySegments().stream().sorted().collect(Collectors.toList())
       );
 
       // add #4, this will add one more temporary segment:
@@ -152,7 +152,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertNull(appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(BatchAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add #1
       Assert.assertEquals(
@@ -802,7 +802,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   @Test(timeout = 60_000L)
   public void testTotalRowCount() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       Assert.assertEquals(0, appenderator.getTotalRowCount());
@@ -843,8 +843,8 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   public void testVerifyRowIngestionMetrics() throws Exception
   {
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    try (final AppenderatorTester tester =
-             new AppenderatorTester(5,
+    try (final BatchAppenderatorTester tester =
+             new BatchAppenderatorTester(5,
                                     10000L,
                                     null, false, rowIngestionMeters
              )) {
@@ -861,11 +861,67 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
     }
   }
+
+  @Test
+  public void testPushContract() throws Exception
+  {
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    try (final BatchAppenderatorTester tester =
+             new BatchAppenderatorTester(1,
+                                         50000L,
+                                         null, false, rowIngestionMeters
+             )) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 1), null);
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar2", 1), null);
+      appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar3", 1), null);
+
+      // push only a single segment
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+          Collections.singletonList(IDENTIFIERS.get(0)),
+          null,
+          false
+      ).get();
+
+      // only one segment must have been pushed:
+      Assert.assertEquals(
+          Collections.singletonList(IDENTIFIERS.get(0)),
+          Lists.transform(
+              segmentsAndCommitMetadata.getSegments(),
+              new Function<DataSegment, SegmentIdWithShardSpec>()
+              {
+                @Override
+                public SegmentIdWithShardSpec apply(DataSegment input)
+                {
+                  return SegmentIdWithShardSpec.fromDataSegment(input);
+                }
+              }
+          ).stream().sorted().collect(Collectors.toList())
+      );
+
+      Assert.assertEquals(
+          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
+          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+      // the responsability for dropping is in the BatchAppenderatorDriver, drop manually:
+      appenderator.drop(IDENTIFIERS.get(0));
+
+      // and the segment that was not pushed should still be active
+      Assert.assertEquals(
+          Collections.singletonList(IDENTIFIERS.get(1)),
+          appenderator.getSegments()
+      );
+
+
+    }
+  }
   
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
-        AppenderatorTester.DATASOURCE,
+        BatchAppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)
