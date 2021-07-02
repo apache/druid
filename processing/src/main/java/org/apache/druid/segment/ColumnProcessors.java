@@ -239,7 +239,7 @@ public class ColumnProcessors
           .setDictionaryValuesUnique(
               unique && dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
           )
-          .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(columnCapabilities));
+          .setHasMultipleValues(mayBeMultiValue(columnCapabilities));
     } else {
       // No transformation. Pass through underlying types.
       return columnCapabilities;

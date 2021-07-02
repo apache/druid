@@ -219,7 +219,7 @@ public class ExpressionPlan
    * If no output type was able to be inferred during planning, returns null
    */
   @Nullable
-  public ColumnCapabilities inferColumnCapabilities(@Nullable ValueType hint)
+  public ColumnCapabilities inferColumnCapabilities(@Nullable ValueType outputTypeHint)
   {
     if (outputType != null) {
       final ValueType inferredValueType = ExprType.toValueType(outputType);
@@ -227,7 +227,7 @@ public class ExpressionPlan
       if (inferredValueType.isNumeric()) {
         // if float was explicitly specified preserve it, because it will currently never be the computed output type
         // since there is no float expression type
-        if (ValueType.FLOAT == hint) {
+        if (ValueType.FLOAT == outputTypeHint) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
         }
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(inferredValueType);
@@ -235,8 +235,8 @@ public class ExpressionPlan
 
       // null constants can sometimes trip up the type inference to report STRING, so check if explicitly supplied
       // output type is numeric and stick with that if so
-      if (hint != null && hint.isNumeric()) {
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(hint);
+      if (outputTypeHint != null && outputTypeHint.isNumeric()) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(outputTypeHint);
       }
 
       // fancy string stuffs
@@ -273,7 +273,7 @@ public class ExpressionPlan
       // the complete set of input types
       if (any(Trait.NON_SCALAR_OUTPUT, Trait.NEEDS_APPLIED)) {
         // if the hint requested a string, use a string
-        if (ValueType.STRING == hint) {
+        if (ValueType.STRING == outputTypeHint) {
           return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
         }
         // maybe something is looking for a little fun and wants arrays? let whatever it is through
