@@ -67,7 +67,6 @@ public class RocketMQIndexTaskTuningConfig extends SeekableStreamIndexTaskTuning
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
