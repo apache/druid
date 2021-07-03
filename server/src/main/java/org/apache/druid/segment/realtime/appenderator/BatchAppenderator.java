@@ -629,12 +629,9 @@ public class BatchAppenderator implements Appenderator
       }
       File persistedDir = sm.getPersistedFileDir();
       if (persistedDir == null) {
-        throw new ISE("Sink for identifier[%s] not found in local file system[%s]", identifier);
+        throw new ISE("Sink for identifier[%s] not found in local file system", identifier);
       }
       identifiersDirs.add(persistedDir);
-    }
-    if (identifiersDirs == null) {
-      throw new ISE("Identifiers were persisted but could not be retrieved");
     }
 
     // push all sinks for identifiers:
