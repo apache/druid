@@ -1991,42 +1991,6 @@ public class RocketMQIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
-  {
-    resetOffsetAutomatically = true;
-    // Insert data
-    insertData();
-
-    final RocketMQIndexTask task = createTask(
-        null,
-        new RocketMQIndexTaskIOConfig(
-            0,
-            "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 200L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(PartitionUtil.genPartition(BROKER_NAME, 0), 500L)),
-            rocketmqServer.consumerProperties(),
-            RocketMQSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-            true,
-            null,
-            null,
-            INPUT_FORMAT
-        )
-    );
-
-    runTask(task);
-
-    while (!task.getRunner().getStatus().equals(Status.READING)) {
-      Thread.sleep(20);
-    }
-
-    for (int i = 0; i < 5; i++) {
-      Assert.assertEquals(Status.READING, task.getRunner().getStatus());
-      // Offset should not be reset
-      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(PartitionUtil.genPartition(BROKER_NAME, 0)));
-    }
-  }
-
-  @Test(timeout = 60_000L)
   public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
   {
     // Insert data

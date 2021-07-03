@@ -21,7 +21,6 @@ package org.apache.druid.indexing.rocketmq;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.rocketmq.RocketMQRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -133,8 +132,7 @@ public class RocketMQIndexTaskRunner extends SeekableStreamIndexTaskRunner<Strin
       for (final StreamPartition<String> streamPartition : assignment) {
         long sequence = currOffsets.get(streamPartition.getPartitionId());
         long earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (earliestSequenceNumber == 0L
-            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+        if (createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
           if (task.getTuningConfig().isResetOffsetAutomatically()) {
             log.info("Attempting to reset sequences automatically for all partitions");
             try {
