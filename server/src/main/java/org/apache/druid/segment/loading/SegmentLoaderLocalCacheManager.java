@@ -142,11 +142,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Override
   public boolean isSegmentLoaded(final DataSegment segment)
   {
-    return findStorageLocationIfLoaded(segment) != null;
+    return findStoragePathIfLoaded(segment) != null;
   }
 
   @Nullable
-  private File findStorageLocationIfLoaded(final DataSegment segment)
+  private File findStoragePathIfLoaded(final DataSegment segment)
   {
     for (StorageLocation location : locations) {
       String storageDir = getSegmentDir(segment);
@@ -225,7 +225,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        File segmentDir = findStorageLocationIfLoaded(segment);
+        File segmentDir = findStoragePathIfLoaded(segment);
         if (segmentDir != null) {
           return segmentDir;
         }
@@ -330,7 +330,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     synchronized (lock) {
       try {
         // May be the segment was already loaded [This check is required to account for restart scenarios]
-        if (null != findStorageLocationIfLoaded(segment)) {
+        if (null != findStoragePathIfLoaded(segment)) {
           return true;
         }
 
@@ -369,7 +369,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        File loc = findStorageLocationIfLoaded(segment);
+        File loc = findStoragePathIfLoaded(segment);
 
         if (loc == null) {
           log.warn("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment.getId());

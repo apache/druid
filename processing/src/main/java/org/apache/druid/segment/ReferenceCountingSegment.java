@@ -33,6 +33,9 @@ import java.util.Optional;
  * {@link Segment} that is also a {@link ReferenceCountingSegment}, allowing query engines that operate directly on
  * segments to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight
  * queries.
+ *
+ * Extensions can extend this class for populating {@link org.apache.druid.timeline.VersionedIntervalTimeline} with
+ * a custom implementation through SegmentLoader.
  */
 public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<Segment>
     implements SegmentReference, Overshadowable<ReferenceCountingSegment>

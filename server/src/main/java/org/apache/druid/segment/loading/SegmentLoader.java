@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
@@ -29,10 +30,21 @@ import java.io.File;
  * Loading segments from deep storage to local storage.
  * Implementations must be thread-safe.
  */
+@ExtensionPoint
 public interface SegmentLoader
 {
   boolean isSegmentLoaded(DataSegment segment);
 
+  /**
+   * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
+   * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
+   * by the {@link org.apache.druid.server.SegmentManager}
+   * @param segment - {@link DataSegment} segment to download
+   * @param lazy - whether the loading is lazy
+   * @param loadFailed - Callback to invoke if the loading fails
+   * @return
+   * @throws SegmentLoadingException
+   */
   ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
