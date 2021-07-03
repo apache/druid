@@ -33,7 +33,7 @@ For more information, see [Adding a new DynamicConfigProvider implementation](..
 
 ## Environment variable dynamic config provider
 
-`EnvironmentVariableDynamicConfigProvider` can be used to avoid exposing credentials or other secret information in the configuration files using environment variables. An example to use this configProvider is:
+`EnvironmentVariableDynamicConfigProvider` can be used to avoid exposing credentials or other secret information in the configuration files using environment variables. An example to use this `configProvider` is:
 ```json
 druid.some.config.dynamicConfigProvider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
 ```
