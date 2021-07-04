@@ -118,17 +118,21 @@ public class K8sDruidClusterAdminClient extends AbstractDruidClusterAdminClient
 
   private void restartPod(String podName)
   {
-    // We only need to delete the pod, k8s StatefulSet controller will automatically recreate it.
     try {
-      V1Pod prevPod = k8sClient.deleteNamespacedPod(
-          podName,
-          NAMESPACE,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+      // We only need to delete the pod, k8s StatefulSet controller will automatically recreate it.
+      V1Pod prevPod = RetryUtils.retry(
+          () -> k8sClient.deleteNamespacedPod(
+              podName,
+              NAMESPACE,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+          ),
+          (Throwable th) -> true,
+          3
       );
 
       // Wait for previous pod to terminate and new pod to come up
