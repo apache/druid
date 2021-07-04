@@ -136,7 +136,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                     item.type,
                     new DiscoveryDruidNodeAndResourceVersion(
                         item.object.getMetadata().getResourceVersion(),
-                        getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
+                        () -> getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
                     )
                 );
                 return true;
