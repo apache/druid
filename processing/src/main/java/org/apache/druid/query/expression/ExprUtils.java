@@ -23,12 +23,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -128,60 +124,5 @@ public class ExprUtils
   static boolean isNullLiteral(final Expr expr)
   {
     return expr.isLiteral() && expr.getLiteralValue() == null;
-  }
-
-  @Nullable
-  public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
-      final String expression,
-      final ExprMacroTable macroTable
-  )
-  {
-    return asTimestampFloorExpr(Parser.parse(expression, macroTable));
-  }
-
-  @Nullable
-  public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(final Expr expr)
-  {
-    if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
-      return (TimestampFloorExprMacro.TimestampFloorExpr) expr;
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Converts an expression to a Granularity, if possible. This is possible if, and only if, the expression
-   * is a timestamp_floor function on the __time column with literal parameters for period, origin, and timeZone.
-   *
-   * @return granularity or null if not possible
-   */
-  @Nullable
-  public static Granularity toQueryGranularity(final String expression, final ExprMacroTable macroTable)
-  {
-    return toQueryGranularity(Parser.parse(expression, macroTable));
-  }
-
-  /**
-   * Converts an expression to a Granularity, if possible. This is possible if, and only if, the expression
-   * is a timestamp_floor function on the __time column with literal parameters for period, origin, and timeZone.
-   *
-   * @return granularity or null if not possible
-   */
-  @Nullable
-  public static Granularity toQueryGranularity(final Expr expression)
-  {
-    TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression);
-    if (expr == null) {
-      return null;
-    }
-
-    final Expr arg = expr.getArg();
-    final Granularity granularity = expr.getGranularity();
-
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getBindingIfIdentifier())) {
-      return granularity;
-    } else {
-      return null;
-    }
   }
 }

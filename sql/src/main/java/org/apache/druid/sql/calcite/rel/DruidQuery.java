@@ -55,6 +55,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -1002,7 +1003,7 @@ public class DruidQuery
       postAggregators.addAll(sorting.getProjection().getPostAggregators());
     }
 
-    return new GroupByQuery(
+    GroupByQuery query = new GroupByQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
         getVirtualColumns(true),
@@ -1016,6 +1017,42 @@ public class DruidQuery
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
+    // in this case, the timestampResult optimization is not neccessary
+    if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
+      return query;
+    }
+    Map<String, Object> theContext = plannerContext.getQueryContext();
+
+    Granularity queryGranularity = null;
+
+    if (!grouping.getDimensions().isEmpty()) {
+      for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
+        Granularity granularity = Expressions.toQueryGranularity(
+            dimensionExpression.getDruidExpression(),
+            plannerContext.getExprMacroTable()
+        );
+        if (granularity == null) {
+          continue;
+        }
+        if (queryGranularity != null) {
+          // group by more than one timestamp_floor
+          // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
+          queryGranularity = null;
+          break;
+        }
+        queryGranularity = granularity;
+        int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
+        theContext = new HashMap<>();
+        // these settings will only affect the most inner query sent to the down streaming compute nodes
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+      }
+    }
+    if (queryGranularity == null) {
+      return query;
+    }
+    return query.withOverriddenContext(theContext);
   }
 
   /**

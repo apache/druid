@@ -216,14 +216,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
     context.put("finalize", false);
     context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
-    Map<String, Object> timestampFieldContext = GroupByQueryHelper.findTimestampResultField(query);
-    context.putAll(timestampFieldContext);
 
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
-    final String timestampResultField = (String) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
-    final boolean hasTimestampResultField = timestampResultField != null
-                                            && query.getContextBoolean(CTX_KEY_OUTERMOST, true);
+    final String timestampResultField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
+                                            && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
+                                            && !query.isApplyLimitPushDown();
     int timestampResultFieldIndex = 0;
     if (hasTimestampResultField) {
       // sql like "group by city_id,time_floor(__time to day)",
@@ -232,7 +231,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // but the ResultRow structure is changed from [d0, d1] to [__time, d0]
       // this structure should be fixed as [d0, d1] (actually it is [d0, __time]) before postAggs are called
       final Granularity timestampResultFieldGranularity
-          = (Granularity) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+          = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
       dimensionSpecs =
           query.getDimensions()
                .stream()
@@ -241,7 +240,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       granularity = timestampResultFieldGranularity;
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
-      timestampResultFieldIndex = (int) timestampFieldContext.get(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }
@@ -488,7 +487,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
           )
           .withVirtualColumns(VirtualColumns.EMPTY)
           .withDimFilter(null)
-          .withSubtotalsSpec(null);
+          .withSubtotalsSpec(null)
+          // timestampResult optimization is not for subtotal scenario, so disable it
+          .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
 
       resultSupplierOne = GroupByRowProcessor.process(
           baseSubtotalQuery,

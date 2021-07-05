@@ -35,9 +35,11 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.expression.ExprUtils;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -675,7 +677,35 @@ public class Expressions
   @Nullable
   public static Granularity toQueryGranularity(final DruidExpression expression, final ExprMacroTable macroTable)
   {
-    return ExprUtils.toQueryGranularity(expression.getExpression(), macroTable);
+    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, macroTable);
+
+    if (expr == null) {
+      return null;
+    }
+
+    final Expr arg = expr.getArg();
+    final Granularity granularity = expr.getGranularity();
+
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getBindingIfIdentifier())) {
+      return granularity;
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
+      final DruidExpression expression,
+      final ExprMacroTable macroTable
+  )
+  {
+    final Expr expr = Parser.parse(expression.getExpression(), macroTable);
+
+    if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
+      return (TimestampFloorExprMacro.TimestampFloorExpr) expr;
+    } else {
+      return null;
+    }
   }
 
   /**

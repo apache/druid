@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -148,6 +149,10 @@ import java.util.stream.Collectors;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+  private static final Granularity P1D = new PeriodGranularity(Period.parse("P1D"), null, DateTimeZone.UTC);
+  private static final Granularity P1M = new PeriodGranularity(Period.parse("P1M"), null, DateTimeZone.UTC);
+  private static final Granularity P1Y = new PeriodGranularity(Period.parse("P1Y"), null, DateTimeZone.UTC);
+
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -7966,7 +7971,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 ImmutableList.of("d0", "d1"),
                                                 ImmutableList.of("d0", "d2")
                                             ))
-                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1D))
                                             .build()
                             )
                         )
@@ -10075,7 +10080,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1Y))
                         .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -13337,7 +13342,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -13404,7 +13409,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13470,7 +13475,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13618,7 +13623,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13677,7 +13682,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13735,7 +13740,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13796,7 +13801,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of("d2")
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d2", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13857,7 +13862,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13930,7 +13935,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -13998,7 +14003,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -14067,7 +14072,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 1
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -17261,7 +17266,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 100
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.of(
@@ -17334,7 +17339,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 100
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
                         .build()
         ),
         ImmutableList.<Object[]>builder().add(
@@ -17902,5 +17907,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 0L, 325323L, 325323L}
         )
     );
+  }
+
+  private Map<String, Object> withTimestampResultContext(
+      Map<String, Object> input,
+      String timestampResultField,
+      int timestampResultFieldIndex,
+      Granularity granularity
+  )
+  {
+    Map<String, Object> output = new HashMap<>(input);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
+    return output;
   }
 }
