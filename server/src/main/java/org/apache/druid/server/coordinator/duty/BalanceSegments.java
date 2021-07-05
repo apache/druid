@@ -56,6 +56,8 @@ public class BalanceSegments implements CoordinatorDuty
   protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
 
+  private static final int DEFAULT_RESERVOIR_SIZE = 1;
+
   public BalanceSegments(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
@@ -190,19 +192,20 @@ public class BalanceSegments implements CoordinatorDuty
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     int moved = 0, unmoved = 0;
 
-    Iterator<BalancerSegmentHolder> segmetnsToMove = strategy.pickSegmentsToMove(
+    Iterator<BalancerSegmentHolder> segmentsToMove = strategy.pickSegmentsToMove(
         toMoveFrom,
         params.getBroadcastDatasources(),
-        maxSegmentsToMove
+        params.getCoordinatorDynamicConfig().useBatchedSegmentSampler() ? maxSegmentsToMove : DEFAULT_RESERVOIR_SIZE,
+        params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
     );
 
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      if (!segmetnsToMove.hasNext()) {
+      if (!segmentsToMove.hasNext()) {
         log.info("All servers to move segments from are empty, ending run.");
         break;
       }
-      final BalancerSegmentHolder segmentToMoveHolder = segmetnsToMove.next();
+      final BalancerSegmentHolder segmentToMoveHolder = segmentsToMove.next();
 
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadataManager, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
