@@ -1534,6 +1534,7 @@
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
+                        <reuseForks>false</reuseForks>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
