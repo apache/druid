@@ -535,7 +535,7 @@ public class BatchAppenderator implements Appenderator
       // the invariant of exactly one, always swappable, sink with exactly one unpersisted hydrant must hold
       int totalHydrantsForSink = hydrants.size();
       if (totalHydrantsForSink != 1) {
-        throw new ISE("There should be only onw hydrant for identifier[%s] but there are[%s]",
+        throw new ISE("There should be only one hydrant for identifier[%s] but there are[%s]",
                       identifier, totalHydrantsForSink
         );
       }
@@ -551,7 +551,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     if (indexesToPersist.isEmpty()) {
-      log.info("No indexes will be peristed");
+      log.info("No indexes will be persisted");
     }
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     try {
@@ -650,8 +650,7 @@ public class BatchAppenderator implements Appenderator
       // push it:
       final DataSegment dataSegment = mergeAndPush(
           identifiersAndSinks.lhs,
-          identifiersAndSinks.rhs,
-          false
+          identifiersAndSinks.rhs
       );
 
       // record it:
@@ -672,14 +671,12 @@ public class BatchAppenderator implements Appenderator
    *
    * @param identifier    sink identifier
    * @param sink          sink to push
-   * @param useUniquePath true if the segment should be written to a path with a unique identifier
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
   private DataSegment mergeAndPush(
       final SegmentIdWithShardSpec identifier,
-      final Sink sink,
-      final boolean useUniquePath
+      final Sink sink
   )
   {
 
@@ -696,10 +693,8 @@ public class BatchAppenderator implements Appenderator
 
     int numHydrants = 0;
     for (FireHydrant hydrant : sink) {
-      synchronized (hydrant) {
-        if (!hydrant.hasSwapped()) {
-          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
-        }
+      if (!hydrant.hasSwapped()) {
+        throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
       }
       numHydrants++;
     }
@@ -715,12 +710,8 @@ public class BatchAppenderator implements Appenderator
     try {
       if (descriptorFile.exists()) {
         // Already pushed.
-        if (useUniquePath) {
-          throw new ISE("Merge and push for batch appenderator does not use unique path");
-        } else {
-          log.info("Segment[%s] already pushed, skipping.", identifier);
-          return objectMapper.readValue(descriptorFile, DataSegment.class);
-        }
+        log.info("Segment[%s] already pushed, skipping.", identifier);
+        return objectMapper.readValue(descriptorFile, DataSegment.class);
       }
 
       removeDirectory(mergedTarget);
@@ -775,7 +766,7 @@ public class BatchAppenderator implements Appenderator
                       indexes,
                       schema.getDimensionsSpec()
                   )),
-              useUniquePath
+              false
           ),
           exception -> exception instanceof Exception,
           5
@@ -1052,61 +1043,59 @@ public class BatchAppenderator implements Appenderator
    */
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
   {
-    synchronized (indexToPersist) {
+    if (indexToPersist.hasSwapped()) {
+      throw new ISE(
+          "Segment[%s] hydrant[%s] already swapped. This cannot happen.",
+          identifier,
+          indexToPersist
+      );
+    }
 
-      if (indexToPersist.hasSwapped()) {
-        throw new ISE("Segment[%s] hydrant[%s] already swapped. This cannot happen.",
-            identifier,
-            indexToPersist
-        );
+    log.debug("Segment[%s], persisting Hydrant[%s]", identifier, indexToPersist);
+
+    try {
+      final long startTime = System.nanoTime();
+      int numRows = indexToPersist.getIndex().size();
+
+      // since the sink may have been persisted before it may have lost its
+      // hydrant count, we remember that value in the sinks metadata so we have
+      // to pull it from there....
+      SinkMetadata sm = sinksMetadata.get(identifier);
+      if (sm == null) {
+        throw new ISE("Sink must not be null for identifier when persisting hydrant[%s]", identifier);
       }
+      final File persistDir = createPersistDirIfNeeded(identifier);
+      indexMerger.persist(
+          indexToPersist.getIndex(),
+          identifier.getInterval(),
+          new File(persistDir, String.valueOf(sm.getNumHydrants())),
+          tuningConfig.getIndexSpecForIntermediatePersists(),
+          tuningConfig.getSegmentWriteOutMediumFactory()
+      );
+      sm.setPersistedFileDir(persistDir);
 
-      log.debug("Segment[%s], persisting Hydrant[%s]", identifier, indexToPersist);
+      log.info(
+          "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+          indexToPersist.getSegmentId(),
+          indexToPersist.getCount(),
+          (System.nanoTime() - startTime) / 1000000,
+          numRows
+      );
 
-      try {
-        final long startTime = System.nanoTime();
-        int numRows = indexToPersist.getIndex().size();
+      indexToPersist.swapSegment(null);
+      // remember hydrant count:
+      sm.addHydrants(1);
 
-        // since the sink may have been persisted before it may have lost its
-        // hydrant count, we remember that value in the sinks metadata so we have
-        // to pull it from there....
-        SinkMetadata sm = sinksMetadata.get(identifier);
-        if (sm == null) {
-          throw new ISE("Sink must not be null for identifier when persisting hydrant[%s]", identifier);
-        }
-        final File persistDir = createPersistDirIfNeeded(identifier);
-        indexMerger.persist(
-            indexToPersist.getIndex(),
-            identifier.getInterval(),
-            new File(persistDir, String.valueOf(sm.getNumHydrants())),
-            tuningConfig.getIndexSpecForIntermediatePersists(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
-        );
-        sm.setPersistedFileDir(persistDir);
+      return numRows;
+    }
+    catch (IOException e) {
+      log.makeAlert("Incremental persist failed")
+         .addData("segment", identifier.toString())
+         .addData("dataSource", schema.getDataSource())
+         .addData("count", indexToPersist.getCount())
+         .emit();
 
-        log.info(
-            "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
-            indexToPersist.getSegmentId(),
-            indexToPersist.getCount(),
-            (System.nanoTime() - startTime) / 1000000,
-            numRows
-        );
-
-        indexToPersist.swapSegment(null);
-        // remember hydrant count:
-        sm.addHydrants(1);
-
-        return numRows;
-      }
-      catch (IOException e) {
-        log.makeAlert("Incremental persist failed")
-           .addData("segment", identifier.toString())
-           .addData("dataSource", schema.getDataSource())
-           .addData("count", indexToPersist.getCount())
-           .emit();
-
-        throw new RuntimeException(e);
-      }
+      throw new RuntimeException(e);
     }
   }
 
