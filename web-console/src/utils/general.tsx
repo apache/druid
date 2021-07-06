@@ -100,28 +100,29 @@ interface NeedleAndMode {
 }
 
 export function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value.toLowerCase();
+  const input = filter.value;
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
       mode: 'exact',
     };
+  } else {
+    return {
+      needle: input.replace(/^"/, '').toLowerCase(),
+      mode: 'includes',
+    };
   }
-  return {
-    needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'includes',
-  };
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
-  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return needle === haystack;
+    return needle === String(value);
+  } else {
+    return String(value).toLowerCase().includes(needle);
   }
-  return haystack.includes(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {

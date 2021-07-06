@@ -72,10 +72,10 @@ describe('general', () => {
         String(
           sqlQueryCustomTableFilter({
             id: 'datasource',
-            value: `"hello"`,
+            value: `"Hello"`,
           }),
         ),
-      ).toEqual(`"datasource" = 'hello'`);
+      ).toEqual(`"datasource" = 'Hello'`);
     });
   });
 
