@@ -2121,7 +2121,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {this.renderColumnFilterControls()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          onNextStep: () => {
+            if (!filterQueryState.data) return false;
+
+            let newSpec = spec;
+            if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
+              const currentRollup = deepGet(newSpec, 'spec.dataSchema.granularitySpec.rollup');
+              newSpec = updateSchemaWithSample(
+                newSpec,
+                filterQueryState.data,
+                'specific',
+                typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
+              );
+            }
+
+            this.updateSpec(newSpec);
+            return true;
+          },
+        })}
       </>
     );
   }
