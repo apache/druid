@@ -21,10 +21,12 @@ package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.util.Config;
+import okhttp3.Protocol;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -34,6 +36,7 @@ import org.apache.druid.testing.guice.TestClient;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.Collections;
 
 public class K8sDruidClusterAdminClient extends AbstractDruidClusterAdminClient
 {
@@ -61,7 +64,15 @@ public class K8sDruidClusterAdminClient extends AbstractDruidClusterAdminClient
     super(jsonMapper, httpClient, config);
 
     try {
-      this.k8sClient = new CoreV1Api(Config.defaultClient());
+      ApiClient k8sApiClient = Config.defaultClient();
+      k8sApiClient.setHttpClient(
+          k8sApiClient
+              .getHttpClient()
+              .newBuilder()
+              .protocols(Collections.singletonList((Protocol.HTTP_1_1)))
+              .build()
+      );
+      this.k8sClient = new CoreV1Api(k8sApiClient);
     }
     catch (IOException ex) {
       throw new RE(ex, "Failed to create K8s ApiClient instance");

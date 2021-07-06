@@ -26,6 +26,7 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.Config;
+import okhttp3.Protocol;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -63,7 +64,15 @@ public class K8sDiscoveryModule implements DruidModule
                 try {
                   // Note: we can probably improve things here about figuring out how to find the K8S API server,
                   // HTTP client timeouts etc.
-                  return Config.defaultClient();
+                  ApiClient k8sClient = Config.defaultClient();
+                  k8sClient.setHttpClient(
+                    k8sClient
+                        .getHttpClient()
+                        .newBuilder()
+                        .protocols(Collections.singletonList((Protocol.HTTP_1_1)))
+                        .build()
+                  );
+                  return k8sClient;
                 }
                 catch (IOException ex) {
                   throw new RuntimeException("Failed to create K8s ApiClient instance", ex);
