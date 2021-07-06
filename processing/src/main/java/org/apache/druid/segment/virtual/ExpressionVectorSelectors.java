@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -54,7 +55,13 @@ public class ExpressionVectorSelectors
       String constant = plan.getExpression().eval(ExprUtils.nilBindings()).asString();
       return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorInspector(), constant);
     }
-    throw new IllegalStateException("Only constant expressions currently support dimension selectors");
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && ExprType.STRING == plan.getOutputType()) {
+      return new SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
+          factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(plan.getSingleInputName())),
+          plan.getExpression()
+      );
+    }
+    throw new IllegalStateException("Only constant and single input string expressions currently support dictionary encoded selectors");
   }
 
   public static VectorValueSelector makeVectorValueSelector(

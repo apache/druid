@@ -49,7 +49,7 @@ This sorting order will try to parse all string values as numbers. Unparseable v
 When comparing two unparseable values (e.g., "hello" and "world"), this ordering will sort by comparing the unparsed strings lexicographically.
 
 ## Strlen
-Sorts values by the their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
+Sorts values by their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
 
 ## Version
 Sorts values as versions, e.g.: "10.0 sorts after 9.0", "1.0.0-SNAPSHOT sorts after 1.0.0".

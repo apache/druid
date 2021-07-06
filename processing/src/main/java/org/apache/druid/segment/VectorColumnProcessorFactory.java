@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -86,4 +88,27 @@ public interface VectorColumnProcessorFactory<T>
    * cases where the dictionary does not exist or is not expected to be useful.
    */
   T makeObjectProcessor(@SuppressWarnings("unused") ColumnCapabilities capabilities, VectorObjectSelector selector);
+
+  /**
+   * The processor factory can influence the decision on whether or not to prefer a dictionary encoded column value
+   * selector over a an object selector by examining the {@link ColumnCapabilities}.
+   *
+   * By default, all processor factories prefer to use a dictionary encoded selector if the column has a dictionary
+   * available ({@link ColumnCapabilities#isDictionaryEncoded()} is true), and there is a unique mapping of dictionary
+   * id to value ({@link ColumnCapabilities#areDictionaryValuesUnique()} is true), but this can be overridden
+   * if there is more appropriate behavior for a given processor.
+   *
+   * For processors, this means by default only actual dictionary encoded string columns (likely from real segments)
+   * will use {@link SingleValueDimensionVectorSelector} and {@link MultiValueDimensionVectorSelector}, while
+   * processors on things like string expression virtual columns will prefer to use {@link VectorObjectSelector}. In
+   * other words, it is geared towards use cases where there is a clear opportunity to benefit to deferring having to
+   * deal with the actual string value in exchange for the increased complexity of dealing with dictionary encoded
+   * selectors.
+   */
+  default boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
+  {
+    Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
+    Preconditions.checkArgument(capabilities.getType() == ValueType.STRING, "Must only be called on a STRING column");
+    return capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
+  }
 }
