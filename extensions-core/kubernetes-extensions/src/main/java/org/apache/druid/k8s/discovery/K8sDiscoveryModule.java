@@ -66,11 +66,11 @@ public class K8sDiscoveryModule implements DruidModule
                   // HTTP client timeouts etc.
                   ApiClient k8sClient = Config.defaultClient();
                   k8sClient.setHttpClient(
-                    k8sClient
-                        .getHttpClient()
-                        .newBuilder()
-                        .protocols(Collections.singletonList((Protocol.HTTP_1_1)))
-                        .build()
+                      k8sClient
+                          .getHttpClient()
+                          .newBuilder()
+                          .protocols(Collections.singletonList((Protocol.HTTP_1_1)))
+                          .build()
                   );
                   return k8sClient;
                 }
