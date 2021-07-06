@@ -172,6 +172,18 @@ public class ServerManagerTest
           {
 
           }
+
+          @Override
+          public boolean reserve(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
         }
     );
     serverManager = new ServerManager(

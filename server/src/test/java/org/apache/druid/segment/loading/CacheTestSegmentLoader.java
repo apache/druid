@@ -91,6 +91,18 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
+  public boolean reserve(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean release(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void cleanup(DataSegment segment)
   {
     segmentsInTrash.add(segment);

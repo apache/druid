@@ -124,6 +124,11 @@ public class StorageLocation
     return files.contains(segmentFile);
   }
 
+  public File segmentDirectoryAsFile(String segmentDir)
+  {
+    return new File(path, segmentDir);
+  }
+
   /**
    * Reserves space to store the given segment, only if it has not been done already. This can be used
    * when segment is already downloaded on the disk. Unlike {@link #reserve(String, DataSegment)}, this function

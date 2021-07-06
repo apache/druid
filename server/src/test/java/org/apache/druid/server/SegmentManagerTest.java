@@ -85,6 +85,18 @@ public class SegmentManagerTest
     }
 
     @Override
+    public boolean reserve(DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean release(DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void cleanup(DataSegment segment)
     {
 
