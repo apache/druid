@@ -1534,7 +1534,6 @@
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
-                        <reuseForks>false</reuseForks>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -1788,7 +1787,7 @@
                         </executions>
                         <configuration combine.self="override">
                             <forkCount>${maven.fork.count}</forkCount>
-                            <reuseForks>false</reuseForks>
+                            <reuseForks>true</reuseForks>
                             <trimStackTrace>false</trimStackTrace>
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
