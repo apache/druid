@@ -42,6 +42,11 @@ public final class ConnectionUriUtils
   public static final String POSTGRES_PREFIX = "jdbc:postgresql:";
   public static final String MARIADB_PREFIX = "jdbc:mariadb:";
 
+  public static final String POSTGRES_DRIVER = "org.postgresql.Driver";
+  public static final String MYSQL_DRIVER = "com.mysql.jdbc.Driver";
+  public static final String MYSQL_NON_REGISTERING_DRIVER = "com.mysql.jdbc.NonRegisteringDriver";
+  public static final String MARIADB_DRIVER = "org.mariadb.jdbc.Driver";
+
   /**
    * This method checks {@param actualProperties} against {@param allowedProperties} if they are not system properties.
    * A property is regarded as a system property if its name starts with a prefix in {@param systemPropertyPrefixes}.
@@ -100,15 +105,15 @@ public final class ConnectionUriUtils
               notFoundMysql
           );
         }
-        catch (IllegalArgumentException iae) {
-          throw iae;
+        catch (IllegalArgumentException iaeMaria2x) {
+          throw iaeMaria2x;
         }
         catch (Throwable otherMaria2x) {
           throw new RuntimeException(otherMaria2x);
         }
       }
-      catch (IllegalArgumentException iae) {
-        throw iae;
+      catch (IllegalArgumentException iaeMySql) {
+        throw iaeMySql;
       }
       catch (Throwable otherMysql) {
         throw new RuntimeException(otherMysql);
@@ -123,30 +128,29 @@ public final class ConnectionUriUtils
         }
         catch (ClassNotFoundException notFoundMaria3x) {
           throw new RuntimeException(
-              "Failed to find MariaDB driver class. Please check the MySQL connector version 2.7.3 is in the classpath",
+              "Failed to find MariaDB driver class. Please check the MariaDB connector version 2.7.3 is in the classpath",
               notFoundMaria2x
           );
         }
-        catch (IllegalArgumentException iae) {
-          throw iae;
+        catch (IllegalArgumentException iaeMaria3x) {
+          throw iaeMaria3x;
         }
         catch (Throwable otherMaria3x) {
           throw new RuntimeException(otherMaria3x);
         }
       }
-      catch (IllegalArgumentException iae) {
-        throw iae;
+      catch (IllegalArgumentException iaeMaria2x) {
+        throw iaeMaria2x;
       }
       catch (Throwable otherMaria2x) {
         throw new RuntimeException(otherMaria2x);
       }
     } else if (connectionUri.startsWith(POSTGRES_PREFIX)) {
-
       try {
         return tryParsePostgresConnectionUri(connectionUri);
       }
-      catch (IllegalArgumentException iae) {
-        throw iae;
+      catch (IllegalArgumentException iaePostgres) {
+        throw iaePostgres;
       }
       catch (Throwable otherPostgres) {
         // no special handling for class not found because postgres driver is in distribution and should be available.
@@ -163,7 +167,7 @@ public final class ConnectionUriUtils
   public static Set<String> tryParsePostgresConnectionUri(String connectionUri)
       throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException
   {
-    Class<?> driverClass = Class.forName("org.postgresql.Driver");
+    Class<?> driverClass = Class.forName(POSTGRES_DRIVER);
     Method parseUrl = driverClass.getMethod("parseURL", String.class, Properties.class);
     Properties properties = (Properties) parseUrl.invoke(null, connectionUri, null);
     if (properties == null) {
@@ -178,7 +182,7 @@ public final class ConnectionUriUtils
       throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException,
              InvocationTargetException
   {
-    Class<?> driverClass = Class.forName("com.mysql.jdbc.NonRegisteringDriver");
+    Class<?> driverClass = Class.forName(MYSQL_NON_REGISTERING_DRIVER);
     Method parseUrl = driverClass.getMethod("parseURL", String.class, Properties.class);
     // almost the same as postgres, but is an instance level method
     Properties properties = (Properties) parseUrl.invoke(driverClass.getConstructor().newInstance(), connectionUri, null);
@@ -200,6 +204,7 @@ public final class ConnectionUriUtils
     Class<?> optionsClass = Class.forName("org.mariadb.jdbc.util.Options");
     Method parseUrl = urlParserClass.getMethod("parse", String.class);
     Method getOptions = urlParserClass.getMethod("getOptions");
+
     Object urlParser = parseUrl.invoke(null, connectionUri);
 
     if (urlParser == null) {

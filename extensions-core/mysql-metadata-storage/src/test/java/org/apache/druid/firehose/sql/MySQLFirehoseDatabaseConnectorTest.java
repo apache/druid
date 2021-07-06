@@ -178,6 +178,31 @@ public class MySQLFirehoseDatabaseConnectorTest
   }
 
   @Test
+  public void testSuccessOnlyValidPropertyMariaDb()
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mariadb://localhost:3306/test?user=maytas&password=secret&keyonly";
+      }
+    };
+
+    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(
+        ImmutableSet.of("user", "password", "keyonly", "etc")
+    );
+
+    new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
+        securityConfig
+    );
+  }
+
+
+
+  @Test
   public void testFailOnlyInvalidProperty()
   {
     MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
@@ -210,6 +235,30 @@ public class MySQLFirehoseDatabaseConnectorTest
       public String getConnectURI()
       {
         return "jdbc:mysql://localhost:3306/test?user=maytas&password=secret&keyonly";
+      }
+    };
+
+    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
+
+    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expect(IllegalArgumentException.class);
+
+    new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
+        securityConfig
+    );
+  }
+
+  @Test
+  public void testFailValidAndInvalidPropertyMariadb()
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mariadb://localhost:3306/test?user=maytas&password=secret&keyonly";
       }
     };
 
@@ -272,7 +321,7 @@ public class MySQLFirehoseDatabaseConnectorTest
       }
     };
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,

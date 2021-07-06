@@ -53,8 +53,10 @@ ADD lib/* /usr/local/druid/lib/
 RUN if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ] ; \
     then wget -q "https://repo1.maven.org/maven2/mysql/mysql-connector-java/$MYSQL_VERSION/mysql-connector-java-$MYSQL_VERSION.jar" \
     -O /usr/local/druid/lib/mysql-connector-java.jar; \
-    else wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-java.jar; fi
+    elif [ "$MYSQL_DRIVER_CLASSNAME" = "org.mariadb.jdbc.Driver" ] ; \
+    then wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" \
+    -O /usr/local/druid/lib/mysql-connector-java.jar; \
+    fi
 
 # download kafka protobuf provider
 RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \

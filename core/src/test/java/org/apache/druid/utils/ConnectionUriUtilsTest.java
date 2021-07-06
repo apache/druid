@@ -27,6 +27,8 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.util.Set;
 
@@ -121,6 +123,71 @@ public class ConnectionUriUtilsTest
     }
 
     @Test
+    public void tryParseInvalidPostgres()
+    {
+      expectedException.expect(IAE.class);
+      ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:postgresql://bad:1234&param", true);
+    }
+
+    @Test
+    public void tryParseInvalidMySql()
+    {
+      expectedException.expect(IAE.class);
+      ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:mysql:/bad", true);
+    }
+
+    @Test
+    public void testMySqlFallbackMySqlMaria2x()
+    {
+      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
+      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
+      utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI)).thenThrow(ClassNotFoundException.class);
+      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI)).thenCallRealMethod();
+
+      Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
+      // this would be 9 if didn't fall back to mariadb
+      Assert.assertEquals(4, props.size());
+      utils.close();
+    }
+
+    @Test
+    public void testMariaFallbackMaria3x()
+    {
+      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
+      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false)).thenCallRealMethod();
+      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI)).thenThrow(ClassNotFoundException.class);
+      utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI)).thenCallRealMethod();
+
+      try {
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
+        // this would be 4 if didn't fall back to mariadb 3x
+        Assert.assertEquals(8, props.size());
+      }
+      catch (RuntimeException e) {
+
+        Assert.assertTrue(e.getMessage().contains("Failed to find MariaDB driver class"));
+      }
+      utils.close();
+    }
+
+    @Test
+    public void testMySqlFallbackMySqlNoDrivers()
+    {
+      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
+      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
+      utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI)).thenThrow(ClassNotFoundException.class);
+      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI)).thenThrow(ClassNotFoundException.class);
+
+      try {
+        ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
+      }
+      catch (RuntimeException e) {
+        Assert.assertTrue(e.getMessage().contains("Failed to find MySQL driver class"));
+      }
+      utils.close();
+    }
+
+    @Test
     public void testPosgresDriver() throws Exception
     {
       Set<String> props = ConnectionUriUtils.tryParsePostgresConnectionUri(POSTGRES_URI);
@@ -146,7 +213,7 @@ public class ConnectionUriUtilsTest
     }
 
     @Test
-    public void testMariaDb2xDriver() throws Exception
+    public void testMariaDb2xDriver() throws Throwable
     {
       Set<String> props = ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI);
       // mariadb doesn't spit out any extras other than what the user specified
@@ -186,6 +253,24 @@ public class ConnectionUriUtilsTest
       Assert.assertTrue(props.contains("password"));
       Assert.assertTrue(props.contains("otherOptions"));
       Assert.assertTrue(props.contains("keyonly"));
+    }
+
+    @Test(expected = IAE.class)
+    public void testPostgresInvalidArgs() throws Exception
+    {
+      ConnectionUriUtils.tryParsePostgresConnectionUri(MYSQL_URI);
+    }
+
+    @Test(expected = IAE.class)
+    public void testMySqlInvalidArgs() throws Exception
+    {
+      ConnectionUriUtils.tryParseMySqlConnectionUri(POSTGRES_URI);
+    }
+
+    @Test(expected = IAE.class)
+    public void testMariaDbInvalidArgs() throws Exception
+    {
+      ConnectionUriUtils.tryParseMariaDb2xConnectionUri(POSTGRES_URI);
     }
   }
 }

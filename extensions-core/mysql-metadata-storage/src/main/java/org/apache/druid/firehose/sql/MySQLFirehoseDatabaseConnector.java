@@ -54,7 +54,13 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
     this.driverClassName = driverClassName;
     final BasicDataSource datasource = getDatasource(connectorConfig, securityConfig);
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName(driverClassName != null ? driverClassName : "com.mysql.jdbc.Driver");
+    if (driverClassName != null) {
+      datasource.setDriverClassName(driverClassName);
+    } else if (connectorConfig.getConnectURI().startsWith(ConnectionUriUtils.MARIADB_PREFIX)) {
+      datasource.setDriverClassName(ConnectionUriUtils.MARIADB_DRIVER);
+    } else {
+      datasource.setDriverClassName(ConnectionUriUtils.MYSQL_DRIVER);
+    }
     this.dbi = new DBI(datasource);
   }
 
