@@ -614,7 +614,6 @@ public class BatchAppenderator implements Appenderator
       throw new ISE("Batch ingestion does not require uniquePath");
     }
 
-
     // Any sinks not persisted so far need to be persisted before push:
     persistAllAndRemoveSinks();
 
@@ -622,6 +621,7 @@ public class BatchAppenderator implements Appenderator
 
     // get the dirs for the identfiers:
     List<File> identifiersDirs = new ArrayList<>();
+    int totalHydrantsMerged = 0;
     for (SegmentIdWithShardSpec identifier : identifiers) {
       SinkMetadata sm = sinksMetadata.get(identifier);
       if (sm == null) {
@@ -632,6 +632,7 @@ public class BatchAppenderator implements Appenderator
         throw new ISE("Sink for identifier[%s] not found in local file system", identifier);
       }
       identifiersDirs.add(persistedDir);
+      totalHydrantsMerged += sm.getNumHydrants();
     }
 
     // push all sinks for identifiers:
@@ -661,7 +662,9 @@ public class BatchAppenderator implements Appenderator
       }
 
     }
-    log.info("Push complete...");
+
+    log.info("Push complete: total sinks merged[%d], total hydrants merged[%d]",
+             identifiers.size(), totalHydrantsMerged);
 
     return Futures.immediateFuture(new SegmentsAndCommitMetadata(dataSegments, null));
   }
