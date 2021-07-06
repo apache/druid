@@ -17,7 +17,7 @@
  */
 
 import {
-  alphanumericCompare,
+  arrangeWithPrefixSuffix,
   formatBytes,
   formatBytesCompact,
   formatInteger,
@@ -25,33 +25,30 @@ import {
   formatMillions,
   formatPercent,
   moveElement,
-  sortWithPrefixSuffix,
   sqlQueryCustomTableFilter,
   swapElements,
 } from './general';
 
 describe('general', () => {
-  describe('sortWithPrefixSuffix', () => {
+  describe('arrangeWithPrefixSuffix', () => {
     it('works in simple case', () => {
       expect(
-        sortWithPrefixSuffix(
+        arrangeWithPrefixSuffix(
           'abcdefgh'.split('').reverse(),
           'gef'.split(''),
           'ba'.split(''),
-          alphanumericCompare,
         ).join(''),
-      ).toEqual('gefcdhba');
+      ).toEqual('gefhdcba');
     });
 
     it('dedupes', () => {
       expect(
-        sortWithPrefixSuffix(
+        arrangeWithPrefixSuffix(
           'abcdefgh'.split('').reverse(),
           'gefgef'.split(''),
           'baba'.split(''),
-          alphanumericCompare,
         ).join(''),
-      ).toEqual('gefcdhba');
+      ).toEqual('gefhdcba');
     });
   });
 

@@ -301,20 +301,15 @@ export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
-export function alphanumericCompare(a: string, b: string): number {
-  return String(a).localeCompare(b, undefined, { numeric: true });
-}
-
-export function sortWithPrefixSuffix(
+export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
   suffix: readonly string[],
-  cmp?: (a: string, b: string) => number,
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
   const post = uniq(suffix.filter(x => things.includes(x)));
-  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
+  return pre.concat(mid, post);
 }
 
 // ----------------------------
