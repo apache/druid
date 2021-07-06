@@ -271,6 +271,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         if (!success) {
           throw new SegmentLoadingException("Failed to load segment %s in reserved location [%s]", segment.getId(), loc.getPath().getAbsolutePath());
         }
+        return storageDir;
       }
     }
 
