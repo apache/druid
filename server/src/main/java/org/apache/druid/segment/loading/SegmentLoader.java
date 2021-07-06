@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
@@ -30,7 +30,7 @@ import java.io.File;
  * Loading segments from deep storage to local storage.
  * Implementations must be thread-safe.
  */
-@ExtensionPoint
+@UnstableApi
 public interface SegmentLoader
 {
   boolean isSegmentLoaded(DataSegment segment);
