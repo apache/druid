@@ -122,7 +122,7 @@ For more information, see [TLS support](tls-support.md) and [Simple SSLContext P
 
 ## Authentication and authorization
 
-You can configure authentication and authorization to control access to the the Druid APIs. Then configure users, roles, and permissions, as described in the following sections. Make the configuration changes in the `common.runtime.properties` file on all Druid servers in the cluster.
+You can configure authentication and authorization to control access to the Druid APIs. Then configure users, roles, and permissions, as described in the following sections. Make the configuration changes in the `common.runtime.properties` file on all Druid servers in the cluster.
 
 Within Druid's operating context, authenticators control the way user identities are verified. Authorizers employ user roles to relate authenticated users to the datasources they are permitted to access. You can set the finest-grained permissions on a per-datasource basis.
 

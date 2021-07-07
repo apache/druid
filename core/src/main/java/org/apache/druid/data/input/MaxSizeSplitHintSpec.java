@@ -53,7 +53,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
    * - 'jute.maxbuffer' in ZooKeeper. This system property controls the max size of ZNode. As its default is 500KB,
    *   task allocation can fail if the serialized ingestion spec is larger than this limit.
    * - 'max_allowed_packet' in MySQL. This is the max size of a communication packet sent to a MySQL server.
-   *   The default is either 64MB or 4MB depending on MySQL version. Updating metadata store can fail if the serialized
+   *   The default is either [64MiB](https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_allowed_packet) or 4MiB depending on MySQL version. Updating metadata store can fail if the serialized
    *   ingestion spec is larger than this limit.
    *
    * The default is conservatively chosen as 1000.
