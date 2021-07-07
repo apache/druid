@@ -19,14 +19,30 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryHistoryDialog } from './query-history-dialog';
+import { JSON_STRING_FORMATTER } from '../../utils';
 
-describe('query plan dialog', () => {
-  it('matches snapshot', () => {
-    const queryPlanDialog = (
-      <QueryHistoryDialog setQueryString={() => null} queryRecords={[]} onClose={() => {}} />
+import { FormattedInputGroup } from './formatted-input-group';
+
+describe('FormattedInputGroup', () => {
+  it('matches snapshot on undefined value', () => {
+    const suggestibleInput = (
+      <FormattedInputGroup onValueChange={() => {}} formatter={JSON_STRING_FORMATTER} />
     );
-    render(queryPlanDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+
+    const { container } = render(suggestibleInput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with escaped value', () => {
+    const suggestibleInput = (
+      <FormattedInputGroup
+        value={`Here are some chars \t\r\n lol`}
+        onValueChange={() => {}}
+        formatter={JSON_STRING_FORMATTER}
+      />
+    );
+
+    const { container } = render(suggestibleInput);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

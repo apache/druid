@@ -118,6 +118,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
@@ -134,6 +135,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
@@ -150,6 +152,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
@@ -193,6 +196,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(

@@ -19,10 +19,8 @@
 import { AxisScale } from 'd3-axis';
 import React from 'react';
 
-import { BarUnitData } from '../components/segment-timeline/segment-timeline';
-
 import { BarUnit } from './bar-unit';
-import { HoveredBarInfo } from './stacked-bar-chart';
+import { BarUnitData, HoveredBarInfo } from './stacked-bar-chart';
 
 interface BarGroupProps {
   dataToRender: BarUnitData[];
@@ -54,9 +52,9 @@ export class BarGroup extends React.Component<BarGroupProps> {
 
     return dataToRender.map((entry: BarUnitData, i: number) => {
       const y0 = yScale(entry.y0 || 0) || 0;
-      const x = xScale(new Date(entry.x));
+      const x = xScale(new Date(entry.x + 'Z'));
       const y = yScale((entry.y0 || 0) + entry.y) || 0;
-      const height = y0 - y;
+      const height = Math.max(y0 - y, 0);
       const barInfo: HoveredBarInfo = {
         xCoordinate: x,
         yCoordinate: y,

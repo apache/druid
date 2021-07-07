@@ -123,8 +123,6 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
   @Test
   public void testQuantileOnFloatAndLongs() throws Exception
   {
-    cannotVectorize();
-
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0299999713897705,
@@ -238,8 +236,6 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
   @Test
   public void testQuantileOnCastedString() throws Exception
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.01, 20, 0.0, 10.0),\n"

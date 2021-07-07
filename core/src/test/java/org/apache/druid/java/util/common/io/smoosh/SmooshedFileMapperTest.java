@@ -183,7 +183,7 @@ public class SmooshedFileMapperTest
     try (FileSmoosher smoosher = new FileSmoosher(baseDir)) {
       File dataFile = folder.newFile("data.bin");
       try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
-        raf.setLength(1 << 20); // 1 MB
+        raf.setLength(1 << 20); // 1 MiB
       }
       smoosher.add(dataFile);
     }

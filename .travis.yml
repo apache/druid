@@ -114,8 +114,8 @@ jobs:
       install: skip
       # Strict compilation requires more than 2 GB
       script: >
-        ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
-        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+        ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
+        ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
     - name: "analyze dependencies"
       script: |-

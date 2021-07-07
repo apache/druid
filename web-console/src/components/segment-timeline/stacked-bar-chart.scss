@@ -16,34 +16,35 @@
  * limitations under the License.
  */
 
-import React from 'react';
+.stacked-bar-chart {
+  position: relative;
+  overflow: hidden;
 
-import './bar-unit.scss';
+  .bar-chart-tooltip {
+    position: absolute;
+    left: 100px;
+    right: 0;
 
-interface BarChartUnitProps {
-  x: number | undefined;
-  y: number;
-  width: number;
-  height: number;
-  style?: any;
-  onClick?: () => void;
-  onHover?: () => void;
-  offHover?: () => void;
-}
+    div {
+      display: inline-block;
+      width: 230px;
+    }
+  }
 
-export function BarUnit(props: BarChartUnitProps) {
-  const { x, y, width, height, style, onClick, onHover, offHover } = props;
-  return (
-    <rect
-      className="bar-chart-unit"
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      style={style}
-      onClick={onClick}
-      onMouseOver={onHover}
-      onMouseLeave={offHover}
-    />
-  );
+  svg {
+    position: absolute;
+
+    .hovered-bar {
+      fill: transparent;
+      stroke: #ffffff;
+      stroke-width: 1.5px;
+    }
+
+    .gridline-x {
+      line {
+        stroke-dasharray: 5, 5;
+        opacity: 0.5;
+      }
+    }
+  }
 }

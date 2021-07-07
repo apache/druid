@@ -132,4 +132,11 @@ public abstract class DruidCoordinatorConfig
   {
     return 1;
   }
+
+  @Config("druid.coordinator.compaction.skipLockedIntervals")
+  public boolean getCompactionSkipLockedIntervals()
+  {
+    return true;
+  }
+
 }

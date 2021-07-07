@@ -42,9 +42,9 @@ public class FileWriteOutBytesTest
   }
 
   @Test
-  public void write4KBIntsShouldNotFlush() throws IOException
+  public void write4KiBIntsShouldNotFlush() throws IOException
   {
-    // Write 4KB of ints and expect the write operation of the file channel will be triggered only once.
+    // Write 4KiB of ints and expect the write operation of the file channel will be triggered only once.
     EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
             .andAnswer(() -> {
               ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
@@ -58,8 +58,8 @@ public class FileWriteOutBytesTest
     for (int i = 0; i < numOfInt; i++) {
       fileWriteOutBytes.writeInt(i);
     }
-    // no need to flush up to 4KB
-    // the first byte after 4KB will cause a flush
+    // no need to flush up to 4KiB
+    // the first byte after 4KiB will cause a flush
     fileWriteOutBytes.write(1);
     EasyMock.verify(mockFileChannel);
   }

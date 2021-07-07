@@ -64,7 +64,7 @@ public abstract class AbstractIndexerTest
   protected TestQueryHelper queryHelper;
 
   @Inject
-  private IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
 
   protected Closeable unloader(final String dataSource)
   {
@@ -101,7 +101,7 @@ public abstract class AbstractIndexerTest
     unloadAndKillData(dataSource, first, last);
   }
 
-  protected void loadData(String indexTask, final String fullDatasourceName) throws Exception
+  protected String submitIndexTask(String indexTask, final String fullDatasourceName) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
@@ -112,6 +112,13 @@ public abstract class AbstractIndexerTest
     );
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
+
+    return taskID;
+  }
+
+  protected void loadData(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    final String taskID = submitIndexTask(indexTask, fullDatasourceName);
     indexer.waitUntilTaskCompletes(taskID);
 
     ITRetryUtil.retryUntilTrue(

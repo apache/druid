@@ -139,7 +139,7 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|maxStoreSize|double|maximal size of store in GB, if store is larger entries will start expiring|no |0|
+|maxStoreSize|double|maximal size of store in GiB, if store is larger entries will start expiring|no |0|
 |maxEntriesSize|long| Specifies the maximum number of entries the cache may contain.|no |0 (infinite capacity)|
 |expireAfterAccess|long| Specifies the eviction time after last read in milliseconds.|no |0 (No read-time-based eviction when set to null)|
 |expireAfterWrite|long| Specifies the eviction time after last write in milliseconds.|no |0 (No write-time-based eviction when set to null)|

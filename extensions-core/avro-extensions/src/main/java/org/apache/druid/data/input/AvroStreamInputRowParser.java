@@ -36,6 +36,8 @@ import java.util.Objects;
 public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
+  private final Boolean binaryAsString;
+  private final Boolean extractUnionsByType;
   private final AvroBytesDecoder avroBytesDecoder;
   private final ObjectFlattener<GenericRecord> avroFlattener;
   private final MapInputRowParser mapParser;
@@ -43,12 +45,16 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   @JsonCreator
   public AvroStreamInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder
+      @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder,
+      @JsonProperty("binaryAsString") Boolean binaryAsString,
+      @JsonProperty("extractUnionsByType") Boolean extractUnionsByType
   )
   {
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, false);
+    this.binaryAsString = binaryAsString != null && binaryAsString;
+    this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, this.binaryAsString, this.extractUnionsByType);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 
@@ -76,7 +82,9 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   {
     return new AvroStreamInputRowParser(
         parseSpec,
-        avroBytesDecoder
+        avroBytesDecoder,
+        binaryAsString,
+        extractUnionsByType
     );
   }
 

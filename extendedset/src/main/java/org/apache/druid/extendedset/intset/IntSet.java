@@ -77,7 +77,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
     int next();
 
     /**
-     * Skips all the elements before the the specified element, so that
+     * Skips all the elements before the specified element, so that
      * {@link #next()} gives the given element or, if it does not exist, the
      * element immediately after according to the sorting provided by this
      * set.
