@@ -24,8 +24,8 @@ import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -45,8 +45,6 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Period;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -58,7 +56,6 @@ import java.util.Map;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 {
-  private static final Granularity P1D = new PeriodGranularity(Period.parse("P1D"), null, DateTimeZone.UTC);
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
@@ -121,7 +118,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     "a0:a"
                                                                 )))
                                                                 .setContext(
-                                                                    withTimestampResultContext(queryContext, "d0", P1D)
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
                                                                 )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -216,7 +217,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                                 .setContext(
-                                                                    withTimestampResultContext(queryContext, "d0", P1D)
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
                                                                 )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -305,7 +310,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                                 .setContext(
-                                                                    withTimestampResultContext(queryContext, "d0", P1D)
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
                                                                 )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -394,7 +403,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     not(selector("country", null, null))
                                                                 ))
                                                                 .setContext(
-                                                                    withTimestampResultContext(queryContext, "d0", P1D)
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
                                                                 )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
@@ -483,7 +496,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     not(selector("country", null, null))
                                                                 ))
                                                                 .setContext(
-                                                                    withTimestampResultContext(queryContext, "d0", P1D)
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
                                                                 )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()

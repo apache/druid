@@ -149,10 +149,6 @@ import java.util.stream.Collectors;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
-  private static final Granularity P1D = new PeriodGranularity(Period.parse("P1D"), null, DateTimeZone.UTC);
-  private static final Granularity P1M = new PeriodGranularity(Period.parse("P1M"), null, DateTimeZone.UTC);
-  private static final Granularity P1Y = new PeriodGranularity(Period.parse("P1Y"), null, DateTimeZone.UTC);
-
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -7971,7 +7967,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 ImmutableList.of("d0", "d1"),
                                                 ImmutableList.of("d0", "d2")
                                             ))
-                                            .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1D))
+                                            .setContext(withTimestampResultContext(
+                                                QUERY_CONTEXT_DEFAULT,
+                                                "d0",
+                                                0,
+                                                Granularities.DAY
+                                            ))
                                             .build()
                             )
                         )
@@ -10080,7 +10081,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1Y))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.YEAR))
                         .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -13342,7 +13343,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -13409,7 +13410,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13475,7 +13476,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13623,7 +13624,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13682,7 +13683,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13740,7 +13741,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13801,7 +13802,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of("d2")
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d2", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d2", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13862,7 +13863,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -13935,7 +13936,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -14003,7 +14004,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -14072,7 +14073,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 1
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -17266,7 +17267,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 100
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.of(
@@ -17339,7 +17340,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 100
                             )
                         )
-                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, P1M))
+                        .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
         ImmutableList.<Object[]>builder().add(

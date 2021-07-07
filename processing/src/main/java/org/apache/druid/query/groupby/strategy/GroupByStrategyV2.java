@@ -304,7 +304,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           mergedResults,
           row -> {
             final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
-            fixResultRowWithTimestampResultField(
+            moveOrReplicateTimestampInRow(
                 query,
                 timestampResultFieldIndexInOriginalDimensions,
                 row,
@@ -324,7 +324,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
             // Copy everything that comes before the postaggregations.
             if (hasTimestampResultField) {
-              fixResultRowWithTimestampResultField(
+              moveOrReplicateTimestampInRow(
                   query,
                   timestampResultFieldIndexInOriginalDimensions,
                   row,
@@ -354,7 +354,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  private void fixResultRowWithTimestampResultField(
+  private void moveOrReplicateTimestampInRow(
       GroupByQuery query,
       int timestampResultFieldIndexInOriginalDimensions,
       ResultRow before,
