@@ -42,6 +42,7 @@ public class AvroOCFInputFormat extends NestedInputFormat
   private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
 
   private final boolean binaryAsString;
+  private final boolean extractUnionsByType;
   @Nullable
   private final Schema readerSchema;
 
@@ -50,7 +51,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
       @JacksonInject @Json ObjectMapper mapper,
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("schema") @Nullable Map<String, Object> schema,
-      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
+      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
+      @JsonProperty("extractUnionsByType") @Nullable Boolean extractUnionsByType
   ) throws Exception
   {
     super(flattenSpec);
@@ -62,7 +64,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
     } else {
       this.readerSchema = null;
     }
-    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.binaryAsString = binaryAsString != null && binaryAsString;
+    this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;
   }
 
   @Override
@@ -82,7 +85,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
         temporaryDirectory,
         readerSchema,
         getFlattenSpec(),
-        binaryAsString
+        binaryAsString,
+        extractUnionsByType
     );
   }
 

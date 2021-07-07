@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -40,8 +40,6 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.SegmentPublisher;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  *
  */
@@ -53,7 +51,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
@@ -70,7 +68,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject SegmentHandoffNotifierFactory handoffNotifierFactory,
-      @JacksonInject @Processing ExecutorService executorService,
+      @JacksonInject QueryProcessingPool queryProcessingPool,
       @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
@@ -86,7 +84,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentAnnouncer = segmentAnnouncer;
     this.segmentPublisher = segmentPublisher;
     this.handoffNotifierFactory = handoffNotifierFactory;
-    this.queryExecutorService = executorService;
+    this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
@@ -113,7 +111,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
+        queryProcessingPool,
         joinableFactory,
         dataSegmentPusher,
         segmentPublisher,

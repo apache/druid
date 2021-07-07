@@ -46,10 +46,12 @@ import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -101,6 +103,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -187,7 +190,7 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        serverManagerExec,
+        new ForwardingQueryProcessingPool(serverManagerExec),
         new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
@@ -737,7 +740,7 @@ public class ServerManagerTest
 
     @Override
     public QueryRunner<Result<SearchResultValue>> mergeRunners(
-        ExecutorService queryExecutor,
+        QueryProcessingPool queryProcessingPool,
         Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
     )
     {

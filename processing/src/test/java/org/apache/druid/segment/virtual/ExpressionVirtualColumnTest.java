@@ -268,7 +268,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
 
-    // do some ugly faking to test if SingleStringInputDimensionSelector is created for multi-value expressions when possible
+    // do some ugly faking to test if SingleStringInputDeferredEvaluationExpressionDimensionSelector is created for multi-value expressions when possible
     ColumnSelectorFactory factory = new ColumnSelectorFactory()
     {
       @Override
@@ -331,7 +331,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
           @Override
           public boolean nameLookupPossibleInAdvance()
           {
-            // fake this so when SingleStringInputDimensionSelector it doesn't explode
+            // fake this so when SingleStringInputDeferredEvaluationExpressionDimensionSelector it doesn't explode
             return true;
           }
 
@@ -365,7 +365,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     final BaseObjectColumnValueSelector selectorExplicit =
         SCALE_LIST_SELF_EXPLICIT.makeDimensionSelector(spec, factory);
 
-    Assert.assertTrue(selectorImplicit instanceof SingleStringInputDimensionSelector);
+    Assert.assertTrue(selectorImplicit instanceof SingleStringInputDeferredEvaluationExpressionDimensionSelector);
     Assert.assertTrue(selectorExplicit instanceof ExpressionMultiValueDimensionSelector);
   }
 

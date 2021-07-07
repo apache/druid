@@ -52,6 +52,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryContexts;
@@ -10960,7 +10961,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     ChainedExecutionQueryRunner ceqr = new ChainedExecutionQueryRunner(
-        Execs.directExecutor(),
+        DirectQueryProcessingPool.INSTANCE,
         (query1, future) -> {
           return;
         },
