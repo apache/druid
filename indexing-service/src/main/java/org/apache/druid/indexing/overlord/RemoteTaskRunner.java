@@ -540,7 +540,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else if ((completeTask = completeTasks.get(task.getId())) != null) {
       return completeTask.getResult();
     } else {
-      return addPendingTask(task).getResult();
+      RemoteTaskRunnerWorkItem workItem = addPendingTask(task);
+      runPendingTasks();
+      return workItem.getResult();
     }
   }
 
@@ -681,7 +683,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   /**
-   * Adds a task to the pending queue
+   * Adds a task to the pending queue.
+   * {@link #runPendingTasks()} should be called to run the pending task.
    */
   @VisibleForTesting
   RemoteTaskRunnerWorkItem addPendingTask(final Task task)
@@ -696,7 +699,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
-    runPendingTasks();
     return taskRunnerWorkItem;
   }
 
@@ -705,7 +707,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * are successfully assigned to a worker will be moved from pendingTasks to runningTasks. This method is thread-safe.
    * This method should be run each time there is new worker capacity or if new tasks are assigned.
    */
-  private void runPendingTasks()
+  @VisibleForTesting
+  void runPendingTasks()
   {
     runPendingTasksExec.submit(
         (Callable<Void>) () -> {
@@ -716,30 +719,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             sortByInsertionTime(copy);
 
             for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
-              String taskId = taskRunnerWorkItem.getTaskId();
-              if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
-                try {
-                  //this can still be null due to race from explicit task shutdown request
-                  //or if another thread steals and completes this task right after this thread makes copy
-                  //of pending tasks. See https://github.com/apache/druid/issues/2842 .
-                  Task task = pendingTaskPayloads.get(taskId);
-                  if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
-                    pendingTaskPayloads.remove(taskId);
-                  }
-                }
-                catch (Exception e) {
-                  log.makeAlert(e, "Exception while trying to assign task")
-                     .addData("taskId", taskRunnerWorkItem.getTaskId())
-                     .emit();
-                  RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
-                  if (workItem != null) {
-                    taskComplete(workItem, null, TaskStatus.failure(taskId));
-                  }
-                }
-                finally {
-                  tryAssignTasks.remove(taskId);
-                }
-              }
+              runPendingTask(taskRunnerWorkItem);
             }
           }
           catch (Exception e) {
@@ -749,6 +729,45 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           return null;
         }
     );
+  }
+
+  /**
+   * Run one pending task. This method must be called in the same class except for unit tests.
+   */
+  @VisibleForTesting
+  void runPendingTask(RemoteTaskRunnerWorkItem taskRunnerWorkItem)
+  {
+    String taskId = taskRunnerWorkItem.getTaskId();
+    if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
+      try {
+        //this can still be null due to race from explicit task shutdown request
+        //or if another thread steals and completes this task right after this thread makes copy
+        //of pending tasks. See https://github.com/apache/druid/issues/2842 .
+        Task task = pendingTaskPayloads.get(taskId);
+        if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
+          pendingTaskPayloads.remove(taskId);
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Exception while trying to assign task")
+           .addData("taskId", taskRunnerWorkItem.getTaskId())
+           .emit();
+        RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
+        if (workItem != null) {
+          taskComplete(
+              workItem,
+              null,
+              TaskStatus.failure(
+                  taskId,
+                  StringUtils.format("Failed to assign this task. See overlord logs for more details.")
+              )
+          );
+        }
+      }
+      finally {
+        tryAssignTasks.remove(taskId);
+      }
+    }
   }
 
   @VisibleForTesting
@@ -930,7 +949,18 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               elapsed,
               config.getTaskAssignmentTimeout()
           ).emit();
-          taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
+          taskComplete(
+              taskRunnerWorkItem,
+              theZkWorker,
+              TaskStatus.failure(
+                  task.getId(),
+                  StringUtils.format(
+                      "The worker that this task is assigned did not start it in timeout[%s]. "
+                      + "See overlord logs for more details.",
+                      config.getTaskAssignmentTimeout()
+                  )
+              )
+          );
           break;
         }
       }
@@ -1066,9 +1096,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
               taskRunnerWorkItem = runningTasks.remove(taskId);
               if (taskRunnerWorkItem != null) {
-                log.info("Task[%s] just disappeared!", taskId);
-                taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
-                TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
+                log.warn("Task[%s] just disappeared!", taskId);
+                final TaskStatus taskStatus = TaskStatus.failure(
+                    taskId,
+                    "The worker that this task was assigned disappeared. See overlord logs for more details."
+                );
+                taskRunnerWorkItem.setResult(taskStatus);
+                TaskRunnerUtils.notifyStatusChanged(listeners, taskId, taskStatus);
               } else {
                 log.info("Task[%s] went bye bye.", taskId);
               }
@@ -1189,8 +1223,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               log.info("Failing task[%s]", assignedTask);
               RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
               if (taskRunnerWorkItem != null) {
-                taskRunnerWorkItem.setResult(TaskStatus.failure(assignedTask));
-                TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, TaskStatus.failure(assignedTask));
+                final TaskStatus taskStatus = TaskStatus.failure(
+                    assignedTask,
+                    StringUtils.format("Canceled for worker cleanup. See overlord logs for more details.")
+                );
+                taskRunnerWorkItem.setResult(taskStatus);
+                TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, taskStatus);
               } else {
                 log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
               }
@@ -1235,7 +1273,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private void taskComplete(
       RemoteTaskRunnerWorkItem taskRunnerWorkItem,
-      ZkWorker zkWorker,
+      @Nullable ZkWorker zkWorker,
       TaskStatus taskStatus
   )
   {

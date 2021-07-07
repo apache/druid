@@ -68,6 +68,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -424,7 +425,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             config.getTaskAssignmentTimeout()
         ).emit();
         // taskComplete(..) must be called outside of statusLock, see comments on method.
-        taskComplete(workItem, workerHolder, TaskStatus.failure(taskId));
+        taskComplete(
+            workItem,
+            workerHolder,
+            TaskStatus.failure(
+                taskId,
+                StringUtils.format(
+                    "The worker that this task is assigned did not start it in timeout[%s]. "
+                    + "See overlord and middleManager/indexer logs for more details.",
+                    config.getTaskAssignmentTimeout()
+                )
+            )
+        );
       }
 
       return true;
@@ -647,14 +659,26 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
             for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
               if (!taskItem.getResult().isDone()) {
-                log.info(
+                log.warn(
                     "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
                     workerHostAndPort,
                     taskItem.getTaskId(),
                     config.getTaskCleanupTimeout()
                 );
                 // taskComplete(..) must be called outside of statusLock, see comments on method.
-                taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
+                taskComplete(
+                    taskItem,
+                    null,
+                    TaskStatus.failure(
+                        taskItem.getTaskId(),
+                        StringUtils.format(
+                            "The worker that this task was assigned disappeared and "
+                            + "did not report cleanup within timeout[%s]. "
+                            + "See overlord and middleManager/indexer logs for more details.",
+                            config.getTaskCleanupTimeout()
+                        )
+                    )
+                );
               }
             }
           }
@@ -1179,7 +1203,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         if (taskItem.getTask() == null) {
           log.makeAlert("No Task obj found in TaskItem for taskID[%s]. Failed.", taskId).emit();
           // taskComplete(..) must be called outside of statusLock, see comments on method.
-          taskComplete(taskItem, null, TaskStatus.failure(taskId));
+          taskComplete(
+              taskItem,
+              null,
+              TaskStatus.failure(
+                  taskId,
+                  "No payload found for this task. "
+                  + "See overlord logs and middleManager/indexer logs for more details."
+              )
+          );
           continue;
         }
 
@@ -1205,7 +1237,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
              .emit();
 
           // taskComplete(..) must be called outside of statusLock, see comments on method.
-          taskComplete(taskItem, null, TaskStatus.failure(taskId));
+          taskComplete(
+              taskItem,
+              null,
+              TaskStatus.failure(
+                  taskId,
+                  StringUtils.format(
+                      "Failed to assign this task with an exception: %s",
+                      th.toString()
+                  )
+              )
+          );
         }
         finally {
           synchronized (statusLock) {

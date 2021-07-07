@@ -33,6 +33,7 @@ import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -390,14 +391,20 @@ public class WorkerHolder
                 announcement.getStatus(),
                 worker.getHost()
             );
-            delta.add(TaskAnnouncement.create(
-                announcement.getTaskId(),
-                announcement.getTaskType(),
-                announcement.getTaskResource(),
-                TaskStatus.failure(announcement.getTaskId()),
-                announcement.getTaskLocation(),
-                announcement.getTaskDataSource()
-            ));
+            delta.add(
+                TaskAnnouncement.create(
+                    announcement.getTaskId(),
+                    announcement.getTaskType(),
+                    announcement.getTaskResource(),
+                    TaskStatus.failure(
+                        announcement.getTaskId(),
+                        "This task disappeared on the worker where it was assigned. "
+                        + "See overlord logs for more details."
+                    ),
+                    announcement.getTaskLocation(),
+                    announcement.getTaskDataSource()
+                )
+            );
           }
         }
 
@@ -427,14 +434,20 @@ public class WorkerHolder
                   announcement.getStatus(),
                   worker.getHost()
               );
-              delta.add(TaskAnnouncement.create(
-                  announcement.getTaskId(),
-                  announcement.getTaskType(),
-                  announcement.getTaskResource(),
-                  TaskStatus.failure(announcement.getTaskId()),
-                  announcement.getTaskLocation(),
-                  announcement.getTaskDataSource()
-              ));
+              delta.add(
+                  TaskAnnouncement.create(
+                      announcement.getTaskId(),
+                      announcement.getTaskType(),
+                      announcement.getTaskResource(),
+                      TaskStatus.failure(
+                          announcement.getTaskId(),
+                          "This task disappeared on the worker where it was assigned. "
+                          + "See overlord logs for more details."
+                      ),
+                      announcement.getTaskLocation(),
+                      announcement.getTaskDataSource()
+                  )
+              );
             }
           } else if (change instanceof WorkerHistoryItem.Metadata) {
             isWorkerDisabled = ((WorkerHistoryItem.Metadata) change).isDisabled();

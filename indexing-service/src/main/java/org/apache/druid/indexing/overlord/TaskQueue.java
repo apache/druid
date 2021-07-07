@@ -288,7 +288,11 @@ public class TaskQueue
           }
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-            notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
+            final String errorMessage = StringUtils.format(
+                "Exception thrown while waiting for the task to be ready to run: %s",
+                e.toString()
+            );
+            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
             continue;
           }
           if (taskIsReady) {
@@ -412,7 +416,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
+          notifyStatus(task, TaskStatus.failure(taskId, StringUtils.format(reasonFormat, args)), reasonFormat, args);
           break;
         }
       }
@@ -556,7 +560,12 @@ public class TaskQueue
                .addData("type", task.getType())
                .addData("dataSource", task.getDataSource())
                .emit();
-            handleStatus(TaskStatus.failure(task.getId()));
+            handleStatus(
+                TaskStatus.failure(
+                    task.getId(),
+                    StringUtils.format("Failed to run this task with an exception: %s", t.toString())
+                )
+            );
           }
 
           private void handleStatus(final TaskStatus status)
