@@ -338,6 +338,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       TaskReport reportRaw = indexer.getTaskReport(taskID).get("ingestionStatsAndErrors");
       IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
       IngestionStatsAndErrorsTaskReportData reportData = (IngestionStatsAndErrorsTaskReportData) report.getPayload();
+
+      // Confirm that the task waited longer than 0ms for the task to complete.
+      Assert.assertTrue(reportData.getSegmentAvailabilityWaitTimeMs() > 0);
+
+      // Make sure that the result of waiting for segments to load matches the expected result
       if (segmentAvailabilityConfirmationPair.rhs != null) {
         Assert.assertEquals(
             Boolean.valueOf(reportData.isSegmentAvailabilityConfirmed()),
