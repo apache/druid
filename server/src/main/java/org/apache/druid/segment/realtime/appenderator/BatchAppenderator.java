@@ -61,6 +61,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -87,9 +88,11 @@ import java.util.stream.Collectors;
  * {@code BatchAppenderator}, this class, was created to specialize in batch ingestion and the old class
  * for stream ingestion was renamed to {@link StreamAppenderator}.
  * <p>
+ * This class is not thread safe!.
  * It is important to realize that this class is completely synchronous despite the {@link Appenderator}
- * interface suggesting otherwise.
+ * interface suggesting otherwise. The concurrency was not required so it has been completely removed.
  */
+@NotThreadSafe
 public class BatchAppenderator implements Appenderator
 {
   public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
