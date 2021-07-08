@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -208,10 +209,21 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+          TaskRunnerUtils.notifyStatusChanged(
+              listeners,
+              task.getId(),
+              TaskStatus.failure(
+                  task.getId(),
+                  StringUtils.format("Failed to stop gracefully with exception: %s", e.toString())
+              )
+          );
         }
       } else {
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+        TaskRunnerUtils.notifyStatusChanged(
+            listeners,
+            task.getId(),
+            TaskStatus.failure(task.getId(), "Canceled as task execution process stopped")
+        );
       }
 
       elapsed = System.currentTimeMillis() - start;
