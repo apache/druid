@@ -83,17 +83,17 @@ Below shows the configurations of OSS's input source.
 
 #### OSS Object
 
-|property|description|default|Required|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |bucket|Name of the OSS bucket|None|yes|
 |path|The path where data is located.|None|yes|
 
 #### Properties Object
 
-|property|description|default|required?|
+|Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|accessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this OSS InputSource's access key|None|yes|
-|secretKey|The [Password Provider](../operations/password-provider.md) or plain text string of this OSS InputSource's secret key|None|yes|
+|accessKey|The [Password Provider](../../operations/password-provider.md) or plain text string of this OSS InputSource's access key|None|yes|
+|secretKey|The [Password Provider](../../operations/password-provider.md) or plain text string of this OSS InputSource's secret key|None|yes|
 |endpoint|The endpoint of this OSS InputSource|None|no|
 
 ### Reading from a file 
