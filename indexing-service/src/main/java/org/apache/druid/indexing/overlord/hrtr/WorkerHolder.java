@@ -33,7 +33,6 @@ import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
