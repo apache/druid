@@ -90,7 +90,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchFallback
+      boolean useLegacyBatchProcessing
   )
   {
     throw new UOE(ERROR_MSG);

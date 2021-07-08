@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -44,7 +42,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -77,7 +74,6 @@ public class BatchAppenderatorTester implements AutoCloseable
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
   private final FireDepartmentMetrics metrics;
-  private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
   private final ServiceEmitter emitter;
@@ -146,7 +142,7 @@ public class BatchAppenderatorTester implements AutoCloseable
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
-      final boolean batchFallback
+      final boolean useLegacyBatchProcessing
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -175,7 +171,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    tuningConfig = new IndexTuningConfig(
+    tuningConfig = new TestIndexTuningConfig(
         null,
         2,
         null,
@@ -199,21 +195,14 @@ public class BatchAppenderatorTester implements AutoCloseable
         null,
         null,
         null,
-        null
-    ).withBasePersistDirectory(basePersistDirectory != null ? basePersistDirectory : createNewBasePersistDirectory());
-
+        null,
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+    );
     metrics = new FireDepartmentMetrics();
 
     IndexIO indexIO = new IndexIO(
         objectMapper,
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
-        }
+        () -> 0
     );
     IndexMerger indexMerger = new IndexMergerV9(
         objectMapper,
@@ -228,7 +217,7 @@ public class BatchAppenderatorTester implements AutoCloseable
     );
     emitter.start();
     EmittingLogger.registerEmitter(emitter);
-    dataSegmentPusher = new DataSegmentPusher()
+    DataSegmentPusher dataSegmentPusher = new DataSegmentPusher()
     {
       private boolean mustFail = true;
 
@@ -275,7 +264,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexMerger,
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        batchFallback
+        useLegacyBatchProcessing
     );
   }
 
@@ -328,10 +317,11 @@ public class BatchAppenderatorTester implements AutoCloseable
   }
 
 
-  // copied from druid-indexing as is for testing since it is not accessible from server module,
-  // we could simplify since not all its functionality is being used
-  // but leaving as is, it could be useful later
-  private static class IndexTuningConfig implements AppenderatorConfig
+  // copied from druid-indexing testing since it is not accessible from server module,
+  // Cleaned up a little but Leaving mostly as-is since most of the functionality is 
+  // setting defaults when passing null and those defaults are
+  // required for the appenderator to work
+  private static class TestIndexTuningConfig implements AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -404,33 +394,32 @@ public class BatchAppenderatorTester implements AutoCloseable
       }
     }
 
-    @JsonCreator
-    public IndexTuningConfig(
-        @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-        @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
-        @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
-        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-        @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-        @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
-        @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
-        @JsonProperty("partitionDimensions") @Deprecated @Nullable List<String> partitionDimensions,
-        @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-        @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
-        @JsonProperty("reportParseExceptions") @Deprecated @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Deprecated @Nullable Long publishTimeout,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("segmentWriteOutMediumFactory") @Nullable
-            SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-        @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-        @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+    public TestIndexTuningConfig(
+        Integer targetPartitionSize,
+        Integer maxRowsPerSegment,
+        AppendableIndexSpec appendableIndexSpec,
+        Integer maxRowsInMemory,
+        Long maxBytesInMemory,
+        Boolean skipBytesInMemoryOverheadCheck,
+        Long maxTotalRows,
+        Integer rowFlushBoundary_forBackCompatibility,
+        Integer numShards,
+        List<String> partitionDimensions,
+        PartitionsSpec partitionsSpec,
+        IndexSpec indexSpec,
+        IndexSpec indexSpecForIntermediatePersists,
+        Integer maxPendingPersists,
+        Boolean forceGuaranteedRollup,
+        Boolean reportParseExceptions,
+        Long publishTimeout,
+        Long pushTimeout,
+        SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        Boolean logParseExceptions,
+        Integer maxParseExceptions,
+        Integer maxSavedParseExceptions,
+        Integer maxColumnsToMerge,
+        Long awaitSegmentAvailabilityTimeoutMillis,
+        File basePersistDir
     )
     {
       this(
@@ -454,7 +443,7 @@ public class BatchAppenderatorTester implements AutoCloseable
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout != null ? pushTimeout : publishTimeout,
-          null,
+          basePersistDir,
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
@@ -469,30 +458,25 @@ public class BatchAppenderatorTester implements AutoCloseable
       );
     }
 
-    private IndexTuningConfig()
-    {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-    }
-
-    private IndexTuningConfig(
-        @Nullable AppendableIndexSpec appendableIndexSpec,
-        @Nullable Integer maxRowsInMemory,
-        @Nullable Long maxBytesInMemory,
-        @Nullable Boolean skipBytesInMemoryOverheadCheck,
-        @Nullable PartitionsSpec partitionsSpec,
-        @Nullable IndexSpec indexSpec,
-        @Nullable IndexSpec indexSpecForIntermediatePersists,
-        @Nullable Integer maxPendingPersists,
-        @Nullable Boolean forceGuaranteedRollup,
-        @Nullable Boolean reportParseExceptions,
-        @Nullable Long pushTimeout,
-        @Nullable File basePersistDirectory,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        @Nullable Boolean logParseExceptions,
-        @Nullable Integer maxParseExceptions,
-        @Nullable Integer maxSavedParseExceptions,
-        @Nullable Integer maxColumnsToMerge,
-        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+    private TestIndexTuningConfig(
+         AppendableIndexSpec appendableIndexSpec,
+         Integer maxRowsInMemory,
+         Long maxBytesInMemory,
+         Boolean skipBytesInMemoryOverheadCheck,
+         @Nullable PartitionsSpec partitionsSpec,
+         IndexSpec indexSpec,
+         IndexSpec indexSpecForIntermediatePersists,
+         Integer maxPendingPersists,
+         Boolean forceGuaranteedRollup,
+         Boolean reportParseExceptions,
+         Long pushTimeout,
+         File basePersistDirectory,
+         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+         Boolean logParseExceptions,
+         Integer maxParseExceptions,
+         Integer maxSavedParseExceptions,
+         Integer maxColumnsToMerge,
+         Long awaitSegmentAvailabilityTimeoutMillis
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -543,83 +527,35 @@ public class BatchAppenderatorTester implements AutoCloseable
     }
 
     @Override
-    public IndexTuningConfig withBasePersistDirectory(File dir)
+    public TestIndexTuningConfig withBasePersistDirectory(File dir)
     {
-      return new IndexTuningConfig(
-          appendableIndexSpec,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          skipBytesInMemoryOverheadCheck,
-          partitionsSpec,
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          dir,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
-      );
+      throw new UnsupportedOperationException();
     }
 
-    public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
-    {
-      return new IndexTuningConfig(
-          appendableIndexSpec,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          skipBytesInMemoryOverheadCheck,
-          partitionsSpec,
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          basePersistDirectory,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
-      );
-    }
-
-    @JsonProperty
     @Override
     public AppendableIndexSpec getAppendableIndexSpec()
     {
       return appendableIndexSpec;
     }
-
-    @JsonProperty
+    
     @Override
     public int getMaxRowsInMemory()
     {
       return maxRowsInMemory;
     }
-
-    @JsonProperty
+    
     @Override
     public long getMaxBytesInMemory()
     {
       return maxBytesInMemory;
     }
-
-    @JsonProperty
+    
     @Override
     public boolean isSkipBytesInMemoryOverheadCheck()
     {
       return skipBytesInMemoryOverheadCheck;
     }
-
-    @JsonProperty
+    
     @Nullable
     @Override
     public PartitionsSpec getPartitionsSpec()
@@ -637,75 +573,58 @@ public class BatchAppenderatorTester implements AutoCloseable
              : new DynamicPartitionsSpec(null, null);
     }
 
-    @JsonProperty
     @Override
     public IndexSpec getIndexSpec()
     {
       return indexSpec;
     }
-
-    @JsonProperty
+    
     @Override
     public IndexSpec getIndexSpecForIntermediatePersists()
     {
       return indexSpecForIntermediatePersists;
     }
-
-    @JsonProperty
+    
     @Override
     public int getMaxPendingPersists()
     {
       return maxPendingPersists;
     }
 
-
-    @JsonProperty
     public boolean isForceGuaranteedRollup()
     {
       return forceGuaranteedRollup;
     }
 
-    @JsonProperty
     @Override
     public boolean isReportParseExceptions()
     {
       return reportParseExceptions;
     }
 
-    @JsonProperty
-    public long getPushTimeout()
-    {
-      return pushTimeout;
-    }
-
     @Nullable
     @Override
-    @JsonProperty
     public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
     {
       return segmentWriteOutMediumFactory;
     }
 
     @Override
-    @JsonProperty
     public int getMaxColumnsToMerge()
     {
       return maxColumnsToMerge;
     }
 
-    @JsonProperty
     public boolean isLogParseExceptions()
     {
       return logParseExceptions;
     }
 
-    @JsonProperty
     public int getMaxParseExceptions()
     {
       return maxParseExceptions;
     }
 
-    @JsonProperty
     public int getMaxSavedParseExceptions()
     {
       return maxSavedParseExceptions;
@@ -718,7 +637,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     @Nullable
     @Override
     @Deprecated
-    @JsonProperty
     public Integer getMaxRowsPerSegment()
     {
       return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
@@ -731,7 +649,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     @Override
     @Nullable
     @Deprecated
-    @JsonProperty
     public Long getMaxTotalRows()
     {
       return partitionsSpec instanceof DynamicPartitionsSpec
@@ -741,7 +658,6 @@ public class BatchAppenderatorTester implements AutoCloseable
 
     @Deprecated
     @Nullable
-    @JsonProperty
     public Integer getNumShards()
     {
       return partitionsSpec instanceof HashedPartitionsSpec
@@ -750,7 +666,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     }
 
     @Deprecated
-    @JsonProperty
     public List<String> getPartitionDimensions()
     {
       return partitionsSpec instanceof HashedPartitionsSpec
@@ -770,7 +685,7 @@ public class BatchAppenderatorTester implements AutoCloseable
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
 
-    @JsonProperty
+    
     public long getAwaitSegmentAvailabilityTimeoutMillis()
     {
       return awaitSegmentAvailabilityTimeoutMillis;
@@ -785,7 +700,7 @@ public class BatchAppenderatorTester implements AutoCloseable
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      IndexTuningConfig that = (IndexTuningConfig) o;
+      TestIndexTuningConfig that = (TestIndexTuningConfig) o;
       return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
              maxRowsInMemory == that.maxRowsInMemory &&
              maxBytesInMemory == that.maxBytesInMemory &&

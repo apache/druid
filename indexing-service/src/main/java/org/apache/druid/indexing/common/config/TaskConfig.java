@@ -77,7 +77,7 @@ public class TaskConfig
   private final boolean ignoreTimestampSpecForDruidInputSource;
 
   @JsonProperty
-  private final boolean batchFallback;
+  private final boolean useLegacyBatchProcessing;
 
   @JsonCreator
   public TaskConfig(
@@ -91,7 +91,7 @@ public class TaskConfig
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
-      @JsonProperty("batchFallback") boolean batchFallback // only set to true to fall back to older behavior
+      @JsonProperty("useLegacyBatchProcessing") boolean useLegacyBatchProcessing // only set to true to fall back to older behavior
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -117,7 +117,7 @@ public class TaskConfig
       this.shuffleDataLocations = shuffleDataLocations;
     }
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
-    this.batchFallback = batchFallback;
+    this.useLegacyBatchProcessing = useLegacyBatchProcessing;
   }
 
   @JsonProperty
@@ -201,9 +201,9 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean getbatchFallback()
+  public boolean getuseLegacyBatchProcessing()
   {
-    return batchFallback;
+    return useLegacyBatchProcessing;
   }
 
 

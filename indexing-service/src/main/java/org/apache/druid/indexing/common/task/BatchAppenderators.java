@@ -81,7 +81,7 @@ public final class BatchAppenderators
         toolbox.getIndexMergerV9(),
         rowIngestionMeters,
         parseExceptionHandler,
-        toolbox.getConfig().getbatchFallback()
+        toolbox.getConfig().getuseLegacyBatchProcessing()
     );
   }
 

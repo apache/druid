@@ -88,8 +88,7 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler,
-        true
+        parseExceptionHandler
     );
   }
 
@@ -104,10 +103,10 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchFallback
+      boolean useLegacyBatchProcessing
   )
   {
-    if (batchFallback) {
+    if (useLegacyBatchProcessing) {
       // fallback to code known to be working, this is just a fallback option in case new
       // batch appenderator has some early bugs but we will remove this fallback as soon as
       // we determine that batch appenderator code is stable
@@ -124,8 +123,7 @@ public class Appenderators
           indexMerger,
           null,
           rowIngestionMeters,
-          parseExceptionHandler,
-          false
+          parseExceptionHandler
       );
     }
     return new BatchAppenderator(

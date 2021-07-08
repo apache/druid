@@ -70,14 +70,12 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 public class BatchAppenderator implements Appenderator
@@ -103,7 +101,7 @@ public class BatchAppenderator implements Appenderator
    * called). It could also be accessed (but not mutated) potentially in the context
    * of any thread from {@link #drop}.
    */
-  private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
+  private final Map<SegmentIdWithShardSpec, Sink> sinks = new HashMap<>();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
 
@@ -111,76 +109,12 @@ public class BatchAppenderator implements Appenderator
    * The following sinks metadata map and associated class are the way to retain metadata now that sinks
    * are being completely removed from memory after each incremental persist.
    */
-  private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
-
-  /**
-   * This class is used for information that needs to be kept related to Sinks as
-   * they are persisted and removed from memory at every incremental persist.
-   * The information is used for sanity checks and as information required
-   * for functionality, depending in the field that is used. More info about the
-   * fields is annotated as comments in the class
-   */
-  private static class SinkMetadata
-  {
-    /** This is used to maintain the rows in the sink accross persists of the sink
-    * used for functionality (i.e. to detect whether an incremental push
-    * is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)}
-    **/
-    private int numRowsInSegment;
-    /** For sanity check as well as functionality: to make sure that all hydrants for a sink are restored from disk at
-     * push time and also to remember the fire hydrant "count" when persisting it.
-     */
-    private int numHydrants;
-    /* Reference to directory that holds the persisted data */
-    File persistedFileDir;
-
-    public SinkMetadata()
-    {
-      this(0, 0);
-    }
-
-    public SinkMetadata(int numRowsInSegment, int numHydrants)
-    {
-      this.numRowsInSegment = numRowsInSegment;
-      this.numHydrants = numHydrants;
-    }
-
-    public void addRows(int num)
-    {
-      numRowsInSegment += num;
-    }
-
-    public void addHydrants(int num)
-    {
-      numHydrants += num;
-    }
-
-    public int getNumRowsInSegment()
-    {
-      return numRowsInSegment;
-    }
-
-    public int getNumHydrants()
-    {
-      return numHydrants;
-    }
-
-    public void setPersistedFileDir(File persistedFileDir)
-    {
-      this.persistedFileDir = persistedFileDir;
-    }
-
-    public File getPersistedFileDir()
-    {
-      return persistedFileDir;
-    }
-
-  }
+  private final Map<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new HashMap<>();
 
   // This variable updated in add(), persist(), and drop()
-  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
-  private final AtomicInteger totalRows = new AtomicInteger();
-  private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
+  private int rowsCurrentlyInMemory = 0;
+  private int totalRows = 0;
+  private long bytesCurrentlyInMemory = 0;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
 
@@ -296,9 +230,9 @@ public class BatchAppenderator implements Appenderator
     }
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
-    rowsCurrentlyInMemory.addAndGet(numAddedRows);
-    bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
-    totalRows.addAndGet(numAddedRows);
+    rowsCurrentlyInMemory += numAddedRows;
+    bytesCurrentlyInMemory += bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd;
+    totalRows += numAddedRows;
     sinksMetadata.computeIfAbsent(identifier, unused -> new SinkMetadata()).addRows(numAddedRows);
 
     boolean persist = false;
@@ -308,19 +242,19 @@ public class BatchAppenderator implements Appenderator
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
     }
-    if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+    if (rowsCurrentlyInMemory >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
-          rowsCurrentlyInMemory.get(),
+          rowsCurrentlyInMemory,
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
+    if (bytesCurrentlyInMemory >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
-          bytesCurrentlyInMemory.get(),
+          bytesCurrentlyInMemory,
           maxBytesTuningConfig
       ));
     }
@@ -336,13 +270,13 @@ public class BatchAppenderator implements Appenderator
           if (sinkEntry.swappable()) {
             // Code for batch no longer memory maps hydrants but they still take memory...
             int memoryStillInUse = calculateMemoryUsedByHydrant();
-            bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
+            bytesCurrentlyInMemory += memoryStillInUse;
           }
         }
       }
 
       if (!skipBytesInMemoryOverheadCheck
-          && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+          && bytesCurrentlyInMemory - bytesToBePersisted > maxBytesTuningConfig) {
         // We are still over maxBytesTuningConfig even after persisting.
         // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
         final String alertMessage = StringUtils.format(
@@ -352,7 +286,7 @@ public class BatchAppenderator implements Appenderator
             sinks.size(),
             sinks.values().stream().mapToInt(Iterables::size).sum(),
             getTotalRowCount(),
-            bytesCurrentlyInMemory.get(),
+            bytesCurrentlyInMemory,
             bytesToBePersisted,
             maxBytesTuningConfig
         );
@@ -402,19 +336,19 @@ public class BatchAppenderator implements Appenderator
   @Override
   public int getTotalRowCount()
   {
-    return totalRows.get();
+    return totalRows;
   }
 
   @VisibleForTesting
   public int getRowsInMemory()
   {
-    return rowsCurrentlyInMemory.get();
+    return rowsCurrentlyInMemory;
   }
 
   @VisibleForTesting
   public long getBytesCurrentlyInMemory()
   {
-    return bytesCurrentlyInMemory.get();
+    return bytesCurrentlyInMemory;
   }
 
   @VisibleForTesting
@@ -444,7 +378,7 @@ public class BatchAppenderator implements Appenderator
           maxBytesTuningConfig,
           null
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
+      bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
 
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
@@ -474,11 +408,14 @@ public class BatchAppenderator implements Appenderator
   private void clear(boolean removeOnDiskData)
   {
     // Drop commit metadata, then abandon all segments.
-    log.info("Clearing all sinks & hydrants, removing data on disk: [%s]", removeOnDiskData);
+    log.info("Clearing all[%d] sinks & their hydrants, removing data on disk: [%s]", sinks.size(), removeOnDiskData);
     // Drop everything.
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      removeSink(entry.getKey(), entry.getValue(), removeOnDiskData);
-    }
+    Iterator<Map.Entry<SegmentIdWithShardSpec, Sink>> sinksIterator = sinks.entrySet().iterator();
+    sinksIterator.forEachRemaining(entry -> {
+      clearSinkMetadata(entry.getKey(), entry.getValue(), removeOnDiskData);
+      sinksIterator.remove();
+    });
+    metrics.setSinkCount(sinks.size());
   }
 
   @Override
@@ -493,10 +430,13 @@ public class BatchAppenderator implements Appenderator
       if (totalRowsAfter < 0) {
         log.warn("Total rows[%d] after dropping segment[%s] rows [%d]", totalRowsAfter, identifier, rowsToDrop);
       }
-      totalRows.set(Math.max(totalRowsAfter, 0));
+      totalRows = Math.max(totalRowsAfter, 0);
     }
     if (sink != null) {
-      removeSink(identifier, sink, true);
+      clearSinkMetadata(identifier, sink, true);
+      if (sinks.remove(identifier) == null) {
+        log.warn("Sink for identifier[%s] not found, skipping", identifier);
+      }
     }
     return Futures.immediateFuture(null);
   }
@@ -587,8 +527,8 @@ public class BatchAppenderator implements Appenderator
     }
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
-    rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
-    bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
+    rowsCurrentlyInMemory -= numPersistedRows;
+    bytesCurrentlyInMemory -= bytesPersisted;
 
     // remove all sinks after persisting:
     clear(false);
@@ -819,9 +759,7 @@ public class BatchAppenderator implements Appenderator
 
     log.debug("Shutting down...");
 
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      removeSink(entry.getKey(), entry.getValue(), false);
-    }
+    clear(false);
 
     unlockBasePersistDirectory();
 
@@ -833,7 +771,7 @@ public class BatchAppenderator implements Appenderator
       }
     }
 
-    totalRows.set(0);
+    totalRows = 0;
     sinksMetadata.clear();
   }
 
@@ -969,7 +907,10 @@ public class BatchAppenderator implements Appenderator
     return new Pair<>(identifier, currSink);
   }
 
-  private void removeSink(
+  // This function does not remove the sink from its tracking Map (sinks), the caller is responsible for that
+  // this is because the Map is not synchronized and removing elements from a map while traversing it
+  // throws a concurrent access exception
+  private void clearSinkMetadata(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean removeOnDiskData
@@ -979,25 +920,18 @@ public class BatchAppenderator implements Appenderator
     if (sink.finishWriting()) {
       // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
-      rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
-      bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
+      rowsCurrentlyInMemory -= sink.getNumRowsInMemory();
+      bytesCurrentlyInMemory -= sink.getBytesInMemory();
+      bytesCurrentlyInMemory -= calculateSinkMemoryInUsed();
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
-          bytesCurrentlyInMemory.addAndGet(-calculateMemoryUsedByHydrant());
+          bytesCurrentlyInMemory -= calculateMemoryUsedByHydrant();
         }
       }
       // totalRows are not decremented when removing the sink from memory, sink was just persisted and it
       // still "lives" but it is in hibernation. It will be revived later just before push.
     }
-
-
-    if (!sinks.remove(identifier, sink)) {
-      log.error("Sink for segment[%s] no longer valid, not abandoning.", identifier);
-    }
-
-    metrics.setSinkCount(sinks.size());
 
     if (removeOnDiskData) {
       removeDirectory(computePersistDir(identifier));
@@ -1123,8 +1057,6 @@ public class BatchAppenderator implements Appenderator
       return 0;
     }
     // These calculations are approximated from actual heap dumps.
-    // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
-    // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     int total;
     total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
     return total;
@@ -1138,4 +1070,69 @@ public class BatchAppenderator implements Appenderator
     // Rough estimate of memory footprint of empty Sink based on actual heap dumps
     return ROUGH_OVERHEAD_PER_SINK;
   }
+
+  /**
+   * This class is used for information that needs to be kept related to Sinks as
+   * they are persisted and removed from memory at every incremental persist.
+   * The information is used for sanity checks and as information required
+   * for functionality, depending in the field that is used. More info about the
+   * fields is annotated as comments in the class
+   */
+  private static class SinkMetadata
+  {
+    /** This is used to maintain the rows in the sink accross persists of the sink
+     * used for functionality (i.e. to detect whether an incremental push
+     * is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)}
+     **/
+    private int numRowsInSegment;
+    /** For sanity check as well as functionality: to make sure that all hydrants for a sink are restored from disk at
+     * push time and also to remember the fire hydrant "count" when persisting it.
+     */
+    private int numHydrants;
+    /* Reference to directory that holds the persisted data */
+    File persistedFileDir;
+
+    public SinkMetadata()
+    {
+      this(0, 0);
+    }
+
+    public SinkMetadata(int numRowsInSegment, int numHydrants)
+    {
+      this.numRowsInSegment = numRowsInSegment;
+      this.numHydrants = numHydrants;
+    }
+
+    public void addRows(int num)
+    {
+      numRowsInSegment += num;
+    }
+
+    public void addHydrants(int num)
+    {
+      numHydrants += num;
+    }
+
+    public int getNumRowsInSegment()
+    {
+      return numRowsInSegment;
+    }
+
+    public int getNumHydrants()
+    {
+      return numHydrants;
+    }
+
+    public void setPersistedFileDir(File persistedFileDir)
+    {
+      this.persistedFileDir = persistedFileDir;
+    }
+
+    public File getPersistedFileDir()
+    {
+      return persistedFileDir;
+    }
+
+  }
+
 }

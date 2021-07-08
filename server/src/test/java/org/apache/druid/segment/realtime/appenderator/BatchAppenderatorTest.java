@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -31,7 +30,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -114,14 +112,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           IDENTIFIERS.subList(0, 3),
           Lists.transform(
               segmentsAndCommitMetadata.getSegments(),
-              new Function<DataSegment, SegmentIdWithShardSpec>()
-              {
-                @Override
-                public SegmentIdWithShardSpec apply(DataSegment input)
-                {
-                  return SegmentIdWithShardSpec.fromDataSegment(input);
-                }
-              }
+              SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(
@@ -207,14 +198,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           IDENTIFIERS.subList(0, 3),
           Lists.transform(
               segmentsAndCommitMetadata.getSegments(),
-              new Function<DataSegment, SegmentIdWithShardSpec>()
-              {
-                @Override
-                public SegmentIdWithShardSpec apply(DataSegment input)
-                {
-                  return SegmentIdWithShardSpec.fromDataSegment(input);
-                }
-              }
+              SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(
@@ -648,14 +632,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           IDENTIFIERS.subList(0, 1),
           Lists.transform(
               segmentsAndCommitMetadata.getSegments(),
-              new Function<DataSegment, SegmentIdWithShardSpec>()
-              {
-                @Override
-                public SegmentIdWithShardSpec apply(DataSegment input)
-                {
-                  return SegmentIdWithShardSpec.fromDataSegment(input);
-                }
-              }
+              SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
@@ -890,14 +867,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           Collections.singletonList(IDENTIFIERS.get(0)),
           Lists.transform(
               segmentsAndCommitMetadata.getSegments(),
-              new Function<DataSegment, SegmentIdWithShardSpec>()
-              {
-                @Override
-                public SegmentIdWithShardSpec apply(DataSegment input)
-                {
-                  return SegmentIdWithShardSpec.fromDataSegment(input);
-                }
-              }
+              SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
 

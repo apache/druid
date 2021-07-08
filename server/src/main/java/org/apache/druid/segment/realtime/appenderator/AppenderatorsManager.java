@@ -98,7 +98,7 @@ public interface AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchFallback
+      boolean useLegacyBatchProcessing
   );
 
   /**
