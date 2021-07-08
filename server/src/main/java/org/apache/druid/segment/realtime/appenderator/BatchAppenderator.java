@@ -78,6 +78,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+/**
+ * This is a new class produced when the old {@code AppenderatorImpl} was split. For historical
+ * reasons, the code for creating segments was all handled by the same code path in that class. The code
+ * was correct but inefficient for batch ingestion from a memory perspective. If the input file being processed
+ * by batch ingestion had enough sinks & hydrants produced then it may run out of memory either in the
+ * hydrant creation phase (append) of this class or in the merge hydrants phase. Therefore a new class,
+ * {@code BatchAppenderator}, this class, was created to specialize in batch ingestion and the old class
+ * for stream ingestion was renamed to {@link StreamAppenderator}.
+ * <p>
+ * It is important to realize that this class is completely synchronous despite the {@link Appenderator}
+ * interface suggesting otherwise.
+ */
 public class BatchAppenderator implements Appenderator
 {
   public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
@@ -95,12 +107,6 @@ public class BatchAppenderator implements Appenderator
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
-  /**
-   * This map needs to be concurrent because it's accessed and mutated from multiple threads from where
-   * this Appenderator is used (and methods like {@link #add(SegmentIdWithShardSpec, InputRow, Supplier, boolean)} are
-   * called). It could also be accessed (but not mutated) potentially in the context
-   * of any thread from {@link #drop}.
-   */
   private final Map<SegmentIdWithShardSpec, Sink> sinks = new HashMap<>();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
