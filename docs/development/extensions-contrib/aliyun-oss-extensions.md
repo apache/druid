@@ -98,8 +98,8 @@ Below shows the configurations of OSS's input source.
 
 ### Reading from a file 
 
-Say file `rollup-data.json` has been uploaded to a folder `druid` in your OSS bucket, which is the same bucket your Druid is configured , 
-`uri` property of OSS's input source could be used as below:
+Say that the file `rollup-data.json`, which could be found under Druid's `quickstart/tutorial` directory, has been uploaded to a folder `druid` in your OSS bucket, which is the same bucket your Druid is configured , 
+`uri` property of OSS's input source could be used for the reading. 
 
 ```json
 {
@@ -152,11 +152,11 @@ Say file `rollup-data.json` has been uploaded to a folder `druid` in your OSS bu
 }
 ```
 
-By posting above json to `http://{YOUR_ROUTER_IP:8888}/druid/indexer/v1/task` endpoint, an ingestion task will be created by the indexing service to ingest.
+By posting the above ingestion task spec to `http://{YOUR_ROUTER_IP:8888}/druid/indexer/v1/task`, an ingestion task will be created by the indexing service to ingest.
 
 ### Reading files in folders
 
-Use `prefixes` to read files in folders as below:
+If we want to read files in a same folder, we could use the `prefixes` property to specify the folder name where Druid could find input files instead of specifying file URIs one by one.
 
 ```json
 ...
@@ -165,7 +165,7 @@ Use `prefixes` to read files in folders as below:
       "inputSource" : {
         "type" : "oss",
         "prefixes" : [
-          "2020", "2021"
+          "oss://{YOUR_OSS_BUCKET}/2020", "oss://{YOUR_OSS_BUCKET}/2021"
         ]
       },
       "inputFormat" : {
@@ -176,7 +176,7 @@ Use `prefixes` to read files in folders as below:
 ...
 ```
 
-Task will read all files in `2020` and `2021` folders. 
+The spec above tells the ingestion task to read all files under `2020` and `2021` folders.
 
 ### Reading from other buckets 
 
@@ -228,3 +228,9 @@ If the default `druid.oss.accessKey` is not able to access a bucket, `properties
 ```
 
 This `properties` could be applied to any of `uris`, `objects`, `prefixes` property above.
+
+
+## Troubleshooting
+
+When using OSS as deep storage or reading from OSS, the most problems that users will encounter are related to OSS permission. 
+Please refer to the official [OSS permission troubleshooting document](https://www.alibabacloud.com/help/doc-detail/42777.htm) to find a solution.
