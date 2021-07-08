@@ -288,10 +288,8 @@ public class TaskQueue
           }
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-            final String errorMessage = StringUtils.format(
-                "Exception thrown while waiting for the task to be ready to run: %s",
-                e.toString()
-            );
+            final String errorMessage = "Failed while waiting for the task to be ready to run. "
+                                        + "See overlord logs for more details.";
             notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
             continue;
           }
@@ -561,10 +559,7 @@ public class TaskQueue
                .addData("dataSource", task.getDataSource())
                .emit();
             handleStatus(
-                TaskStatus.failure(
-                    task.getId(),
-                    StringUtils.format("Failed to run this task with an exception: %s", t.toString())
-                )
+                TaskStatus.failure(task.getId(), "Failed to run this task. See overlord logs for more details.")
             );
           }
 

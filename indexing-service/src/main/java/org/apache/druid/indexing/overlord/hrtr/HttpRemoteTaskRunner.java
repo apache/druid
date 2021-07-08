@@ -1240,13 +1240,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           taskComplete(
               taskItem,
               null,
-              TaskStatus.failure(
-                  taskId,
-                  StringUtils.format(
-                      "Failed to assign this task with an exception: %s",
-                      th.toString()
-                  )
-              )
+              TaskStatus.failure(taskId, "Failed to assign this task. See overlord logs for more details.")
           );
         }
         finally {
