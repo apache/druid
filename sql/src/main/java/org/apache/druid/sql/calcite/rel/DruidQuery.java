@@ -1021,7 +1021,7 @@ public class DruidQuery
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
       return query;
     }
-    Map<String, Object> theContext = plannerContext.getQueryContext();
+    Map<String, Object> theContext = new HashMap<>();
 
     Granularity queryGranularity = null;
 
