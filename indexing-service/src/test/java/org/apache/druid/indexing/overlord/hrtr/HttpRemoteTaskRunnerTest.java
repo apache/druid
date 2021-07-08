@@ -49,6 +49,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -1494,7 +1495,8 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertTrue(future.get().isFailure());
     Assert.assertNotNull(future.get().getErrorMsg());
     Assert.assertTrue(
-        future.get().getErrorMsg().startsWith("Failed to assign this task with an exception")
+        StringUtils.format("Actual message is: %s", future.get().getErrorMsg()),
+        future.get().getErrorMsg().startsWith("Failed to assign this task")
     );
   }
 

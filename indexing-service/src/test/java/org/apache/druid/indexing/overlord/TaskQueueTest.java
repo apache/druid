@@ -42,6 +42,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.EntryExistsException;
@@ -343,7 +344,8 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
     Assert.assertNotNull(statusOptional.get().getErrorMsg());
     Assert.assertTrue(
-        statusOptional.get().getErrorMsg().startsWith("Exception thrown while waiting for the task to be ready to run")
+        StringUtils.format("Actual message is: %s", statusOptional.get().getErrorMsg()),
+        statusOptional.get().getErrorMsg().startsWith("Failed while waiting for the task to be ready to run")
     );
   }
 
