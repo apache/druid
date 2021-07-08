@@ -98,6 +98,7 @@
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <mysql.version>5.1.48</mysql.version>
+        <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.1.63.Final</netty4.version>
         <postgresql.version>42.2.14</postgresql.version>
