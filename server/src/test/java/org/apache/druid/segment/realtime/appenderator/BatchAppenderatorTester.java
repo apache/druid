@@ -24,8 +24,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -180,14 +178,9 @@ public class BatchAppenderatorTester implements AutoCloseable
         new IndexSpec(),
         0,
         false,
-        false,
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        false,
-        0,
-        1,
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        0L,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
     );
     metrics = new FireDepartmentMetrics();
@@ -320,13 +313,8 @@ public class BatchAppenderatorTester implements AutoCloseable
     private final IndexSpec indexSpec;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
-    private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
     private final long pushTimeout;
-    private final boolean logParseExceptions;
-    private final int maxParseExceptions;
-    private final int maxSavedParseExceptions;
-    private final long awaitSegmentAvailabilityTimeoutMillis;
     private final IndexSpec indexSpecForIntermediatePersists;
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -338,15 +326,10 @@ public class BatchAppenderatorTester implements AutoCloseable
          Boolean skipBytesInMemoryOverheadCheck,
          IndexSpec indexSpec,
          Integer maxPendingPersists,
-         Boolean forceGuaranteedRollup,
          Boolean reportParseExceptions,
          Long pushTimeout,
          @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-         Boolean logParseExceptions,
-         Integer maxParseExceptions,
-         Integer maxSavedParseExceptions,
          Integer maxColumnsToMerge,
-         Long awaitSegmentAvailabilityTimeoutMillis,
          File basePersistDirectory
     )
     {
@@ -356,15 +339,10 @@ public class BatchAppenderatorTester implements AutoCloseable
       this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck;
       this.indexSpec = indexSpec;
       this.maxPendingPersists = maxPendingPersists;
-      this.forceGuaranteedRollup = forceGuaranteedRollup;
       this.reportParseExceptions = reportParseExceptions;
       this.pushTimeout = pushTimeout;
       this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-      this.logParseExceptions = logParseExceptions;
-      this.maxParseExceptions = maxParseExceptions;
-      this.maxSavedParseExceptions = Math.min(1, maxSavedParseExceptions);
       this.maxColumnsToMerge = maxColumnsToMerge;
-      this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
       this.basePersistDirectory = basePersistDirectory;
 
       this.partitionsSpec = null;
@@ -408,16 +386,6 @@ public class BatchAppenderatorTester implements AutoCloseable
       return partitionsSpec;
     }
 
-    public PartitionsSpec getGivenOrDefaultPartitionsSpec()
-    {
-      if (partitionsSpec != null) {
-        return partitionsSpec;
-      }
-      return forceGuaranteedRollup
-             ? new HashedPartitionsSpec(null, null, null)
-             : new DynamicPartitionsSpec(null, null);
-    }
-
     @Override
     public IndexSpec getIndexSpec()
     {
@@ -434,11 +402,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     public int getMaxPendingPersists()
     {
       return maxPendingPersists;
-    }
-
-    public boolean isForceGuaranteedRollup()
-    {
-      return forceGuaranteedRollup;
     }
 
     @Override
@@ -460,21 +423,6 @@ public class BatchAppenderatorTester implements AutoCloseable
       return maxColumnsToMerge;
     }
 
-    public boolean isLogParseExceptions()
-    {
-      return logParseExceptions;
-    }
-
-    public int getMaxParseExceptions()
-    {
-      return maxParseExceptions;
-    }
-
-    public int getMaxSavedParseExceptions()
-    {
-      return maxSavedParseExceptions;
-    }
-
     @Override
     public File getBasePersistDirectory()
     {
@@ -487,11 +435,6 @@ public class BatchAppenderatorTester implements AutoCloseable
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
     
-    public long getAwaitSegmentAvailabilityTimeoutMillis()
-    {
-      return awaitSegmentAvailabilityTimeoutMillis;
-    }
-
     @Override
     public boolean equals(Object o)
     {
@@ -508,18 +451,13 @@ public class BatchAppenderatorTester implements AutoCloseable
              skipBytesInMemoryOverheadCheck == that.skipBytesInMemoryOverheadCheck &&
              maxColumnsToMerge == that.maxColumnsToMerge &&
              maxPendingPersists == that.maxPendingPersists &&
-             forceGuaranteedRollup == that.forceGuaranteedRollup &&
              reportParseExceptions == that.reportParseExceptions &&
              pushTimeout == that.pushTimeout &&
-             logParseExceptions == that.logParseExceptions &&
-             maxParseExceptions == that.maxParseExceptions &&
-             maxSavedParseExceptions == that.maxSavedParseExceptions &&
              Objects.equals(partitionsSpec, that.partitionsSpec) &&
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
+             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
     }
 
     @Override
@@ -536,14 +474,9 @@ public class BatchAppenderatorTester implements AutoCloseable
           indexSpecForIntermediatePersists,
           basePersistDirectory,
           maxPendingPersists,
-          forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          segmentWriteOutMediumFactory,
-          awaitSegmentAvailabilityTimeoutMillis
+          segmentWriteOutMediumFactory
       );
     }
 
@@ -560,14 +493,9 @@ public class BatchAppenderatorTester implements AutoCloseable
              ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +
              ", basePersistDirectory=" + basePersistDirectory +
              ", maxPendingPersists=" + maxPendingPersists +
-             ", forceGuaranteedRollup=" + forceGuaranteedRollup +
              ", reportParseExceptions=" + reportParseExceptions +
              ", pushTimeout=" + pushTimeout +
-             ", logParseExceptions=" + logParseExceptions +
-             ", maxParseExceptions=" + maxParseExceptions +
-             ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
-             ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
              '}';
     }
   }
