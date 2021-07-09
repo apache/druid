@@ -35,6 +35,7 @@ import java.util.Objects;
 public class AvroStreamInputFormat extends NestedInputFormat
 {
   private final boolean binaryAsString;
+  private final boolean extractUnionsByType;
 
   private final AvroBytesDecoder avroBytesDecoder;
 
@@ -42,12 +43,14 @@ public class AvroStreamInputFormat extends NestedInputFormat
   public AvroStreamInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder,
-      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
+      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
+      @JsonProperty("extractUnionsByType") @Nullable Boolean extractUnionsByType
   )
   {
     super(flattenSpec);
     this.avroBytesDecoder = avroBytesDecoder;
-    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.binaryAsString = binaryAsString != null && binaryAsString;
+    this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;
   }
 
   @Override
@@ -76,7 +79,8 @@ public class AvroStreamInputFormat extends NestedInputFormat
         source,
         avroBytesDecoder,
         getFlattenSpec(),
-        binaryAsString
+        binaryAsString,
+        extractUnionsByType
     );
   }
 

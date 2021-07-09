@@ -62,7 +62,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new AppenderatorImpl(
+    return new StreamAppenderator(
         id,
         schema,
         config,
@@ -88,8 +88,7 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler,
-        true
+        parseExceptionHandler
     );
   }
 
@@ -104,24 +103,40 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      boolean useLegacyBatchProcessing
   )
   {
-    return new AppenderatorImpl(
+    if (useLegacyBatchProcessing) {
+      // fallback to code known to be working, this is just a fallback option in case new
+      // batch appenderator has some early bugs but we will remove this fallback as soon as
+      // we determine that batch appenderator code is stable
+      return new StreamAppenderator(
+          id,
+          schema,
+          config,
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          new NoopDataSegmentAnnouncer(),
+          null,
+          indexIO,
+          indexMerger,
+          null,
+          rowIngestionMeters,
+          parseExceptionHandler
+      );
+    }
+    return new BatchAppenderator(
         id,
         schema,
         config,
         metrics,
         dataSegmentPusher,
         objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
         indexIO,
         indexMerger,
-        null,
         rowIngestionMeters,
-        parseExceptionHandler,
-        batchMemoryMappedIndex // This is a task config (default false) to fallback to "old" code in case of bug with the new memory optimization code
+        parseExceptionHandler
     );
   }
 }

@@ -74,6 +74,7 @@ EMR
 EMRFS
 ETL
 Elasticsearch
+Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
