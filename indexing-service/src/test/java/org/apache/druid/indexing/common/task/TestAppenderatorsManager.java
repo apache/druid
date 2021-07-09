@@ -105,7 +105,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      boolean useLegacyBatchProcessing
   )
   {
     return Appenderators.createOffline(
@@ -119,7 +119,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        batchMemoryMappedIndex
+        useLegacyBatchProcessing
     );
   }
 

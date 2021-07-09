@@ -43,6 +43,12 @@ import java.util.List;
  * Concurrency: all methods defined in this class directly, including {@link #close()} and {@link #closeNow()}, i. e.
  * all methods of the data appending and indexing lifecycle except {@link #drop} must be called from a single thread.
  * Methods inherited from {@link QuerySegmentWalker} can be called concurrently from multiple threads.
+ *<p>
+ * Important note: For historical reasons there was a single implementation for this interface ({@code AppenderatorImpl})
+ * but that since has been split into two classes: {@link StreamAppenderator} and {@link BatchAppenderator}. With this change
+ * all the query support & concurrency has been removed from the {@code BatchAppenderator} therefore this class no longer
+ * makes sense to have as an {@code Appenderator}. In the future we may want to refactor away the {@code Appenderator}
+ * interface from {@code BatchAppenderator}.
  */
 public interface Appenderator extends QuerySegmentWalker
 {
@@ -213,15 +219,6 @@ public interface Appenderator extends QuerySegmentWalker
    * in background thread then it does not cause any problems.
    */
   void closeNow();
-
-  /**
-   * Flag to tell internals whether appenderator is working on behalf of a real time task.
-   * This is to manage certain aspects as needed. For example, for batch, non-real time tasks,
-   * physical segments (i.e. hydrants) do not need to memory map their persisted
-   * files. In this case, the code will avoid memory mapping them thus ameliorating the occurance
-   * of OOMs.
-   */
-  boolean isRealTime();
 
   /**
    * Result of {@link Appenderator#add} containing following information
