@@ -508,7 +508,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public List<VersionedSupervisorSpec> getSupervisorHistory(String id)
+  public List<Object> getSupervisorHistory(String id)
   {
     try {
       StatusResponseHolder response = httpClient.go(
@@ -531,8 +531,8 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      List<VersionedSupervisorSpec> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<VersionedSupervisorSpec>>()
+      List<Object> responseData = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<Object>>()
           {
           }
       );

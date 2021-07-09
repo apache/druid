@@ -397,8 +397,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           30,
           "Waiting for supervisor to be healthy"
       );
+
+      // Sleep for 10 secs to make sure that at least one cycle of supervisor auto cleanup duty ran
+      Thread.sleep(10000);
+
       // Verify that supervisor spec exist
-      List<VersionedSupervisorSpec> specs = indexer.getSupervisorHistory(generatedTestConfig.getSupervisorId());
+      List<Object> specs = indexer.getSupervisorHistory(generatedTestConfig.getSupervisorId());
       Assert.assertNotNull(specs);
       Assert.assertFalse(specs.isEmpty());
 
