@@ -301,6 +301,10 @@ export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
+export function alphanumericCompare(a: string, b: string): number {
+  return String(a).localeCompare(b, undefined, { numeric: true });
+}
+
 export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],

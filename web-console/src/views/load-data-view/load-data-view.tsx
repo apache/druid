@@ -126,6 +126,7 @@ import {
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
+  alphanumericCompare,
   deepDelete,
   deepGet,
   deepSet,
@@ -2311,6 +2312,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
+    const schemaToolsMenu = this.renderSchemaToolsMenu();
     return (
       <>
         <div className="main">{mainFill}</div>
@@ -2463,6 +2465,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   }}
                 />
               </FormGroup>
+              {schemaToolsMenu && (
+                <FormGroup>
+                  <Popover2 content={schemaToolsMenu}>
+                    <Button icon={IconNames.BUILD} />
+                  </Popover2>
+                </FormGroup>
+              )}
             </>
           )}
           {this.renderAutoDimensionControls()}
@@ -2477,6 +2486,59 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       </>
     );
   }
+
+  private readonly renderSchemaToolsMenu = () => {
+    const { spec } = this.state;
+    const dimensions: DimensionSpec[] | undefined = deepGet(
+      spec,
+      `spec.dataSchema.dimensionsSpec.dimensions`,
+    );
+    const metrics: MetricSpec[] | undefined = deepGet(spec, `spec.dataSchema.metricsSpec`);
+
+    if (!dimensions && !metrics) return;
+    return (
+      <Menu>
+        {dimensions && (
+          <MenuItem
+            icon={IconNames.ARROWS_HORIZONTAL}
+            text="Order dimensions alphabetically"
+            onClick={() => {
+              if (!dimensions) return;
+              const newSpec = deepSet(
+                spec,
+                `spec.dataSchema.dimensionsSpec.dimensions`,
+                dimensions
+                  .slice()
+                  .sort((d1, d2) =>
+                    alphanumericCompare(getDimensionSpecName(d1), getDimensionSpecName(d2)),
+                  ),
+              );
+              this.updateSpec(newSpec);
+            }}
+          />
+        )}
+        {metrics && (
+          <MenuItem
+            icon={IconNames.ARROWS_HORIZONTAL}
+            text="Order metrics alphabetically"
+            onClick={() => {
+              if (!metrics) return;
+              const newSpec = deepSet(
+                spec,
+                `spec.dataSchema.metricsSpec`,
+                metrics
+                  .slice()
+                  .sort((m1, m2) =>
+                    alphanumericCompare(getMetricSpecName(m1), getMetricSpecName(m2)),
+                  ),
+              );
+              this.updateSpec(newSpec);
+            }}
+          />
+        )}
+      </Menu>
+    );
+  };
 
   private readonly onAutoDimensionSelect = (selectedAutoDimension: string) => {
     this.setState({
@@ -2699,7 +2761,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           model={selectedDimensionSpec}
           onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
         />
-        {reorderDimensionMenu && (
+        {selectedDimensionSpecIndex !== -1 && (
           <FormGroup>
             <Popover2 content={reorderDimensionMenu}>
               <Button
