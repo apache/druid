@@ -52,6 +52,7 @@ import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
@@ -108,6 +109,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes.
@@ -1081,6 +1083,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
               if (announcement.getTaskStatus().isComplete()) {
                 taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
+                taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
                 runPendingTasks();
               }
               break;
@@ -1293,41 +1296,76 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     // Move from running -> complete
-    completeTasks.put(taskStatus.getId(), taskRunnerWorkItem);
-    runningTasks.remove(taskStatus.getId());
+    // If the task was running and this is the first complete event,
+    // previousComplete should be null and removedRunning should not.
+    final RemoteTaskRunnerWorkItem previousComplete = completeTasks.put(taskStatus.getId(), taskRunnerWorkItem);
+    final RemoteTaskRunnerWorkItem removedRunning = runningTasks.remove(taskStatus.getId());
 
-    // Update success/failure counters
-    if (zkWorker != null) {
-      if (taskStatus.isSuccess()) {
-        zkWorker.resetContinuouslyFailedTasksCount();
-        if (blackListedWorkers.remove(zkWorker)) {
-          zkWorker.setBlacklistedUntil(null);
-          log.info("[%s] removed from blacklist because a task finished with SUCCESS", zkWorker.getWorker());
+    if (previousComplete != null && removedRunning != null) {
+      log.warn(
+          "This is not the first complete event for task[%s], but it was still known as running. "
+          + "Ignoring the previously known running status.",
+          taskStatus.getId()
+      );
+    }
+
+    if (previousComplete != null) {
+      // This is not the first complete event for the same task.
+      try {
+        // getResult().get() must return immediately.
+        TaskState lastKnownState = previousComplete.getResult().get(1, TimeUnit.MILLISECONDS).getStatusCode();
+        if (taskStatus.getStatusCode() != lastKnownState) {
+          log.warn(
+              "The state of the new task complete event is different from its last known state. "
+              + "New state[%s], last known state[%s]",
+              taskStatus.getStatusCode(),
+              lastKnownState
+          );
         }
-      } else if (taskStatus.isFailure()) {
-        zkWorker.incrementContinuouslyFailedTasksCount();
       }
+      catch (InterruptedException e) {
+        log.warn(e, "Interrupted while getting the last known task status.");
+        Thread.currentThread().interrupt();
+      }
+      catch (ExecutionException | TimeoutException e) {
+        // This case should not really happen.
+        log.warn(e, "Failed to get the last known task status. Ignoring this failure.");
+      }
+    } else {
+      // This is the first complete event for this task.
+      // Update success/failure counters
+      if (zkWorker != null) {
+        if (taskStatus.isSuccess()) {
+          zkWorker.resetContinuouslyFailedTasksCount();
+          if (blackListedWorkers.remove(zkWorker)) {
+            zkWorker.setBlacklistedUntil(null);
+            log.info("[%s] removed from blacklist because a task finished with SUCCESS", zkWorker.getWorker());
+          }
+        } else if (taskStatus.isFailure()) {
+          zkWorker.incrementContinuouslyFailedTasksCount();
+        }
 
-      // Blacklist node if there are too many failures.
-      synchronized (blackListedWorkers) {
-        if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-            blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
-          zkWorker.setBlacklistedUntil(DateTimes.nowUtc().plus(config.getWorkerBlackListBackoffTime()));
-          if (blackListedWorkers.add(zkWorker)) {
-            log.info(
-                "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
-                zkWorker.getWorker(),
-                zkWorker.getBlacklistedUntil(),
-                zkWorker.getContinuouslyFailedTasksCount()
-            );
+        // Blacklist node if there are too many failures.
+        synchronized (blackListedWorkers) {
+          if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
+              blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
+            zkWorker.setBlacklistedUntil(DateTimes.nowUtc().plus(config.getWorkerBlackListBackoffTime()));
+            if (blackListedWorkers.add(zkWorker)) {
+              log.info(
+                  "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
+                  zkWorker.getWorker(),
+                  zkWorker.getBlacklistedUntil(),
+                  zkWorker.getContinuouslyFailedTasksCount()
+              );
+            }
           }
         }
       }
-    }
 
-    // Notify interested parties
-    taskRunnerWorkItem.setResult(taskStatus);
-    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+      // Notify interested parties
+      taskRunnerWorkItem.setResult(taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+    }
   }
 
   @Override
