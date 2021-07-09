@@ -23,7 +23,7 @@ title: "Multi-value dimensions"
   -->
 
 
-Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
+Apache Druid supports "multi-value" string dimensions, which result from input fields that contain an
 array of values instead of a single value. 
 
 This document describes filtering and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
@@ -33,9 +33,9 @@ about using multi-value string dimensions in SQL.
 
 ## Overview
 
-At ingestion time, Druid automatically detects multi-value dimensions and configures the `dimensionsSpec` accordingly. It detects JSON arrays or CSV/TSV fields.
+At ingestion time, Druid can detect multi-value dimensions and configure the `dimensionsSpec` accordingly. It detects JSON arrays or CSV/TSV fields as multi-value dimensions.
 
-You can specify the multi-value delimiter in TSV or CSV data using the `listDelimiter` field in the `parseSpec`. In JSON data, the multiple value dimension must be formatted as a JSON array in the ingested data. No additional `parseSpec` configuration is needed.
+For TSV or CSV data, you can specify the multi-value delimiters using the `listDelimiter` field in the `parseSpec`. JSON data must be formatted as a JSON array to be ingested as a multi-value dimension. JSON data does not require `parseSpec` configuration.
 
 The following shows an example multi-value dimension named `tags` in a `dimensionsSpec`:
 
@@ -60,8 +60,7 @@ See [Dimension Objects](../ingestion/index.md#dimension-objects) for information
 
 ## Querying multi-value dimensions
 
-Suppose you have a datasource with a segment that contains the following rows, with a multi-value dimension
-called `tags`.
+The following sections describe filtering and grouping behavior based on the following example data, which includes a multi-value dimension, `tags`.
 
 ```
 {"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]}  #row1
@@ -69,6 +68,7 @@ called `tags`.
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": ["t5","t6","t7"]}  #row3
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": []}                #row4
 ```
+> Be sure to remove the comments before trying out the sample data. 
 
 ### Filtering
 
@@ -83,7 +83,7 @@ dimensions. Filters follow these rules on multi-value dimensions:
   underlying filters match that row; "or" matches a row if any underlying filters match that row; "not" matches a row
   if the underlying filter does not match the row.
 
-For example, this "or" filter would match row1 and row2 of the dataset above, but not row3:
+The following example illustrates these rules. This query applies an "or" filter to match row1 and row2 of the dataset above, but not row3:
 
 ```
 {
