@@ -23,8 +23,8 @@ const fs = require('fs-extra');
 const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-docs.js';
 
-const EXPECTED_NUMBER_OF_FUNCTIONS = 134;
-const EXPECTED_NUMBER_OF_DATA_TYPES = 14;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 134;
+const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function unwrapMarkdownLinks(str) {
   return str.replace(/\[([^\]]+)\]\([^)]+\)/g, (_, s) => s);
@@ -58,16 +58,16 @@ const readDoc = async () => {
   }
 
   // Make sure there are enough functions found
-  if (functionDocs.length < EXPECTED_NUMBER_OF_FUNCTIONS) {
+  if (functionDocs.length < MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS) {
     throw new Error(
-      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length} but expected ${EXPECTED_NUMBER_OF_FUNCTIONS})`,
+      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
   // Make sure there are at least 10 data types for sanity
-  if (dataTypeDocs.length < EXPECTED_NUMBER_OF_DATA_TYPES) {
+  if (dataTypeDocs.length < MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES) {
     throw new Error(
-      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length} but expected ${EXPECTED_NUMBER_OF_DATA_TYPES})`,
+      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );
   }
 
