@@ -420,6 +420,7 @@ package object spark {
         .partitionMap(partitioner.getPartitionMap)
         .rationalizeSegments(false)
         .rollUp(shouldRollUp)
+        .shardSpecType("hashed")
     }
 
     def rangePartitionAndWrite(
@@ -439,6 +440,7 @@ package object spark {
         .partitionMap(partitioner.getPartitionMap)
         .rationalizeSegments(false)
         .rollUp(shouldRollUp)
+        .shardSpecType("single")
     }
 
     def partitionAndWrite(
@@ -458,6 +460,7 @@ package object spark {
         .partitionMap(partitioner.getPartitionMap)
         .rationalizeSegments(false)
         .rollUp(shouldRollUp)
+        .shardSpecType("numbered")
     }
   }
 }

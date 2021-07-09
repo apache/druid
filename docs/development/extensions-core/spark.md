@@ -155,10 +155,12 @@ match the segment's id exactly. The writer will rationalize shard specs within t
 ensure data is atomically loaded in Druid. Either way, callers should still take care when partitioning
 dataframes to  write to avoid ingesting skewed data or too many small segments.
 
-For initial development work, sample `HashBasedNumbered`, `SingleDimension`, and `Numbered` partitioners
-are provided. These partitioners all implement the `PartitionMapProvider` interface, so once they've
-partitioned a dataframe the corresponding partition map can be retrieved via the `getPartitionMap`
-method. If calling code imports `org.apache.druid.spark.DruidDataFrame`, dataframes will
+#### Provided Partitioners
+
+For initial development work, sample `HashBasedNumberedPartitioner`, `SingleDimensionPartitioner`, and
+`NumberedPartitioner` partitioners are provided. These partitioners all implement the `PartitionMapProvider`
+interface, so once they've partitioned a dataframe the corresponding partition map can be retrieved via the
+`getPartitionMap` method. If calling code imports `org.apache.druid.spark.DruidDataFrame`, dataframes will
 have the additional methods `hashPartitionAndWrite`, `rangePartitionAndWrite`, and `partitionAndWrite`
 which will partition the dataframe using the respective partitioner, set the appropriate writer
 options including passing the partition map, and return a DataFrameWriter object for final configuration
@@ -167,6 +169,13 @@ dataframe using your knowledge of the underlying data.** These partitioners use 
 `__timeBucket`, `__rank`, `__partitionNum`, and `__partitionKey` internally, so they will not work
 if a source dataframe uses those column names as well. If the source dataframe uses those column names,
 `HashedNumberedSegmentPartitioner` or a custom partitioner will need to be used.
+
+|Target Shard Spec|Provided Partitioner|`DruidDataFrame` Convenience Method|
+|-----------------|-----------|-----------|
+|`HashBasedNumberedShardSpec`|`HashBasedNumberedPartitioner`|`df.hashPartitionAndWrite(...)`|
+|`SingleDimensionShardSpec`|`SingleDimensionPartitioner`|`df.rangePartitionAndWrite(...)`|
+|`NumberedShardSpec`|`NumberedPartitioner`|`df.partitionAndWrite(...)`|
+|`HashBasedNumberedShardSpec`|`HashedNumberedSegmentPartitioner`|None|
 
 ## Plugin Registries and Druid Extension Support
 One of Druid's strengths is its extensibility. Since these Spark readers and writers will not execute on a Druid cluster
