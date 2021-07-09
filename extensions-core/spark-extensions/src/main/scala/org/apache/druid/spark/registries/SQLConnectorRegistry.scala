@@ -22,7 +22,8 @@ package org.apache.druid.spark.registries
 import com.google.common.base.Supplier
 import org.apache.druid.java.util.common.IAE
 import org.apache.druid.metadata.storage.derby.{DerbyConnector, DerbyMetadataStorage}
-import org.apache.druid.metadata.storage.mysql.{MySQLConnector, MySQLConnectorConfig}
+import org.apache.druid.metadata.storage.mysql.{MySQLConnector, MySQLConnectorDriverConfig,
+  MySQLConnectorSslConfig}
 import org.apache.druid.metadata.storage.postgresql.{PostgreSQLConnector,
   PostgreSQLConnectorConfig, PostgreSQLTablesConfig}
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
@@ -107,7 +108,8 @@ object SQLConnectorRegistry extends Logging {
           new MySQLConnector(
             connectorConfigSupplier,
             metadataTableConfigSupplier,
-            new MySQLConnectorConfig)
+            new MySQLConnectorSslConfig,
+            new MySQLConnectorDriverConfig)
           ),
       "postgres" -> ((connectorConfigSupplier: Supplier[MetadataStorageConnectorConfig],
                        metadataTableConfigSupplier: Supplier[MetadataStorageTablesConfig]) =>
