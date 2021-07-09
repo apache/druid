@@ -1017,7 +1017,7 @@ public class DruidQuery
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
-    // in this case, the timestampResult optimization is not neccessary
+    // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
       return query;
     }
@@ -1063,7 +1063,6 @@ public class DruidQuery
         }
         queryGranularity = granularity;
         int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
-        theContext = new HashMap<>();
         // these settings will only affect the most inner query sent to the down streaming compute nodes
         theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
         theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
