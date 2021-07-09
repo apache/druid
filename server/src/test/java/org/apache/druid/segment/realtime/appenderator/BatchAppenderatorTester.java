@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -30,7 +29,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
@@ -61,7 +59,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -160,42 +157,37 @@ public class BatchAppenderatorTester implements AutoCloseable
         ),
         Map.class
     );
+
     schema = new DataSchema(
         DATASOURCE,
-        parserMap,
+        null,
+        null,
         new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
         null,
+        parserMap,
         objectMapper
     );
+
     tuningConfig = new TestIndexTuningConfig(
-        null,
-        2,
-        null,
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
+        new IndexSpec(),
+        0,
+        false,
+        false,
+        0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        null,
-        null,
-        null,
-        null,
+        false,
+        0,
+        1,
+        IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+        0L,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
     );
     metrics = new FireDepartmentMetrics();
@@ -317,32 +309,17 @@ public class BatchAppenderatorTester implements AutoCloseable
   }
 
 
-  // copied from druid-indexing testing since it is not accessible from server module,
-  // Cleaned up a little but Leaving mostly as-is since most of the functionality is 
-  // setting defaults when passing null and those defaults are
-  // required for the appenderator to work
   private static class TestIndexTuningConfig implements AppenderatorConfig
   {
-    private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-    private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-    private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
-    private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
-    private static final long DEFAULT_PUSH_TIMEOUT = 0;
-
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
     private final boolean skipBytesInMemoryOverheadCheck;
     private final int maxColumnsToMerge;
-
-    // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
-    @Nullable
     private final PartitionsSpec partitionsSpec;
     private final IndexSpec indexSpec;
-    private final IndexSpec indexSpecForIntermediatePersists;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
-
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
     private final long pushTimeout;
@@ -350,180 +327,48 @@ public class BatchAppenderatorTester implements AutoCloseable
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
     private final long awaitSegmentAvailabilityTimeoutMillis;
-
+    private final IndexSpec indexSpecForIntermediatePersists;
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
-    @Nullable
-    private static PartitionsSpec getPartitionsSpec(
-        boolean forceGuaranteedRollup,
-        @Nullable PartitionsSpec partitionsSpec,
-        @Nullable Integer maxRowsPerSegment,
-        @Nullable Long maxTotalRows,
-        @Nullable Integer numShards,
-        @Nullable List<String> partitionDimensions
-    )
-    {
-      if (partitionsSpec == null) {
-        if (forceGuaranteedRollup) {
-          if (maxRowsPerSegment != null
-              || numShards != null
-              || (partitionDimensions != null && !partitionDimensions.isEmpty())) {
-            return new HashedPartitionsSpec(maxRowsPerSegment, numShards, partitionDimensions);
-          } else {
-            return null;
-          }
-        } else {
-          if (maxRowsPerSegment != null || maxTotalRows != null) {
-            return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
-          } else {
-            return null;
-          }
-        }
-      } else {
-        if (forceGuaranteedRollup) {
-          if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
-            throw new IAE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
-          }
-        } else {
-          if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
-            throw new IAE("DynamicPartitionsSpec must be used for best-effort rollup");
-          }
-        }
-        return partitionsSpec;
-      }
-    }
-
     public TestIndexTuningConfig(
-        Integer targetPartitionSize,
-        Integer maxRowsPerSegment,
-        AppendableIndexSpec appendableIndexSpec,
-        Integer maxRowsInMemory,
-        Long maxBytesInMemory,
-        Boolean skipBytesInMemoryOverheadCheck,
-        Long maxTotalRows,
-        Integer rowFlushBoundary_forBackCompatibility,
-        Integer numShards,
-        List<String> partitionDimensions,
-        PartitionsSpec partitionsSpec,
-        IndexSpec indexSpec,
-        IndexSpec indexSpecForIntermediatePersists,
-        Integer maxPendingPersists,
-        Boolean forceGuaranteedRollup,
-        Boolean reportParseExceptions,
-        Long publishTimeout,
-        Long pushTimeout,
-        SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        Boolean logParseExceptions,
-        Integer maxParseExceptions,
-        Integer maxSavedParseExceptions,
-        Integer maxColumnsToMerge,
-        Long awaitSegmentAvailabilityTimeoutMillis,
-        File basePersistDir
-    )
-    {
-      this(
-          appendableIndexSpec,
-          maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
-          maxBytesInMemory != null ? maxBytesInMemory : 0,
-          skipBytesInMemoryOverheadCheck != null
-          ? skipBytesInMemoryOverheadCheck
-          : DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
-          getPartitionsSpec(
-              forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
-              partitionsSpec,
-              maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,
-              maxTotalRows,
-              numShards,
-              partitionDimensions
-          ),
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout != null ? pushTimeout : publishTimeout,
-          basePersistDir,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
-      );
-
-      Preconditions.checkArgument(
-          targetPartitionSize == null || maxRowsPerSegment == null,
-          "Can't use targetPartitionSize and maxRowsPerSegment together"
-      );
-    }
-
-    private TestIndexTuningConfig(
          AppendableIndexSpec appendableIndexSpec,
          Integer maxRowsInMemory,
          Long maxBytesInMemory,
          Boolean skipBytesInMemoryOverheadCheck,
-         @Nullable PartitionsSpec partitionsSpec,
          IndexSpec indexSpec,
-         IndexSpec indexSpecForIntermediatePersists,
          Integer maxPendingPersists,
          Boolean forceGuaranteedRollup,
          Boolean reportParseExceptions,
          Long pushTimeout,
-         File basePersistDirectory,
          @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
          Boolean logParseExceptions,
          Integer maxParseExceptions,
          Integer maxSavedParseExceptions,
          Integer maxColumnsToMerge,
-         Long awaitSegmentAvailabilityTimeoutMillis
+         Long awaitSegmentAvailabilityTimeoutMillis,
+         File basePersistDirectory
     )
     {
-      this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      // initializing this to 0, it will be lazily initialized to a value
-      // @see #getMaxBytesInMemoryOrDefault()
-      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-      this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null
-                                            ?
-                                            DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK
-                                            : skipBytesInMemoryOverheadCheck;
-      this.maxColumnsToMerge = maxColumnsToMerge == null
-                               ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
-                               : maxColumnsToMerge;
-      this.partitionsSpec = partitionsSpec;
-      this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-      this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                              this.indexSpec : indexSpecForIntermediatePersists;
-      this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
-      this.reportParseExceptions = reportParseExceptions == null
-                                   ? DEFAULT_REPORT_PARSE_EXCEPTIONS
-                                   : reportParseExceptions;
-      this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
+      this.appendableIndexSpec = appendableIndexSpec;
+      this.maxRowsInMemory = maxRowsInMemory;
+      this.maxBytesInMemory = maxBytesInMemory;
+      this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck;
+      this.indexSpec = indexSpec;
+      this.maxPendingPersists = maxPendingPersists;
+      this.forceGuaranteedRollup = forceGuaranteedRollup;
+      this.reportParseExceptions = reportParseExceptions;
+      this.pushTimeout = pushTimeout;
+      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+      this.logParseExceptions = logParseExceptions;
+      this.maxParseExceptions = maxParseExceptions;
+      this.maxSavedParseExceptions = Math.min(1, maxSavedParseExceptions);
+      this.maxColumnsToMerge = maxColumnsToMerge;
+      this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
       this.basePersistDirectory = basePersistDirectory;
 
-      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-
-      if (this.reportParseExceptions) {
-        this.maxParseExceptions = 0;
-        this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
-      } else {
-        this.maxParseExceptions = maxParseExceptions == null
-                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
-                                  : maxParseExceptions;
-        this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-                                       : maxSavedParseExceptions;
-      }
-      this.logParseExceptions = logParseExceptions == null
-                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
-                                : logParseExceptions;
-      if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
-        this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
-      } else {
-        this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
-      }
+      this.partitionsSpec = null;
+      this.indexSpecForIntermediatePersists = this.indexSpec;
     }
 
     @Override
@@ -630,49 +475,6 @@ public class BatchAppenderatorTester implements AutoCloseable
       return maxSavedParseExceptions;
     }
 
-    /**
-     * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Nullable
-    @Override
-    @Deprecated
-    public Integer getMaxRowsPerSegment()
-    {
-      return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
-    }
-
-    /**
-     * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Override
-    @Nullable
-    @Deprecated
-    public Long getMaxTotalRows()
-    {
-      return partitionsSpec instanceof DynamicPartitionsSpec
-             ? ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
-             : null;
-    }
-
-    @Deprecated
-    @Nullable
-    public Integer getNumShards()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getNumShards()
-             : null;
-    }
-
-    @Deprecated
-    public List<String> getPartitionDimensions()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getPartitionDimensions()
-             : Collections.emptyList();
-    }
-
     @Override
     public File getBasePersistDirectory()
     {
@@ -684,7 +486,6 @@ public class BatchAppenderatorTester implements AutoCloseable
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
-
     
     public long getAwaitSegmentAvailabilityTimeoutMillis()
     {
