@@ -47,6 +47,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -468,13 +469,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       workerHolder.setLastCompletedTaskTime(DateTimes.nowUtc());
     }
 
-    // Notify interested parties
-    taskRunnerWorkItem.setResult(taskStatus);
-    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+    if (taskRunnerWorkItem.getResult().isDone()) {
+      // This is not the first complete event.
+      try {
+        TaskState lastKnownState = taskRunnerWorkItem.getResult().get().getStatusCode();
+        if (taskStatus.getStatusCode() != lastKnownState) {
+          log.warn(
+              "The state of the new task complete event is different from its last known state. "
+              + "New state[%s], last known state[%s]",
+              taskStatus.getStatusCode(),
+              lastKnownState
+          );
+        }
+      }
+      catch (InterruptedException e) {
+        log.warn(e, "Interrupted while getting the last known task status.");
+        Thread.currentThread().interrupt();
+      }
+      catch (ExecutionException e) {
+        // This case should not really happen.
+        log.warn(e, "Failed to get the last known task status. Ignoring this failure.");
+      }
+    } else {
+      // Notify interested parties
+      taskRunnerWorkItem.setResult(taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
 
-    // Update success/failure counters, Blacklist node if there are too many failures.
-    if (workerHolder != null) {
-      blacklistWorkerIfNeeded(taskStatus, workerHolder);
+      // Update success/failure counters, Blacklist node if there are too many failures.
+      if (workerHolder != null) {
+        blacklistWorkerIfNeeded(taskStatus, workerHolder);
+      }
     }
 
     synchronized (statusLock) {

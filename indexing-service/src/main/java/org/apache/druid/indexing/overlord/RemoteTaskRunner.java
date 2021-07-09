@@ -1083,7 +1083,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
               if (announcement.getTaskStatus().isComplete()) {
                 taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
-                taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
                 runPendingTasks();
               }
               break;
