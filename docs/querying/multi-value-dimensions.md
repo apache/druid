@@ -24,18 +24,43 @@ title: "Multi-value dimensions"
 
 
 Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
-array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
-characters). By default Druid ingests the values in alphabetical order, see [Dimension Objects](../ingestion/index.md#dimension-objects) for configuration.
+array of values instead of a single value. 
 
-This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
-are used as a dimension being grouped by. See the section on multi-value columns in
-[segments](../design/segments.md#multi-value-columns) for internal representation details. Examples in this document
+This document describes filtering and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
+[segments documentation](../design/segments.md#multi-value-columns). Examples in this document
 are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql.md) for details
 about using multi-value string dimensions in SQL.
 
+## Overview
+
+At ingestion time, Druid automatically detects multi-value dimensions and configures the `dimensionsSpec` accordingly. It detects JSON arrays or CSV/TSV fields.
+
+You can specify the multi-value delimiter in TSV or CSV data using the `listDelimiter` field in the `parseSpec`. In JSON data, the multiple value dimension must be formatted as a JSON array in the ingested data. No additional `parseSpec` configuration is needed.
+
+The following shows an example multi-value dimension named `tags` in a `dimensionsSpec`:
+
+```
+"dimensions": [
+  {
+    "type": "string",
+    "name": "tags",
+    "multiValueHandling": "SORTED_ARRAY",
+    "createBitmapIndex": true
+  }
+],
+```
+
+By default, Druid sorts values in multi-value dimensions. This behavior is controlled by the `SORTED_ARRAY` value of the `multiValueHandling` field. Alternatively, you can specify multi-value handling as:
+
+* `SORTED_SET`: results in the removal of duplicate values
+* `ARRAY`: retains the original order of the values
+
+See [Dimension Objects](../ingestion/index.md#dimension-objects) for information on configuring multi-value handling.
+
+
 ## Querying multi-value dimensions
 
-Suppose, you have a dataSource with a segment that contains the following rows, with a multi-value dimension
+Suppose you have a datasource with a segment that contains the following rows, with a multi-value dimension
 called `tags`.
 
 ```
@@ -118,7 +143,7 @@ only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you
 your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
-### Example: GroupBy query with no filtering
+## Example: GroupBy query with no filtering
 
 See [GroupBy querying](groupbyquery.md) for details.
 
@@ -148,7 +173,7 @@ See [GroupBy querying](groupbyquery.md) for details.
 }
 ```
 
-returns following result.
+This query returns the following result:
 
 ```json
 [
@@ -204,9 +229,9 @@ returns following result.
 ]
 ```
 
-notice how original rows are "exploded" into multiple rows and merged.
+Notice that original rows are "exploded" into multiple rows and merged.
 
-### Example: GroupBy query with a selector query filter
+## Example: GroupBy query with a selector query filter
 
 See [query filters](filters.md) for details of selector query filter.
 
@@ -241,7 +266,7 @@ See [query filters](filters.md) for details of selector query filter.
 }
 ```
 
-returns following result.
+This query returns the following result:
 
 ```json
 [
@@ -283,17 +308,16 @@ returns following result.
 ]
 ```
 
-You might be surprised to see inclusion of "t1", "t2", "t4" and "t5" in the results. It happens because query filter is
-applied on the row before explosion. For multi-value dimensions, selector filter for "t3" would match row1 and row2,
-after which exploding is done. For multi-value dimensions, query filter matches a row if any individual value inside
+You might be surprised to see "t1", "t2", "t4" and "t5" included in the results. This is because the query filter is
+applied on the row before explosion. For multi-value dimensions, a selector filter for "t3" would match row1 and row2,
+after which exploding is done. For multi-value dimensions, a query filter matches a row if any individual value inside
 the multiple values matches the query filter.
 
-### Example: GroupBy query with a selector query filter and additional filter in "dimensions" attributes
+## Example: GroupBy query with selector query and dimension filters
 
-To solve the problem above and to get only rows for "t3" returned, you would have to use a "filtered dimension spec" as
-in the query below.
+To solve the problem above and to get only rows for "t3", use a "filtered dimension spec", as in the query below.
 
-See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.md#filtered-dimensionspecs) for details.
+See filtered `dimensionSpecs` in [dimensionSpecs](dimensionspecs.md#filtered-dimensionspecs) for details.
 
 ```json
 {
@@ -330,7 +354,7 @@ See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.md#fil
 }
 ```
 
-returns the following result.
+This query returns the following result:
 
 ```json
 [
@@ -345,5 +369,5 @@ returns the following result.
 ```
 
 Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
-dimensionSpec is much more efficient because that gets applied at the lowest level in the query processing pipeline.
+`dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
