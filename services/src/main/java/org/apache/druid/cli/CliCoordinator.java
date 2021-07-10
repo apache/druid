@@ -291,9 +291,6 @@ public class CliCoordinator extends ServerRunnable
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
-
-            // This is needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
-            binder.bind(TaskStorage.class).toProvider(Providers.of(null));
           }
 
           @Provides

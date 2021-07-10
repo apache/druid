@@ -77,7 +77,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JsonProperty("spec") final SeekableStreamSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("context") @Nullable Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject TaskStorage taskStorage,
+      @JacksonInject @Nullable TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
