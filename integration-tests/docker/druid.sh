@@ -101,6 +101,9 @@ setupData()
     export AWS_REGION=us-east-1
   fi
 
+  if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
+    setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
+  fi
 
   # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
   if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -76,7 +77,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
-public class AppenderatorTester implements AutoCloseable
+public class StreamAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
@@ -93,14 +94,14 @@ public class AppenderatorTester implements AutoCloseable
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory
   )
   {
     this(maxRowsInMemory, -1, null, false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final boolean enablePushFailure
   )
@@ -108,7 +109,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, -1, null, enablePushFailure);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final boolean enablePushFailure
@@ -117,7 +118,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -127,7 +128,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -138,7 +139,7 @@ public class AppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -181,7 +182,6 @@ public class AppenderatorTester implements AutoCloseable
         null,
         null,
         basePersistDirectory,
-        null,
         null,
         null,
         null,
@@ -284,7 +284,7 @@ public class AppenderatorTester implements AutoCloseable
         ),
         new NoopDataSegmentAnnouncer(),
         emitter,
-        queryExecutor,
+        new ForwardingQueryProcessingPool(queryExecutor),
         NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),

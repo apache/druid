@@ -72,7 +72,7 @@ If required, multiple rules can be joined by newline character and specified as 
 ### Increasing HTTP Header size for large SPNEGO negotiate header
 In Active Directory environment, SPNEGO token in the Authorization header includes PAC (Privilege Access Certificate) information,
 which includes all security groups for the user. In some cases when the user belongs to many security groups the header to grow beyond what druid can handle by default.
-In such cases, max request header size that druid can handle can be increased by setting `druid.server.http.maxRequestHeaderSize` (default 8Kb) and `druid.router.http.maxRequestBufferSize` (default 8Kb).
+In such cases, max request header size that druid can handle can be increased by setting `druid.server.http.maxRequestHeaderSize` (default 8KiB) and `druid.router.http.maxRequestBufferSize` (default 8KiB).
 
 ## Configuring Kerberos Escalated Client
 

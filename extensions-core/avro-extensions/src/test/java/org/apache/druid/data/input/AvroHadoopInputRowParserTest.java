@@ -62,7 +62,7 @@ public class AvroHadoopInputRowParserTest
 
   private void testParse(GenericRecord record, boolean fromPigAvroStorage) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, fromPigAvroStorage);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, fromPigAvroStorage, false, false);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class

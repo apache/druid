@@ -1520,7 +1520,7 @@ public class ApproximateHistogram
    *
    * @param probabilities array of probabilities
    *
-   * @return an array of length probabilities.length representing the the approximate sample quantiles
+   * @return an array of length probabilities.length representing the approximate sample quantiles
    * corresponding to the given probabilities
    */
 

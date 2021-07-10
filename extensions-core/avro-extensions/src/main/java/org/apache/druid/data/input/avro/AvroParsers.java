@@ -39,7 +39,8 @@ public class AvroParsers
   public static ObjectFlattener<GenericRecord> makeFlattener(
       final ParseSpec parseSpec,
       final boolean fromPigAvroStorage,
-      final boolean binaryAsString
+      final boolean binaryAsString,
+      final boolean extractUnionsByType
   )
   {
     final JSONPathSpec flattenSpec;
@@ -49,7 +50,7 @@ public class AvroParsers
       flattenSpec = JSONPathSpec.DEFAULT;
     }
 
-    return ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString));
+    return ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType));
   }
 
   public static List<InputRow> parseGenericRecord(

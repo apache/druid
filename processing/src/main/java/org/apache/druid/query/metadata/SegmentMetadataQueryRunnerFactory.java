@@ -21,8 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -30,12 +28,13 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.AbstractPrioritizedCallable;
+import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryTimeoutException;
@@ -58,7 +57,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -186,11 +184,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeRunners(
-      ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-    final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
     return new ConcatQueryRunner<SegmentAnalysis>(
         Sequences.map(
             Sequences.simple(queryRunners),
@@ -210,8 +207,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
                     final int priority = QueryContexts.getPriority(query);
                     final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-                    final ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
-                        new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
+                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
+                        new AbstractPrioritizedQueryRunnerCallable<Sequence<SegmentAnalysis>, SegmentAnalysis>(priority, input)
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call()

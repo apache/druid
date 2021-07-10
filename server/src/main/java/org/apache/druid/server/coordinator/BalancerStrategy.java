@@ -37,7 +37,7 @@ import java.util.Set;
 public interface BalancerStrategy
 {
   /**
-   * Find the best server to move a {@link DataSegment} to according the the balancing strategy.
+   * Find the best server to move a {@link DataSegment} to according the balancing strategy.
    * @param proposalSegment segment to move
    * @param serverHolders servers to consider as move destinations
    * @return The server to move to, or null if no move should be made or no server is suitable

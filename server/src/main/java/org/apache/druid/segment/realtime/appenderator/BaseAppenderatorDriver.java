@@ -172,7 +172,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Allocated segments for a sequence
    */
-  static class SegmentsForSequence
+  public static class SegmentsForSequence
   {
     // Interval Start millis -> List of Segments for this interval
     // there might be multiple segments for a start interval, for example one segment
@@ -215,7 +215,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       return intervalToSegmentStates.get(timestamp);
     }
 
-    Stream<SegmentWithState> allSegmentStateStream()
+    public Stream<SegmentWithState> allSegmentStateStream()
     {
       return intervalToSegmentStates
           .values()
@@ -261,7 +261,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   }
 
   @VisibleForTesting
-  Map<String, SegmentsForSequence> getSegments()
+  public Map<String, SegmentsForSequence> getSegments()
   {
     return segments;
   }

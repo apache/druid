@@ -35,7 +35,7 @@
     "test-e2e": "jest --config jest.e2e.config.js e2e-tests",
     "codecov": "codecov --disable=gcov -p ..",
     "coverage": "jest --coverage src",
-    "update-snapshots": "jest -u",
+    "update-snapshots": "jest -u --config jest.unit.config.js",
     "autofix": "npm run eslint-fix && npm run sasslint-fix && npm run prettify",
     "eslint": "eslint '{src,e2e-tests}/**/*.ts?(x)'",
     "eslint-fix": "npm run eslint -- --fix",

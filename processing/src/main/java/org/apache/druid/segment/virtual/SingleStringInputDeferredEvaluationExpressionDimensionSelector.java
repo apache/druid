@@ -34,16 +34,23 @@ import org.apache.druid.segment.data.IndexedInts;
 import javax.annotation.Nullable;
 
 /**
- * A DimensionSelector decorator that computes an expression on top of it. See {@link ExpressionSelectors} for details
- * on how expression selectors are constructed.
+ * A {@link DimensionSelector} decorator that directly exposes the underlying dictionary id in {@link #getRow},
+ * saving expression computation until {@link #lookupName} is called. This allows for performing operations like
+ * grouping on the native dictionary ids, and deferring expression evaluation until after which can dramatically
+ * reduce the total number of evaluations.
+ *
+ * @see ExpressionSelectors for details on how expression selectors are constructed.
+ *
+ * @see SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector for the vectorized version of
+ * this selector.
  */
-public class SingleStringInputDimensionSelector implements DimensionSelector
+public class SingleStringInputDeferredEvaluationExpressionDimensionSelector implements DimensionSelector
 {
   private final DimensionSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
 
-  public SingleStringInputDimensionSelector(
+  public SingleStringInputDeferredEvaluationExpressionDimensionSelector(
       final DimensionSelector selector,
       final Expr expression
   )

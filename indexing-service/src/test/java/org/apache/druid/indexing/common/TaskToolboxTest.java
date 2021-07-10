@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -62,7 +63,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 public class TaskToolboxTest
 {
@@ -81,7 +81,7 @@ public class TaskToolboxTest
   private QueryRunnerFactoryConglomerate mockQueryRunnerFactoryConglomerate
       = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
-  private ExecutorService mockQueryExecutorService = EasyMock.createMock(ExecutorService.class);
+  private QueryProcessingPool mockQueryProcessingPool = EasyMock.createMock(QueryProcessingPool.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
   private SegmentLoaderFactory mockSegmentLoaderFactory = EasyMock.createMock(SegmentLoaderFactory.class);
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
@@ -126,7 +126,7 @@ public class TaskToolboxTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         mockHandoffNotifierFactory,
         () -> mockQueryRunnerFactoryConglomerate,
-        mockQueryExecutorService,
+        mockQueryProcessingPool,
         NoopJoinableFactory.INSTANCE,
         () -> mockMonitorScheduler,
         mockSegmentLoaderFactory,
@@ -172,9 +172,9 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testGetQueryExecutorService()
+  public void testGetQueryProcessingPool()
   {
-    Assert.assertEquals(mockQueryExecutorService, taskToolbox.build(task).getQueryExecutorService());
+    Assert.assertEquals(mockQueryProcessingPool, taskToolbox.build(task).getQueryProcessingPool());
   }
 
   @Test
