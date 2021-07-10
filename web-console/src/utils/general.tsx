@@ -100,28 +100,29 @@ interface NeedleAndMode {
 }
 
 export function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value.toLowerCase();
+  const input = filter.value;
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
       mode: 'exact',
     };
+  } else {
+    return {
+      needle: input.replace(/^"/, '').toLowerCase(),
+      mode: 'includes',
+    };
   }
-  return {
-    needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'includes',
-  };
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
-  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return needle === haystack;
+    return needle === String(value);
+  } else {
+    return String(value).toLowerCase().includes(needle);
   }
-  return haystack.includes(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
@@ -304,16 +305,15 @@ export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
 
-export function sortWithPrefixSuffix(
+export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
   suffix: readonly string[],
-  cmp?: (a: string, b: string) => number,
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
   const post = uniq(suffix.filter(x => things.includes(x)));
-  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
+  return pre.concat(mid, post);
 }
 
 // ----------------------------
