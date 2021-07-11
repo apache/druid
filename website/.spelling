@@ -1276,6 +1276,7 @@ nativeQueryIds
 netAddress
 netHwaddr
 netName
+noticeType
 numComplexMetrics
 numDimensions
 numMetrics
