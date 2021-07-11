@@ -55,7 +55,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @JsonProperty("ioConfig") @Nullable KinesisSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject @Nullable TaskStorage taskStorage,
+      @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject KinesisIndexTaskClientFactory kinesisIndexTaskClientFactory,

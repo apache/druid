@@ -362,60 +362,96 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
   protected void doTestTerminatedSupervisorAutoCleanup(@Nullable Boolean transactionEnabled) throws Exception
   {
-    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
+    final GeneratedTestConfig generatedTestConfig1 = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    final GeneratedTestConfig generatedTestConfig2 = new GeneratedTestConfig(
         INPUT_FORMAT,
         getResourceAsString(JSON_INPUT_FORMAT_PATH)
     );
     try (
-        final Closeable closer = createResourceCloser(generatedTestConfig);
+        final Closeable closer1 = createResourceCloser(generatedTestConfig1);
+        final Closeable closer2 = createResourceCloser(generatedTestConfig2);
         final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
     ) {
-      final String taskSpec = generatedTestConfig.getStreamIngestionPropsTransform()
+      final String taskSpec1 = generatedTestConfig1.getStreamIngestionPropsTransform()
                                                  .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
-      LOG.info("Submitted supervisor");
+      LOG.info("supervisorSpec1: [%s]\n", taskSpec1);
+      final String taskSpec2 = generatedTestConfig2.getStreamIngestionPropsTransform()
+                                                   .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec2: [%s]\n", taskSpec2);
+      // Start both supervisors
+      generatedTestConfig1.setSupervisorId(indexer.submitSupervisor(taskSpec1));
+      generatedTestConfig2.setSupervisorId(indexer.submitSupervisor(taskSpec2));
+      LOG.info("Submitted supervisors");
       // Start generating the data
-      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+      final StreamGenerator streamGenerator1 = new WikipediaStreamEventStreamGenerator(
           new JsonEventSerializer(jsonMapper),
           EVENTS_PER_SECOND,
           CYCLE_PADDING_MS
       );
-      streamGenerator.run(
-          generatedTestConfig.getStreamName(),
+      streamGenerator1.run(
+          generatedTestConfig1.getStreamName(),
           streamEventWriter,
           TOTAL_NUMBER_OF_SECOND,
           FIRST_EVENT_TIME
       );
-      // Verify supervisor is healthy before termination
+      final StreamGenerator streamGenerator2 = new WikipediaStreamEventStreamGenerator(
+          new JsonEventSerializer(jsonMapper),
+          EVENTS_PER_SECOND,
+          CYCLE_PADDING_MS
+      );
+      streamGenerator2.run(
+          generatedTestConfig2.getStreamName(),
+          streamEventWriter,
+          TOTAL_NUMBER_OF_SECOND,
+          FIRST_EVENT_TIME
+      );
+      // Verify supervisors are healthy before termination
       ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig1.getSupervisorId())),
           true,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Waiting for supervisor1 to be healthy"
+      );
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig2.getSupervisorId())),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor2 to be healthy"
       );
 
       // Sleep for 10 secs to make sure that at least one cycle of supervisor auto cleanup duty ran
       Thread.sleep(10000);
 
-      // Verify that supervisor spec exist
-      List<Object> specs = indexer.getSupervisorHistory(generatedTestConfig.getSupervisorId());
-      Assert.assertNotNull(specs);
-      Assert.assertFalse(specs.isEmpty());
+      // Verify that supervisor specs exist
+      List<Object> specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
 
-      LOG.info("Terminating supervisor");
-      indexer.terminateSupervisor(generatedTestConfig.getSupervisorId());
+      List<Object> specs2 = indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
+      Assert.assertNotNull(specs2);
+      Assert.assertFalse(specs2.isEmpty());
+
+      // Supervisor 1 should still be active while supervisor 2 is now terminated
+      LOG.info("Terminating supervisor 2");
+      indexer.terminateSupervisor(generatedTestConfig2.getSupervisorId());
 
       // Verify that auto cleanup eventually removes supervisor spec after termination
       ITRetryUtil.retryUntil(
-          () -> indexer.getSupervisorHistory(generatedTestConfig.getSupervisorId()) == null,
+          () -> indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId()) == null,
           true,
           10000,
           30,
-          "Waiting for supervisor spec to be auto clean"
+          "Waiting for supervisor spec 2 to be auto clean"
       );
+      // Verify that supervisor 1 spec was not remove
+      specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
     }
   }
 
