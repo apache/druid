@@ -52,7 +52,7 @@ hdfs:
   # Enable hdfs as deep-storage reference: http://druid.apache.org/docs/latest/development/extensions-core/hdfs.html
   # Need to do:
   # 1. enabled: true
-  # 2. add hdfs extension
+  # 2. add `"druid-hdfs-storage"` to `druid_extensions_loadList`
   # 3. supply configmap's name which contains hdfs-site.xml and core-site.xml
   enabled: false
   configMapName: ''
