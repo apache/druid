@@ -132,7 +132,9 @@ public class PollingLookup extends LookupExtractor
       return NullHandling.emptyToNullIfNeeded((String) cache.get(keyEquivalent));
     }
     finally {
+      if (cache != null) {
         cacheRefKeeper.doneWithIt();
+      }
     }
   }
 
@@ -160,7 +162,9 @@ public class PollingLookup extends LookupExtractor
       return cache.getKeys(valueEquivalent);
     }
     finally {
+      if (cache != null) {
         cacheRefKeeper.doneWithIt();
+      }
     }
   }
 
