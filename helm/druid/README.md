@@ -7,7 +7,7 @@
 To install the Druid Chart into your Kubernetes cluster :
 
 1. `cd` to root directory of druid project
-2. execute command ```bash helm install --namespace "druid" --name "druid" helm/druid```
+2. execute command `helm install --namespace "druid" --name "druid" helm/druid`
 
 After installation succeeds, you can get a status of Chart
 
