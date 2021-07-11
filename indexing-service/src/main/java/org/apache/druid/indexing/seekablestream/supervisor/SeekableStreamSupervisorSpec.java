@@ -77,14 +77,14 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JsonProperty("spec") final SeekableStreamSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("context") @Nullable Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject TaskStorage taskStorage,
-      @JacksonInject TaskMaster taskMaster,
+      @JacksonInject @Nullable TaskStorage taskStorage,
+      @JacksonInject @Nullable TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject @Nullable RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
