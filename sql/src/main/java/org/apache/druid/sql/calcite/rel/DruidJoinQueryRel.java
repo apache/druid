@@ -316,6 +316,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       cost = CostEstimates.COST_JOIN_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();
+      if (joinRel.getJoinType() == JoinRelType.INNER) {
+        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+      }
     }
 
     if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
