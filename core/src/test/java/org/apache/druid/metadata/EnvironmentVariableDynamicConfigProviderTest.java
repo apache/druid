@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,11 +34,18 @@ import java.util.Map;
 public class EnvironmentVariableDynamicConfigProviderTest
 {
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+  private static final Map<String, String> NEW_ENV_MAP = ImmutableMap.of("DRUID_USER", "druid", "DRUID_PASSWORD", "123");
 
   @Before
   public void setupTest() throws Exception
   {
-    setEnv(ImmutableMap.of("DRUID_USER", "druid", "DRUID_PASSWORD", "123"));
+    changeENV();
+  }
+
+  @After
+  public void tearDownTest() throws Exception
+  {
+    recoverENV();
   }
 
   @Test
@@ -61,32 +69,41 @@ public class EnvironmentVariableDynamicConfigProviderTest
     Assert.assertEquals("123", ((EnvironmentVariableDynamicConfigProvider) provider).getConfig().get("password"));
   }
 
-  protected static void setEnv(Map<String, String> newenv) throws Exception
+  private static void changeENV() throws Exception
   {
-    try {
-      Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
-      Field theEnvironmentField = processEnvironmentClass.getDeclaredField("theEnvironment");
-      theEnvironmentField.setAccessible(true);
-      Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
-      env.putAll(newenv);
-      Field theCaseInsensitiveEnvironmentField = processEnvironmentClass.getDeclaredField("theCaseInsensitiveEnvironment");
-      theCaseInsensitiveEnvironmentField.setAccessible(true);
-      Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvironmentField.get(null);
-      cienv.putAll(newenv);
+    getENVMap().putAll(NEW_ENV_MAP);
+  }
+
+  private static void recoverENV() throws Exception
+  {
+    Map<String, String> envMap = getENVMap();
+    for (String envName : NEW_ENV_MAP.keySet()) {
+      envMap.remove(envName);
     }
-    catch (NoSuchFieldException e) {
-      Class[] classes = Collections.class.getDeclaredClasses();
-      Map<String, String> env = System.getenv();
-      for (Class cl : classes) {
-        if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
-          Field field = cl.getDeclaredField("m");
-          field.setAccessible(true);
-          Object obj = field.get(env);
-          Map<String, String> map = (Map<String, String>) obj;
-          map.clear();
-          map.putAll(newenv);
-        }
+  }
+
+  /**
+   * This method use reflection to get system evniorment variables map in runtime JVM
+   * which can be changed.
+   *
+   * @return system evniorment variables map.
+   */
+  private static Map<String, String> getENVMap() throws Exception
+  {
+    Map<String, String> envMap = null;
+    Class[] classes = Collections.class.getDeclaredClasses();
+    Map<String, String> systemEnv = System.getenv();
+    for (Class cl : classes) {
+      if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+        Field field = cl.getDeclaredField("m");
+        field.setAccessible(true);
+        Object object = field.get(systemEnv);
+        envMap = (Map<String, String>) object;
       }
     }
+    if (envMap == null) {
+      throw new RuntimeException("Failed to get environment map.");
+    }
+    return envMap;
   }
 }
