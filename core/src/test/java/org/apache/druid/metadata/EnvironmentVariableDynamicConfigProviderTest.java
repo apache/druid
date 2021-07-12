@@ -83,10 +83,10 @@ public class EnvironmentVariableDynamicConfigProviderTest
   }
 
   /**
-   * This method use reflection to get system evniorment variables map in runtime JVM
+   * This method use reflection to get system environment variables map in runtime JVM
    * which can be changed.
    *
-   * @return system evniorment variables map.
+   * @return system environment variables map.
    */
   private static Map<String, String> getENVMap() throws Exception
   {
