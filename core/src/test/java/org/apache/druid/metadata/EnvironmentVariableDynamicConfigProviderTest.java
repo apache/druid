@@ -21,31 +21,44 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class EnvironmentVariableDynamicConfigProviderTest
 {
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-  private static final Map<String, String> NEW_ENV_MAP = ImmutableMap.of("DRUID_USER", "druid", "DRUID_PASSWORD", "123");
+  private static final Map<String, String> CHANGED_ENV_MAP = new HashMap<>();
 
-  @Before
-  public void setupTest() throws Exception
+  @BeforeClass
+  public static void setupTest() throws Exception
   {
-    changeENV();
+    Map<String, String> oldEnvMap = getENVMap();
+    Map<String, String> addEnvMap = ImmutableMap.of("DRUID_USER", "druid", "DRUID_PASSWORD", "123");
+    for (Map.Entry<String, String> entry : addEnvMap.entrySet()) {
+      CHANGED_ENV_MAP.put(entry.getKey(), oldEnvMap.get(entry.getKey()));
+      oldEnvMap.put(entry.getKey(), entry.getValue());
+    }
   }
 
-  @After
-  public void tearDownTest() throws Exception
+  @AfterClass
+  public static void tearDownTest() throws Exception
   {
-    recoverENV();
+    Map<String, String> oldEnvMap = getENVMap();
+    for (Map.Entry<String, String> entry : CHANGED_ENV_MAP.entrySet()) {
+      if (entry.getValue() == null) {
+        oldEnvMap.remove(entry.getKey());
+      } else {
+        oldEnvMap.put(entry.getKey(), entry.getValue());
+      }
+    }
   }
 
   @Test
@@ -67,19 +80,6 @@ public class EnvironmentVariableDynamicConfigProviderTest
     Assert.assertTrue(provider instanceof EnvironmentVariableDynamicConfigProvider);
     Assert.assertEquals("druid", ((EnvironmentVariableDynamicConfigProvider) provider).getConfig().get("user"));
     Assert.assertEquals("123", ((EnvironmentVariableDynamicConfigProvider) provider).getConfig().get("password"));
-  }
-
-  private static void changeENV() throws Exception
-  {
-    getENVMap().putAll(NEW_ENV_MAP);
-  }
-
-  private static void recoverENV() throws Exception
-  {
-    Map<String, String> envMap = getENVMap();
-    for (String envName : NEW_ENV_MAP.keySet()) {
-      envMap.remove(envName);
-    }
   }
 
   /**
