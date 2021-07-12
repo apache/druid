@@ -51,14 +51,14 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
       @JsonProperty("ioConfig") @Nullable KafkaSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject @Nullable TaskStorage taskStorage,
-      @JacksonInject @Nullable TaskMaster taskMaster,
+      @JacksonInject TaskStorage taskStorage,
+      @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject @Nullable RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {

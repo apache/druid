@@ -55,14 +55,14 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @JsonProperty("ioConfig") @Nullable KinesisSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject @Nullable TaskStorage taskStorage,
-      @JacksonInject @Nullable TaskMaster taskMaster,
+      @JacksonInject TaskStorage taskStorage,
+      @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject KinesisIndexTaskClientFactory kinesisIndexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject @Nullable RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )

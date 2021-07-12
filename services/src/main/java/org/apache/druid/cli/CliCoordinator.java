@@ -295,7 +295,7 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
 
             if (!beOverlord) {
-              // This is needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
+              // These are needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
               binder.bind(TaskStorage.class).toProvider(Providers.of(null));
               binder.bind(TaskMaster.class).toProvider(Providers.of(null));
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
