@@ -309,8 +309,8 @@ Example ingestion spec for task type `index_parallel` (native batch):
       },
       "dimensionsSpec": {
         "dimensions": [
-          { "type": "string", "page" },
-          { "type": "string", "language" },
+          { "type": "string", "name": "page" },
+          { "type": "string", "name": "language" },
           { "type": "long", "name": "userId" }
         ]
       },
