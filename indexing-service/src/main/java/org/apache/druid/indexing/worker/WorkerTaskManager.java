@@ -256,11 +256,7 @@ public class WorkerTaskManager
                     task,
                     TaskStatus.failure(
                         task.getId(),
-                        StringUtils.format(
-                            "Failed to run task with exception: %s. "
-                            + "See middleManager or indexer logs for more details.",
-                            t.toString()
-                        )
+                        "Failed to run task with an exception. See middleManager or indexer logs for more details."
                     )
                 )
             );

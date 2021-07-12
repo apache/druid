@@ -214,7 +214,7 @@ public class ThreadingTaskRunner
                               LOGGER.error(t, "Exception caught while running the task.");
                               taskStatus = TaskStatus.failure(
                                   task.getId(),
-                                  StringUtils.format("Failed with exception: %s", t.toString())
+                                  "Failed with an exception. See indexer logs for more details."
                               );
                             }
                             finally {

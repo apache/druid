@@ -154,8 +154,7 @@ public class ForkingTaskRunnerTest
             "java -cp",
             "/path/to/somewhere:some-jars.jar",
             "/some===file",
-            "/asecretFileNa=me",
-            // this should not be masked but there is not way to know this not a property and probably this is an unrealistic scenario anyways
+            "/asecretFileNa=me", // this should not be masked but there is not way to know this not a property and probably this is an unrealistic scenario anyways
             "-Dsome.property=random",
             "-Dsome.otherproperty = random=random",
             "-Dsome.somesecret = secretvalue",
@@ -165,8 +164,7 @@ public class ForkingTaskRunnerTest
             "-Dsome.otherSecret= =asfdhkj352872598====fasdlkjfa="
         ),
         "java -cp /path/to/somewhere:some-jars.jar /some===file /asecretFileNa=<masked> -Dsome.property=random -Dsome.otherproperty = random=random "
-        +
-        "-Dsome.somesecret =<masked> -Dsome.somesecret=<masked> -Dsome.somepassword =<masked> -Dsome.some=notasecret -Dsome.otherSecret=<masked>"
+        + "-Dsome.somesecret =<masked> -Dsome.somesecret=<masked> -Dsome.somepassword =<masked> -Dsome.some=notasecret -Dsome.otherSecret=<masked>"
     );
     StartupLoggingConfig startupLoggingConfig = new StartupLoggingConfig();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
@@ -194,9 +192,9 @@ public class ForkingTaskRunnerTest
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
-            "baseDir",
-            "baseTaskDir",
-            "hadoopPath",
+            null,
+            null,
+            null,
             null,
             ImmutableList.of(),
             false,
@@ -247,9 +245,9 @@ public class ForkingTaskRunnerTest
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
-            "baseDir",
-            "baseTaskDir",
-            "hadoopPath",
+            null,
+            null,
+            null,
             null,
             ImmutableList.of(),
             false,
@@ -304,9 +302,9 @@ public class ForkingTaskRunnerTest
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
-            "baseDir",
-            "baseTaskDir",
-            "hadoopPath",
+            null,
+            null,
+            null,
             null,
             ImmutableList.of(),
             false,
