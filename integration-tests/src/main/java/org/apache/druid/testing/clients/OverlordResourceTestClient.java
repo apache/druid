@@ -507,6 +507,41 @@ public class OverlordResourceTestClient
     }
   }
 
+  public List<Object> getSupervisorHistory(String id)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%ssupervisor/%s/history",
+                  getIndexerURL(),
+                  StringUtils.urlEncode(id)
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        return null;
+      } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting supervisor status, response [%s %s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      List<Object> responseData = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<Object>>()
+          {
+          }
+      );
+      return responseData;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
