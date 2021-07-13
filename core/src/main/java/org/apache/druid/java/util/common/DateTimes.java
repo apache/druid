@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableSet;
 import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -28,6 +29,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
@@ -43,6 +45,8 @@ public final class DateTimes
       ISODateTimeFormat.dateTimeParser().withOffsetParsed()
   );
 
+  private static final Set<String> AVAILABLE_TIMEZONE_IDS = ImmutableSet.copyOf(TimeZone.getAvailableIDs());
+
   /**
    * This pattern aims to match strings, produced by {@link DateTime#toString()}. It's not rigorous: it could accept
    * some strings that couldn't be obtained by calling toString() on any {@link DateTime} object, and also it could
@@ -53,14 +57,28 @@ public final class DateTimes
       "[0-9]{4}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}(Z|[+\\-][0-9]{2}(:[0-9]{2}))"
   );
 
-  @SuppressForbidden(reason = "DateTimeZone#forID")
   public static DateTimeZone inferTzFromString(String tzId)
+  {
+    return inferTzFromString(tzId, true);
+  }
+
+  /**
+   * @return The dateTimezone for the provided {@param tzId}. If {@param fallback} is true, the default timezone
+   * will be returned if the tzId does not match a supported timezone.
+   * @throws IllegalArgumentException if {@param fallback} is false and the provided tzId doesn't match a supported
+   * timezone.
+   */
+  @SuppressForbidden(reason = "DateTimeZone#forID")
+  public static DateTimeZone inferTzFromString(String tzId, boolean fallback) throws IllegalArgumentException
   {
     try {
       return DateTimeZone.forID(tzId);
     }
     catch (IllegalArgumentException e) {
       // also support Java timezone strings
+      if (!fallback && !AVAILABLE_TIMEZONE_IDS.contains(tzId)) {
+        throw e;
+      }
       return DateTimeZone.forTimeZone(TimeZone.getTimeZone(tzId));
     }
   }
