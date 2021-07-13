@@ -246,13 +246,20 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker, spin up minWorkerCount, we cannot determine the exact capacity here to fulfill the need
-      // since we are not aware of the expectedWorkerCapacity.
-      int moreWorkersNeeded = currValidWorkers == 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
+      // If there are no worker, try to determine worker capacity from config.
+      Integer workerCapacityFromConfig = null;
+      if (currValidWorkers == 0) {
+        workerCapacityFromConfig = config.getWorkerCapacityFallback();
+      }
+
+      // If there are no worker and workerCapacityFallback is not set in config then spin up minWorkerCount,
+      // as we cannot determine the exact capacity here to fulfill the need
+      int moreWorkersNeeded = currValidWorkers == 0 && workerCapacityFromConfig == null ? minWorkerCount : getWorkersNeededToAssignTasks(
           remoteTaskRunnerConfig,
           workerConfig,
           pendingTasks,
-          workers
+          workers,
+          workerCapacityFromConfig
       );
       log.debug("More workers needed: %d", moreWorkersNeeded);
 
@@ -280,7 +287,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
         final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
-        final Collection<ImmutableWorkerInfo> workers
+        final Collection<ImmutableWorkerInfo> workers,
+        final Integer workerCapacityFallback
     )
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
@@ -295,7 +303,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       }
       WorkerSelectStrategy workerSelectStrategy = workerConfig.getSelectStrategy();
       int need = 0;
-      int capacity = getExpectedWorkerCapacity(workers);
+      int capacity = getExpectedWorkerCapacity(workers, workerCapacityFallback);
       log.info("Expected worker capacity: %d", capacity);
 
       // Simulate assigning tasks to dummy workers using configured workerSelectStrategy
@@ -441,12 +449,18 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return currValidWorkers;
   }
 
-  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers)
+  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers, final Integer workerCapacityFallback)
   {
     int size = workers.size();
     if (size == 0) {
-      // No existing workers assume capacity per worker as 1
-      return 1;
+      // No existing workers
+      if (workerCapacityFallback != null) {
+        // Return workerCapacityFallback if it is set in config
+        return workerCapacityFallback;
+      } else {
+        // Assume capacity per worker as 1
+        return 1;
+      }
     } else {
       // Assume all workers have same capacity
       return workers.iterator().next().getWorker().getCapacity();

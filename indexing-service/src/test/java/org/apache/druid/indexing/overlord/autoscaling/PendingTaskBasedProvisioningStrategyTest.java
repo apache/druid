@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.indexer.TaskLocation;
@@ -138,6 +139,101 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
+  public void testProvisionNoCurrentlyRunningWorkerWithCapacityFallbackSetAndNoPendingTaskShouldProvisionMinimumAsCurrentIsBelowMinimum()
+  {
+    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityFallback(30);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(new ArrayList<String>());
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    // No pending tasks
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        new ArrayList<>()
+    );
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.emptyList()
+    );
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
+    EasyMock.expect(autoScaler.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("aNode"))
+    ).times(3);
+    EasyMock.replay(runner, autoScaler);
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertTrue(provisioner.getStats().toList().size() == 3);
+    for (ScalingStats.ScalingEvent event : provisioner.getStats().toList()) {
+      Assert.assertTrue(
+          event.getEvent() == ScalingStats.EVENT.PROVISION
+      );
+    }
+  }
+
+  @Test
+  public void testProvisionNoCurrentlyRunningWorkerWithCapacityFallbackSetAndNoPendingTaskShouldNotProvisionAsMinimumIsZero()
+  {
+    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityFallback(30);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    // minWorkerCount is 0
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(new ArrayList<String>());
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    // No pending tasks
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        new ArrayList<>()
+    );
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.emptyList()
+    );
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
+    EasyMock.replay(runner, autoScaler);
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertEquals(0, provisioner.getStats().toList().size());
+  }
+
+  @Test
   public void testSuccessfulMinWorkersProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
@@ -207,7 +303,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingProvisioning()
+  public void testProvisioning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
@@ -241,6 +337,153 @@ public class PendingTaskBasedProvisioningStrategyTest
     Assert.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
+
+    provisionedSomething = provisioner.doProvision();
+
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertTrue(
+        provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+    DateTime anotherCreatedTime = provisioner.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        createdTime.equals(anotherCreatedTime)
+    );
+
+    EasyMock.verify(autoScaler);
+    EasyMock.verify(runner);
+  }
+
+  @Test
+  public void testProvisionWithPendingTaskAndWorkerCapacityFallbackSetButNonEmptyCurrentlyRunningWorkerShouldUseCapcityFromRunningWorker()
+  {
+    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityFallback(30);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(3).times(1);
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(new ArrayList<String>()).times(2);
+    EasyMock.expect(autoScaler.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("fake"))
+    ).times(2);
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    // two pending tasks
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        ImmutableList.of(
+            NoopTask.create(),
+            NoopTask.create()
+        )
+    ).times(2);
+    // Capacity for current worker is 1
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Arrays.asList(
+            new TestZkWorker(testTask).toImmutable(),
+            new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
+        )
+    ).times(2);
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(1);
+    EasyMock.replay(runner);
+    EasyMock.replay(autoScaler);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+
+    // Expect to use capacity from current worker (which is 1)
+    // and since there are two pending tasks, we will need two more workers
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertEquals(2, provisioner.getStats().toList().size());
+    DateTime createdTime = provisioner.getStats().toList().get(0).getTimestamp();
+    Assert.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(0).getEvent());
+    Assert.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(1).getEvent());
+
+    provisionedSomething = provisioner.doProvision();
+
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertTrue(
+        provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+    DateTime anotherCreatedTime = provisioner.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        createdTime.equals(anotherCreatedTime)
+    );
+
+    EasyMock.verify(autoScaler);
+    EasyMock.verify(runner);
+  }
+
+  @Test
+  public void testProvisionWithPendingTaskAndWorkerCapacityFallbackSetButEmptyCurrentlyRunningWorkerShouldUseCapcityFromFallbackConfig()
+  {
+    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityFallback(30);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(3).times(1);
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(new ArrayList<String>()).times(2);
+    EasyMock.expect(autoScaler.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("fake"))
+    ).times(1);
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    // two pending tasks
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        ImmutableList.of(
+            NoopTask.create(),
+            NoopTask.create()
+        )
+    ).times(2);
+    // No currently running worker node
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.emptyList()
+    ).times(2);
+
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(1);
+    EasyMock.replay(runner);
+    EasyMock.replay(autoScaler);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+
+    // Expect to use capacity from workerCapacityFallback config (which is 30)
+    // and since there are two pending tasks, we will need one more worker
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertEquals(1, provisioner.getStats().toList().size());
+    DateTime createdTime = provisioner.getStats().toList().get(0).getTimestamp();
+    Assert.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(0).getEvent());
 
     provisionedSomething = provisioner.doProvision();
 

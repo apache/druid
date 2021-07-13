@@ -1015,6 +1015,7 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|PT30S|
 |`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
 |`druid.indexer.autoscale.workerPort`|The port that MiddleManagers will run on.|8080|
+|`druid.indexer.autoscale.workerCapacityFallback`| Worker capcity for determining number of workers needed for auto scaling when there are currently no worker running. If unset or null, auto scaler will scale to `minNumWorkers` in autoScaler config instead. Note: this config is only applicable to `pendingTaskBased` provisioning strategy|null|
 
 ##### Supervisors
 
