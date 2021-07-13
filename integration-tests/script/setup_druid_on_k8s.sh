@@ -16,7 +16,11 @@
 
 set -e
 
-export KUBECTL="sudo /usr/local/bin/kubectl"
+export KUBECTL="/usr/local/bin/kubectl"
+
+DRUID_CLUSTER_SPEC_YAML=$1
+
+echo "Druid Cluster Spec ${DRUID_CLUSTER_SPEC_YAML}"
 
 # setup client keystore
 cd integration-tests
@@ -40,9 +44,13 @@ sudo rm -rf tmp
 mkdir tmp
 chmod 777 tmp
 
+# Technically postgres isn't needed in all tests i.e. where derby is used, but ok.
+$KUBECTL apply -f integration-tests/k8s/postgres.yaml
+
+# spec name needs to come from argument for high availability test
 $KUBECTL apply -f integration-tests/k8s/role-and-binding.yaml
-sed -i "s|REPLACE_VOLUMES|`pwd`|g" integration-tests/k8s/tiny-cluster.yaml
-$KUBECTL apply -f integration-tests/k8s/tiny-cluster.yaml
+sed -i.bak "s|REPLACE_VOLUMES|`pwd`|g" ${DRUID_CLUSTER_SPEC_YAML}
+$KUBECTL apply -f ${DRUID_CLUSTER_SPEC_YAML}
 
 # Wait a bit
 sleep 180
@@ -51,3 +59,14 @@ sleep 180
 
 $KUBECTL get pod
 $KUBECTL get svc
+
+# Temporary debug info
+$KUBECTL describe po postgres-0
+$KUBECTL describe svc postgres
+$KUBECTL get endpoints postgres
+
+for v in postgres-0 druid-tiny-cluster-coordinator1-0 druid-tiny-cluster-coordinator2-0 druid-tiny-cluster-overlord1-0 druid-tiny-cluster-overlord2-0 ; do
+  echo "\n\n####### Printing Logs for $v #########"
+  $KUBECTL logs --tail 1000 $v
+  echo "####### Printed Logs for $v #########\n\n"
+done

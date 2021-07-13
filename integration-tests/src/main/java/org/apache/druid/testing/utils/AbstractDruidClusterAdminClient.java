@@ -20,12 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.model.Container;
-import com.github.dockerjava.core.DockerClientBuilder;
-import com.github.dockerjava.netty.NettyDockerCmdExecFactory;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -41,28 +36,17 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
 import java.nio.channels.ClosedChannelException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
 
-public class DruidClusterAdminClient
+public abstract class AbstractDruidClusterAdminClient
 {
-  private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
-  private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
-  private static final String COORDINATOR_TWO_DOCKER_CONTAINER_NAME = "/druid-coordinator-two";
-  private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
-  private static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
-  private static final String OVERLORD_TWO_DOCKER_CONTAINER_NAME = "/druid-overlord-two";
-  private static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
-  private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
-  private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
+  private static final Logger LOG = new Logger(AbstractDruidClusterAdminClient.class);
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private IntegrationTestingConfig config;
 
   @Inject
-  DruidClusterAdminClient(
+  AbstractDruidClusterAdminClient(
       ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
@@ -73,45 +57,21 @@ public class DruidClusterAdminClient
     this.config = config;
   }
 
-  public void restartCoordinatorContainer()
-  {
-    restartDockerContainer(COORDINATOR_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartCoordinatorContainer();
 
-  public void restartCoordinatorTwoContainer()
-  {
-    restartDockerContainer(COORDINATOR_TWO_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartCoordinatorTwoContainer();
 
-  public void restartHistoricalContainer()
-  {
-    restartDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartHistoricalContainer();
 
-  public void restartOverlordContainer()
-  {
-    restartDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartOverlordContainer();
 
-  public void restartOverlordTwoContainer()
-  {
-    restartDockerContainer(OVERLORD_TWO_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartOverlordTwoContainer();
 
-  public void restartBrokerContainer()
-  {
-    restartDockerContainer(BROKER_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartBrokerContainer();
 
-  public void restartRouterContainer()
-  {
-    restartDockerContainer(ROUTER_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartRouterContainer();
 
-  public void restartMiddleManagerContainer()
-  {
-    restartDockerContainer(MIDDLEMANAGER_DOCKER_CONTAINER_NAME);
-  }
+  public abstract void restartMiddleManagerContainer();
 
   public void waitUntilCoordinatorReady()
   {
@@ -152,25 +112,6 @@ public class DruidClusterAdminClient
   public void waitUntilRouterReady()
   {
     waitUntilInstanceReady(config.getRouterUrl());
-  }
-
-  private void restartDockerContainer(String serviceName)
-  {
-    DockerClient dockerClient = DockerClientBuilder.getInstance()
-                                                   .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
-                                                                                 .withConnectTimeout(10 * 1000))
-                                                   .build();
-    List<Container> containers = dockerClient.listContainersCmd().exec();
-    Optional<String> containerName = containers.stream()
-                                               .filter(container -> Arrays.asList(container.getNames()).contains(serviceName))
-                                               .findFirst()
-                                               .map(container -> container.getId());
-
-    if (!containerName.isPresent()) {
-      LOG.error("Cannot find docker container for " + serviceName);
-      throw new ISE("Cannot find docker container for " + serviceName);
-    }
-    dockerClient.restartContainerCmd(containerName.get()).exec();
   }
 
   private void waitUntilInstanceReady(final String host)

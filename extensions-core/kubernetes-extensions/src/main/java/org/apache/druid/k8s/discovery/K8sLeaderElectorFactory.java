@@ -38,4 +38,9 @@ interface K8sLeaderElector
 {
   String getCurrentLeader();
   void run(Runnable startLeadingHook, Runnable stopLeadingHook);
+
+  default void close()
+  {
+
+  }
 }

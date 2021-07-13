@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.druid.testing.guice.DruidTestModule;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -337,6 +338,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public DruidTestModule.DruidDeploymentEnvType getDruidDeploymentEnvType()
+      {
+        return DruidTestModule.DruidDeploymentEnvType.DOCKER;
+      }
+
+      @Override
       public String getProperty(String prop)
       {
         return properties.get(prop);
@@ -409,14 +416,8 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public boolean isDocker()
-      {
-        return true;
-      }
-
-      @Override
       @Nullable
-      public String getDockerHost()
+      public String getDruidClusterHost()
       {
         return dockerIp;
       }

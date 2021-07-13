@@ -36,7 +36,7 @@ public class SuiteListener implements ISuiteListener
   {
     Injector injector = DruidTestModuleFactory.getInjector();
     IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
-    DruidClusterAdminClient druidClusterAdminClient = injector.getInstance(DruidClusterAdminClient.class);
+    AbstractDruidClusterAdminClient druidClusterAdminClient = injector.getInstance(AbstractDruidClusterAdminClient.class);
 
     druidClusterAdminClient.waitUntilCoordinatorReady();
     druidClusterAdminClient.waitUntilIndexerReady();

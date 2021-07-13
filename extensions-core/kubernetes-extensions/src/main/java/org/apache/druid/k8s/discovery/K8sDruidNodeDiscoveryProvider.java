@@ -276,6 +276,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                     baseNodeRoleWatcher.childRemoved(item.object.getNode());
                     break;
                   default:
+                    // It is expected to receive additional events of type BOOKMARK and MODIFIED
+                    // that are used only to update the last known resourceVersion
                 }
 
                 // This should be updated after the action has been dealt with successfully

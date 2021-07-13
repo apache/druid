@@ -35,6 +35,6 @@ if ($BUILD_DRUID_CLSUTER); then
   bash $DRUID_HOME/integration-tests/script/setup_druid_operator_on_k8s.sh
 
   echo "Start to setup druid on k8s"
-  bash $DRUID_HOME/integration-tests/script/setup_druid_on_k8s.sh
+  bash $DRUID_HOME/integration-tests/script/setup_druid_on_k8s.sh $DRUID_K8S_CLUSTER_SPEC
 fi
 

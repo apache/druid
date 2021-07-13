@@ -40,11 +40,21 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.IntegrationTestingCuratorConfig;
+import org.apache.druid.testing.utils.AbstractDruidClusterAdminClient;
+import org.apache.druid.testing.utils.DockerDruidClusterAdminClient;
+import org.apache.druid.testing.utils.K8sDruidClusterAdminClient;
 
 /**
  */
 public class DruidTestModule implements Module
 {
+  public enum DruidDeploymentEnvType
+  {
+    K8S,
+    DOCKER,
+    UNKNOWN
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -81,5 +91,20 @@ public class DruidTestModule implements Module
   public ServiceEmitter getServiceEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
   {
     return new ServiceEmitter("", "", new LoggingEmitter(config.get(), jsonMapper));
+  }
+
+  @Provides
+  public AbstractDruidClusterAdminClient getDruidClusterAdminClient(
+      ObjectMapper jsonMapper,
+      @TestClient HttpClient httpClient,
+      IntegrationTestingConfig config
+  )
+  {
+    DruidDeploymentEnvType envType = config.getDruidDeploymentEnvType();
+    if (envType == DruidDeploymentEnvType.K8S) {
+      return new K8sDruidClusterAdminClient(jsonMapper, httpClient, config);
+    } else {
+      return new DockerDruidClusterAdminClient(jsonMapper, httpClient, config);
+    }
   }
 }

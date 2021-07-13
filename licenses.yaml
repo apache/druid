@@ -857,7 +857,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 12.0.0
 libraries:
   - io.kubernetes: client-java
 
@@ -867,7 +867,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 12.0.0
 libraries:
   - io.kubernetes: client-java-api
 
@@ -877,7 +877,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 12.0.0
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -887,7 +887,7 @@ name: io.prometheus simpleclient_common
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.10.0
 libraries:
   - io.prometheus: simpleclient_common
 
@@ -927,7 +927,7 @@ name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.4
+version: 1.8.5
 libraries:
   - io.gsonfire: gson-fire
 
@@ -947,7 +947,7 @@ name: io.prometheus simpleclient_httpserver
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.10.0
 libraries:
   - io.prometheus: simpleclient_httpserver
 
@@ -957,7 +957,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.2
+version: 0.7.6
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -987,7 +987,7 @@ name: io.prometheus simpleclient
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.10.0
 libraries:
   - io.prometheus: simpleclient
 
@@ -997,7 +997,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 12.0.0
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1007,7 +1007,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.27
+version: 1.28
 libraries:
   - org.yaml: snakeyaml
 
@@ -1029,7 +1029,7 @@ module: extensions/druid-kubernetes-extensions
 license_name: MIT License
 version: 1.68
 libraries:
-  - org.bouncycastle: bcprov-jdk15on
+  - org.bouncycastle: bcpkix-jdk15on
 
 ---
 
@@ -1097,7 +1097,7 @@ name: com.github.vladimir-bukhtoyarov bucket4j-core
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.10.0
+version: 6.0.1
 libraries:
   - com.github.vladimir-bukhtoyarov: bucket4j-core
 

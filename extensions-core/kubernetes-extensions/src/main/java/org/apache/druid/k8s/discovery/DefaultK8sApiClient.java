@@ -80,7 +80,7 @@ public class DefaultK8sApiClient implements K8sApiClient
   )
   {
     try {
-      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null);
+      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, null, null, null, null, null);
       Preconditions.checkState(podList != null, "WTH: NULL podList");
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
@@ -114,7 +114,7 @@ public class DefaultK8sApiClient implements K8sApiClient
           Watch.createWatch(
               realK8sClient,
               coreV1Api.listNamespacedPodCall(namespace, null, true, null, null,
-                                              labelSelector, null, lastKnownResourceVersion, 0, true, null
+                                              labelSelector, null, lastKnownResourceVersion, null, 0, true, null
               ),
               new TypeReference<Watch.Response<V1Pod>>()
               {
@@ -136,7 +136,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                     item.type,
                     new DiscoveryDruidNodeAndResourceVersion(
                         item.object.getMetadata().getResourceVersion(),
-                        getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
+                        () -> getDiscoveryDruidNodeFromPodDef(nodeRole, item.object)
                     )
                 );
                 return true;
@@ -179,7 +179,7 @@ public class DefaultK8sApiClient implements K8sApiClient
         // k8s no longer has history that we need
         return null;
       }
-
+      
       throw new RE(ex, "Expection in watching pods, code[%d] and error[%s].", ex.getCode(), ex.getResponseBody());
     }
   }

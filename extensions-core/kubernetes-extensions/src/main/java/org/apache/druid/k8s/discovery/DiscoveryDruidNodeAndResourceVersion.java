@@ -21,12 +21,20 @@ package org.apache.druid.k8s.discovery;
 
 import org.apache.druid.discovery.DiscoveryDruidNode;
 
+import java.util.function.Supplier;
+
 public class DiscoveryDruidNodeAndResourceVersion
 {
   private final String resourceVersion;
-  private final DiscoveryDruidNode node;
+  private final Supplier<DiscoveryDruidNode> node;
 
   public DiscoveryDruidNodeAndResourceVersion(String resourceVersion, DiscoveryDruidNode node)
+  {
+    this.resourceVersion = resourceVersion;
+    this.node = () -> node;
+  }
+
+  public DiscoveryDruidNodeAndResourceVersion(String resourceVersion, Supplier<DiscoveryDruidNode> node)
   {
     this.resourceVersion = resourceVersion;
     this.node = node;
@@ -39,6 +47,6 @@ public class DiscoveryDruidNodeAndResourceVersion
 
   public DiscoveryDruidNode getNode()
   {
-    return node;
+    return node.get();
   }
 }
