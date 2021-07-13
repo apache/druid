@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class is a copy (with modification) of {@link FilterJoinRule}. Specifically, this class contains a
@@ -308,15 +309,16 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
     ImmutableList.Builder<RexNode> isNotNullFiltersBuilder = ImmutableList.builder();
     ImmutableList.Builder<Pair<RexNode, RexNode>> equalityFiltersOperandBuilder = ImmutableList.builder();
 
-    for (RexNode joinFilter : joinFilters) {
-      List<RexNode> operands = ((RexCall) joinFilter).getOperands();
+    joinFilters.stream().filter(joinFilter -> joinFilter instanceof RexCall).forEach(joinFilter -> {
       if (joinFilter.isA(SqlKind.IS_NOT_NULL)) {
         isNotNullFiltersBuilder.add(joinFilter);
+      } else if (joinFilter.isA(SqlKind.EQUALS)) {
+        List<RexNode> operands = ((RexCall) joinFilter).getOperands();
+        if (operands.size() == 2 && operands.stream().noneMatch(Objects::isNull)) {
+          equalityFiltersOperandBuilder.add(new Pair<>(operands.get(0), operands.get(1)));
+        }
       }
-      if (joinFilter.isA(SqlKind.EQUALS) && operands.size() == 2) {
-        equalityFiltersOperandBuilder.add(new Pair<>(operands.get(0), operands.get(1)));
-      }
-    }
+    });
 
     List<Pair<RexNode, RexNode>> equalityFilters = equalityFiltersOperandBuilder.build();
     ImmutableList.Builder<RexNode> removableFilters = ImmutableList.builder();
