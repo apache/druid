@@ -246,20 +246,16 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker, try to determine worker capacity from config.
-      Integer workerCapacityFromConfig = null;
-      if (currValidWorkers == 0) {
-        workerCapacityFromConfig = config.getWorkerCapacityFallback();
-      }
-
-      // If there are no worker and workerCapacityFallback is not set in config then spin up minWorkerCount,
-      // as we cannot determine the exact capacity here to fulfill the need
-      int moreWorkersNeeded = currValidWorkers == 0 && workerCapacityFromConfig == null ? minWorkerCount : getWorkersNeededToAssignTasks(
+      // If there are no worker and workerCapacityFallback config is not set (-1) then spin up minWorkerCount
+      // as we cannot determine the exact capacity here to fulfill the need.
+      // However, if there are no worker but workerCapacityFallback config is set (>0), then we can
+      // determine the number of workers needed using workerCapacityFallback config as expected worker capacity
+      int moreWorkersNeeded = currValidWorkers == 0 && config.getWorkerCapacityFallback() > 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
           remoteTaskRunnerConfig,
           workerConfig,
           pendingTasks,
           workers,
-          workerCapacityFromConfig
+          config.getWorkerCapacityFallback()
       );
       log.debug("More workers needed: %d", moreWorkersNeeded);
 
