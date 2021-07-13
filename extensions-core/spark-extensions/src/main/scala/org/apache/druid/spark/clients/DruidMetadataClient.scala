@@ -48,8 +48,7 @@ class DruidMetadataClient(
                            base: String = "druid"
                          ) extends Logging {
   private lazy val druidMetadataTableConfig = MetadataStorageTablesConfig.fromBase(base)
-  private lazy val dbcpProperties = new Properties()
-  dbcpProperties.putAll(dbcpMap)
+  private lazy val dbcpProperties = new Properties(dbcpMap)
   private lazy val password = if (passwordProviderSer == "") {
     // Jackson doesn't like deserializing empty strings
     passwordProviderSer
