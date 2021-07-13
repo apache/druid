@@ -379,11 +379,19 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return true;
   }
 
-  // not yet supported, will be implemented in the future maybe? need to find a proper way to measure kinesis lag.
+  // Unlike the Kafka Indexing Service,
+  // Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number,
+  // rather than message count.
   @Override
   public LagStats computeLagStats()
   {
-    throw new UnsupportedOperationException("Compute Lag Stats is not supported in KinesisSupervisor yet.");
+    Map<String, Long> partitionTimeLags = getPartitionTimeLag();
+
+    if (partitionTimeLags == null) {
+      return new LagStats(0, 0, 0);
+    }
+
+    return computeLags(partitionTimeLags);
   }
 
   @Override
