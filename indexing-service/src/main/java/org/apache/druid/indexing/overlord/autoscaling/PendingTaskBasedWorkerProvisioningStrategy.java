@@ -246,11 +246,11 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker and workerCapacityFallback config is not set (-1) then spin up minWorkerCount
+      // If there are no worker and workerCapacityFallback config is not set (-1) or invalid (<= 0), then spin up minWorkerCount
       // as we cannot determine the exact capacity here to fulfill the need.
       // However, if there are no worker but workerCapacityFallback config is set (>0), then we can
       // determine the number of workers needed using workerCapacityFallback config as expected worker capacity
-      int moreWorkersNeeded = currValidWorkers == 0 && config.getWorkerCapacityFallback() > 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
+      int moreWorkersNeeded = currValidWorkers == 0 && config.getWorkerCapacityFallback() <= 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
           remoteTaskRunnerConfig,
           workerConfig,
           pendingTasks,
@@ -284,7 +284,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers,
-        final Integer workerCapacityFallback
+        final int workerCapacityFallback
     )
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
@@ -445,12 +445,12 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return currValidWorkers;
   }
 
-  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers, final Integer workerCapacityFallback)
+  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers, final int workerCapacityFallback)
   {
     int size = workers.size();
     if (size == 0) {
       // No existing workers
-      if (workerCapacityFallback != null) {
+      if (workerCapacityFallback > 0) {
         // Return workerCapacityFallback if it is set in config
         return workerCapacityFallback;
       } else {
