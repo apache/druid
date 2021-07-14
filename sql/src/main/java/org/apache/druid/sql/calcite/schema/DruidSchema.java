@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
@@ -132,6 +133,9 @@ public class DruidSchema extends AbstractSchema
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
 
+  // Configured context to attach to internally generated queries.
+  private final BrokerInternalQueryConfig brokerInternalQueryConfig;
+
   @GuardedBy("lock")
   private boolean refreshImmediately = false;
   @GuardedBy("lock")
@@ -148,7 +152,8 @@ public class DruidSchema extends AbstractSchema
       final SegmentManager segmentManager,
       final JoinableFactory joinableFactory,
       final PlannerConfig config,
-      final Escalator escalator
+      final Escalator escalator,
+      final BrokerInternalQueryConfig brokerInternalQueryConfig
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -159,6 +164,7 @@ public class DruidSchema extends AbstractSchema
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.tables = new ConcurrentHashMap<>();
     this.escalator = escalator;
+    this.brokerInternalQueryConfig = brokerInternalQueryConfig;
 
     serverView.registerTimelineCallback(
         Execs.directExecutor(),
@@ -527,7 +533,8 @@ public class DruidSchema extends AbstractSchema
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         queryLifecycleFactory,
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
-        escalator.createEscalatedAuthenticationResult()
+        escalator.createEscalatedAuthenticationResult(),
+        brokerInternalQueryConfig.getContext()
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
@@ -648,7 +655,8 @@ public class DruidSchema extends AbstractSchema
   private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final QueryLifecycleFactory queryLifecycleFactory,
       final Iterable<SegmentId> segments,
-      final AuthenticationResult authenticationResult
+      final AuthenticationResult authenticationResult,
+      final Map<String, Object> context
   )
   {
     // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
@@ -667,7 +675,7 @@ public class DruidSchema extends AbstractSchema
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
-        ImmutableMap.of(),
+        context == null ? ImmutableMap.of() : context,
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         false
