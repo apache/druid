@@ -160,11 +160,6 @@ private[v2] object DruidDataWriterFactory extends Logging {
       val nonDimColumns = metrics ++ excludedDimensions :+ tsCol
       val dimensions = schema.fieldNames.filterNot(nonDimColumns.contains(_))
 
-      val excessDimensions = dimensions.filterNot(schema.fieldNames.contains(_))
-      if (excessDimensions.nonEmpty) {
-        logWarn(s"Dimensions contains columns not in source df! Excess columns: ${excessDimensions.mkString(", ")}")
-      }
-
       SchemaUtils.convertStructTypeToDruidDimensionSchema(dimensions, schema)
     } else {
       // If dimensions were provided as a JSON list, parse them directly. Otherwise, infer types
