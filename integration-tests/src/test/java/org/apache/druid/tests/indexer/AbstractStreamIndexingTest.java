@@ -373,7 +373,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     try (
         final Closeable closer1 = createResourceCloser(generatedTestConfig1);
         final Closeable closer2 = createResourceCloser(generatedTestConfig2);
-        final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
     ) {
       final String taskSpec1 = generatedTestConfig1.getStreamIngestionPropsTransform()
                                                  .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
@@ -385,44 +384,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       generatedTestConfig1.setSupervisorId(indexer.submitSupervisor(taskSpec1));
       generatedTestConfig2.setSupervisorId(indexer.submitSupervisor(taskSpec2));
       LOG.info("Submitted supervisors");
-      // Start generating the data
-      final StreamGenerator streamGenerator1 = new WikipediaStreamEventStreamGenerator(
-          new JsonEventSerializer(jsonMapper),
-          EVENTS_PER_SECOND,
-          CYCLE_PADDING_MS
-      );
-      streamGenerator1.run(
-          generatedTestConfig1.getStreamName(),
-          streamEventWriter,
-          TOTAL_NUMBER_OF_SECOND,
-          FIRST_EVENT_TIME
-      );
-      final StreamGenerator streamGenerator2 = new WikipediaStreamEventStreamGenerator(
-          new JsonEventSerializer(jsonMapper),
-          EVENTS_PER_SECOND,
-          CYCLE_PADDING_MS
-      );
-      streamGenerator2.run(
-          generatedTestConfig2.getStreamName(),
-          streamEventWriter,
-          TOTAL_NUMBER_OF_SECOND,
-          FIRST_EVENT_TIME
-      );
-      // Verify supervisors are healthy before termination
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig1.getSupervisorId())),
-          true,
-          10000,
-          30,
-          "Waiting for supervisor1 to be healthy"
-      );
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig2.getSupervisorId())),
-          true,
-          10000,
-          30,
-          "Waiting for supervisor2 to be healthy"
-      );
 
       // Sleep for 10 secs to make sure that at least one cycle of supervisor auto cleanup duty ran
       Thread.sleep(10000);
