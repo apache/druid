@@ -59,38 +59,44 @@ public class BloomDimFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "dim6")),
-              null,
-              null
-          )
-      )
-  );
+  private static final InputRowParser<Map<String, Object>> PARSER;
 
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of(
-          "dim0",
-          "0",
-          "dim1",
-          "",
-          "dim2",
-          ImmutableList.of("a", "b"),
-          "dim6",
-          "2017-07-25"
-      )).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of(), "dim6", "2017-07-25"))
-            .get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""), "dim6", "2017-05-25"))
-            .get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
-  );
+  private static final List<InputRow> ROWS;
 
   private static DefaultObjectMapper mapper = new DefaultObjectMapper();
+
+  static {
+    NullHandling.initializeForTests();
+    PARSER = new MapInputRowParser(
+        new TimeAndDimsParseSpec(
+            new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "dim6")),
+                null,
+                null
+            )
+        )
+    );
+    ROWS = ImmutableList.of(
+        PARSER.parseBatch(ImmutableMap.of(
+            "dim0",
+            "0",
+            "dim1",
+            "",
+            "dim2",
+            ImmutableList.of("a", "b"),
+            "dim6",
+            "2017-07-25"
+        )).get(0),
+        PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of(), "dim6", "2017-07-25"))
+              .get(0),
+        PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""), "dim6", "2017-05-25"))
+              .get(0),
+        PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+        PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
+        PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
+    );
+  }
 
   public BloomDimFilterTest(
       String testName,

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.HadoopTuningConfig;
@@ -56,6 +57,10 @@ import java.util.concurrent.Callable;
 
 public class MaterializedViewSupervisorSpecTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -44,6 +45,11 @@ import java.io.IOException;
 public class MaterializedViewQueryTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private DataSourceOptimizer optimizer;
 
   @Before

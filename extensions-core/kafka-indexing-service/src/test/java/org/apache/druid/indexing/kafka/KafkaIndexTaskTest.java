@@ -40,6 +40,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -212,6 +213,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   );
 
   static {
+    NullHandling.initializeForTests();
     Stream.concat(
         new KafkaIndexTaskModule().getJacksonModules().stream(),
         Stream.of(TEST_MODULE)
