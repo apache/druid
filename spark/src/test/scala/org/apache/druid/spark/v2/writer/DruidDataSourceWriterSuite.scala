@@ -22,6 +22,7 @@ package org.apache.druid.spark.v2.writer
 import org.apache.druid.java.util.common.{FileUtils, StringUtils}
 import org.apache.druid.spark.clients.DruidMetadataClient
 import org.apache.druid.spark.configuration.Configuration
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
 import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
@@ -32,7 +33,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 
 class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with BeforeAndAfterEach
-  with DruidDataSourceV2TestUtils {
+  with DruidDataSourceV2TestUtils with Logging {
   var uri: String = _
 
   test("commit should correctly record segment data in the metadata database") {
@@ -124,7 +125,9 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
     val locations = Seq(firstSegmentString, secondSegmentString, thirdSegmentString)
       .map(path => StringUtils.replace(path, segmentsDir.getCanonicalPath, tempDir.getCanonicalPath))
     val commitMessages = DruidWriterCommitMessage(locations)
+    log.info(tempDir.listFiles().flatMap(f => if (!f.isDirectory) Seq(f.getName) else f.list()).mkString(", "))
     druidDataSourceWriter.abort(Array(commitMessages.asInstanceOf[WriterCommitMessage]))
+    log.info(tempDir.listFiles().flatMap(f => if (!f.isDirectory) Seq(f.getName) else f.list()).mkString(", "))
 
     // Having killed all segments, we should have deleted the directory structure up to the data source directory
     tempDir.list().toSeq shouldBe 'isEmpty
