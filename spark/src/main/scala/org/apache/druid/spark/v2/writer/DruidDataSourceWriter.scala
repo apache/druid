@@ -34,7 +34,7 @@ import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriterFacto
 import org.apache.spark.sql.types.StructType
 
 import java.util.Optional
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.{mapAsScalaMapConverter, seqAsJavaListConverter}
 
 /**
   * A DruidDataSourceWriter orchestrates writing a dataframe to Druid.
@@ -104,8 +104,17 @@ class DruidDataSourceWriter(
       conf.dive(DruidConfigurationKeys.writerPrefix).get(DruidConfigurationKeys.deepStorageTypeDefaultKey),
       conf
     )
-    segments.foreach(segment =>
-      segmentKiller.killQuietly(MAPPER.readValue(segment, classOf[DataSegment])))
+    segments.foreach { segmentStr =>
+      val segment = MAPPER.readValue(segmentStr, classOf[DataSegment])
+      // Not using segmentKiller.killQuietly so we can surface the exception at WARN instead of DEBUG
+      try {
+        segmentKiller.kill(segment)
+      } catch {
+        case e: Exception =>
+          log.warn(s"Unable to clean segment ${segment.getId.toString} with load spec " +
+            s"${segment.getLoadSpec.asScala.mkString(", ")}! Caught ${e.getMessage}", e)
+      }
+    }
   }
 }
 

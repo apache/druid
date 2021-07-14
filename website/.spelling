@@ -1893,7 +1893,7 @@ PiB
 protobuf
 Golang
 multiValueHandling
- - ../docs/development/spark.md
+ - ../docs/operations/spark.md
 SaveMode
 SaveModes
 partitioners
