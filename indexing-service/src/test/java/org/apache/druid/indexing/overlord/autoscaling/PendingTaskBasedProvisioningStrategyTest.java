@@ -647,7 +647,9 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.singletonList(
+        ImmutableList.of(
+            new TestZkWorker(testTask).toImmutable(),
+            new TestZkWorker(testTask).toImmutable(),
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
