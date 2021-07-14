@@ -63,11 +63,11 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
-  "taskSlot/total/count" : { "dimensions" : [], "type" : "gauge" },
-  "taskSlot/idle/count" : { "dimensions" : [], "type" : "gauge" },
-  "taskSlot/busy/count" : { "dimensions" : [], "type" : "gauge" },
-  "taskSlot/lazy/count" : { "dimensions" : [], "type" : "gauge" },
-  "taskSlot/blacklisted/count" : { "dimensions" : [], "type" : "gauge" },
+  "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/busy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
