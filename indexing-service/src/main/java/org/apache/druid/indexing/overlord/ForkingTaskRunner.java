@@ -27,6 +27,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -669,36 +670,38 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
     if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return config.getPorts().size();
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(config.getPorts().size()));
     }
-    return config.getEndPort() - config.getStartPort() + 1;
+    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+    Map<String, Long> totalTaskSlots = getTotalTaskSlotCount();
+    Map<String, Long> usedTaskSlots = getUsedTaskSlotCount();
+    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Math.max(totalTaskSlots.get(WorkerConfig.DEFAULT_CATEGORY) - usedTaskSlots.get(WorkerConfig.DEFAULT_CATEGORY), 0));
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
-    return portFinder.findUsedPortCount();
+    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(portFinder.findUsedPortCount()));
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
