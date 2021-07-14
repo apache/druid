@@ -91,16 +91,12 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.error("No autoScaler available, cannot %s workers", action);
       return null;
     }
-    if (workerConfig.getAutoScaler().getMinNumWorkers() == 0) {
-      if (!(config instanceof PendingTaskBasedWorkerProvisioningConfig)) {
-        log.error("PendingTaskBasedWorkerProvisioningConfig must be provided");
-        return null;
-      }
-      int workerCapacityHint = ((PendingTaskBasedWorkerProvisioningConfig) config).getWorkerCapacityHint();
-      if (workerCapacityHint <= 0) {
-        log.error(ERROR_MESSAGE_MIN_WORKER_ZERO_HINT_UNSET, workerCapacityHint);
-        return null;
-      }
+    if (config instanceof PendingTaskBasedWorkerProvisioningConfig
+        && workerConfig.getAutoScaler().getMinNumWorkers() == 0
+        && ((PendingTaskBasedWorkerProvisioningConfig) config).getWorkerCapacityHint() <= 0
+    ) {
+      log.error(ERROR_MESSAGE_MIN_WORKER_ZERO_HINT_UNSET, ((PendingTaskBasedWorkerProvisioningConfig) config).getWorkerCapacityHint());
+      return null;
     }
     return workerConfig;
   }
