@@ -30,7 +30,7 @@ public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvis
   private int maxScalingStep = 10;
 
   @JsonProperty
-  private int workerCapacityFallback = -1;
+  private int workerCapacityHint = -1;
 
   public int getMaxScalingStep()
   {
@@ -78,14 +78,14 @@ public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvis
     return this;
   }
 
-  public int getWorkerCapacityFallback()
+  public int getWorkerCapacityHint()
   {
-    return workerCapacityFallback;
+    return workerCapacityHint;
   }
 
-  public PendingTaskBasedWorkerProvisioningConfig setWorkerCapacityFallback(int workerCapacityFallback)
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerCapacityHint(int workerCapacityHint)
   {
-    this.workerCapacityFallback = workerCapacityFallback;
+    this.workerCapacityHint = workerCapacityHint;
     return this;
   }
 }

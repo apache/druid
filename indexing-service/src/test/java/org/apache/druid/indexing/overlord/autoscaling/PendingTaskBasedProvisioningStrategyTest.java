@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -108,9 +109,34 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
+  public void testFailIfMinWorkerIsZeroAndWorkerHintNotSet()
+  {
+    EmittingLogger mockLogger = EasyMock.createMock(EmittingLogger.class);
+    Capture<String> capturedArgument = Capture.newInstance();
+    mockLogger.error(EasyMock.capture(capturedArgument), EasyMock.anyInt());
+
+    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.replay(autoScaler, mockLogger);
+    DefaultWorkerBehaviorConfig defaultWorkerBehaviorConfig = PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(
+        DSuppliers.of(workerConfig),
+        config,
+        "test",
+        mockLogger
+    );
+    Assert.assertNull(defaultWorkerBehaviorConfig);
+    Assert.assertEquals(PendingTaskBasedWorkerProvisioningStrategy.ERROR_MESSAGE_MIN_WORKER_ZERO_HINT_UNSET, capturedArgument.getValue());
+  }
+
+  @Test
   public void testSuccessfulInitialMinWorkersProvision()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -139,7 +165,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testProvisionNoCurrentlyRunningWorkerWithCapacityFallbackSetAndNoPendingTaskShouldProvisionMinimumAsCurrentIsBelowMinimum()
+  public void testProvisionNoCurrentlyRunningWorkerWithCapacityHintSetAndNoPendingTaskShouldProvisionMinimumAsCurrentIsBelowMinimum()
   {
     PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
         .setMaxScalingDuration(new Period(1000))
@@ -147,7 +173,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setPendingTaskTimeout(new Period(0))
         .setWorkerVersion(MIN_VERSION)
         .setMaxScalingStep(2)
-        .setWorkerCapacityFallback(30);
+        .setWorkerCapacityHint(30);
     strategy = new PendingTaskBasedWorkerProvisioningStrategy(
         config,
         DSuppliers.of(workerConfig),
@@ -161,7 +187,7 @@ public class PendingTaskBasedProvisioningStrategyTest
           }
         }
     );
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -190,7 +216,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testProvisionNoCurrentlyRunningWorkerWithCapacityFallbackSetAndNoPendingTaskShouldNotProvisionAsMinimumIsZero()
+  public void testProvisionNoCurrentlyRunningWorkerWithCapacityHintSetAndNoPendingTaskShouldNotProvisionAsMinimumIsZero()
   {
     PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
         .setMaxScalingDuration(new Period(1000))
@@ -198,7 +224,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setPendingTaskTimeout(new Period(0))
         .setWorkerVersion(MIN_VERSION)
         .setMaxScalingStep(2)
-        .setWorkerCapacityFallback(30);
+        .setWorkerCapacityHint(30);
     strategy = new PendingTaskBasedWorkerProvisioningStrategy(
         config,
         DSuppliers.of(workerConfig),
@@ -213,7 +239,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         }
     );
     // minWorkerCount is 0
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -236,7 +262,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSuccessfulMinWorkersProvision()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -270,7 +296,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -305,7 +331,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testProvisioning()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>()).times(2);
@@ -354,7 +380,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testProvisionWithPendingTaskAndWorkerCapacityFallbackSetButNonEmptyCurrentlyRunningWorkerShouldUseCapcityFromRunningWorker()
+  public void testProvisionWithPendingTaskAndWorkerCapacityHintSetButNonEmptyCurrentlyRunningWorkerShouldUseCapcityFromRunningWorker()
   {
     PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
         .setMaxScalingDuration(new Period(1000))
@@ -362,7 +388,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setPendingTaskTimeout(new Period(0))
         .setWorkerVersion(MIN_VERSION)
         .setMaxScalingStep(2)
-        .setWorkerCapacityFallback(30);
+        .setWorkerCapacityHint(30);
     strategy = new PendingTaskBasedWorkerProvisioningStrategy(
         config,
         DSuppliers.of(workerConfig),
@@ -376,7 +402,7 @@ public class PendingTaskBasedProvisioningStrategyTest
           }
         }
     );
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(3).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>()).times(2);
@@ -429,7 +455,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testProvisionWithPendingTaskAndWorkerCapacityFallbackSetButEmptyCurrentlyRunningWorkerShouldUseCapcityFromFallbackConfig()
+  public void testProvisionWithPendingTaskAndWorkerCapacityHintSetButEmptyCurrentlyRunningWorkerShouldUseCapcityFromHintConfig()
   {
     PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
         .setMaxScalingDuration(new Period(1000))
@@ -437,7 +463,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setPendingTaskTimeout(new Period(0))
         .setWorkerVersion(MIN_VERSION)
         .setMaxScalingStep(2)
-        .setWorkerCapacityFallback(30);
+        .setWorkerCapacityHint(30);
     strategy = new PendingTaskBasedWorkerProvisioningStrategy(
         config,
         DSuppliers.of(workerConfig),
@@ -451,7 +477,7 @@ public class PendingTaskBasedProvisioningStrategyTest
           }
         }
     );
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(3).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>()).times(2);
@@ -478,7 +504,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean provisionedSomething = provisioner.doProvision();
 
-    // Expect to use capacity from workerCapacityFallback config (which is 30)
+    // Expect to use capacity from workerCapacityHint config (which is 30)
     // and since there are two pending tasks, we will need one more worker
     Assert.assertTrue(provisionedSomething);
     Assert.assertEquals(1, provisioner.getStats().toList().size());
@@ -509,7 +535,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expectLastCall();
     EasyMock.replay(emitter);
 
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>()).times(2);
@@ -566,7 +592,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testDoSuccessfulTerminate()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
     EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(
@@ -586,7 +612,8 @@ public class PendingTaskBasedProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.singletonList(
+        ImmutableList.of(
+            new TestZkWorker(testTask).toImmutable(),
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
@@ -610,7 +637,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSomethingTerminating()
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(3);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(
@@ -654,7 +681,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
@@ -685,7 +712,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
@@ -703,7 +730,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
@@ -730,7 +757,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     // Don't provision anything
     EasyMock.reset(autoScaler);
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
@@ -741,7 +768,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     EasyMock.reset(autoScaler);
     // Increase minNumWorkers
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
