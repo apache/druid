@@ -188,9 +188,9 @@ generator functions must be registered before the first Spark action which would
 This extension can be run on a Spark cluster in one of two ways: bundled as part of an application jar or uploaded as
 a library jar to a Spark cluster and included in the classpath provided to Spark applications by the application
 manager. If the second approach is used, this extension should be built with
-`mvn clean package -pl extensions-core/spark-extensions` and the resulting jar `druid-spark-extensions-<VERSION>.jar`
+`mvn clean package -pl spark` and the resulting jar `druid-spark-<VERSION>.jar`
 uploaded to the Spark cluster. Application jars should then be built with a compile-time dependency on
-`org.apache.druid.extensions:druid-spark-extensions` (e.g. marked as `provided` in Maven or with `compile` in Gradle).
+`org.apache.druid:druid-spark` (e.g. marked as `provided` in Maven or with `compile` in Gradle).
 
 ## Configuration Reference
 
@@ -230,7 +230,7 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |`table`|The Druid data source to read from|Yes||
 |`reader.segments`|A hard-coded list of Druid segments to read. If set, all other configurations are ignored and the specified segments are read directly. Must be deserializable into Druid DataSegment instances|No|
 |`reader.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
-|`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
+|`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 |`reader.vectorize`|**Experimental!** If true, reads data from segments in batches if possible|No|False|
 |`reader.batchSize`|**Experimental!** The number of rows to read in one batch if `reader.vectorize` is set to true|No|512|
 
@@ -245,7 +245,7 @@ the documentation!).
 
 ### Writer Configs
 The properties used to configure the DataSourceWriter when writing data to Druid from Spark. See the
-[ingestion specs documentation](../../ingestion/index.md#ingestion-specs) for more details.
+[ingestion specs documentation](../ingestion/index.md#ingestion-specs) for more details.
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
@@ -253,10 +253,10 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |`writer.deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
 |`writer.version`|The version of the segments to be written|No|The current Unix epoch time|
 |`writer.dimensions`|A list of the dimensions to write to Druid. If not set, all dimensions in the dataframe that aren't either explicitly set as metric or timestamp columns or excluded via `excludedDimensions` will be used|No||
-|`writer.metrics`|The [metrics spec](../../ingestion/index.md#metricsspec) used to define the metrics for the segments written to Druid. `fieldName` must match a column in the source dataframe|No|`[]`|
+|`writer.metrics`|The [metrics spec](../ingestion/index.md#metricsspec) used to define the metrics for the segments written to Druid. `fieldName` must match a column in the source dataframe|No|`[]`|
 |`writer.excludedDimensions`|A comma-delimited list of the columns in the data frame to exclude when writing to Druid. Ignored if `dimensions` is set|No||
-|`writer.segmentGranularity`|The chunking [granularity](../../querying/granularities.md) of the Druid segments written (e.g. what granularity to partition the output segments by on disk)|No|`all`|
-|`writer.queryGranularity`|The resolution [granularity](../../querying/granularities.md) of rows _within_ the Druid segments written|No|`none`|
+|`writer.segmentGranularity`|The chunking [granularity](../querying/granularities.md) of the Druid segments written (e.g. what granularity to partition the output segments by on disk)|No|`all`|
+|`writer.queryGranularity`|The resolution [granularity](../querying/granularities.md) of rows _within_ the Druid segments written|No|`none`|
 |`writer.partitionMap`|A mapping between partitions of the source Spark dataframe and the necessary information for generating Druid segment partitions from the Spark partitions. Has the type signature `Map[Int, Map[String, String]]`|No||
 |`writer.timestampColumn`|The Spark dataframe column to use as a timestamp for each record|No|`ts`|
 |`writer.timestampFormat`|The format of the timestamps in `timestampColumn`|No|`auto`|
@@ -265,13 +265,13 @@ The properties used to configure the DataSourceWriter when writing data to Druid
 |`writer.rowsPerPersist`|How many rows to hold in memory before flushing intermediate indices to disk|No|2000000|
 |`writer.rationalizeSegments`|Whether or not to rationalize segments to ensure contiguity and completeness|No|True if `partitionMap` is not set, False otherwise|
 |`writer.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
-|`writer.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
+|`writer.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 
 `writer.dimensions` may be either a comma-delimited list of column names _or_ a JSON list of Druid DimensionSchema
 objects (i.e. the `dimensions` section of a `DimensionSpec`). If DimensionSchemas are provided, dimension types must
 match the type of the corresponding Spark columns exactly. Otherwise, an IllegalArgumentException will be thrown.
 
-Users can also specify properties to be passed along to the [IndexSpec](../../ingestion/index.md#indexspec). The
+Users can also specify properties to be passed along to the [IndexSpec](../ingestion/index.md#indexspec). The
 defaults will likely be more performant for most users.
 
 |Key|Description|Required|Default|
@@ -307,7 +307,7 @@ and register them with the SegmentWriterRegistry (and hopefully contribute them 
 #### S3 Deep Storage Config
 `deepStorageType` = `s3`
 
-These configs generally shadow the [Connecting to S3 configuration](../extensions-core/s3.md#connecting-to-s3-configuration)
+These configs generally shadow the [Connecting to S3 configuration](../development/extensions-core/s3.md#connecting-to-s3-configuration)
 section of the Druid s3 extension doc, including in the inconsistent use of `disable` vs `enable` as boolean property
 name prefixes
 
@@ -318,9 +318,9 @@ name prefixes
 |`s3.maxListingLength`|The maximum number of input files matching a prefix to retrieve or delete in one call|No|1000/1024|
 |`s3.disableAcl`|Whether or not to disable ACLs on the output segments. If this is false, additional S3 permissions are required|No|False|
 |`s3.useS3aSchema`|Whether or not to use the `s3a` filesystem when writing segments to S3.|No|True ***(note this is the opposite of the druid-s3 extension!)***|
-|`s3.accessKey`|The S3 access key. See [S3 authentication methods](../extensions-core/s3.md#s3-authentication-methods) for more details||
-|`s3.secretKey`|The S3 secret key. See [S3 authentication methods](../extensions-core/s3.md#s3-authentication-methods) for more details||
-|`s3.fileSessionCredentials`|The path to a properties file containing S3 session credentials. See [S3 authentication methods](../extensions-core/s3.md#s3-authentication-methods) for more details||
+|`s3.accessKey`|The S3 access key. See [S3 authentication methods](../development/extensions-core/s3.md#s3-authentication-methods) for more details||
+|`s3.secretKey`|The S3 secret key. See [S3 authentication methods](../development/extensions-core/s3.md#s3-authentication-methods) for more details||
+|`s3.fileSessionCredentials`|The path to a properties file containing S3 session credentials. See [S3 authentication methods](../development/extensions-core/s3.md#s3-authentication-methods) for more details||
 |`s3.proxy.host`|The proxy host to connect to S3 through|No||
 |`s3.proxy.port`|The proxy port to connect to S3 through|No||
 |`s3.proxy.username`|The user name to use when connecting through a proxy|No||
@@ -338,7 +338,7 @@ name prefixes
 #### GCS Deep Storage Config
 `deepStorageType` = `google`
 
-These configs shadow the [Google Cloud Storage Extension](../extensions-core/google.md) docs. The environment variable
+These configs shadow the [Google Cloud Storage Extension](../development/extensions-core/google.md) docs. The environment variable
 `GOOGLE_APPLICATION_CREDENTIALS` must be set to write segments to GCS.
 
 |Key|Description|Required|Default|

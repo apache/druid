@@ -5740,7 +5740,7 @@ license_file_path: licenses/bin/warning.MIT
 
 name: Apache Spark
 license_category: binary
-module: extensions/druid-spark-extensions
+module: spark
 license_name: Apache License version 2.0
 version: 2.4.7
 libraries:
@@ -5780,7 +5780,7 @@ notice: |
 
 name: Scala Library
 license_category: binary
-module: extensions/druid-spark-extensions
+module: spark
 license_name: Apache License version 2.0
 version: 2.12.12
 libraries:
@@ -5790,10 +5790,10 @@ libraries:
 
 ---
 
-# Not sure why check-license finds these as well (they're not in mvn dependency:tree for the spark-extensions module)
+# Not sure why check-license finds these as well (they're not in mvn dependency:tree for the spark module)
 name: Paranamer
 license_category: binary
-module: extensions/druid-spark-extensions
+module: spark
 license_name: BSD-3-Clause License
 version: 2.8
 copyright: Paul Hammant & ThoughtWorks Inc
@@ -5805,7 +5805,7 @@ libraries:
 
 name: Jackson Paranamer
 license_category: binary
-module: extensions/druid-spark-extensions
+module: spark
 license_name: Apache License version 2.0
 version: 2.10.5
 libraries:

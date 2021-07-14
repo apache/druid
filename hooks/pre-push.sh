@@ -14,5 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mvn checkstyle:checkstyle --fail-at-end
-mvn scalastyle:check -pl extensions-core/spark-extensions/ --fail-at-end
+mvn checkstyle:checkstyle --fail-at-end  -pl '!spark' && mvn scalastyle:check --fail-at-end -pl spark

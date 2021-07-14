@@ -22,16 +22,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.apache.druid.extensions</groupId>
-    <artifactId>druid-spark-extensions</artifactId>
-    <name>druid-spark-extensions</name>
-    <description>druid-spark-extensions</description>
+    <artifactId>druid-spark</artifactId>
+    <name>druid-spark</name>
+    <description>Spark connectors for reading data from and writing data to Druid clusters</description>
 
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
         <version>0.22.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <properties>
@@ -618,7 +617,7 @@
                     <failOnWarning>false</failOnWarning>
                     <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
                     <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
-                    <configLocation>${project.basedir}/../../codestyle/scalastyle_config.xml</configLocation>
+                    <configLocation>${project.basedir}/../codestyle/scalastyle_config.xml</configLocation>
                 </configuration>
                 <executions>
                     <execution>

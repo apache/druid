@@ -143,6 +143,8 @@
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>
+        <!-- Spark Connectors -->
+        <module>spark</module>
         <!-- Core extensions -->
         <module>extensions-core/kubernetes-extensions</module>
         <module>extensions-core/avro-extensions</module>
@@ -171,7 +173,6 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
-        <module>extensions-core/spark-extensions</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
