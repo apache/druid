@@ -36,12 +36,12 @@ import java.util.List;
 
 public class AvroFlattenerMakerTest
 {
-  private static AvroFlattenerMaker FLATTENER_WITHOUT_EXTRACT_UNION_BY_TYPE =
+  private static final AvroFlattenerMaker FLATTENER_WITHOUT_EXTRACT_UNION_BY_TYPE =
       new AvroFlattenerMaker(false, false, false);
-  private static AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
+  private static final AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
       new AvroFlattenerMaker(false, false, true);
 
-  final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+  private static final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
 
   @Test
   public void getRootField_flattenerWithoutExtractUnionsByType()
