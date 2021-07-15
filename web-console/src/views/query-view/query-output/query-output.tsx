@@ -33,7 +33,14 @@ import ReactTable from 'react-table';
 
 import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql, stringifyValue } from '../../../utils';
+import {
+  copyAndAlert,
+  deepSet,
+  filterMap,
+  oneOf,
+  prettyPrintSql,
+  stringifyValue,
+} from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -65,7 +72,7 @@ function getNumericColumnBraces(
     const numColumns = queryResult.header.length;
     for (let c = 0; c < numColumns; c++) {
       const brace = filterMap(rows, row =>
-        typeof row[c] === 'number' ? String(row[c]) : undefined,
+        oneOf(typeof row[c], 'number', 'bigint') ? String(row[c]) : undefined,
       );
       if (rows.length === brace.length) {
         numericColumnBraces[c] = brace;

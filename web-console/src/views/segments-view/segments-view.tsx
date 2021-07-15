@@ -51,6 +51,7 @@ import {
   getNeedleAndMode,
   LocalStorageKeys,
   makeBooleanFilter,
+  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -144,7 +145,7 @@ interface SegmentQueryResultRow {
   partitioning: string;
   size: number;
   partition_num: number;
-  num_rows: number;
+  num_rows: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
