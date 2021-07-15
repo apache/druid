@@ -316,6 +316,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       cost = CostEstimates.COST_JOIN_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();
+      if (joinRel.getJoinType() == JoinRelType.INNER) {
+        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+      }
     }
 
     if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
@@ -351,7 +354,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return !DruidRels.isScanOrMapping(left, true);
   }
 
-  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  public static boolean computeRightRequiresSubquery(final DruidRel<?> right)
   {
     // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
@@ -385,7 +388,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return Pair.of(rightPrefix, signatureBuilder.build());
   }
 
-  private static DruidRel<?> getSomeDruidChild(final RelNode child)
+  public static DruidRel<?> getSomeDruidChild(final RelNode child)
   {
     if (child instanceof DruidRel) {
       return (DruidRel<?>) child;
