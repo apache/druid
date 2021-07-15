@@ -24,7 +24,7 @@ title: "Multi-value dimensions"
 
 
 Apache Druid supports "multi-value" string dimensions. Multi-value string dimensions result from input fields that contain an
-array of values instead of a single value, such as `tags` in the following JSON array example: 
+array of values instead of a single value, such as the `tags` values in the following JSON array example: 
 
 ```
 {"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]} 
