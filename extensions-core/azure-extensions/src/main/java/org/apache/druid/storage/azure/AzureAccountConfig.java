@@ -30,6 +30,9 @@ import javax.validation.constraints.NotNull;
 public class AzureAccountConfig
 {
   @JsonProperty
+  private String hostAddress;
+
+  @JsonProperty
   private String protocol = "https";
 
   @JsonProperty
@@ -85,5 +88,18 @@ public class AzureAccountConfig
   public String getKey()
   {
     return key;
+  }
+
+  public String getHostAddress() {
+    return hostAddress;
+  }
+
+  //other region Azure Host Address support,for example
+  // The azure storage hadoop in china access pattern is:
+  // wasbs://<containername>@<accountname>.blob.core.chinacloudapi.cn/<file.path>/
+  // (from https://docs.azure.cn/zh-cn/hdinsight/hdinsight-hadoop-use-blob-storage)
+  public void setHostAddress(String hostAddress) {
+    this.hostAddress = hostAddress;
+    AzureUtils.changeStaticValue(null,AzureUtils.class,"AZURE_STORAGE_HOST_ADDRESS",hostAddress);
   }
 }
