@@ -59,6 +59,7 @@ import {
   getDruidErrorMessage,
   LocalStorageKeys,
   lookupBy,
+  NumberLike,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
@@ -114,7 +115,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
 
 const DEFAULT_RULES_KEY = '_default';
 
-function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
+function formatLoadDrop(segmentsToLoad: NumberLike, segmentsToDrop: NumberLike): string {
   const loadDrop: string[] = [];
   if (segmentsToLoad) {
     loadDrop.push(`${pluralIfNeeded(segmentsToLoad, 'segment')} to load`);
@@ -152,20 +153,20 @@ const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: number;
-  readonly num_segments_to_load: number;
-  readonly num_segments_to_drop: number;
+  readonly num_segments: NumberLike;
+  readonly num_segments_to_load: NumberLike;
+  readonly num_segments_to_drop: NumberLike;
   readonly minute_aligned_segments: number;
   readonly hour_aligned_segments: number;
   readonly day_aligned_segments: number;
   readonly month_aligned_segments: number;
   readonly year_aligned_segments: number;
-  readonly total_data_size: number;
-  readonly replicated_size: number;
+  readonly total_data_size: NumberLike;
+  readonly replicated_size: NumberLike;
   readonly min_segment_rows: number;
   readonly avg_segment_rows: number;
   readonly max_segment_rows: number;
-  readonly total_rows: number;
+  readonly total_rows: NumberLike;
   readonly avg_row_size: number;
 }
 
@@ -224,7 +225,7 @@ interface RetentionDialogOpenOn {
 
 interface CompactionDialogOpenOn {
   readonly datasource: string;
-  readonly compactionConfig: CompactionConfig;
+  readonly compactionConfig?: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -800,9 +801,9 @@ ORDER BY 1`;
 
   getDatasourceActions(
     datasource: string,
-    unused: boolean,
+    unused: boolean | undefined,
     rules: Rule[],
-    compactionConfig: CompactionConfig,
+    compactionConfig: CompactionConfig | undefined,
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
@@ -1032,7 +1033,7 @@ ORDER BY 1`;
               minWidth: 200,
               accessor: 'num_segments',
               Cell: ({ value: num_segments, original }) => {
-                const { datasource, unused, num_segments_to_load } = original;
+                const { datasource, unused, num_segments_to_load } = original as Datasource;
                 if (unused) {
                   return (
                     <span>
@@ -1086,7 +1087,7 @@ ORDER BY 1`;
               filterable: false,
               minWidth: 100,
               Cell: ({ original }) => {
-                const { num_segments_to_load, num_segments_to_drop } = original;
+                const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
                 return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
               },
             },
@@ -1107,7 +1108,7 @@ ORDER BY 1`;
               filterable: false,
               width: 220,
               Cell: ({ value, original }) => {
-                const { min_segment_rows, max_segment_rows } = original;
+                const { min_segment_rows, max_segment_rows } = original as Datasource;
                 if (isNaN(value) || isNaN(min_segment_rows) || isNaN(max_segment_rows)) return '-';
                 return (
                   <>
@@ -1141,10 +1142,10 @@ ORDER BY 1`;
                   day_aligned_segments,
                   month_aligned_segments,
                   year_aligned_segments,
-                } = original;
+                } = original as Datasource;
                 const segmentGranularities: string[] = [];
                 if (!num_segments || isNaN(year_aligned_segments)) return '-';
-                if (num_segments - minute_aligned_segments) {
+                if (Number(num_segments) - minute_aligned_segments) {
                   segmentGranularities.push('Sub minute');
                 }
                 if (minute_aligned_segments - hour_aligned_segments) {
@@ -1208,7 +1209,7 @@ ORDER BY 1`;
               filterable: false,
               width: 150,
               Cell: ({ original }) => {
-                const { datasource, compactionConfig, compactionStatus } = original;
+                const { datasource, compactionConfig, compactionStatus } = original as Datasource;
                 return (
                   <span
                     className="clickable-cell"
@@ -1239,7 +1240,7 @@ ORDER BY 1`;
                   : 0,
               filterable: false,
               Cell: ({ original }) => {
-                const { compactionStatus } = original;
+                const { compactionStatus } = original as Datasource;
 
                 if (!compactionStatus || zeroCompactionStatus(compactionStatus)) {
                   return (
@@ -1296,7 +1297,7 @@ ORDER BY 1`;
                 (compactionStatus && compactionStatus.bytesAwaitingCompaction) || 0,
               filterable: false,
               Cell: ({ original }) => {
-                const { compactionStatus } = original;
+                const { compactionStatus } = original as Datasource;
 
                 if (!compactionStatus) {
                   return <BracedText text="-" braces={leftToBeCompactedValues} />;
@@ -1318,7 +1319,7 @@ ORDER BY 1`;
               filterable: false,
               minWidth: 100,
               Cell: ({ original }) => {
-                const { datasource, rules } = original;
+                const { datasource, rules } = original as Datasource;
                 return (
                   <span
                     onClick={() =>
@@ -1348,7 +1349,7 @@ ORDER BY 1`;
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: ({ value: datasource, original }) => {
-                const { unused, rules, compactionConfig } = original;
+                const { unused, rules, compactionConfig } = original as Datasource;
                 const datasourceActions = this.getDatasourceActions(
                   datasource,
                   unused,
