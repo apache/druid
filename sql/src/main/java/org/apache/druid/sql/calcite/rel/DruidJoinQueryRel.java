@@ -354,7 +354,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return !DruidRels.isScanOrMapping(left, true);
   }
 
-  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  public static boolean computeRightRequiresSubquery(final DruidRel<?> right)
   {
     // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
@@ -388,7 +388,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return Pair.of(rightPrefix, signatureBuilder.build());
   }
 
-  private static DruidRel<?> getSomeDruidChild(final RelNode child)
+  public static DruidRel<?> getSomeDruidChild(final RelNode child)
   {
     if (child instanceof DruidRel) {
       return (DruidRel<?>) child;
