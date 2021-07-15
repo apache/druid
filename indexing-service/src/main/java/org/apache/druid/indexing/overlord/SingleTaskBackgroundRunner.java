@@ -209,7 +209,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
-          // Creating a failed status to only feed listeners seems quite strange.
+          // Creating a new status to only feed listeners seems quite strange.
           // This is currently OK because we have no listeners yet registered in peon.
           // However, we should fix this in the near future by always retrieving task status
           // from one single source of truth that is also propagated to the overlord.
@@ -224,7 +224,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           );
         }
       } else {
-        // Creating a failed status to only feed listeners seems quite strange.
+        // Creating a new status to only feed listeners seems quite strange.
         // This is currently OK because we have no listeners yet registered in peon.
         // However, we should fix this in the near future by always retrieving task status
         // from one single source of truth that is also propagated to the overlord.
