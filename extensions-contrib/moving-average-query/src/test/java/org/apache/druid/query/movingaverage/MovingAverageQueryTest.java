@@ -70,6 +70,7 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
@@ -367,7 +368,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        new NoopServiceEmitter()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

@@ -292,6 +292,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportQueriedSegmentCount(long segmentCount)
+  {
+    return delegateQueryMetrics.reportQueriedSegmentCount(segmentCount);
+  }
+
+  @Override
   public void emit(ServiceEmitter emitter)
   {
     delegateQueryMetrics.emit(emitter);

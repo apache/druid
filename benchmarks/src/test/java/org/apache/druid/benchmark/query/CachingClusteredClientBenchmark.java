@@ -107,6 +107,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -342,7 +343,8 @@ public class CachingClusteredClientBenchmark
         processingConfig,
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        new NoopServiceEmitter()
     );
   }
 

@@ -271,6 +271,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
+   * Registeres "segments queried count" metric.
+   */
+  QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount);
+
+  /**
    * Registers "wait time" metric.
    */
   QueryMetrics<QueryType> reportWaitTime(long timeNs);
