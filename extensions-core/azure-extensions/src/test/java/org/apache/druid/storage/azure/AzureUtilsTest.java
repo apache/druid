@@ -74,6 +74,8 @@ public class AzureUtilsTest
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathHasLeadingAzurePathPrefix_returnsPathWithLeadingAzurePathRemoved()
   {
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setHostAddress("blob.core.chinacloudapi.cn");
     String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX);
     Assert.assertEquals(BLOB_NAME, path);
   }
