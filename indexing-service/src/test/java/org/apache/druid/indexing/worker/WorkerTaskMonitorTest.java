@@ -361,6 +361,10 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(1, announcements.size());
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
     Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
+    Assert.assertEquals(
+        "Canceled as unknown task. See middleManager or indexer logs for more details.",
+        announcements.get(0).getTaskStatus().getErrorMsg()
+    );
   }
 
   @Test(timeout = 60_000L)
