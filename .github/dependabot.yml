@@ -9,5 +9,8 @@ updates:
       # pin ZooKeeper dependencies to 3.5.x
       - dependency-name: "org.apache.zookeeper"
         versions: "[3.6,)"
+      # pin Jetty dependencies to 9.4.x
+      - dependency-name: "org.eclipse.jetty"
+        versions: "[9.5,)"
       # Keep commons-io at 2.6 until https://issues.apache.org/jira/browse/IO-741 is resolved
       - dependency-name: "commons-io:commons-io"
