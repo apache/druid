@@ -162,6 +162,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private SchemaConfig schemaConfig = new SchemaConfig(Integer.MAX_VALUE);
 
   @BeforeClass
   public static void setUpClass()
@@ -271,7 +272,8 @@ public class SystemSchemaTest extends CalciteTestBase
         client,
         client,
         druidNodeDiscoveryProvider,
-        mapper
+        mapper,
+        new SchemaConfig(0)
     );
   }
 
@@ -1175,9 +1177,8 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testTasksTable() throws Exception
   {
-
     SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
-                                                 .withConstructor(client, mapper, authMapper)
+                                                 .withConstructor(client, mapper, authMapper, schemaConfig)
                                                  .createMock();
 
     EasyMock.replay(tasksTable);
