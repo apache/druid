@@ -27,12 +27,14 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -40,6 +42,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ *
  */
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
@@ -117,6 +120,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    *
    * This ctor is mainly for test cases, including test cases in other modules
    */
+  @VisibleForTesting
   public SegmentLoaderLocalCacheManager(
       IndexIO indexIO,
       SegmentLoaderConfig config,
@@ -131,25 +135,44 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
   }
 
+  static String getSegmentDir(DataSegment segment)
+  {
+    return DataSegmentPusher.getDefaultStorageDir(segment, false);
+  }
+
   @Override
   public boolean isSegmentLoaded(final DataSegment segment)
   {
-    return findStorageLocationIfLoaded(segment) != null;
+    return findStoragePathIfLoaded(segment) != null;
   }
 
+  /**
+   * This method will try to find if the segment is already downloaded on any location. If so, the segment path
+   * is returned. Along with that, location state is also updated with the segment location. Refer to
+   * {@link StorageLocation#maybeReserve(String, DataSegment)} for more details.
+   * If the segment files are damaged in any location, they are removed from the location.
+   * @param segment - Segment to check
+   * @return - Path corresponding to segment directory if found, null otherwise.
+   */
   @Nullable
-  private StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
+  private File findStoragePathIfLoaded(final DataSegment segment)
   {
     for (StorageLocation location : locations) {
-      File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+      String storageDir = getSegmentDir(segment);
+      File localStorageDir = location.segmentDirectoryAsFile(storageDir);
       if (localStorageDir.exists()) {
         if (checkSegmentFilesIntact(localStorageDir)) {
-          log.warn("[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.", localStorageDir.getAbsolutePath());
+          log.warn(
+              "[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.",
+              localStorageDir.getAbsolutePath()
+          );
           cleanupCacheFiles(location.getPath(), localStorageDir);
           location.removeSegmentDir(localStorageDir, segment);
           break;
         } else {
-          return location;
+          // Before returning, we also reserve the space. Refer to the StorageLocation#maybeReserve documentation for details.
+          location.maybeReserve(storageDir, segment);
+          return localStorageDir;
         }
       }
     }
@@ -178,18 +201,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
   {
-    final ReferenceCountingLock lock = createOrGetLock(segment);
-    final File segmentFiles;
-    synchronized (lock) {
-      try {
-        segmentFiles = getSegmentFiles(segment);
-      }
-      finally {
-        unlock(segment, lock);
-      }
-    }
+    final File segmentFiles = getSegmentFiles(segment);
+    //TODO: what if its called multiple-times
     File factoryJson = new File(segmentFiles, "factory.json");
     final SegmentizerFactory factory;
 
@@ -203,8 +219,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     } else {
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
-
-    return factory.factorize(segment, segmentFiles, lazy, loadFailed);
+    Segment baseSegment = factory.factorize(segment, segmentFiles, lazy, loadFailed);
+    return ReferenceCountingSegment.wrapSegment(baseSegment, segment.getShardSpec());
   }
 
   /**
@@ -219,16 +235,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        StorageLocation loc = findStorageLocationIfLoaded(segment);
-        String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-
-        if (loc == null) {
-          loc = loadSegmentWithRetry(segment, storageDir);
-        } else {
-          // If the segment is already downloaded on disk, we just update the current usage
-          loc.maybeReserve(storageDir, segment);
+        File segmentDir = findStoragePathIfLoaded(segment);
+        if (segmentDir != null) {
+          return segmentDir;
         }
-        return new File(loc.getPath(), storageDir);
+
+        return loadSegmentWithRetry(segment);
       }
       finally {
         unlock(segment, lock);
@@ -237,42 +249,81 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   /**
-   * location may fail because of IO failure, most likely in two cases:<p>
+   * If we have already reserved a location before, probably via {@link #reserve(DataSegment)}, then only that location
+   * should be tried. Otherwise, we would fetch locations using {@link StorageLocationSelectorStrategy} and try all
+   * of them one by one till there is success.
+   * Location may fail because of IO failure, most likely in two cases:<p>
    * 1. druid don't have the write access to this location, most likely the administrator doesn't config it correctly<p>
    * 2. disk failure, druid can't read/write to this disk anymore
-   *
+   * <p>
    * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
-  private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
+  private File loadSegmentWithRetry(DataSegment segment) throws SegmentLoadingException
   {
-    Iterator<StorageLocation> locationsIterator = strategy.getLocations();
+    String segmentDir = getSegmentDir(segment);
 
+    // Try the already reserved location. If location has been reserved outside, then we do not release the location
+    // here and simply delete any downloaded files. That is, we revert anything we do in this function and nothing else.
+    for (StorageLocation loc : locations) {
+      if (loc.isReserved(segmentDir)) {
+        File storageDir = loc.segmentDirectoryAsFile(segmentDir);
+        boolean success = loadInLocationWithStartMarkerQuietly(loc, segment, storageDir, false);
+        if (!success) {
+          throw new SegmentLoadingException("Failed to load segment %s in reserved location [%s]", segment.getId(), loc.getPath().getAbsolutePath());
+        }
+        return storageDir;
+      }
+    }
+
+    // No location was reserved so we try all the locations
+    Iterator<StorageLocation> locationsIterator = strategy.getLocations();
     while (locationsIterator.hasNext()) {
 
       StorageLocation loc = locationsIterator.next();
 
-      File storageDir = loc.reserve(storageDirStr, segment);
+      // storageDir is the file path corresponding to segment dir
+      File storageDir = loc.reserve(segmentDir, segment);
       if (storageDir != null) {
-        try {
-          loadInLocationWithStartMarker(segment, storageDir);
-          return loc;
-        }
-        catch (SegmentLoadingException e) {
-          try {
-            log.makeAlert(
-                e,
-                "Failed to load segment in current location [%s], try next location if any",
-                loc.getPath().getAbsolutePath()
-            ).addData("location", loc.getPath().getAbsolutePath()).emit();
-          }
-          finally {
-            loc.removeSegmentDir(storageDir, segment);
-            cleanupCacheFiles(loc.getPath(), storageDir);
-          }
+        boolean success = loadInLocationWithStartMarkerQuietly(loc, segment, storageDir, true);
+        if (success) {
+          return storageDir;
         }
       }
     }
     throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
+  }
+
+  /**
+   * A helper method over {@link #loadInLocationWithStartMarker(DataSegment, File)} that catches the {@link SegmentLoadingException}
+   * and emits alerts.
+   * @param loc - {@link StorageLocation} where segment is to be downloaded in.
+   * @param segment - {@link DataSegment} to download
+   * @param storageDir - {@link File} pointing to segment directory
+   * @param releaseLocation - Whether to release the location in case of failures
+   * @return - True if segment was downloaded successfully, false otherwise.
+   */
+  private boolean loadInLocationWithStartMarkerQuietly(StorageLocation loc, DataSegment segment, File storageDir, boolean releaseLocation)
+  {
+    try {
+      loadInLocationWithStartMarker(segment, storageDir);
+      return true;
+    }
+    catch (SegmentLoadingException e) {
+      try {
+        log.makeAlert(
+            e,
+            "Failed to load segment in current location [%s], try next location if any",
+            loc.getPath().getAbsolutePath()
+        ).addData("location", loc.getPath().getAbsolutePath()).emit();
+      }
+      finally {
+        if (releaseLocation) {
+          loc.removeSegmentDir(storageDir, segment);
+        }
+        cleanupCacheFiles(loc.getPath(), storageDir);
+      }
+    }
+    return false;
   }
 
   private void loadInLocationWithStartMarker(DataSegment segment, File storageDir) throws SegmentLoadingException
@@ -317,6 +368,73 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
+  public boolean reserve(final DataSegment segment)
+  {
+    final ReferenceCountingLock lock = createOrGetLock(segment);
+    synchronized (lock) {
+      try {
+        // May be the segment was already loaded [This check is required to account for restart scenarios]
+        if (null != findStoragePathIfLoaded(segment)) {
+          return true;
+        }
+
+        String storageDirStr = getSegmentDir(segment);
+
+        // check if we already reserved the segment
+        for (StorageLocation location : locations) {
+          if (location.isReserved(storageDirStr)) {
+            return true;
+          }
+        }
+
+        // Not found in any location, reserve now
+        for (Iterator<StorageLocation> it = strategy.getLocations(); it.hasNext(); ) {
+          StorageLocation location = it.next();
+          if (null != location.reserve(storageDirStr, segment)) {
+            return true;
+          }
+        }
+      }
+      finally {
+        unlock(segment, lock);
+      }
+    }
+
+    return false;
+  }
+
+  @Override
+  public boolean release(final DataSegment segment)
+  {
+    final ReferenceCountingLock lock = createOrGetLock(segment);
+    synchronized (lock) {
+      try {
+        String storageDir = getSegmentDir(segment);
+
+        // Release the first location encountered
+        for (StorageLocation location : locations) {
+          if (location.isReserved(storageDir)) {
+            File localStorageDir = location.segmentDirectoryAsFile(storageDir);
+            if (localStorageDir.exists()) {
+              throw new ISE(
+                  "Asking to release a location '%s' while the segment directory '%s' is present on disk. Any state on disk must be deleted before releasing",
+                  location.getPath().getAbsolutePath(),
+                  localStorageDir.getAbsolutePath()
+              );
+            }
+            return location.release(storageDir, segment.getSize());
+          }
+        }
+      }
+      finally {
+        unlock(segment, lock);
+      }
+    }
+
+    return false;
+  }
+
+  @Override
   public void cleanup(DataSegment segment)
   {
     if (!config.isDeleteOnRemove()) {
@@ -326,18 +444,17 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        StorageLocation loc = findStorageLocationIfLoaded(segment);
+        File loc = findStoragePathIfLoaded(segment);
 
         if (loc == null) {
           log.warn("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment.getId());
           return;
         }
-
         // If storageDir.mkdirs() success, but downloadStartMarker.createNewFile() failed,
         // in this case, findStorageLocationIfLoaded() will think segment is located in the failed storageDir which is actually not.
         // So we should always clean all possible locations here
         for (StorageLocation location : locations) {
-          File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+          File localStorageDir = new File(location.getPath(), getSegmentDir(segment));
           if (localStorageDir.exists()) {
             // Druid creates folders of the form dataSource/interval/version/partitionNum.
             // We need to clean up all these directories if they are all empty.

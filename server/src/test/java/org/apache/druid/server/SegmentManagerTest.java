@@ -70,16 +70,28 @@ public class SegmentManagerTest
     }
 
     @Override
-    public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+    public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
     {
-      return new SegmentForTesting(
+      return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
           MapUtils.getString(segment.getLoadSpec(), "version"),
           (Interval) segment.getLoadSpec().get("interval")
-      );
+      ), segment.getShardSpec());
     }
 
     @Override
     public File getSegmentFiles(DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean reserve(DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean release(DataSegment segment)
     {
       throw new UnsupportedOperationException();
     }
