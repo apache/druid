@@ -190,6 +190,24 @@ public class AvroStreamInputRowParserTest
   }
 
   @Test
+  public void testSerdeNonDefault() throws IOException
+  {
+    Repository repository = new Avro1124RESTRepositoryClientWrapper("http://github.io");
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        PARSE_SPEC,
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        true,
+        true
+    );
+    ByteBufferInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(parser),
+        ByteBufferInputRowParser.class
+    );
+
+    Assert.assertEquals(parser, parser2);
+  }
+
+  @Test
   public void testParse() throws SchemaValidationException, IOException
   {
     // serde test

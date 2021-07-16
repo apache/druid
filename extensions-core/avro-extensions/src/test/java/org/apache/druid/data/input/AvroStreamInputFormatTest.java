@@ -64,7 +64,6 @@ import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSome
 
 public class AvroStreamInputFormatTest
 {
-
   private static final String EVENT_TYPE = "eventType";
   private static final String ID = "id";
   private static final String SOME_OTHER_ID = "someOtherId";
@@ -120,6 +119,24 @@ public class AvroStreamInputFormatTest
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
         false,
         false
+    );
+    NestedInputFormat inputFormat2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(inputFormat),
+        NestedInputFormat.class
+    );
+
+    Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
+  public void testSerdeNonDefault() throws IOException
+  {
+    Repository repository = new Avro1124RESTRepositoryClientWrapper("http://github.io");
+    AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
+        flattenSpec,
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        true,
+        true
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(inputFormat),
