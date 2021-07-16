@@ -148,6 +148,10 @@ export function oneOf<T>(thing: T, ...options: T[]): boolean {
   return options.includes(thing);
 }
 
+export function typeIs<T extends { type: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => options.includes(x.type);
+}
+
 // ----------------------------
 
 export function countBy<T>(

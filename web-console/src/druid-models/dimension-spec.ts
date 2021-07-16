@@ -17,7 +17,7 @@
  */
 
 import { Field } from '../components';
-import { filterMap } from '../utils';
+import { filterMap, typeIs } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
 import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
@@ -47,8 +47,8 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'createBitmapIndex',
     type: 'boolean',
+    defined: typeIs('string'),
     defaultValue: true,
-    defined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
   },
 ];
 
