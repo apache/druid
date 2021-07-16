@@ -195,6 +195,19 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
+    name: 'useBatchedSegmentSampler',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of
+        size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed
+        up segment balancing process, especially if there are huge number of segments in the cluster
+        or if there are too many segments to move.
+      </>
+    ),
+  },
+  {
     name: 'percentOfSegmentsToConsiderPerMove',
     type: 'number',
     defaultValue: 100,
