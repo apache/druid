@@ -67,6 +67,17 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
   }
 
   /**
+   * <p>
+   *   This method will be called to check if {@link LookupExtractor} is ready.
+   * </p>
+   * @return Returns false if the {@link LookupExtractor} is not ready otherwise returns true
+   */
+  default boolean isReady()
+  {
+    return true;
+  }
+
+  /**
    * This method is deprecated and is not removed only to allow 0.10.0 to 0.10.1 transition. It is not used
    * on a cluster that is running 0.10.1. It will be removed in a later release.
    */

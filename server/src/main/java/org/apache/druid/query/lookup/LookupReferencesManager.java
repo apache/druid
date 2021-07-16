@@ -168,7 +168,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
                 while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
                   try {
                     handlePendingNotices();
-                    LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.MINUTES.toNanos(1));
+                    LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.SECONDS.toNanos(1));
                   }
                   catch (Throwable t) {
                     LOG.makeAlert(t, "Error occured while lookup notice handling.").emit();
@@ -269,6 +269,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     addNotice(new LoadNotice(lookupName, lookupExtractorFactoryContainer, lookupConfig.getLookupStartRetries()));
+    addNotice(new StatusNotice(this, lookupName, lookupExtractorFactoryContainer));
   }
 
   public void remove(String lookupName)
@@ -292,7 +293,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           return new LookupUpdateState(oldState.lookupMap, builder.build(), oldState.noticesBeingHandled);
         }
     );
-    LockSupport.unpark(mainThread);
+    if (!(notice instanceof StatusNotice)) {
+      LockSupport.unpark(mainThread);
+    }
   }
 
   @Override
@@ -335,6 +338,10 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         LoadNotice loadNotice = (LoadNotice) notice;
         lookupsToLoad.put(loadNotice.lookupName, loadNotice.lookupExtractorFactoryContainer);
         lookupsToDrop.remove(loadNotice.lookupName);
+      } else if (notice instanceof StatusNotice) {
+        StatusNotice statusNotice = (StatusNotice) notice;
+        lookupsToLoad.put(statusNotice.lookupName, statusNotice.lookupExtractorFactoryContainer);
+        lookupsToDrop.remove(statusNotice.lookupName);
       } else if (notice instanceof DropNotice) {
         DropNotice dropNotice = (DropNotice) notice;
         lookupsToDrop.add(dropNotice.lookupName);
@@ -587,6 +594,43 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     void handle(Map<String, LookupExtractorFactoryContainer> lookupMap) throws Exception;
   }
 
+  private static class StatusNotice implements Notice
+  {
+    private final LookupReferencesManager manager;
+    private final String lookupName;
+    private final LookupExtractorFactoryContainer lookupExtractorFactoryContainer;
+
+    public StatusNotice(
+        LookupReferencesManager manager,
+        String lookupName,
+        LookupExtractorFactoryContainer lookupExtractorFactoryContainer
+    )
+    {
+      this.manager = manager;
+      this.lookupName = lookupName;
+      this.lookupExtractorFactoryContainer = lookupExtractorFactoryContainer;
+    }
+
+    @Override
+    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap)
+    {
+      if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isReady()) {
+        LookupExtractorFactoryContainer old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
+
+        LOG.info("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
+
+        if (old != null) {
+          if (!old.getLookupExtractorFactory().destroy()) {
+            throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
+          }
+        }
+      } else {
+        LOG.info("Loading lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
+        manager.addNotice(new StatusNotice(manager, lookupName, lookupExtractorFactoryContainer));
+      }
+    }
+  }
+
   private static class LoadNotice implements Notice
   {
     private final String lookupName;
@@ -627,16 +671,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           e -> true,
           startRetries
       );
-
-      old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
-
-      LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
-
-      if (old != null) {
-        if (!old.getLookupExtractorFactory().destroy()) {
-          throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
-        }
-      }
     }
 
     @Override
