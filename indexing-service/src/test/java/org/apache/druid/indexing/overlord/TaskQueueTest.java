@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.EntryExistsException;
@@ -146,8 +148,14 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(task.interval, locksForTask.get(0).getInterval());
 
     // Verify that locks are removed on calling shutdown
-    taskQueue.shutdown(task.getId(), "Shutdown Task");
+    taskQueue.shutdown(task.getId(), "Shutdown Task test");
     Assert.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
+
+    Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
+    Assert.assertTrue(statusOptional.isPresent());
+    Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
+    Assert.assertNotNull(statusOptional.get().getErrorMsg());
+    Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
   }
 
   @Test
@@ -303,6 +311,42 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
     Assert.assertFalse(queuedTask.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+  }
+
+  @Test
+  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        new SimpleTaskRunner(actionClientFactory),
+        actionClientFactory,
+        getLockbox(),
+        new NoopServiceEmitter()
+    );
+    taskQueue.setActive(true);
+    final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"))
+    {
+      @Override
+      public boolean isReady(TaskActionClient taskActionClient)
+      {
+        throw new RuntimeException("isReady failure test");
+      }
+    };
+    taskQueue.add(task);
+    taskQueue.manageInternal();
+
+    Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
+    Assert.assertTrue(statusOptional.isPresent());
+    Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
+    Assert.assertNotNull(statusOptional.get().getErrorMsg());
+    Assert.assertTrue(
+        StringUtils.format("Actual message is: %s", statusOptional.get().getErrorMsg()),
+        statusOptional.get().getErrorMsg().startsWith("Failed while waiting for the task to be ready to run")
+    );
   }
 
   private static class TestTask extends AbstractBatchIndexTask

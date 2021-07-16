@@ -29,21 +29,25 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver.SegmentsForSequence;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
-import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -73,7 +77,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   );
 
   private SegmentAllocator allocator;
-  private AppenderatorTester appenderatorTester;
+  private BatchAppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
 
@@ -84,13 +88,13 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Before
   public void setup()
   {
-    appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
+    appenderatorTester = new BatchAppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
     driver = new BatchAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestUsedSegmentChecker(appenderatorTester),
+        new TestUsedSegmentChecker(appenderatorTester.getPushedSegments()),
         dataSegmentKiller
     );
 
@@ -199,4 +203,38 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   {
     return (segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
   }
+
+  static class TestSegmentAllocator implements SegmentAllocator
+  {
+    private final String dataSource;
+    private final Granularity granularity;
+    private final Map<Long, AtomicInteger> counters = new HashMap<>();
+
+    public TestSegmentAllocator(String dataSource, Granularity granularity)
+    {
+      this.dataSource = dataSource;
+      this.granularity = granularity;
+    }
+
+    @Override
+    public SegmentIdWithShardSpec allocate(
+        final InputRow row,
+        final String sequenceName,
+        final String previousSegmentId,
+        final boolean skipSegmentLineageCheck
+    )
+    {
+      DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());
+      final long timestampTruncated = dateTimeTruncated.getMillis();
+      counters.putIfAbsent(timestampTruncated, new AtomicInteger());
+      final int partitionNum = counters.get(timestampTruncated).getAndIncrement();
+      return new SegmentIdWithShardSpec(
+          dataSource,
+          granularity.bucket(dateTimeTruncated),
+          VERSION,
+          new NumberedShardSpec(partitionNum, 0)
+      );
+    }
+  }
+
 }

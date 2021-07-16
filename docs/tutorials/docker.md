@@ -84,4 +84,4 @@ It takes a few seconds for all the Druid processes to fully start up. If you ope
 From here you can follow along with the [Quickstart](./index.md#step-4-load-data), or elaborate on your `docker-compose.yml` to add any additional external service dependencies as necessary.
 
 ## Docker Memory Requirements
-If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker. 6 GB may be a good place to start. 
+If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker. 6 GiB may be a good place to start. 

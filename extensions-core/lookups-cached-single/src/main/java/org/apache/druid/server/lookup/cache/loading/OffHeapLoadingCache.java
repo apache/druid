@@ -47,7 +47,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
 
   /**
    * Sets store size limit. Disk or memory space consumed be storage should not grow over this space.
-   * maximal size of store in GB, if store is larger entries will start expiring
+   * maximal size of store in GiB, if store is larger entries will start expiring
    */
   @JsonProperty
   private final double maxStoreSize;

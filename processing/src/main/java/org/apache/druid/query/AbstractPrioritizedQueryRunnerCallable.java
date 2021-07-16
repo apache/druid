@@ -17,20 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
-
-import com.google.inject.BindingAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package org.apache.druid.query;
 
 /**
+ * A helper class to avoid boilerplate for creating {@link PrioritizedQueryRunnerCallable} objects.
+ * @param <T>
+ * @param <V>
  */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Processing
+public abstract class AbstractPrioritizedQueryRunnerCallable<T, V> implements PrioritizedQueryRunnerCallable<T, V>
 {
+  private final QueryRunner<V> runner;
+  private final int priority;
+
+  public AbstractPrioritizedQueryRunnerCallable(int priority, QueryRunner<V> runner)
+  {
+    this.priority = priority;
+    this.runner = runner;
+  }
+
+  @Override
+  public QueryRunner<V> getRunner()
+  {
+    return runner;
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return priority;
+  }
 }

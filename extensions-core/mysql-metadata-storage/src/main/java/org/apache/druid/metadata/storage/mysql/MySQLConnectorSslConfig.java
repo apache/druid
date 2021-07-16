@@ -24,7 +24,7 @@ import org.apache.druid.metadata.PasswordProvider;
 
 import java.util.List;
 
-public class MySQLConnectorConfig
+public class MySQLConnectorSslConfig
 {
   @JsonProperty
   private boolean useSSL = false;
@@ -109,7 +109,7 @@ public class MySQLConnectorConfig
   @Override
   public String toString()
   {
-    return "MySQLConnectorConfig{" +
+    return "MySQLConnectorSslConfig{" +
            "useSSL='" + useSSL + '\'' +
            ", clientCertificateKeyStoreUrl='" + clientCertificateKeyStoreUrl + '\'' +
            ", clientCertificateKeyStoreType='" + clientCertificateKeyStoreType + '\'' +

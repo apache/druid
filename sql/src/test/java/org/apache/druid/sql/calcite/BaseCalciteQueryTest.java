@@ -30,6 +30,7 @@ import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,6 +54,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -224,12 +226,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
-  public static Map<String, Object> getTimeseriesContextWithFloorTime(Map<String, Object> context,
-                                                                      String timestampResultField)
+  public static Map<String, Object> getTimeseriesContextWithFloorTime(
+      Map<String, Object> context,
+      String timestampResultField
+  )
   {
-    return ImmutableMap.<String, Object>builder().putAll(context)
-                                                .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
-                                                .build();
+    return ImmutableMap.<String, Object>builder()
+                       .putAll(context)
+                       .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                       .build();
   }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
@@ -969,5 +974,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         QueryStackTests.getProcessingConfig(true, numMergeBuffers)
     );
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+  }
+
+  protected Map<String, Object> withTimestampResultContext(
+      Map<String, Object> input,
+      String timestampResultField,
+      int timestampResultFieldIndex,
+      Granularity granularity
+  )
+  {
+    Map<String, Object> output = new HashMap<>(input);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
+    return output;
   }
 }
