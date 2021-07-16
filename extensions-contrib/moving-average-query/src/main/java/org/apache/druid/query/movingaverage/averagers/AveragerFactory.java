@@ -21,9 +21,11 @@ package org.apache.druid.query.movingaverage.averagers;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interface representing Averager in the movingAverage query.
@@ -33,6 +35,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DefaultAggregateAveragerFactory.class),
     @JsonSubTypes.Type(name = "constant", value = ConstantAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMean", value = DoubleMeanAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMeanNoNulls", value = DoubleMeanNoNullAveragerFactory.class),
@@ -77,6 +80,18 @@ public interface AveragerFactory<R, F>
    * @return The {@link Averager}
    */
   Averager<R> createAverager();
+
+  /**
+   * Create an Averager for a specific dimension combination.
+   *
+   * @param aggMap The Map of AggregatorFactory used to create averager.
+   *
+   * @return The {@link Averager}
+   */
+  default Averager<R> createAverager(Map<String, AggregatorFactory> aggMap)
+  {
+    return createAverager();
+  }
 
   /**
    * Gets the list of dependent fields that will be used by this Averager. Most

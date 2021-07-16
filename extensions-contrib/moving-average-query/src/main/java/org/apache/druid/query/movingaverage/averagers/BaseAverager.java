@@ -77,7 +77,7 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
   {
     Object metric = e.get(fieldName);
     I finalMetric;
-    if (a.containsKey(fieldName)) {
+    if (a.containsKey(fieldName) && finalizeMetric()) {
       AggregatorFactory af = a.get(fieldName);
       finalMetric = metric != null ? (I) af.finalizeComputation(metric) : null;
     } else {
@@ -85,6 +85,11 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
     }
     buckets[index++] = finalMetric;
     index %= numBuckets;
+  }
+
+  public boolean finalizeMetric()
+  {
+    return true;
   }
 
   /* (non-Javadoc)

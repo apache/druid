@@ -286,7 +286,7 @@ public class MovingAverageIterable implements Iterable<Row>
 
       // Initialize key's averagers.
       if (avg == null) {
-        avg = averagerFactories.stream().map(af -> af.createAverager()).collect(Collectors.toList());
+        avg = averagerFactories.stream().map(af -> af.createAverager(aggMap)).collect(Collectors.toList());
         averagers.put(key, avg);
       }
 
