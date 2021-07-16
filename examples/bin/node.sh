@@ -64,7 +64,7 @@ case $command in
     fi
     JAVA="$JAVA_BIN_DIR/java"
 
-    nohup $JAVA `cat $CONF_DIR/$nodeType/jvm.config | xargs` -cp $CONF_DIR/_common:$CONF_DIR/$nodeType:$LIB_DIR/*:$HADOOP_CONF_DIR org.apache.druid.cli.Main server $nodeType >> $LOG_DIR/$nodeType.log 2>&1 &
+    nohup $JAVA -Ddruid.node.type=$nodeType -Druid.log.path=$LOG_DIR `cat $CONF_DIR/$nodeType/jvm.config | xargs` -cp $CONF_DIR/_common:$CONF_DIR/$nodeType:$LIB_DIR/*:$HADOOP_CONF_DIR org.apache.druid.cli.Main server $nodeType >> /dev/null 2>&1 &
     nodeType_PID=$!
     echo $nodeType_PID > $pid
     echo "Started $nodeType node ($nodeType_PID)"
