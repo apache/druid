@@ -433,10 +433,10 @@ public class DruidSchema extends AbstractSchema
                       segmentMetadata = AvailableSegmentMetadata
                           .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS)
                           .build();
-                      segmentsNeedingRefresh.add(segment.getId());
+                      markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
                         log.debug("Added new mutable segment[%s].", segment.getId());
-                        mutableSegments.add(segment.getId());
+                        markSegmentAsMutable(segment.getId());
                       } else {
                         log.debug("Added new immutable segment[%s].", segment.getId());
                       }
@@ -455,7 +455,7 @@ public class DruidSchema extends AbstractSchema
                       if (server.isSegmentReplicationTarget()) {
                         // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
                         // even if it's also available on non-replicatable (realtime) servers.
-                        mutableSegments.remove(segment.getId());
+                        unmarkSegmentAsMutable(segment.getId());
                         log.debug("Segment[%s] has become immutable.", segment.getId());
                       }
                     }
@@ -484,7 +484,7 @@ public class DruidSchema extends AbstractSchema
       log.debug("Segment[%s] is gone.", segment.getId());
 
       segmentsNeedingRefresh.remove(segment.getId());
-      mutableSegments.remove(segment.getId());
+      unmarkSegmentAsMutable(segment.getId());
 
       segmentMetadataInfo.compute(
           segment.getDataSource(),
@@ -573,6 +573,27 @@ public class DruidSchema extends AbstractSchema
       );
 
       lock.notifyAll();
+    }
+  }
+
+  private void markSegmentAsNeedRefresh(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      segmentsNeedingRefresh.add(segmentId);
+    }
+  }
+
+  private void markSegmentAsMutable(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      mutableSegments.add(segmentId);
+    }
+  }
+
+  private void unmarkSegmentAsMutable(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      mutableSegments.remove(segmentId);
     }
   }
 
