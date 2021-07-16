@@ -430,6 +430,8 @@
                                         <argument>org.apache.druid.extensions.contrib:gce-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:aliyun-oss-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-pulsar-indexing-service</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
