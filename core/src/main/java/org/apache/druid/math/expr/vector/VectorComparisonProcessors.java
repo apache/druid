@@ -35,10 +35,10 @@ public class VectorComparisonProcessors
       Expr left,
       Expr right,
       Supplier<LongOutStringsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
-      Supplier<LongOutLongsInFunctionVectorProcessor> longOutLongsInProcessor,
-      Supplier<DoubleOutLongDoubleInFunctionVectorProcessor> doubleOutLongDoubleInProcessor,
-      Supplier<DoubleOutDoubleLongInFunctionVectorProcessor> doubleOutDoubleLongInProcessor,
-      Supplier<DoubleOutDoublesInFunctionVectorProcessor> doubleOutDoublesInProcessor
+      Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
+      Supplier<DoubleOutLongDoubleInFunctionVectorValueProcessor> doubleOutLongDoubleInProcessor,
+      Supplier<DoubleOutDoubleLongInFunctionVectorValueProcessor> doubleOutDoubleLongInProcessor,
+      Supplier<DoubleOutDoublesInFunctionVectorValueProcessor> doubleOutDoublesInProcessor
   )
   {
     final ExprType leftType = left.getOutputType(inspector);
@@ -95,7 +95,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(Objects.equals(leftVal, rightVal));
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -107,7 +107,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left == right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -119,7 +119,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(left == right);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -131,7 +131,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(left == right);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -169,7 +169,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(!Objects.equals(leftVal, rightVal));
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -181,7 +181,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left != right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -193,7 +193,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(left != right);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -205,7 +205,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(left != right);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -243,7 +243,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) >= 0);
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -255,7 +255,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left >= right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -267,7 +267,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) >= 0);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -279,7 +279,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) >= 0);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -317,7 +317,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) > 0);
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -329,7 +329,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left > right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -341,7 +341,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) > 0);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -353,7 +353,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) > 0);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -391,7 +391,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) <= 0);
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -403,7 +403,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left <= right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -415,7 +415,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) <= 0);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -427,7 +427,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) <= 0);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -465,7 +465,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) < 0);
           }
         },
-        () -> new LongOutLongsInFunctionVectorProcessor(
+        () -> new LongOutLongsInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -477,7 +477,7 @@ public class VectorComparisonProcessors
             return Evals.asLong(left < right);
           }
         },
-        () -> new DoubleOutLongDoubleInFunctionVectorProcessor(
+        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -489,7 +489,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) < 0);
           }
         },
-        () -> new DoubleOutDoubleLongInFunctionVectorProcessor(
+        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()
@@ -501,7 +501,7 @@ public class VectorComparisonProcessors
             return Evals.asDouble(Double.compare(left, right) < 0);
           }
         },
-        () -> new DoubleOutDoublesInFunctionVectorProcessor(
+        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
             inspector.getMaxVectorSize()

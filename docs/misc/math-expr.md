@@ -63,8 +63,10 @@ The following built-in functions are available.
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
-|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
+|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
+|isnull|isnull(expr) returns 1 if the value is null, else 0|
+|notnull|notnull(expr) returns 1 if the value is not null, else 0|
 |bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## String functions
@@ -254,7 +256,34 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* boolean functions: `isnull`, `notnull` are supported for string and numeric types
+* conditional functions: `nvl` is supported for string and numeric types
+* string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
+
+## Legacy logical operator mode
+In earlier releases of Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, but this behavior has been changed so that these operations output 'homogeneous' boolean values.
+
+Old behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+
+Current behavior:
+* `100 && 11` -> `1`
+* `0.7 || 0.3` -> `1.0`
+
+Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
+
+For the "or" operator:
+* `true || null`, `null || true`, -> `true`
+* `false || null`, `null || false`, `null || null`-> `null`
+
+For the "and" operator:
+* `true && null`, `null && true`, `null && null` -> `null`
+* `false && null`, `null && false` -> `false`
+
+To revert to the behavior of previous Druid versions, `druid.generic.useLegacyLogicalOperators` can be set to `true` in your Druid configuration.
