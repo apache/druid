@@ -120,13 +120,13 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
     segmentPredicates.remove(callback);
   }
 
-  static class FilteringSegmentCallback implements SegmentCallback
+  public static class FilteringSegmentCallback implements SegmentCallback
   {
 
     private final SegmentCallback callback;
     private final Predicate<Pair<DruidServerMetadata, DataSegment>> filter;
 
-    FilteringSegmentCallback(SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter)
+    public FilteringSegmentCallback(SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter)
     {
       this.callback = callback;
       this.filter = filter;
