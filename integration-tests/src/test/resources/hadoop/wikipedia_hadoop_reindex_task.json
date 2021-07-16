@@ -66,6 +66,7 @@
         "yarn.resourcemanager.hostname" : "druid-it-hadoop",
         "yarn.nodemanager.vmem-check-enabled" : "false",
         "mapreduce.map.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.job.classloader": "true",
         "mapreduce.job.user.classpath.first" : "true",
         "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
         "mapreduce.map.memory.mb" : 1024,

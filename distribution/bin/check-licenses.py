@@ -247,6 +247,7 @@ def build_compatible_license_names():
     compatible_licenses['New BSD License'] = 'BSD-3-Clause License'
     compatible_licenses['3-Clause BSD License'] = 'BSD-3-Clause License'
     compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
+    compatible_licenses['BSD 2-Clause license'] = 'BSD 2-Clause license'
 
     compatible_licenses['ICU License'] = 'ICU License'
 
@@ -289,6 +290,8 @@ def build_compatible_license_names():
     compatible_licenses['MIT License'] = 'MIT License'
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
+
+    compatible_licenses['The Go license'] = 'The Go license'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses

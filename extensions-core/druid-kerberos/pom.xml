@@ -286,6 +286,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
+      <version>${hadoop.compile.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.nimbusds</groupId>

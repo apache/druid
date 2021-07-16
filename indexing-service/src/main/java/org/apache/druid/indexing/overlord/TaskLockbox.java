@@ -1187,9 +1187,9 @@ public class TaskLockbox
     public String toString()
     {
       return Objects.toStringHelper(this)
-                    .add("taskLock", taskLock)
-                    .add("taskIds", taskIds)
-                    .toString();
+                        .add("taskLock", taskLock)
+                        .add("taskIds", taskIds)
+                        .toString();
     }
   }
 }
