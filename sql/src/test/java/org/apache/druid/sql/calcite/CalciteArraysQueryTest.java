@@ -1161,7 +1161,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_concat(\"__acc\", \"a0\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1175,7 +1175,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new FilteredAggregatorFactory(
@@ -1190,7 +1190,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   "array_set_add_all(\"__acc\", \"a2\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               selector("dim1", "shazbot", null)
@@ -1236,7 +1236,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_concat(\"__acc\", \"a0\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1250,7 +1250,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           )
                       )
@@ -1290,7 +1290,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_concat(\"__acc\", \"a0\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1304,7 +1304,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1318,7 +1318,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_concat(\"__acc\", \"a2\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1332,7 +1332,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a3\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1346,7 +1346,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_concat(\"__acc\", \"a4\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new ExpressionLambdaAggregatorFactory(
@@ -1360,7 +1360,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a5\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           )
                       )
@@ -1415,7 +1415,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           )
                       )
@@ -1457,7 +1457,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           )
                       )
@@ -1577,7 +1577,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
                                                       null,
-                                                      new HumanReadableBytes(1024),
+                                                      ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                                       TestExprMacroTable.INSTANCE
                                                   )
                                               )
@@ -1669,7 +1669,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                 "array_set_add_all(\"__acc\", \"a0\")",
                                                 null,
                                                 null,
-                                                new HumanReadableBytes(1024),
+                                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                                 TestExprMacroTable.INSTANCE
                                             )
                                         )
@@ -1746,7 +1746,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
                                                       null,
-                                                      new HumanReadableBytes(1024),
+                                                      ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                                       TestExprMacroTable.INSTANCE
                                                   )
                                               )

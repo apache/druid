@@ -22,25 +22,24 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -57,10 +56,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ArraySqlAggregator implements SqlAggregator
+public class StringSqlAggregator implements SqlAggregator
 {
-  private static final String NAME = "ARRAY_AGG";
-  private static final SqlAggFunction FUNCTION = new ArrayAggFunction();
+  private static final String NAME = "STRING_AGG";
+  private static final SqlAggFunction FUNCTION = new StringAggFunction();
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -82,7 +81,6 @@ public class ArraySqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
@@ -94,12 +92,28 @@ public class ArraySqlAggregator implements SqlAggregator
       return null;
     }
 
+    RexNode separatorNode = Expressions.fromFieldAccess(
+        rowSignature,
+        project,
+        aggregateCall.getArgList().get(1)
+    );
+    if (!separatorNode.isA(SqlKind.LITERAL)) {
+      // separator must be a literal
+      return null;
+    }
+    String separator = RexLiteral.stringValue(separatorNode);
+
+    if (separator == null) {
+      // separator must not be null
+      return null;
+    }
+
     Integer maxSizeBytes = null;
-    if (arguments.size() > 1) {
+    if (arguments.size() > 2) {
       RexNode maxBytes = Expressions.fromFieldAccess(
           rowSignature,
           project,
-          aggregateCall.getArgList().get(1)
+          aggregateCall.getArgList().get(2)
       );
       if (!maxBytes.isA(SqlKind.LITERAL)) {
         // maxBytes must be a literal
@@ -110,29 +124,9 @@ public class ArraySqlAggregator implements SqlAggregator
     final DruidExpression arg = arguments.get(0);
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
+    final String initialvalue = "[]";
+    final ValueType elementType = ValueType.STRING;
     final String fieldName;
-    final String initialvalue;
-    final ValueType elementType;
-    final ValueType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
-    if (druidType == null) {
-      initialvalue = "[]";
-      elementType = ValueType.STRING;
-    } else {
-      switch (druidType) {
-        case LONG_ARRAY:
-          initialvalue = "<LONG>[]";
-          elementType = ValueType.LONG;
-          break;
-        case DOUBLE_ARRAY:
-          initialvalue = "<DOUBLE>[]";
-          elementType = ValueType.DOUBLE;
-          break;
-        default:
-          initialvalue = "[]";
-          elementType = ValueType.STRING;
-          break;
-      }
-    }
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
@@ -140,80 +134,84 @@ public class ArraySqlAggregator implements SqlAggregator
       fieldName = vc.getOutputName();
     }
 
+    final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
+    final NotDimFilter dimFilter = new NotDimFilter(new SelectorDimFilter(fieldName, null, null));
     if (aggregateCall.isDistinct()) {
       return Aggregation.create(
-          new ExpressionLambdaAggregatorFactory(
-              name,
-              ImmutableSet.of(fieldName),
-              null,
-              initialvalue,
-              null,
-              true,
-              StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
-              StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
-              null,
-              null,
-              maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
-              macroTable
+          // string_agg ignores nulls
+          new FilteredAggregatorFactory(
+              new ExpressionLambdaAggregatorFactory(
+                  name,
+                  ImmutableSet.of(fieldName),
+                  null,
+                  initialvalue,
+                  null,
+                  true,
+                  StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
+                  StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
+                  null,
+                  finalizer,
+                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  macroTable
+              ),
+              dimFilter
           )
       );
     } else {
       return Aggregation.create(
-          new ExpressionLambdaAggregatorFactory(
-              name,
-              ImmutableSet.of(fieldName),
-              null,
-              initialvalue,
-              null,
-              true,
-              StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
-              StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
-              null,
-              null,
-              maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
-              macroTable
+          // string_agg ignores nulls
+          new FilteredAggregatorFactory(
+              new ExpressionLambdaAggregatorFactory(
+                  name,
+                  ImmutableSet.of(fieldName),
+                  null,
+                  initialvalue,
+                  null,
+                  true,
+                  StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
+                  StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
+                  null,
+                  finalizer,
+                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  macroTable
+              ),
+              dimFilter
           )
       );
     }
   }
 
-  static class ArrayAggReturnTypeInference implements SqlReturnTypeInference
+  private static class StringAggFunction extends SqlAggFunction
   {
-    @Override
-    public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
-    {
-      RelDataType type = sqlOperatorBinding.getOperandType(0);
-      if (SqlTypeUtil.isArray(type)) {
-        throw new ISE("Cannot use ARRAY_AGG on array inputs %s", type);
-      }
-      return Calcites.createSqlArrayTypeWithNullability(
-          sqlOperatorBinding.getTypeFactory(),
-          type.getSqlTypeName(),
-          true
-      );
-    }
-  }
-
-  private static class ArrayAggFunction extends SqlAggFunction
-  {
-    private static final ArrayAggReturnTypeInference RETURN_TYPE_INFERENCE = new ArrayAggReturnTypeInference();
-
-    ArrayAggFunction()
+    StringAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          RETURN_TYPE_INFERENCE,
+          opBinding ->
+              Calcites.createSqlTypeWithNullability(opBinding.getTypeFactory(), SqlTypeName.VARCHAR, true),
           InferTypes.ANY_NULLABLE,
           OperandTypes.or(
-            OperandTypes.ANY,
-            OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("'%s'(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
-                OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-            )
+              OperandTypes.and(
+                  OperandTypes.sequence(
+                      StringUtils.format("'%s'(expr, separator)", NAME),
+                      OperandTypes.ANY,
+                      OperandTypes.STRING
+                  ),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
+              ),
+              OperandTypes.and(
+                  OperandTypes.sequence(
+                      StringUtils.format("'%s'(expr, separator, maxSizeBytes)", NAME),
+                      OperandTypes.ANY,
+                      OperandTypes.STRING,
+                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                  ),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC)
+              )
           ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          SqlFunctionCategory.STRING,
           false,
           false,
           Optionality.IGNORED
