@@ -122,6 +122,14 @@ spec:
         - name: google-cloud-key
           mountPath: /var/secrets/google
   {{- end }}
+  {{- if .Values.hdfs.enabled }}
+        - name: core-site
+          mountPath: /opt/druid/conf/druid/cluster/_common/core-site.xml
+          subPath: core-site.xml
+        - name: hdfs-site
+          mountPath: /opt/druid/conf/druid/cluster/_common/hdfs-site.xml
+          subPath: hdfs-site.xml
+  {{- end }}
       volumes:
   {{- if not .Values.historical.persistence.enabled }} 
       - name: data
@@ -131,6 +139,20 @@ spec:
       - name: google-cloud-key
         secret:
           secretName: {{ .Values.gCloudStorage.secretName }}
+  {{- end }}
+  {{- if .Values.hdfs.enabled }}
+      - name: core-site
+        configMap:
+          name: {{ .Values.hdfs.configMapName }}
+          items:
+            - key: core-site.xml
+              path: core-site.xml
+      - name: hdfs-site
+        configMap:
+          name: {{ .Values.hdfs.configMapName }}
+          items:
+            - key: hdfs-site.xml
+              path: hdfs-site.xml
   {{- end }}
   updateStrategy:
     type: {{ .Values.historical.updateStrategy.type }}
