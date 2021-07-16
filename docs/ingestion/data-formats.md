@@ -380,8 +380,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry | no |
-| headers | Json | To send headers to the Schema Registry | no |
+| config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
+| headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -408,12 +408,20 @@ Multiple Instances:
         "schema.registry.ssl.truststore.password": "<password>",
         "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
         "schema.registry.ssl.keystore.password": "<password>",
-        "schema.registry.ssl.key.password": "<password>"
+        "schema.registry.ssl.key.password": "<password>",
+        "schema.registry.ssl.key.password",
        ... 
    },
    "headers": {
        "traceID" : "b29c5de2-0db4-490b-b421",
        "timeStamp" : "1577191871865",
+       "druid.dynamic.config.provider":{
+            "type":"mapString", 
+            "config":{
+                 "registry.header.prop.1":"value.1", 
+                 "registry.header.prop.2":"value.2"
+                 }
+            }
        ...
     }
 }
@@ -1223,8 +1231,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry | no |
-| headers | Json | To send headers to the Schema Registry | no |
+| config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md).  | no |
+| headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -1259,6 +1267,13 @@ Multiple Instances:
   "headers": {
       "traceID" : "b29c5de2-0db4-490b-b421",
       "timeStamp" : "1577191871865",
+      "druid.dynamic.config.provider":{
+           "type":"mapString", 
+           "config":{
+                "registry.header.prop.1":"value.1", 
+                "registry.header.prop.2":"value.2"
+                }
+           }
       ...
   }
 }

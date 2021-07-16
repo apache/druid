@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
@@ -30,8 +32,10 @@ import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +45,7 @@ import org.mockito.Mockito;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 public class SchemaRegistryBasedAvroBytesDecoderTest
 {
@@ -56,7 +61,10 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testMultipleUrls() throws Exception
   {
     String json = "{\"urls\":[\"http://localhost\"],\"type\": \"schema_registry\"}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedAvroBytesDecoder decoder;
     decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
         .readerFor(AvroBytesDecoder.class)
@@ -70,7 +78,10 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testUrl() throws Exception
   {
     String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\"}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedAvroBytesDecoder decoder;
     decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
         .readerFor(AvroBytesDecoder.class)
@@ -84,7 +95,10 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testConfig() throws Exception
   {
     String json = "{\"url\":\"http://localhost\",\"type\": \"schema_registry\", \"config\":{}}";
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
     SchemaRegistryBasedAvroBytesDecoder decoder;
     decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
         .readerFor(AvroBytesDecoder.class)
@@ -162,5 +176,49 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
     return out.toByteArray();
+  }
+
+  @Test
+  public void testParseHeader() throws JsonProcessingException
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{},\"headers\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.header.prop.2\":\"value.2\", \"registry.header.prop.3\":\"value.3\"}},\"registry.header.prop.1\":\"value.1\",\"registry.header.prop.2\":\"value.4\"}}";
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
+    SchemaRegistryBasedAvroBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
+        .readerFor(AvroBytesDecoder.class)
+        .readValue(json);
+
+    Map<String, String> header = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
+
+    // Then
+    Assert.assertEquals(3, header.size());
+    Assert.assertEquals("value.1", header.get("registry.header.prop.1"));
+    Assert.assertEquals("value.2", header.get("registry.header.prop.2"));
+    Assert.assertEquals("value.3", header.get("registry.header.prop.3"));
+  }
+
+  @Test
+  public void testParseConfig() throws JsonProcessingException
+  {
+    String json = "{\"url\":\"http://localhost\",\"type\":\"schema_registry\",\"config\":{\"druid.dynamic.config.provider\":{\"type\":\"mapString\", \"config\":{\"registry.config.prop.2\":\"value.2\", \"registry.config.prop.3\":\"value.3\"}},\"registry.config.prop.1\":\"value.1\",\"registry.config.prop.2\":\"value.4\"},\"headers\":{}}";
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
+    SchemaRegistryBasedAvroBytesDecoder decoder;
+    decoder = (SchemaRegistryBasedAvroBytesDecoder) mapper
+        .readerFor(AvroBytesDecoder.class)
+        .readValue(json);
+
+    Map<String, ?> config = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getConfig(), SchemaRegistryBasedAvroBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
+
+    // Then
+    Assert.assertEquals(3, config.size());
+    Assert.assertEquals("value.1", config.get("registry.config.prop.1"));
+    Assert.assertEquals("value.2", config.get("registry.config.prop.2"));
+    Assert.assertEquals("value.3", config.get("registry.config.prop.3"));
   }
 }
