@@ -1904,7 +1904,7 @@ DataFrameWriter
 DataSourceReader
 DataSourceWriter
 DynamicConfigProvider
-DynamicConfigRegistry
+DynamicConfigProviderRegistry
 serializable
 deserializable
 Gradle
@@ -1918,3 +1918,4 @@ keyId
 base-64
 DataSourceV2
 _or_
+ADCs

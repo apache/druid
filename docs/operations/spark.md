@@ -239,7 +239,7 @@ The DataSourceReader uses Druid load specs to determine segment locations and re
 storage. This means that no additional configuration is required for the reader but does mean that
 the Spark executors need to be authorized to read from deep storage (e.g. via GCS ADCs, AWS IAM roles, etc.).
 There is code to handle reading segments from Azure, but it has not been tested. If you use the reader for
-data in Azure Storage successfully, please update this documentation :).
+data in Azure Storage successfully, please update this documentation.
 
 #### Vectorized Reads
 **Experimental!** The DataSourceReader can optionally attempt to read data from segments in batches.
@@ -353,6 +353,9 @@ These configs shadow the [Google Cloud Storage Extension](../development/extensi
 
 #### Azure Deep Storage Config
 `deepStorageType` = `azure`
+
+Writing data to Azure deep storage is currently experimental. It should work but is untested. If you use this connector
+to write segments to Azure, please update this documentation.
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
