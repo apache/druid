@@ -207,11 +207,11 @@ object SegmentWriterRegistry extends Logging {
           }
         )
       ),
-      DruidConfigurationKeys.azureDeepStorageKey -> (
+      DruidConfigurationKeys.azureDeepStorageTypeKey -> (
         () => register(
-          DruidConfigurationKeys.azureDeepStorageKey,
+          DruidConfigurationKeys.azureDeepStorageTypeKey,
           (conf: Configuration) => {
-            val azureConf = conf.dive(DruidConfigurationKeys.azureDeepStorageKey)
+            val azureConf = conf.dive(DruidConfigurationKeys.azureDeepStorageTypeKey)
 
             new AzureDataSegmentPusher(
               DeepStorageConstructorHelpers.createAzureStorage(azureConf),
@@ -220,14 +220,15 @@ object SegmentWriterRegistry extends Logging {
             )
           },
           (conf: Configuration) => {
-            val azureConf = conf.dive(DruidConfigurationKeys.azureDeepStorageKey)
+            val azureConf = conf.dive(DruidConfigurationKeys.azureDeepStorageTypeKey)
 
             new AzureDataSegmentKiller(
               DeepStorageConstructorHelpers.createAzureDataSegmentConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureInputDataConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureAccountConfig(azureConf),
               DeepStorageConstructorHelpers.createAzureStorage(azureConf),
-              DeepStorageConstructorHelpers.createAzureCloudBlobIterableFactory(azureConf)
+              /* AzureCloudBlobIterableFactory is only used for AzureDataSegmentKiller.killAll(), which we don't call */
+              null // scalastyle:ignore null
             )
           }
         )

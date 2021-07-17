@@ -63,6 +63,15 @@ class DeepStorageConstructorHelpersSuite extends AnyFunSuite with Matchers {
     "google.maxListingLength" -> "1023"
   ))
 
+  private val sampleAzureConfig: Configuration = Configuration(Map[String, String](
+    "deepStorageType" -> "azure",
+    "azure.account" -> "testAccount",
+    "azure.key" -> "12345ABCDEF",
+    "azure.container" -> "testContainer",
+    "azure.prefix" -> "prefix/to/druid",
+    "azure.maxListingLength" -> "1001"
+  ))
+
   test("createLocalDataSegmentPusherConfig should construct a LocalDataSegmentPusherConfig") {
     val pusherConfig =DeepStorageConstructorHelpers.createLocalDataSegmentPusherConfig(
       sampleLocalConf.dive(DruidConfigurationKeys.localDeepStorageTypeKey)
@@ -152,5 +161,29 @@ class DeepStorageConstructorHelpersSuite extends AnyFunSuite with Matchers {
       sampleGoogleConfig.dive(DruidConfigurationKeys.googleDeepStorageTypeKey)
     )
     inputDataConfig.getMaxListingLength should equal(1023)
+  }
+
+  test("createAzureDataSegmentConfig should correctly parse a Configuration") {
+    val dataSegmentConfig = DeepStorageConstructorHelpers.createAzureDataSegmentConfig(
+      sampleAzureConfig.dive(DruidConfigurationKeys.azureDeepStorageTypeKey)
+    )
+    dataSegmentConfig.getContainer should equal("testContainer")
+    dataSegmentConfig.getPrefix should equal("prefix/to/druid")
+  }
+
+  test("createAzureInputDataConfig should correctly parse a Configuration") {
+    val inputDataConfig = DeepStorageConstructorHelpers.createAzureInputDataConfig(
+      sampleAzureConfig.dive(DruidConfigurationKeys.azureDeepStorageTypeKey)
+    )
+    inputDataConfig.getMaxListingLength should equal(1001)
+  }
+
+  test("createAzureAccountConfig should correctly parse a Configuration") {
+    val accountConfig = DeepStorageConstructorHelpers.createAzureAccountConfig(
+      sampleAzureConfig.dive(DruidConfigurationKeys.azureDeepStorageTypeKey)
+    )
+    accountConfig.getKey should equal("12345ABCDEF")
+    accountConfig.getAccount should equal("testAccount")
+    accountConfig.getProtocol should equal("https")
   }
 }

@@ -22,20 +22,16 @@ package org.apache.druid.spark.utils
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.microsoft.azure.storage.blob.{CloudBlobClient, ListBlobItem}
-import com.microsoft.azure.storage.{StorageCredentials, StorageUri}
 import org.apache.druid.common.aws.{AWSClientConfig, AWSCredentialsConfig, AWSEndpointConfig,
   AWSModule, AWSProxyConfig}
 import org.apache.druid.common.gcp.GcpModule
-import org.apache.druid.java.util.common.{IAE, StringUtils}
+import org.apache.druid.java.util.common.StringUtils
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.spark.mixins.TryWithResources
-import org.apache.druid.storage.azure.blob.{ListBlobItemHolder, ListBlobItemHolderFactory}
-import org.apache.druid.storage.azure.{AzureAccountConfig, AzureCloudBlobIterable,
-  AzureCloudBlobIterableFactory, AzureCloudBlobIterator, AzureCloudBlobIteratorFactory,
-  AzureDataSegmentConfig, AzureInputDataConfig, AzureStorage}
+import org.apache.druid.storage.azure.{AzureAccountConfig, AzureDataSegmentConfig,
+  AzureInputDataConfig, AzureStorage, AzureStorageDruidModule}
 import org.apache.druid.storage.google.{GoogleAccountConfig, GoogleInputDataConfig, GoogleStorage,
   GoogleStorageDruidModule}
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPusherConfig
@@ -45,15 +41,15 @@ import org.apache.druid.storage.s3.{NoopServerSideEncryption, S3DataSegmentPushe
 import org.apache.hadoop.conf.{Configuration => HConf}
 
 import java.io.{ByteArrayInputStream, DataInputStream}
-import java.lang.{Iterable => JIterable}
-import java.net.URI
-import scala.collection.JavaConverters.{asJavaIterableConverter, collectionAsScalaIterableConverter}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 object DeepStorageConstructorHelpers extends TryWithResources {
-  // Spark DataSourceOption property maps are case insensitive, by which they mean they lower-case all keys. Since all
-  // our user-provided property keys will come to us via a DataSourceOption, we need to use a case-insensisitive jackson
-  // mapper to deserialize property maps into objects. We want to be case-aware in the rest of our code, so we create a
-  // private, case-insensitive copy of our mapper here.
+  /*
+   * Spark DataSourceOption property maps are case insensitive, by which they mean they lower-case all keys. Since all
+   * our user-provided property keys will come to us via a DataSourceOption, we need to use a case-insensisitive jackson
+   * mapper to deserialize property maps into objects. We want to be case-aware in the rest of our code, so we create a
+   * private, case-insensitive copy of our mapper here.
+   */
   private val caseInsensitiveMapper = MAPPER.copy()
     .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
     .registerModule(DefaultScalaModule)
@@ -124,10 +120,6 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     )
   }
 
-  /**
-    * Separating the preparation and the creation of ServerSideEncryptingAmazonS3 until I figure out the best place
-    * to inject mocks.
-    */
   def createConfigsForServerSideEncryptingAmazonS3(conf: Configuration):
   (AWSCredentialsConfig, AWSProxyConfig, AWSEndpointConfig, AWSClientConfig, S3StorageConfig) = {
     val credentialsConfig = convertConfToInstance(conf, classOf[AWSCredentialsConfig])
@@ -163,9 +155,6 @@ object DeepStorageConstructorHelpers extends TryWithResources {
     * is package-private, so we can't access the class here. Since we already have the config object and we
     * need to muck about with field visibility, we take the shortcut and just make the constructor accessible. This
     * solution generalizes to the CustomServerSideEncyption case as well.
-    *
-    * @param conf
-    * @return
     */
   def createS3StorageConfig(conf: Configuration): S3StorageConfig = {
     // There's probably a more elegant way to do this that would allow us to transparently support new sse types, but
@@ -235,60 +224,10 @@ object DeepStorageConstructorHelpers extends TryWithResources {
   }
 
   def createAzureStorage(conf: Configuration): AzureStorage = {
-    val storageCredentials = StorageCredentials.tryParseCredentials(
-      conf.getString(DruidConfigurationKeys.azureConnectionStringKey)
-    )
-    val primaryUri = conf.get(DruidConfigurationKeys.azurePrimaryStorageUriKey)
-      .map(new URI(_))
-      .orNull
-    val secondaryUri = conf.get(DruidConfigurationKeys.azureSecondaryStorageUriKey)
-      .map(new URI(_))
-      .orNull
-    val storageUri = new StorageUri(primaryUri, secondaryUri)
-    val cloudBlobClient = new CloudBlobClient(storageUri, storageCredentials)
-    new AzureStorage(cloudBlobClient)
-  }
-
-  /**
-    * I highly doubt this works, but I don't have an Azure system to test on nor do I have the familiarity with Azure
-    * to be sure that testing with local mocks will actually test what I want to test.
-    *
-    * @param properties
-    * @return
-    */
-  def createAzureCloudBlobIterableFactory(conf: Configuration): AzureCloudBlobIterableFactory = {
-    // Taking advantage of the fact that java.net.URIs deviates from spec and dissallow spaces to use it as a separator.
-    val prefixes = conf.getString(DruidConfigurationKeys.azurePrefixesKey)
-      .split(" ")
-      .map(new URI(_))
-      .toIterable
-      .asJava
-    val maxListingLength = conf.getInt(DruidConfigurationKeys.azureMaxListingLengthDefaultKey)
-    val azureStorage = DeepStorageConstructorHelpers.createAzureStorage(conf)
-    val accountConfig = DeepStorageConstructorHelpers.createAzureAccountConfig(conf)
-
-    val listBlobItemHolderFactory = new ListBlobItemHolderFactory {
-      override def create(blobItem: ListBlobItem): ListBlobItemHolder = new ListBlobItemHolder(blobItem)
-    }
-
-    // The constructor for AzureCloudBlobIterator is protected, so no dice here
-    val azureCloudBlobIteratorFactory = new AzureCloudBlobIteratorFactory {
-      override def create(ignoredPrefixes: JIterable[URI], ignoredMaxListingLength: Int): AzureCloudBlobIterator = {
-        val constructor = classOf[AzureCloudBlobIterator]
-          .getDeclaredConstructors
-          .filter(_.getParameterCount == 5)
-          .head
-        constructor.setAccessible(true)
-        constructor
-          .newInstance(
-            azureStorage, listBlobItemHolderFactory, accountConfig, prefixes, maxListingLength.asInstanceOf[Integer]
-          )
-          .asInstanceOf[AzureCloudBlobIterator]
-      }
-    }
-    (_: JIterable[URI], _: Int) => {
-      new AzureCloudBlobIterable(azureCloudBlobIteratorFactory, prefixes, maxListingLength)
-    }
+    val accountConfig = convertConfToInstance(conf, classOf[AzureAccountConfig])
+    val azureModule = new AzureStorageDruidModule
+    val cloudBlobClient = azureModule.getCloudBlobClient(accountConfig)
+    azureModule.getAzureStorageContainer(cloudBlobClient)
   }
 
   private def convertConfToInstance[T](conf: Configuration, clazz: Class[T]): T = {

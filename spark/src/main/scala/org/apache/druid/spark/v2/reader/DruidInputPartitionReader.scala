@@ -99,6 +99,9 @@ class DruidInputPartitionReader(
   }
 
   // TODO: Rewrite this to use SegmentPullers instead of manually constructing URIs
+  //  This will require plumbing through the deep storage related config values to the PartitionReader, creating an
+  //  instance of the appropriate SegmentPuller for the target deep storage, and registering the puller with jackson
+  //  for injection
   private def loadSegment(segment: DataSegment): QueryableIndex = {
     val path = new Path(SegmentReaderRegistry.load(segment.getLoadSpec))
     val segmentDir = new File(tmpDir, segment.getId.toString)

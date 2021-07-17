@@ -72,7 +72,6 @@ object SegmentReaderRegistry extends Logging {
     registeredSegmentLoaderFunctions(loadSpecType)(loadSpec)
   }
 
-  // TODO: Add Azure
   private val knownTypes: Map[String, JMap[String, AnyRef] => URI] =
     Map[String, JMap[String, AnyRef] => URI](
       S3StorageDruidModule.SCHEME_S3_ZIP -> ((loadSpec: JMap[String, AnyRef]) =>
@@ -103,6 +102,14 @@ object SegmentReaderRegistry extends Logging {
         catch {
           case e: URISyntaxException =>
             throw new ISE(e, "Unable to form simple file uri")
-        })
+        }),
+      "azure" -> ((loadSpec: JMap[String, AnyRef]) =>
+        // I don't think this will work when we call CompressionUtils.unzip on a path made from this URI (it looks like
+        // we'd need an AzureByteSource going by AzureEntity and AzureDataSegmentPuller)
+        URI.create(StringUtils.format(
+          "azure://%s/%s",
+          loadSpec.get("containerName"),
+          loadSpec.get("blobPath")
+        )))
   )
 }

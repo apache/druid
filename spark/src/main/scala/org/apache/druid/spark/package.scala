@@ -26,7 +26,7 @@ import org.apache.druid.data.input.impl.DimensionSchema
 import org.apache.druid.jackson.DefaultObjectMapper
 import org.apache.druid.java.util.common.granularity.GranularityType
 import org.apache.druid.math.expr.ExprMacroTable
-import org.apache.druid.metadata.PasswordProvider
+import org.apache.druid.metadata.DynamicConfigProvider
 import org.apache.druid.query.aggregation.AggregatorFactory
 import org.apache.druid.query.expression.{LikeExprMacro, RegexpExtractExprMacro,
   TimestampCeilExprMacro, TimestampExtractExprMacro, TimestampFloorExprMacro,
@@ -182,8 +182,9 @@ package object spark {
       writer.option(metadataPrefix(DruidConfigurationKeys.metadataHostKey), host)
     }
 
-    def metadataPassword(password: PasswordProvider): DataFrameWriter[T] = {
-      writer.option(metadataPrefix(DruidConfigurationKeys.metadataPasswordKey), MAPPER.writeValueAsString(password))
+    def metadataPassword(provider: DynamicConfigProvider[String], confKey: String): DataFrameWriter[T] = {
+      writer.option(metadataPrefix(DruidConfigurationKeys.metadataPasswordKey),
+        provider.getConfig.getOrDefault(confKey, ""))
     }
 
     def metadataPassword(password: String): DataFrameWriter[T] = {
@@ -326,8 +327,9 @@ package object spark {
       reader.option(metadataPrefix(DruidConfigurationKeys.metadataHostKey), host)
     }
 
-    def metadataPassword(password: PasswordProvider): DataFrameReader = {
-      reader.option(metadataPrefix(DruidConfigurationKeys.metadataPasswordKey), MAPPER.writeValueAsString(password))
+    def metadataPassword(provider: DynamicConfigProvider[String], confKey: String): DataFrameReader = {
+      reader.option(metadataPrefix(DruidConfigurationKeys.metadataPasswordKey),
+        provider.getConfig.getOrDefault(confKey, ""))
     }
 
     def metadataPassword(password: String): DataFrameReader = {

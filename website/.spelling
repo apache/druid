@@ -1903,8 +1903,8 @@ DataFrames
 DataFrameWriter
 DataSourceReader
 DataSourceWriter
-PasswordProvider
-PasswordProviderRegistry
+DynamicConfigProvider
+DynamicConfigRegistry
 serializable
 deserializable
 Gradle

@@ -108,6 +108,8 @@ object DruidConfigurationKeys {
   val storageDirectoryKey: String = "storageDirectory"
   val bucketKey: String = "bucket"
   val maxListingLengthKey: String = "maxListingLength"
+  val prefixKey: String = "prefix"
+  val protocolKey: String = "protocol"
 
   // Local SegmentWriter Configs
   val localDeepStorageTypeKey: String = "local"
@@ -133,7 +135,6 @@ object DruidConfigurationKeys {
   val s3EndpointPrefix: String = "endpoint"
   val s3EndpointUrlKey: String = "url"
   val s3EndpointSigningRegionKey: String = "signingRegion"
-  val s3ProtocolKey: String = "protocol"
   val s3DisableChunkedEncodingKey: String = "disableChunkedEncoding"
   val s3EnablePathStyleAccessKey: String = "enablePathStyleAccess"
   val s3ForceGlobalBucketAccessEnabledKey: String = "forceGlobalBucketAccessEnabled"
@@ -144,15 +145,11 @@ object DruidConfigurationKeys {
 
   // GCS SegmentWriter Configs
   val googleDeepStorageTypeKey: String = "google"
-  val gcsPrefixKey: String = "prefix"
 
   // Azure SegmentWriter Configs
-  val azureDeepStorageKey: String = "azure"
-  val azureConnectionStringKey: String = "connectionString"
-  val azurePrimaryStorageUriKey: String = "primaryUri"
-  val azureSecondaryStorageUriKey: String = "secondaryUri"
-  val azurePrefixesKey: String = "prefixes" // Note that there is both a prefix and a prefixes key!
-  val azureMaxListingLengthKey: String = "maxListingLength"
-  val azureCloudBlobIterableFactoryConfigKey: String = "azureCloudBlobIterableFactoryConfig"
-  private[spark] val azureMaxListingLengthDefaultKey: (String, Int) = (azureMaxListingLengthKey, 1024)
+  val azureDeepStorageTypeKey: String = "azure"
+  val azureAccountKey: String = "account"
+  val azureKeyKey: String = "key"
+  val azureMaxTriesKey: String = "maxTries"
+  val azureContainerKey: String = "container"
 }

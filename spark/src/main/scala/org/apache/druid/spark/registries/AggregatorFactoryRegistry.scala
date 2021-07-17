@@ -34,7 +34,7 @@ object AggregatorFactoryRegistry {
     * Register an aggregator factory with the given name. NAME must match the Jackson sub-type for AGGREGATORFACTORY.
     *
     * @param name The Jackson subtype for AGGREGATORFACTORY
-    * @param passwordProvider An implementation of AggregatorFactory to use when processing metrics.
+    * @param factory An implementation of AggregatorFactory to use when processing metrics.
     */
   def register(name: String, factory: AggregatorFactory): Unit = {
     // Cheat

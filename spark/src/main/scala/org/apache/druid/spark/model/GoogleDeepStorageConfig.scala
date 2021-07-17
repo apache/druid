@@ -37,7 +37,7 @@ class GoogleDeepStorageConfig extends DeepStorageConfig(DruidConfigurationKeys.g
 
   def prefix(prefix: String): GoogleDeepStorageConfig = {
     val key = Configuration.toKey(DruidConfigurationKeys.googleDeepStorageTypeKey,
-      DruidConfigurationKeys.gcsPrefixKey)
+      DruidConfigurationKeys.prefixKey)
     optionsMap.put(key, prefix)
     this
   }

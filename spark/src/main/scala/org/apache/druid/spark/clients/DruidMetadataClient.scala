@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Suppliers
 import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
-  PasswordProvider, SQLMetadataConnector}
+import org.apache.druid.metadata.{DynamicConfigProvider, MetadataStorageConnectorConfig,
+  MetadataStorageTablesConfig, SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.spark.mixins.Logging
@@ -53,9 +53,9 @@ class DruidMetadataClient(
     // Jackson doesn't like deserializing empty strings
     passwordProviderSer
   } else {
-    MAPPER.readValue[PasswordProvider](
-      passwordProviderSer, new TypeReference[PasswordProvider] {}
-    ).getPassword
+    MAPPER.readValue[DynamicConfigProvider[String]](
+      passwordProviderSer, new TypeReference[DynamicConfigProvider[String]] {}
+    ).getConfig.getOrDefault("password", "")
   }
 
   private lazy val connectorConfig: MetadataStorageConnectorConfig =

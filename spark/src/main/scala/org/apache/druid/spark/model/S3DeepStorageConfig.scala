@@ -19,8 +19,7 @@
 
 package org.apache.druid.spark.model
 
-import org.apache.druid.metadata.PasswordProvider
-import org.apache.druid.spark.MAPPER
+import org.apache.druid.metadata.DynamicConfigProvider
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 
 import scala.collection.mutable
@@ -50,16 +49,28 @@ class S3DeepStorageConfig extends DeepStorageConfig(DruidConfigurationKeys.s3Dee
     addToOptions(prefix(DruidConfigurationKeys.s3UseS3ASchemaKey), useS3aSchema)
   }
 
-  def accessKey(accessKey: PasswordProvider): S3DeepStorageConfig = {
-    addToOptions(prefix(DruidConfigurationKeys.s3AccessKeyKey), MAPPER.writeValueAsString(accessKey))
+  /**
+    * Extracts the S3 access key and secret key from KEYSPROVIDER using ACCESSKEYCONFKEY and SECRETKEYCONFKEY to extract
+    * the access key and secret key, respectively.
+    *
+    * @param keysProvider The DynamicConfigProvider providing the S3 access and secret keys.
+    * @param accessKeyConfKey The key in the config provided by KEYSPROVIDER whose value is the access key to use.
+    * @param secretKeyConfKey The key in the config provided by KEYSPROVIDER whose value is the secret key to use.
+    */
+  def keys(
+            keysProvider: DynamicConfigProvider[String],
+            accessKeyConfKey: String,
+            secretKeyConfKey: String
+          ): S3DeepStorageConfig = {
+    val config = keysProvider.getConfig
+    val accessKey = config.getOrDefault(accessKeyConfKey, "")
+    val secretKey = config.getOrDefault(secretKeyConfKey, "")
+    addToOptions(prefix(DruidConfigurationKeys.s3AccessKeyKey), accessKey)
+    addToOptions(prefix(DruidConfigurationKeys.s3AccessKeyKey), secretKey)
   }
 
   def accessKey(accessKey: String): S3DeepStorageConfig = {
     addToOptions(prefix(DruidConfigurationKeys.s3AccessKeyKey), accessKey)
-  }
-
-  def secretKey(secretKey: PasswordProvider): S3DeepStorageConfig = {
-    addToOptions(prefix(DruidConfigurationKeys.s3SecretKeyKey), MAPPER.writeValueAsString(secretKey))
   }
 
   def secretKey(secretKey: String): S3DeepStorageConfig = {
@@ -82,9 +93,16 @@ class S3DeepStorageConfig extends DeepStorageConfig(DruidConfigurationKeys.s3Dee
     addToOptions(prefix(DruidConfigurationKeys.s3ProxyPrefix, DruidConfigurationKeys.s3ProxyUsernameKey), username)
   }
 
-  def proxyPassword(password: PasswordProvider): S3DeepStorageConfig = {
+  /**
+    * Extracts the proxy password to use in communicating with S3 from PASSWORDPROVIDER using CONFKEY.
+    *
+    * @param passwordProvider The DynamicConfigProvider providing the proxy password.
+    * @param confKey The key in the config provided by PASSWORDPROVIDER whose value is the proxy password to use.
+    */
+  def proxyPassword(passwordProvider: DynamicConfigProvider[String], confKey: String): S3DeepStorageConfig = {
+    val config = passwordProvider.getConfig
     addToOptions(prefix(DruidConfigurationKeys.s3ProxyPrefix, DruidConfigurationKeys.s3ProxyPasswordKey),
-      MAPPER.writeValueAsString(password))
+      config.getOrDefault(confKey, ""))
   }
 
   def proxyPassword(password: String): S3DeepStorageConfig = {
@@ -102,7 +120,7 @@ class S3DeepStorageConfig extends DeepStorageConfig(DruidConfigurationKeys.s3Dee
   }
 
   def protocol(protocol: String): S3DeepStorageConfig = {
-    addToOptions(prefix(DruidConfigurationKeys.s3ProtocolKey), protocol)
+    addToOptions(prefix(DruidConfigurationKeys.protocolKey), protocol)
   }
 
   def disableChunkedEnconding(disableChunkedEncoding: Boolean): S3DeepStorageConfig = {

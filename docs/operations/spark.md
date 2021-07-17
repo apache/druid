@@ -197,8 +197,8 @@ uploaded to the Spark cluster. Application jars should then be built with a comp
 ### Metadata Client Configs
 The properties used to configure the client that interacts with the Druid metadata server directly. Used by both reader
 and the writer. The `metadataPassword` property can either be provided as a string that will be used as-is or can be
-provided as a serialized PasswordProvider that will be resolved when the metadata client is first instantiated. If a
-custom PasswordProvider is used, be sure to register the provider with the PasswordProviderRegistry before use.
+provided as a serialized DynamicConfigProvider that will be resolved when the metadata client is first instantiated. If
+a  custom DynamicConfigProvider is used, be sure to register the provider with the DynamicConfigProviderRegistry before use.
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
@@ -207,7 +207,7 @@ custom PasswordProvider is used, be sure to register the provider with the Passw
 |`metadata.port`|The metadata server's port|If using derby|1527|
 |`metadata.connectUri`|The URI to use to connect to the metadata server|If not using derby||
 |`metadata.user`|The user to use when connecting to the metadata server|If required by the metadata database||
-|`metadata.password`|The password to use when connecting to the metadata server. This can optionally be a serialized instance of a Druid PasswordProvider or a plain string|If required by the metadata database||
+|`metadata.password`|The password to use when connecting to the metadata server. This can optionally be a serialized instance of a Druid DynamicConfigProvider or a plain string|If required by the metadata database||
 |`metadata.dbcpProperties`|The connection pooling properties to use when connecting to the metadata server|No||
 |`metadata.baseName`|The base name used when creating Druid metadata tables|No|`druid`|
 
@@ -233,6 +233,13 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 |`reader.vectorize`|**Experimental!** If true, reads data from segments in batches if possible|No|False|
 |`reader.batchSize`|**Experimental!** The number of rows to read in one batch if `reader.vectorize` is set to true|No|512|
+
+#### Deep Storage
+The DataSourceReader uses Druid load specs to determine segment locations and retrieve them from deep
+storage. This means that no additional configuration is required for the reader but does mean that
+the Spark executors need to be authorized to read from deep storage (e.g. via GCS ADCs, AWS IAM roles, etc.).
+There is code to handle reading segments from Azure, but it has not been tested. If you use the reader for
+data in Azure Storage successfully, please update this documentation :).
 
 #### Vectorized Reads
 **Experimental!** The DataSourceReader can optionally attempt to read data from segments in batches.
@@ -285,9 +292,6 @@ defaults will likely be more performant for most users.
 ### Deep Storage Configs
 The configuration properties used when interacting with deep storage systems directly. Only used in the writer. (The
 reader interacts with deep storage as well, but for now operates purely off the metadata returned in segment LoadSpecs).
-
-**Caution**: The Azure storage config doesn't work. Users will have to implement their own segment writers
-and register them with the SegmentWriterRegistry (and hopefully contribute them back to this warning can be removed! :))
 
 #### Local Deep Storage Config
 `deepStorageType` = `local`
@@ -352,6 +356,13 @@ These configs shadow the [Google Cloud Storage Extension](../development/extensi
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
+|`azure.account`|The Azure Storage account name to use|Yes||
+|`azure.key`|The key for the Azure Storage account used|Yes||
+|`azure.container`|The Azure Storage container name|Yes||
+|`azure.maxTries`|The number of tries before failing an Azure operation|No|3|
+|`azure.protocol`|The communication protocol to use when interacting with Azure Storage|No|`https`|
+|`azure.prefix`|The string to prepend to all segment blob names written to Azure Storage|No|`""`|
+|`azure.maxListingLength`|The maximum number of input files matching a prefix to retrieve or delete in one call|No|1024|
 
 #### Custom Deep Storage Implementations
 
