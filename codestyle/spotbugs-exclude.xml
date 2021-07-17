@@ -44,6 +44,10 @@
             <Class name="org.apache.druid.server.AsyncQueryForwardingServlet" />
         </And>
     </Match>
+    <!-- Spot Bugs doesn't work for Scala -->
+    <Match>
+        <Package name="~org\.apache\.druid.spark.*"/>
+    </Match>
 
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>

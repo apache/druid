@@ -37,6 +37,10 @@ Druid's focus is on extremely low latency queries, and is ideal for powering app
 return fast enough such that users can interactively explore through data. Druid fully indexes all data, and can act as a middle layer between Spark and your application.
 One typical setup seen in production is to process data in Spark, and load the processed data into Druid for faster access.
 
+To make it easier to combine the powers of Spark and Druid, Druid provides connectors that allow a Spark cluster to directly
+read and write data from a Druid cluster without placing load on the cluster's resources. Please see the [documentation](../operations/spark.md)
+for more details.
+
 For more information about using Druid and Spark together, including benchmarks of the two systems, please see:
 
 <https://www.linkedin.com/pulse/combining-druid-spark-interactive-flexible-analytics-scale-butani>

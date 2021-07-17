@@ -74,7 +74,7 @@ jobs:
       script: ${MVN} animal-sniffer:check --fail-at-end
 
     - name: "checkstyle"
-      script: ${MVN} checkstyle:checkstyle --fail-at-end
+      script: ${MVN} checkstyle:checkstyle --fail-at-end  -pl '!spark' && ${MVN} scalastyle:check --fail-at-end -pl spark
 
     - name: "enforcer checks"
       script: ${MVN} enforcer:enforce --fail-at-end
