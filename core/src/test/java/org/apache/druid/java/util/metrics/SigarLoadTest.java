@@ -19,12 +19,23 @@
 
 package org.apache.druid.java.util.metrics;
 
-import junit.framework.Assert;
 import org.hyperic.sigar.Sigar;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 public class SigarLoadTest
 {
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
+  @Before
+  public void before()
+  {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+  }
+
   @Test
   public void testSigarLoad()
   {

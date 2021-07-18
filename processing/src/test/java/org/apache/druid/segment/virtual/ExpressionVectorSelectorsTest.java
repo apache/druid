@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -95,7 +94,7 @@ public class ExpressionVectorSelectorsTest
       "concat(string1, nonexistent)"
   );
 
-  private static final int ROWS_PER_SEGMENT = 100_000;
+  private static final int ROWS_PER_SEGMENT = 50_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
@@ -273,7 +272,7 @@ public class ExpressionVectorSelectorsTest
           int rows = 0;
           while (!nonVectorized.isDone()) {
             Assert.assertEquals(
-                StringUtils.format("Failed at row %s", rows),
+                "Failed at row " + rows,
                 nonSelector.getObject(),
                 results.get(rows)
             );
