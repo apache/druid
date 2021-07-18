@@ -41,7 +41,7 @@ public class InlineFirehose implements Firehose
   private final StringInputRowParser parser;
   private final LineIterator lineIterator;
 
-  InlineFirehose(String data, StringInputRowParser parser) throws IOException
+  InlineFirehose(String data, StringInputRowParser parser)
   {
     this.parser = parser;
 

@@ -545,13 +545,13 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.11.0
 libraries:
   - commons-io: commons-io
 notices:
   - commons-io: |
       Apache Commons IO
-      Copyright 2002-2017 The Apache Software Foundation
+      Copyright 2002-2021 The Apache Software Foundation
 
 ---
 

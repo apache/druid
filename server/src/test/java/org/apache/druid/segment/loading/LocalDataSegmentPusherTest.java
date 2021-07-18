@@ -153,7 +153,7 @@ public class LocalDataSegmentPusherTest
   public void testPushCannotCreateDirectory() throws IOException
   {
     exception.expect(IOException.class);
-    exception.expectMessage("Unable to create directory");
+    exception.expectMessage("Cannot create directory");
     config.storageDirectory = new File(config.storageDirectory, "xxx");
     Assert.assertTrue(config.storageDirectory.mkdir());
     config.storageDirectory.setWritable(false);
