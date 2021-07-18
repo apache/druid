@@ -225,7 +225,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final Map<String, MetricDesc> metricDescs;
 
   private final Map<String, DimensionDesc> dimensionDescs;
-  private final List<DimensionDesc> dimensionDescsList;
+  protected final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
@@ -349,15 +349,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
 
-  protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
+  protected abstract float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
+  protected abstract long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
+  protected abstract Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+  protected abstract double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract boolean isNull(int rowOffset, int aggOffset);
+  protected abstract boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
   static class IncrementalIndexRowResult
   {
@@ -381,7 +381,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  static class AddToFactsResult
+  public static class AddToFactsResult
   {
     private final int rowCount;
     private final long bytesInMemory;
@@ -665,7 +665,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return deserializeComplexMetrics;
   }
 
-  AtomicInteger getNumEntries()
+  protected AtomicInteger getNumEntries()
   {
     return numEntries;
   }
@@ -898,11 +898,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           incrementalIndexRow -> {
             final int rowOffset = incrementalIndexRow.getRowIndex();
 
-            Object[] theDims = incrementalIndexRow.getDims();
+            int dimLength = incrementalIndexRow.getDimsLength();
 
             Map<String, Object> theVals = Maps.newLinkedHashMap();
-            for (int i = 0; i < theDims.length; ++i) {
-              Object dim = theDims[i];
+            for (int i = 0; i < dimLength; ++i) {
+              Object dim = incrementalIndexRow.getDim(i);
               DimensionDesc dimensionDesc = dimensions.get(i);
               if (dimensionDesc == null) {
                 continue;
@@ -1111,7 +1111,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return true;
   }
 
-  interface FactsHolder
+  public interface FactsHolder
   {
     /**
      * @return the previous rowIndex associated with the specified key, or
@@ -1370,6 +1370,57 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
+  /**
+   * Caches references to selector objects for each column instead of creating a new object each time in order to save
+   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
+   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   */
+  protected static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final ColumnSelectorFactory delegate;
+
+    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
+    {
+      this.delegate = delegate;
+
+      if (concurrentEventAdd) {
+        columnSelectorMap = new ConcurrentHashMap<>();
+      } else {
+        columnSelectorMap = new HashMap<>();
+      }
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return delegate.makeDimensionSelector(dimensionSpec);
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      ColumnValueSelector existing = columnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+
+      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
+      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
+      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
+      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
+      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
+      return existing != null ? existing : columnValueSelector;
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return delegate.getColumnCapabilities(columnName);
+    }
+  }
+
   private class LongMetricColumnSelector implements LongColumnSelector
   {
     private final IncrementalIndexRowHolder currEntry;
@@ -1385,7 +1436,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricLongValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricLongValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1397,7 +1448,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1422,7 +1473,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public Object getObject()
     {
-      return getMetricObjectValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricObjectValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1453,7 +1504,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public float getFloat()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricFloatValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricFloatValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1465,7 +1516,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1484,13 +1535,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public double getDouble()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricDoubleValue(currEntry.get(), metricIndex);
     }
 
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
 
     @Override

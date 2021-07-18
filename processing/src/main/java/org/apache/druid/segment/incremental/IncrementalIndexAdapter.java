@@ -26,10 +26,12 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.StringDimensionIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -95,14 +97,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   {
     int rowNum = 0;
     for (IncrementalIndexRow row : index.getFacts().persistIterable()) {
-      final Object[] dims = row.getDims();
-
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
         // Add 'null' to the dimension's dictionary.
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        // No need to check "dimIndex >= row.getDimsLength()" because isDimNull() verifies that.
+        if (row.isDimNull(dimIndex)) {
           accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
           continue;
         }
@@ -111,7 +112,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         if (capabilities.hasBitmapIndexes()) {
           final MutableBitmap[] bitmapIndexes = accessor.invertedIndexes;
           final DimensionIndexer indexer = accessor.indexer;
-          indexer.fillBitmapsFromUnsortedEncodedKeyComponent(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
+
+          // It is possible that the current indexer is StringDimensionIndexer and that the row
+          // supports fetching the IndexedInts object directly, which has better performance.
+          IndexedInts s = indexer instanceof StringDimensionIndexer ? row.getStringDim(dimIndex) : null;
+
+          if (s != null) {
+            ((StringDimensionIndexer) indexer).fillBitmapsFromUnsortedEncodedKeyComponent(s, rowNum, bitmapIndexes, bitmapFactory);
+          } else {
+            indexer.fillBitmapsFromUnsortedEncodedKeyComponent(row.getDim(dimIndex), rowNum, bitmapIndexes, bitmapFactory);
+          }
         }
       }
       ++rowNum;

@@ -27,11 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -340,33 +336,33 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getFloat();
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getLong();
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].get();
   }
 
   @Override
-  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getDouble();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getDouble();
   }
 
   @Override
-  public boolean isNull(int rowOffset, int aggOffset)
+  public boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].isNull();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].isNull();
   }
 
   /**
@@ -382,57 +378,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     facts.clear();
     if (selectors != null) {
       selectors.clear();
-    }
-  }
-
-  /**
-   * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
-   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
-   */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
-  {
-    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
-    private final ColumnSelectorFactory delegate;
-
-    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
-    {
-      this.delegate = delegate;
-
-      if (concurrentEventAdd) {
-        columnSelectorMap = new ConcurrentHashMap<>();
-      } else {
-        columnSelectorMap = new HashMap<>();
-      }
-    }
-
-    @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
-    {
-      return delegate.makeDimensionSelector(dimensionSpec);
-    }
-
-    @Override
-    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
-    {
-      ColumnValueSelector existing = columnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      }
-
-      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
-      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
-      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
-      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
-      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
-      return existing != null ? existing : columnValueSelector;
-    }
-
-    @Nullable
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return delegate.getColumnCapabilities(columnName);
     }
   }
 

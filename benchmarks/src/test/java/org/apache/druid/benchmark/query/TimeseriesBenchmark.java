@@ -72,6 +72,7 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.incremental.oak.OakIncrementalIndexModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -122,6 +123,8 @@ public class TimeseriesBenchmark
 
   static {
     NullHandling.initializeForTests();
+    // Register OakIncrementalIndex
+    IncrementalIndexCreator.JSON_MAPPER.registerModule(OakIncrementalIndexModule.JACKSON_MODULE);
   }
 
   private AppendableIndexSpec appendableIndexSpec;
@@ -276,7 +279,7 @@ public class TimeseriesBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap", "offheap", "oak"})
     private String indexType;
 
     IncrementalIndex<?> incIndex;
