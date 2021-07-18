@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Objects;
 import java.util.stream.Stream;
 
