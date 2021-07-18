@@ -56,7 +56,7 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   }
 
   @Override
-  public Firehose connect(StringInputRowParser parser, @Nullable File temporaryDirectory) throws IOException
+  public Firehose connect(StringInputRowParser parser, @Nullable File temporaryDirectory)
   {
     return new InlineFirehose(data, parser);
   }
