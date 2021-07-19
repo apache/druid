@@ -48,7 +48,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
@@ -176,7 +176,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
 
-    segmentManager = new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
+    segmentManager = new SegmentManager(EasyMock.createMock(SegmentLoader.class))
     {
       @Override
       public Set<String> getDataSourceNames()

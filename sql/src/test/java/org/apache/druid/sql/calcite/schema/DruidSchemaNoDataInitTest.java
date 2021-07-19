@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.NoopEscalator;
@@ -54,7 +54,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
               conglomerate
           ),
           new TestServerInventoryView(Collections.emptyList()),
-          new SegmentManager(EasyMock.createMock(SegmentCacheManager.class)),
+          new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           PLANNER_CONFIG_DEFAULT,
           new NoopEscalator()
