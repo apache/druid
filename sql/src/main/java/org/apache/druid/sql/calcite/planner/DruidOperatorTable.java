@@ -77,6 +77,12 @@ import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversio
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONExtractDoubleOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONExtractLongOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONExtractStringOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONPathExtractDoubleOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONPathExtractLongOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.JSONPathExtractStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
@@ -272,6 +278,18 @@ public class DruidOperatorTable implements SqlOperatorTable
                    )
                    .build();
 
+  private static final List<SqlOperatorConversion> JSON_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new JSONExtractStringOperatorConversion())
+          .add(new AliasedOperatorConversion(new JSONExtractStringOperatorConversion(), "JSON_EXTRACT"))
+          .add(new JSONExtractLongOperatorConversion())
+          .add(new JSONExtractDoubleOperatorConversion())
+          .add(new JSONPathExtractStringOperatorConversion())
+          .add(new AliasedOperatorConversion(new JSONPathExtractStringOperatorConversion(), "JSONPATH_EXTRACT"))
+          .add(new JSONPathExtractLongOperatorConversion())
+          .add(new JSONPathExtractDoubleOperatorConversion())
+          .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -343,6 +361,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(REDUCTION_OPERATOR_CONVERSIONS)
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
+                   .addAll(JSON_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

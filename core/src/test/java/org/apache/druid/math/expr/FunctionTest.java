@@ -42,6 +42,15 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
+    String jsonStr = "{" +
+        "\"str\":\"hello\"" +
+        ",\"long\":1234567890123" +
+        ",\"double\":1234.5678" +
+        ",\"array\":[" +
+        "{\"no\":1,\"name\":\"n1\"}" +
+        ",{\"no\":2,\"name\":\"n2\"}" +
+        "]}";
+
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
         .put("x", "foo")
         .put("y", 2)
@@ -58,7 +67,10 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("of", 0F)
         .put("a", new String[] {"foo", "bar", "baz", "foobar"})
         .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
-        .put("c", new Double[] {3.1, 4.2, 5.3});
+        .put("c", new Double[] {3.1, 4.2, 5.3})
+        .put("json", jsonStr)
+        .put("jsonInvalid", "{abc}")
+        .put("jsonEmpty", "");
     bindings = InputBindings.withMap(builder.build());
   }
 
@@ -603,6 +615,35 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat('hello', -1)", null);
     assertExpr("repeat(null, 10)", null);
     assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+  @Test
+  public void testJsonExtract()
+  {
+    assertExpr("json_extract_string(json, 'long')", "1234567890123");
+    assertExpr("json_extract_string(json, 'str')", "hello");
+    assertExpr("json_extract_string(json, 'double')", "1234.5678");
+    assertExpr("json_extract_string(json, 'not_exist')", null);
+
+    assertExpr("jsonpath_extract_long(json, 'long')", 1234567890123L);
+    assertExpr("jsonpath_extract_long(json, 'double')", 1234L);
+    assertExpr("jsonpath_extract_long(json, 'str')", null);
+    assertExpr("jsonpath_extract_long(json, 'not_exist')", null);
+
+    assertExpr("jsonpath_extract_double(json, 'long')", 1234567890123d);
+    assertExpr("jsonpath_extract_double(json, 'double')", 1234.5678d);
+    assertExpr("jsonpath_extract_double(json, 'str')", null);
+    assertExpr("jsonpath_extract_double(json, 'not_exist')", null);
+
+    assertExpr("json_extract_string(jsonInvalid, 'not_exist')", null);
+    assertExpr("jsonpath_extract_long(jsonInvalid, 'not_exist')", null);
+    assertExpr("jsonpath_extract_double(jsonInvalid, 'not_exist')", null);
+
+    assertExpr("json_extract_string(jsonEmpty, 'not_exist')", null);
+    assertExpr("jsonpath_extract_long(jsonEmpty, 'not_exist')", null);
+    assertExpr("jsonpath_extract_double(jsonEmpty, 'not_exist')", null);
+
+    assertExpr("jsonpath_extract_long(json, '$.array[0].no')", 1L);
   }
 
 

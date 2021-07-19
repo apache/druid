@@ -247,6 +247,34 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 
 
+## JSON Functions
+
+| function | description |
+| --- | --- |
+| json_extract_string(expr,string...) | Extracts the String value from expr based on string arguments. |
+| json_extract_long(expr,string...) | Extracts the Long value from expr based on string arguments. |
+| json_extract_double(expr,string...) | Extracts the Double value from expr based on string arguments. |
+| jsonpath_extract_string(expr,json-path) | Extracts the String value from expr based on json-path. |
+| jsonpath_extract_long(expr,json-path) | Extracts the Long value from expr based on json-path. |
+| jsonpath_extract_double(expr,json-path) | Extracts the Double value from expr based on json-path. |
+
+### Examples
+
+The `json_extract_*` family of functions extract a value from a JSON-encoded string.
+
+```SQL
+SELECT json_extract_string('{"key1":"val1"}', 'key1')
+-- Extract a value from a nested object
+SELECT json_extract_string('{"key1":{"key2":"val2"}}', 'key1', 'key2')
+```
+
+The `jsonpath_extract_*` family of functions support JSONPath expressions referring to a JSON structure in the same way as XPath expression.
+
+```SQL
+SELECT jsonpath_extract_string('{"key":[{"k":"v1"},{"k":"v2"}]}', '$.key[0].k')
+```
+
+
 ## Vectorization Support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
 

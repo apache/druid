@@ -19,7 +19,12 @@
 
 package org.apache.druid.math.expr;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -31,6 +36,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.utils.FastJSONReader;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -3537,6 +3543,266 @@ public interface Function
           return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
       }
       throw new RE("Unable to slice to unknown type %s", expr.type());
+    }
+  }
+
+  abstract class JSONExtractFuncBase implements Function
+  {
+    protected String extract(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final String arg = args.get(0).eval(bindings).asString();
+
+      if (arg == null) {
+        return null;
+      }
+
+      String[] keyPath = new String[args.size() - 1];
+      for (int i = 1; i < args.size(); i++) {
+        keyPath[i - 1] = args.get(i).eval(bindings).asString();
+      }
+      FastJSONReader reader = new FastJSONReader(arg);
+      String result = reader.get(keyPath);
+      return result;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 2) {
+        throw new IAE("Function[%s] needs at least 2 arguments", name());
+      }
+    }
+  }
+
+  class JSONExtractStringFunc extends JSONExtractFuncBase
+  {
+    @Override
+    public String name()
+    {
+      return "json_extract_string";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return ExprEval.of(extract(args, bindings));
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+  }
+
+  class JSONExtractLongFunc extends JSONExtractFuncBase
+  {
+    @Override
+    public String name()
+    {
+      return "json_extract_long";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      String result = extract(args, bindings);
+      try {
+        return ExprEval.of((long) Double.parseDouble(result));
+      }
+      catch (Exception ignores) {
+        return ExprEval.of(null);
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+  }
+
+  class JSONExtractDoubleFunc extends JSONExtractFuncBase
+  {
+    @Override
+    public String name()
+    {
+      return "json_extract_double";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      String result = extract(args, bindings);
+      try {
+        return ExprEval.of(Double.parseDouble(result));
+      }
+      catch (Exception ignores) {
+        return ExprEval.of(null);
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
+    }
+  }
+
+  ParseContext JSON_PARSER_CONTEXT =
+      JsonPath.using(Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS));
+  ObjectMapper DEFAULT_MAPPER = new ObjectMapper();
+
+  class JSONPathExtractStringFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "jsonpath_extract_string";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final String arg = args.get(0).eval(bindings).asString();
+
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+
+      try {
+        Object result = JSON_PARSER_CONTEXT.parse(arg).read(args.get(1).eval(bindings).asString());
+        if (result == null) {
+          return ExprEval.of(null);
+        }
+
+        if (result instanceof String) {
+          return ExprEval.of((String) result);
+        } else {
+          return ExprEval.of(DEFAULT_MAPPER.valueToTree(result).toString());
+        }
+      }
+      catch (Exception ignore) {
+        return ExprEval.of(null);
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+  }
+
+  class JSONPathExtractLongFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "jsonpath_extract_long";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final String arg = args.get(0).eval(bindings).asString();
+
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+
+      try {
+        Object result = JSON_PARSER_CONTEXT.parse(arg).read(args.get(1).eval(bindings).asString());
+        if (result == null) {
+          return ExprEval.of(null);
+        }
+
+        if (result instanceof Number) {
+          return ExprEval.of(((Number) result).longValue());
+        } else {
+          return ExprEval.of((long) Double.parseDouble(result.toString()));
+        }
+      }
+      catch (Exception ignores) {
+        return ExprEval.of(null);
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.LONG;
+    }
+  }
+
+  class JSONPathExtractDoubleFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "jsonpath_extract_double";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final String arg = args.get(0).eval(bindings).asString();
+
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+
+      try {
+        Object result = JSON_PARSER_CONTEXT.parse(arg).read(args.get(1).eval(bindings).asString());
+        if (result == null) {
+          return ExprEval.of(null);
+        }
+
+        if (result instanceof Number) {
+          return ExprEval.of(((Number) result).doubleValue());
+        } else {
+          return ExprEval.of(Double.parseDouble(result.toString()));
+        }
+      }
+      catch (Exception ignores) {
+        return ExprEval.of(null);
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.DOUBLE;
     }
   }
 }
