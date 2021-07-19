@@ -27,7 +27,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.Intervals;
@@ -45,7 +45,7 @@ public class DruidInputSourceTest
 {
   private final IndexIO indexIO = EasyMock.createMock(IndexIO.class);
   private final CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-  private final SegmentLoaderFactory segmentLoaderFactory = EasyMock.createMock(SegmentLoaderFactory.class);
+  private final SegmentCacheManagerFactory segmentLoaderFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
   private final RetryPolicyFactory retryPolicyFactory = EasyMock.createMock(RetryPolicyFactory.class);
   private final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
 
@@ -63,7 +63,7 @@ public class DruidInputSourceTest
     final InjectableValues.Std injectableValues = (InjectableValues.Std) mapper.getInjectableValues();
     injectableValues.addValue(IndexIO.class, indexIO);
     injectableValues.addValue(CoordinatorClient.class, coordinatorClient);
-    injectableValues.addValue(SegmentLoaderFactory.class, segmentLoaderFactory);
+    injectableValues.addValue(SegmentCacheManagerFactory.class, segmentLoaderFactory);
     injectableValues.addValue(RetryPolicyFactory.class, retryPolicyFactory);
     injectableValues.addValue(TaskConfig.class, taskConfig);
   }

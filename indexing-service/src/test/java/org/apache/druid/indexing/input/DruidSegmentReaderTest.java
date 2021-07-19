@@ -51,7 +51,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -589,10 +589,10 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
   {
     return new DruidSegmentInputEntity(
-        new SegmentLoader()
+        new SegmentCacheManager()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment)
+          public boolean isSegmentCached(DataSegment segment)
           {
             throw new UnsupportedOperationException("unused");
           }

@@ -50,7 +50,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -110,7 +110,7 @@ public class SqlModuleTest
   private JoinableFactory joinableFactory;
 
   @Mock
-  private SegmentLoader segmentLoader;
+  private SegmentCacheManager segmentCacheManager;
 
   private Injector injector;
 
@@ -128,7 +128,7 @@ public class SqlModuleTest
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
-        segmentLoader
+        segmentCacheManager
     );
   }
 
@@ -191,7 +191,7 @@ public class SqlModuleTest
               binder.bind(QueryToolChestWarehouse.class).toInstance(queryToolChestWarehouse);
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
-              binder.bind(SegmentLoader.class).toInstance(segmentLoader);
+              binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager);
 
             },
             new SqlModule(props),

@@ -19,17 +19,42 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
-/**
- * Loading segments from deep storage to local storage. Internally, this class can delegate the download to
- * {@link SegmentCacheManager}. Implementations must be thread-safe.
- */
-public interface SegmentLoader
-{
-  Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+import java.io.File;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-  void cleanup(DataSegment segment);
+/**
+ *
+ */
+public class CacheTestSegmentCacheManager implements SegmentCacheManager
+{
+  private final Set<DataSegment> segmentsInTrash = new HashSet<>();
+
+  @Override
+  public boolean isSegmentCached(DataSegment segment)
+  {
+    Map<String, Object> loadSpec = segment.getLoadSpec();
+    return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
+  }
+
+  @Override
+  public File getSegmentFiles(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void cleanup(DataSegment segment)
+  {
+    segmentsInTrash.add(segment);
+  }
+
+  public Set<DataSegment> getSegmentsInTrash()
+  {
+    return segmentsInTrash;
+  }
 }

@@ -19,17 +19,17 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
-/**
- * Loading segments from deep storage to local storage. Internally, this class can delegate the download to
- * {@link SegmentCacheManager}. Implementations must be thread-safe.
- */
-public interface SegmentLoader
-{
-  Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+import java.io.File;
 
+/**
+ * A class to fetch segment files to local disk and manage the local cache.
+ * Implementations must be thread-safe.
+ */
+public interface SegmentCacheManager
+{
+  boolean isSegmentCached(DataSegment segment);
+  File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
   void cleanup(DataSegment segment);
 }

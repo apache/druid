@@ -104,7 +104,6 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -149,24 +148,12 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment)
-          {
-            return false;
-          }
-
-          @Override
           public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
             );
-          }
-
-          @Override
-          public File getSegmentFiles(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
           }
 
           @Override
