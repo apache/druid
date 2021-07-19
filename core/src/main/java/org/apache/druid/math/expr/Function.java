@@ -218,13 +218,10 @@ public interface Function
 
     protected ExprEval eval(double param)
     {
-      long param2;
-      if (param > Long.MIN_VALUE && param < Long.MAX_VALUE) {
-        param2 = (long) param;
-      } else {
+      if (param < Long.MIN_VALUE || param > Long.MAX_VALUE) {
         throw new IAE("Possible data truncation, param [%f] is out of long value range", param);
       }
-      return eval(param2);
+      return eval((long) param);
     }
 
     @Nullable
