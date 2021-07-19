@@ -78,7 +78,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private final StorageLocationSelectorStrategy strategy;
 
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
-  // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
+  // objects via SegmentCacheManagerFactory objects, so that they can store segments in task-specific
   // directories rather than statically configured directories.
   @Inject
   public SegmentLocalCacheManager(

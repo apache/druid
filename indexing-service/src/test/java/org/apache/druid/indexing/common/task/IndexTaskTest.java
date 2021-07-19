@@ -191,7 +191,6 @@ public class IndexTaskTest extends IngestionTestBase
 
     final File cacheDir = temporaryFolder.newFolder();
     segmentCacheManager = new SegmentLocalCacheManager(
-        indexIO,
         new SegmentLoaderConfig()
         {
           @Override

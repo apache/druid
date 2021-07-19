@@ -1286,7 +1286,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
   {
     final SegmentCacheManager loader = new SegmentLocalCacheManager(
-        getIndexIO(),
         new SegmentLoaderConfig() {
           @Override
           public List<StorageLocationConfig> getLocations()

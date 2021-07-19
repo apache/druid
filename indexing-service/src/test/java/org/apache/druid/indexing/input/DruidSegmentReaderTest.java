@@ -46,8 +46,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -593,12 +591,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         {
           @Override
           public boolean isSegmentCached(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
           {
             throw new UnsupportedOperationException("unused");
           }
