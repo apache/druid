@@ -373,7 +373,11 @@ public class ForkingTaskRunner
                         // Process exited unsuccessfully
                         status = TaskStatus.failure(
                             task.getId(),
-                            "Task execution process exited unsuccessfully. See middleManager logs for more details."
+                            StringUtils.format(
+                                "Task execution process exited unsuccessfully with code[%s]. "
+                                + "See middleManager logs for more details.",
+                                exitCode
+                            )
                         );
                       }
 
