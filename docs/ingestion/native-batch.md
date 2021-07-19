@@ -830,16 +830,53 @@ Only the native Parallel task and Simple task support the input source.
 
 ### S3 Input Source
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source. 
+Use the *S3 input source* to read objects directly from S3-like storage.
 
-The S3 input source is to support reading objects directly from S3.
-Objects can be specified either via a list of S3 URI strings or a list of
-S3 location prefixes, which will attempt to list the contents and ingest
-all objects contained in the locations. The S3 input source is splittable
-and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read one or multiple objects.
+> To ingest from S3-type storage, you need to [load](../development/extensions.html#loading-extensions) the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension.
 
-Sample specs:
+> The S3 input source is splittable, meaning it can be used by the [Parallel task](#parallel-task).  Each `index_parallel` task will then read one or multiple objects.
+
+Objects to ingest can be specified as:
+
+- a list of S3 URI strings or
+- a list of S3 location prefixes
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|`type`|This must be `s3`.|None|yes|
+|`uris`|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
+|`prefixes`|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
+|[`objects`](#s3-input-objects)|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
+|[`properties`](#s3-input-properties-object)|Properties Object for overriding the default S3 configuration.|None|No (defaults will be used if not given)
+
+> When you supply a list of `prefixes`, Druid will list the contents and then ingest
+*all* objects contained in the `prefixes` you specify.
+
+> You can view the payload of individual `index_parallel` tasks to see how Druid has divided up the work of ingestion.
+
+> The S3 input source will skip all empty objects only when `prefixes` is specified.
+
+#### S3 Input Objects
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|`bucket`|Name of the S3 bucket|None|yes|
+|`path`|The path where data is located.|None|yes|
+
+#### S3 Input Properties Object
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|`accessKeyId`|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
+|`secretAccessKey`|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
+|`assumeRoleArn`|AWS ARN of the role to assume.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). `assumeRoleArn` can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
+|`assumeRoleExternalId`|A unique identifier that might be required when you assume a role in another account.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html).|None|no|
+
+> If `accessKeyId` and `secretAccessKey` are not given, then the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+
+#### S3 Input Examples
+
+Using URIs, this ingestion specification will ingest two specific objects:
 
 ```json
 ...
@@ -857,6 +894,8 @@ Sample specs:
 ...
 ```
 
+This specification will ingest all the objects in two locations given in `prefixes`:
+
 ```json
 ...
     "ioConfig": {
@@ -873,6 +912,7 @@ Sample specs:
 ...
 ```
 
+This time using `objects`, this specification will ingest two specific objects, one from the `foo` bucket, one from the `bar` bucket:
 
 ```json
 ...
@@ -893,6 +933,8 @@ Sample specs:
 ...
 ```
 
+This ingestion specification provides task-specific credentials to ingest two specific objects:
+
 ```json
 ...
     "ioConfig": {
@@ -912,6 +954,8 @@ Sample specs:
     },
 ...
 ```
+
+Similarly, task-specific credentials are used here, too:
 
 ```json
 ...
@@ -934,33 +978,7 @@ Sample specs:
 ...
 ```
 
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should be `s3`.|None|yes|
-|uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
-|objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|properties|Properties Object for overriding the default S3 configuration. See below for more information.|None|No (defaults will be used if not given)
-
-Note that the S3 input source will skip all empty objects only when `prefixes` is specified.
-
-S3 Object:
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|bucket|Name of the S3 bucket|None|yes|
-|path|The path where data is located.|None|yes|
-
-Properties Object:
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
-|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
-|assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
-|assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
-
-**Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
+> Read more about S3 and Druid on the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension page, including using S3-like for [Deep Storage](../dependencies/deep-storage.html), more about authentication, and additional configuration options.
 
 ### Google Cloud Storage Input Source
 
