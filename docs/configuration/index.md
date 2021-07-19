@@ -343,12 +343,15 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 
 ### Enabling Metrics
 
-Druid processes periodically emit metrics and different metrics monitors can be included. Each process can overwrite the default list of monitors.
+Druid processes can be configured to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1M|
-|`druid.monitoring.monitors`|Sets list of Druid monitors used by a process. See below for names and more information. For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`.|none (no monitors)|
+|`druid.monitoring.emissionPeriod`|How often metrics are emitted.|`PT1M`|
+|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a process.|none (no monitors)|
+|[`druid.emitter`](#metrics-emitters)|Setting this value will initialize one of the emitter modules.|`noop`|
+
+#### Metrics monitors
 
 The following monitors are available:
 
@@ -367,23 +370,31 @@ The following monitors are available:
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
 
+> Metric monitoring is an essential part of Druid operations.  For example, you might configure monitors on all processes for system and JVM information as follows:
+>
+>`druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`
 
-### Emitting Metrics
+> You can overwrite the default list of monitors with the configurations of individual processes.
 
-The Druid servers [emit various metrics](../operations/metrics.md) and alerts via something we call an Emitter. There are three emitter implementations included with the code, a "noop" emitter (the default if none is specified), one that just logs to log4j ("logging"), and one that does POSTs of JSON events to a server ("http"). The properties for using the logging emitter are described below.
+#### Metrics emitters
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter`|Setting this value to "noop", "logging", "http" or "parametrized" will initialize one of the emitter modules. The value "composing" can be used to initialize multiple emitter modules. |noop|
+There are several emitters available:
 
-#### Logging Emitter Module
+- `noop` (default)
+- log4j ([`logging`](#logging-emitter-module))
+- POSTs of JSON events ([`http`](#http-emitter-module))
+- [`parametrized`](#parametrized-http-emitter-module)
+- [`composing`](#composing-emitter-module) to initialize multiple emitter modules
+- [`graphite`](#graphite-emitter)
+
+##### Logging Emitter Module
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.logging.loggerClass`|Choices: HttpPostEmitter, LoggingEmitter, NoopServiceEmitter, ServiceEmitter. The class used for logging.|LoggingEmitter|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
 
-#### Http Emitter Module
+##### Http Emitter Module
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -397,10 +408,9 @@ The Druid servers [emit various metrics](../operations/metrics.md) and alerts vi
 |`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
 
-#### Http Emitter Module TLS Overrides
+##### Http Emitter Module TLS Overrides
 
-When emitting events to a TLS-enabled receiver, the Http Emitter will by default use an SSLContext obtained via the
-process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
+When emitting events to a TLS-enabled receiver, the Http Emitter will by default use an SSLContext obtained via the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
 SSLContext that would be used for internal communications between Druid processes.
 
 In some use cases it may be desirable to have the Http Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
@@ -416,7 +426,7 @@ The following properties allow the Http Emitter to use its own truststore config
 |`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
 |`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
 
-#### Parametrized Http Emitter Module
+##### Parametrized Http Emitter Module
 
 `druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of Http Emitter Modules, see above.
 Except `recipientBaseUrl`. E.g., `druid.emitter.parametrized.httpEmitting.flushMillis`,
@@ -428,13 +438,13 @@ The additional configs are:
 |--------|-----------|-------|
 |`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. E.g., `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
 
-#### Composing Emitter Module
+##### Composing Emitter Module
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.composing.emitters`|List of emitter modules to load, e.g., ["logging","http"].|[]|
 
-#### Graphite Emitter
+##### Graphite Emitter
 
 To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](../development/extensions-contrib/graphite.md).
 
