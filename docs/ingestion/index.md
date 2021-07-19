@@ -169,16 +169,18 @@ For an example of how to configure rollup, and of how the feature will modify yo
 
 ### Maximizing rollup ratio
 
-You can measure the rollup ratio of a datasource by comparing the number of rows in Druid with the number of ingested
-events. The higher this number, the more benefit you are gaining from rollup. One way to do this is with a
-[Druid SQL](../querying/sql.md) query like:
+You can measure the rollup ratio of a datasource by comparing the number of rows in Druid (`COUNT`) with the number of ingested
+events.  One way to do this is with a
+[Druid SQL](../querying/sql.md) query such as the following, where "count" refers to a `count`-type metric generated at ingestion time:
 
 ```sql
-SELECT SUM("cnt") / COUNT(*) * 1.0 FROM datasource
+SELECT SUM("count") / (COUNT(*) * 1.0)
+FROM datasource
 ```
 
-In this query, `cnt` should refer to a "count" type metric specified at ingestion time. See
-[Counting the number of ingested events](schema-design.md#counting) on the "Schema design" page for more details about
+The higher this number is, the more benefit you are gaining from rollup.
+
+> See [Counting the number of ingested events](schema-design.md#counting) on the "Schema design" page for more details about
 how counting works when rollup is enabled.
 
 Tips for maximizing rollup:
