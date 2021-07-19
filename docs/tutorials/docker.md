@@ -97,7 +97,7 @@ Note that Druid uses port 8888 for the console. This port is also used by Jupyte
 
 ## Launching the cluster
 
-`cd` into the directory that contains the configuation files. This is the directory you created above, or the `distribution/docker/` in your Druid installation directory if you installed Druid locally.
+`cd` into the directory that contains the configuration files. This is the directory you created above, or the `distribution/docker/` in your Druid installation directory if you installed Druid locally.
 
 Run `docker-compose up` to launch the cluster with a shell attached, or `docker-compose up -d` to run the cluster in the background.
 
