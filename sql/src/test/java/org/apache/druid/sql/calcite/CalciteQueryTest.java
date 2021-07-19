@@ -13388,7 +13388,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByOnGroupBy() throws Exception
+  public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim() throws Exception
   {
     testQuery(
         "SELECT dim2, time_floor(gran, 'P1M') gran, sum(s)\n"
@@ -13480,9 +13480,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"abc", timestamp("2001-01-01"), 5.0}
         ) :
         ImmutableList.of(
-            new Object[]{null, timestamp("2000-01-01"), 6.0},
-            new Object[]{null, timestamp("2001-01-01"), 5.0},
-            new Object[]{"", timestamp("2000-01-01"), 5.0},
+            new Object[]{null, timestamp("2001-01-01"), 6.0},
+            new Object[]{null, timestamp("2000-01-01"), 2.0},
+            new Object[]{"", timestamp("2000-01-01"), 3.0},
             new Object[]{"a", timestamp("2001-01-01"), 4.0},
             new Object[]{"abc", timestamp("2001-01-01"), 5.0}
         )

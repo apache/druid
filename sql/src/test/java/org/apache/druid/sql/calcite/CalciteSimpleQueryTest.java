@@ -620,9 +620,9 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
             new Object[]{"abc", timestamp("2001-01-01"), "def", 1L},
             new Object[]{"a", timestamp("2001-01-01"), "1", 1L},
             new Object[]{"a", timestamp("2000-01-01"), "", 1L},
+            new Object[]{"", timestamp("2000-01-01"), "2", 1L},
             new Object[]{null, timestamp("2001-01-01"), "abc", 1L},
-            new Object[]{"", timestamp("2000-01-01"), "10.1", 1L},
-            new Object[]{null, timestamp("2000-01-01"), "2", 1L}
+            new Object[]{null, timestamp("2000-01-01"), "10.1", 1L}
         )
     );
   }
