@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -53,7 +52,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-public class SegmentLoaderLocalCacheManagerConcurrencyTest
+public class SegmentLocalCacheManagerConcurrencyTest
 {
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -66,10 +65,10 @@ public class SegmentLoaderLocalCacheManagerConcurrencyTest
   private final String segmentVersion;
 
   private File localSegmentCacheFolder;
-  private SegmentLoaderLocalCacheManager manager;
+  private SegmentLocalCacheManager manager;
   private ExecutorService executorService;
 
-  public SegmentLoaderLocalCacheManagerConcurrencyTest()
+  public SegmentLocalCacheManagerConcurrencyTest()
   {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
@@ -93,8 +92,7 @@ public class SegmentLoaderLocalCacheManagerConcurrencyTest
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheFolder, 2000L, null);
     locations.add(locationConfig);
 
-    manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+    manager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );

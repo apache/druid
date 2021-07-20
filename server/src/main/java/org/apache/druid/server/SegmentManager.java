@@ -154,11 +154,6 @@ public class SegmentManager
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
-  public boolean isSegmentCached(final DataSegment segment)
-  {
-    return segmentLoader.isSegmentLoaded(segment);
-  }
-
   /**
    * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
    * datasource of a single table.

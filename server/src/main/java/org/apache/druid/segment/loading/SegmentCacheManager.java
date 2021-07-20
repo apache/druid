@@ -19,27 +19,29 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
+import java.io.File;
+
 /**
- * Loading segments from deep storage to local storage. Internally, this class can delegate the download to
- * {@link SegmentCacheManager}. Implementations must be thread-safe.
+ * A class to fetch segment files to local disk and manage the local cache.
+ * Implementations must be thread-safe.
  */
-public interface SegmentLoader
+public interface SegmentCacheManager
 {
   /**
-   * Builds a {@link Segment} by downloading if necessary
-   * @param segment - Segment to load
-   * @param lazy - Whether column metadata de-serialization is to be deferred to access time. Setting this flag to true can speed up segment loading
-   * @param loadFailed - Callback to invoke if lazy loading fails during column access.
-   * @throws SegmentLoadingException - If there is an error in loading the segment
+   * Checks whether a segment is already cached.
    */
-  Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+  boolean isSegmentCached(DataSegment segment);
 
   /**
-   * cleanup any state used by this segment
+   * This method fetches the files for the given segment if the segment is not downloaded already.
+   * @throws SegmentLoadingException if there is an error in downloading files
+   */
+  File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Cleanup the cache space used by the segment
    */
   void cleanup(DataSegment segment);
 }

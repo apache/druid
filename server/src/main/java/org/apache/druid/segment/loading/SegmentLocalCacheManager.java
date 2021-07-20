@@ -26,9 +26,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nonnull;
@@ -41,14 +38,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class SegmentLoaderLocalCacheManager implements SegmentLoader
+public class SegmentLocalCacheManager implements SegmentCacheManager
 {
   @VisibleForTesting
   static final String DOWNLOAD_START_MARKER_FILE_NAME = "downloadStartMarker";
 
-  private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentLocalCacheManager.class);
 
-  private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
   private final ObjectMapper jsonMapper;
 
@@ -82,18 +78,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private final StorageLocationSelectorStrategy strategy;
 
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
-  // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
+  // objects via SegmentCacheManagerFactory objects, so that they can store segments in task-specific
   // directories rather than statically configured directories.
   @Inject
-  public SegmentLoaderLocalCacheManager(
-      IndexIO indexIO,
+  public SegmentLocalCacheManager(
       List<StorageLocation> locations,
       SegmentLoaderConfig config,
       @Nonnull StorageLocationSelectorStrategy strategy,
       @Json ObjectMapper mapper
   )
   {
-    this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
     this.locations = locations;
@@ -102,14 +96,13 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @VisibleForTesting
-  SegmentLoaderLocalCacheManager(
-      IndexIO indexIO,
+  SegmentLocalCacheManager(
       SegmentLoaderConfig config,
       @Nonnull StorageLocationSelectorStrategy strategy,
       @Json ObjectMapper mapper
   )
   {
-    this(indexIO, config.toStorageLocations(), config, strategy, mapper);
+    this(config.toStorageLocations(), config, strategy, mapper);
   }
 
   /**
@@ -117,13 +110,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    *
    * This ctor is mainly for test cases, including test cases in other modules
    */
-  public SegmentLoaderLocalCacheManager(
-      IndexIO indexIO,
+  public SegmentLocalCacheManager(
       SegmentLoaderConfig config,
       @Json ObjectMapper mapper
   )
   {
-    this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
     this.locations = config.toStorageLocations();
@@ -132,7 +123,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
-  public boolean isSegmentLoaded(final DataSegment segment)
+  public boolean isSegmentCached(final DataSegment segment)
   {
     return findStorageLocationIfLoaded(segment) != null;
   }
@@ -175,36 +166,6 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   {
     final File downloadStartMarker = new File(localStorageDir.getPath(), DOWNLOAD_START_MARKER_FILE_NAME);
     return downloadStartMarker.exists();
-  }
-
-  @Override
-  public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
-  {
-    final ReferenceCountingLock lock = createOrGetLock(segment);
-    final File segmentFiles;
-    synchronized (lock) {
-      try {
-        segmentFiles = getSegmentFiles(segment);
-      }
-      finally {
-        unlock(segment, lock);
-      }
-    }
-    File factoryJson = new File(segmentFiles, "factory.json");
-    final SegmentizerFactory factory;
-
-    if (factoryJson.exists()) {
-      try {
-        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
-      }
-    } else {
-      factory = new MMappedQueryableSegmentizerFactory(indexIO);
-    }
-
-    return factory.factorize(segment, segmentFiles, lazy, loadFailed);
   }
 
   /**
