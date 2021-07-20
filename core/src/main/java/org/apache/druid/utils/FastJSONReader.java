@@ -169,8 +169,7 @@ public class FastJSONReader
     return -1;
   }
 
-  @Nullable
-  private boolean isMatched(String expected)
+  private boolean isMatched(@Nullable String expected)
   {
     int begin_index = pos;
     int length = advance('"');
