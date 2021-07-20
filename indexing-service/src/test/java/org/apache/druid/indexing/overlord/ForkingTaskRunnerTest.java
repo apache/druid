@@ -232,7 +232,7 @@ public class ForkingTaskRunnerTest
     final TaskStatus status = forkingTaskRunner.run(NoopTask.create()).get();
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assert.assertEquals(
-        "Task execution process exited unsuccessfully. See middleManager logs for more details.",
+        "Task execution process exited unsuccessfully with code[1]. See middleManager logs for more details.",
         status.getErrorMsg()
     );
   }
