@@ -56,3 +56,17 @@ creating links to files of the same version on GitHub.
 
 The variables are not replaced when running the web site locally using the
 `start` command above.
+
+## Spellcheck
+
+Please run a spellcheck before issuing a pull request to avoid a build failure
+due to spelling issues. Run:
+
+```bash
+npm run link-lint
+npm run spellcheck
+```
+
+If you introduce new (correctly spelled) project names or technical terms, add
+them to the dictionary in the `.spelling` file in this directory. Also, terms
+enclosed in backticks are not spell checked. Example: \``symbolName`\`

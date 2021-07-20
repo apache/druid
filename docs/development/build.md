@@ -73,7 +73,7 @@ mvn clean install -Papache-release,dist,rat -DskipTests
 ```
 #### Potential issues
 
-##### Missing pyyaml
+##### Missing `pyyaml`
 
 You are building Druid from source following the instructions on this page but you get
 ```
