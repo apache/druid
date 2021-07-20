@@ -340,17 +340,15 @@ public class CompactSegmentsTest
       );
     }
 
-    // Run auto compaction without any dataSource in the compaction config
-    // Should still populate the result of everything fully compacted
-    doCompactSegments(compactSegments, new ArrayList<>());
-    Assert.assertEquals(
-        0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
-    );
-    for (int i = 0; i < 3; i++) {
+    // Test run auto compaction with one datasource auto compaction disabled
+    // Snapshot should not contain datasource with auto compaction disabled
+    List<DataSourceCompactionConfig> removedOneConfig = createCompactionConfigs();
+    removedOneConfig.remove(0);
+    doCompactSegments(compactSegments, removedOneConfig);
+    for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED,
+          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -363,6 +361,15 @@ public class CompactSegmentsTest
           0
       );
     }
+
+    // Run auto compaction without any dataSource in the compaction config
+    // Snapshot should be empty
+    doCompactSegments(compactSegments, new ArrayList<>());
+    Assert.assertEquals(
+        0,
+        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+    );
+    Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().isEmpty());
 
     assertLastSegmentNotCompacted(compactSegments);
   }

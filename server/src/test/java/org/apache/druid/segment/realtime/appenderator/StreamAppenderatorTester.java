@@ -17,23 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.appenderator;
+package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryConfig;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -42,12 +59,13 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
@@ -57,59 +75,77 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 
-public class BatchAppenderatorTester implements AutoCloseable
+public class StreamAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
-  private final IndexTask.IndexTuningConfig tuningConfig;
+  private final RealtimeTuningConfig tuningConfig;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
+  private final ExecutorService queryExecutor;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final ServiceEmitter emitter;
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public BatchAppenderatorTester(
-      final int maxRowsInMemory,
-      final boolean enablePushFailure,
-      boolean batchMemoryMappedIndex
+  public StreamAppenderatorTester(
+      final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, -1, null, enablePushFailure, batchMemoryMappedIndex);
+    this(maxRowsInMemory, -1, null, false);
   }
 
-  public BatchAppenderatorTester(
+  public StreamAppenderatorTester(
+      final int maxRowsInMemory,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, -1, null, enablePushFailure);
+  }
+
+  public StreamAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
+  }
+
+  public StreamAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final File basePersistDirectory,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false);
+  }
+
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure,
-      boolean batchMemoryMappedIndex
+      final RowIngestionMeters rowIngestionMeters
   )
   {
-    this(
-        maxRowsInMemory,
-        maxSizeInBytes,
-        basePersistDirectory,
-        enablePushFailure,
-        new SimpleRowIngestionMeters(),
-        false,
-        batchMemoryMappedIndex
-    );
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
   }
 
-  public BatchAppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck,
-      boolean batchMemoryMappedIndex
+      final boolean skipBytesInMemoryOverheadCheck
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -138,34 +174,31 @@ public class BatchAppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    tuningConfig = new IndexTask.IndexTuningConfig(
-        null,
-        2,
+    tuningConfig = new RealtimeTuningConfig(
         null,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-        false,
+        skipBytesInMemoryOverheadCheck,
+        null,
+        null,
+        basePersistDirectory,
         null,
         null,
         null,
         null,
         null,
         null,
+        0,
+        0,
         null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
         null,
         null,
         null,
         null
-    ).withBasePersistDirectory(createNewBasePersistDirectory());
+    );
 
     metrics = new FireDepartmentMetrics();
+    queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     indexIO = new IndexIO(
         objectMapper,
@@ -223,7 +256,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
-    appenderator = Appenderators.createOffline(
+    appenderator = Appenderators.createRealtime(
         schema.getDataSource(),
         schema,
         tuningConfig,
@@ -232,9 +265,32 @@ public class BatchAppenderatorTester implements AutoCloseable
         objectMapper,
         indexIO,
         indexMerger,
+        new DefaultQueryRunnerFactoryConglomerate(
+            ImmutableMap.of(
+                TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                    new TimeseriesQueryQueryToolChest(),
+                    new TimeseriesQueryEngine(),
+                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                ),
+                ScanQuery.class, new ScanQueryRunnerFactory(
+                    new ScanQueryQueryToolChest(
+                        new ScanQueryConfig(),
+                        new DefaultGenericQueryMetricsFactory()
+                    ),
+                    new ScanQueryEngine(),
+                    new ScanQueryConfig()
+                )
+            )
+        ),
+        new NoopDataSegmentAnnouncer(),
+        emitter,
+        new ForwardingQueryProcessingPool(queryExecutor),
+        NoopJoinableFactory.INSTANCE,
+        MapCache.create(2048),
+        new CacheConfig(),
+        new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        batchMemoryMappedIndex
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
     );
   }
 
@@ -248,7 +304,7 @@ public class BatchAppenderatorTester implements AutoCloseable
     return schema;
   }
 
-  public IndexTask.IndexTuningConfig getTuningConfig()
+  public RealtimeTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -282,12 +338,8 @@ public class BatchAppenderatorTester implements AutoCloseable
   public void close() throws Exception
   {
     appenderator.close();
+    queryExecutor.shutdownNow();
     emitter.close();
     FileUtils.deleteDirectory(tuningConfig.getBasePersistDirectory());
-  }
-
-  private static File createNewBasePersistDirectory()
-  {
-    return FileUtils.createTempDir("druid-batch-persist");
   }
 }

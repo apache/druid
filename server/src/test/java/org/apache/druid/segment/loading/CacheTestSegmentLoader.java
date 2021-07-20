@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -28,23 +27,10 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import java.io.File;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 /**
 */
 public class CacheTestSegmentLoader implements SegmentLoader
 {
-  private final Set<DataSegment> segmentsInTrash = new HashSet<>();
-
-  @Override
-  public boolean isSegmentLoaded(DataSegment segment)
-  {
-    Map<String, Object> loadSpec = segment.getLoadSpec();
-    return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
-  }
 
   @Override
   public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
@@ -83,19 +69,8 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public File getSegmentFiles(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void cleanup(DataSegment segment)
   {
-    segmentsInTrash.add(segment);
-  }
 
-  public Set<DataSegment> getSegmentsInTrash()
-  {
-    return segmentsInTrash;
   }
 }

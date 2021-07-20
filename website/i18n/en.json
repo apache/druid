@@ -220,7 +220,7 @@
         "title": "Amazon Kinesis ingestion",
         "sidebar_label": "Amazon Kinesis"
       },
-      "development/extensions-core/druid-kubernetes": {
+      "development/extensions-core/kubernetes": {
         "title": "Kubernetes"
       },
       "development/extensions-core/lookups-cached-global": {
@@ -326,6 +326,10 @@
       },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
+      },
+      "operations/clean-metadata-store": {
+        "title": "Automated cleanup for metadata records",
+        "sidebar_label": "Automated metadata cleanup"
       },
       "operations/deep-storage-migration": {
         "title": "Deep storage migration"
