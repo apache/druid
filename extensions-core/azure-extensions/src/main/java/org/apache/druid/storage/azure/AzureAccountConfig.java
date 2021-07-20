@@ -44,6 +44,9 @@ public class AzureAccountConfig
   @NotNull
   private String key;
 
+  @JsonProperty
+  private String hostAddress;
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
   {
@@ -85,5 +88,14 @@ public class AzureAccountConfig
   public String getKey()
   {
     return key;
+  }
+
+  public String getHostAddress() {
+    return hostAddress;
+  }
+
+  public void setHostAddress(String hostAddress) {
+    this.hostAddress = hostAddress;
+    AzureUtils.changeStaticValue(null,AzureUtils.class,"AZURE_STORAGE_HOST_ADDRESS",hostAddress);
   }
 }

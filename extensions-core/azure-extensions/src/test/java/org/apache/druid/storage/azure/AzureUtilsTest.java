@@ -140,4 +140,10 @@ public class AzureUtilsTest
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON);
     Assert.assertFalse(retry);
   }
+  @Test
+  public void test_changeStaticValue_modifyDefaultAzureStorageHostAddress_returnsModifiedHostPath(){
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setHostAddress("blob.core.chinacloudapi.cn");
+    Assert.assertEquals(config.getHostAddress(),AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
+  }
 }
