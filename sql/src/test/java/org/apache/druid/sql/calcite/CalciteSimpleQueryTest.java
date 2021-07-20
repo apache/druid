@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -36,9 +35,10 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitParamsRunner.class)
+/**
+ * This class tests simple aggregation SQL queries, i.e., no joins and no nested queries.
+ */
 public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
 {
   @Test

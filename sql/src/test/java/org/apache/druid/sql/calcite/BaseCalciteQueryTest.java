@@ -98,6 +98,7 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,6 +108,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
+ * and populates data using {@link CalciteTests#createMockWalker}.
+ */
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static String NULL_STRING;
