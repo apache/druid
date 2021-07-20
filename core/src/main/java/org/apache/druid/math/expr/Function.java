@@ -3548,6 +3548,7 @@ public interface Function
 
   abstract class JSONExtractFuncBase implements Function
   {
+    @Nullable
     protected String extract(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();

@@ -19,11 +19,11 @@
 
 package org.apache.druid.utils;
 
+import javax.annotation.Nullable;
+
 // For fast scalar value extraction, FastJSONReader doesn't support the full specification of types other than String.
 public class FastJSONReader
 {
-  final char INVALID_CHAR = '\u0000';
-
   String json;
   String[] key;
   int pos;
@@ -52,6 +52,7 @@ public class FastJSONReader
   }
 
   // The depth is 1 at first call
+  @Nullable
   private String get(boolean needResult)
   {
     if (json.isEmpty()) {
@@ -81,7 +82,7 @@ public class FastJSONReader
       }
       skipWhitespaces();
 
-      String result = null;
+      String result;
       char c = safeCharAt();
       if (c == '"') {
         result = stringValue(matched);
@@ -141,7 +142,7 @@ public class FastJSONReader
   private char safeCharAt()
   {
     if (pos >= json.length()) {
-      return INVALID_CHAR;
+      return '\u0000';
     } else {
       return json.charAt(pos);
     }
@@ -168,6 +169,7 @@ public class FastJSONReader
     return -1;
   }
 
+  @Nullable
   private boolean isMatched(String expected)
   {
     int begin_index = pos;
@@ -188,6 +190,7 @@ public class FastJSONReader
     return key.equals(expected);
   }
 
+  @Nullable
   private String stringValue(boolean needResult)
   {
     pos++; // skip the opening quote
@@ -217,6 +220,7 @@ public class FastJSONReader
   }
 
   // It loosely parses other types. Because a caller can cast the result to an appropriate type.
+  @Nullable
   private String othersAsString(boolean needResult)
   {
     int begin_index = pos;
@@ -243,6 +247,7 @@ public class FastJSONReader
   }
 
   // It read whole values in an array as a string
+  @Nullable
   private String arrayValueAsString(boolean needResult)
   {
     int begin_index = pos;

@@ -268,7 +268,7 @@ SELECT json_extract_string('{"key1":"val1"}', 'key1')
 SELECT json_extract_string('{"key1":{"key2":"val2"}}', 'key1', 'key2')
 ```
 
-The `jsonpath_extract_*` family of functions support JSONPath expressions referring to a JSON structure in the same way as XPath expression.
+The `jsonpath_extract_*` family of functions support JsonPath expressions referring to a JSON structure in the same way as XPath expression.
 
 ```SQL
 SELECT jsonpath_extract_string('{"key":[{"k":"v1"},{"k":"v2"}]}', '$.key[0].k')

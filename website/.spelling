@@ -189,6 +189,7 @@ UTF-16
 UTF-8
 UTF8
 XMLs
+XPath
 ZK
 ZSTD
 accessor
@@ -1893,3 +1894,9 @@ PiB
 protobuf
 Golang
 multiValueHandling
+json_extract_string
+json_extract_long
+json_extract_double
+jsonpath_extract_string
+jsonpath_extract_long
+jsonpath_extract_double
