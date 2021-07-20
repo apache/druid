@@ -41,12 +41,23 @@ public interface SegmentCacheManager
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Tries to reserve the space for a segment on any location. We only return a boolean result instead of a pointer to
-   * {@link StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly outside {@code SegmentLoader}.
-   * {@link SegmentLoader} operates on the {@code StorageLocation} objects in a thread-safe manner.
+   * Tries to reserve the space for a segment on any location. When the space has been reserved,
+   * {@link #getSegmentFiles(DataSegment)} should download the segment on the reserved location or
+   * fail otherwise.
+   *
+   * This function is useful for custom extensions. Extensions can try to reserve the space first and
+   * if not successful, make some space by cleaning up other segments, etc. There is also improved
+   * concurrency for extensions with this function. Since reserve is a cheaper operation to invoke
+   * till the space has been reserved. Hence it can be put inside a lock if required by the extensions. getSegment
+   * can't be put inside a lock since it is a time-consuming operation, on account of downloading the files.
    *
    * @param segment - Segment to reserve
    * @return True if enough space found to store the segment, false otherwise
+   */
+  /*
+   * We only return a boolean result instead of a pointer to
+   * {@link StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly outside {@code SegmentLoader}.
+   * {@link SegmentLoader} operates on the {@code StorageLocation} objects in a thread-safe manner.
    */
   boolean reserve(DataSegment segment);
 

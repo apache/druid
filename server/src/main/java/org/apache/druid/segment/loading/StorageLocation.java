@@ -166,8 +166,7 @@ public class StorageLocation
   {
     final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
     if (files.contains(segmentFileToAdd)) {
-      //TODO: is this change ok?
-      return segmentFileToAdd;
+      return null;
     }
     if (canHandle(segmentId, segmentSize)) {
       files.add(segmentFileToAdd);

@@ -133,7 +133,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public boolean isSegmentCached(final DataSegment segment)
   {
-    return findStoragePathIfLoaded(segment) != null;
+    return findStoragePathIfCached(segment) != null;
   }
 
   /**
@@ -145,7 +145,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * @return - Path corresponding to segment directory if found, null otherwise.
    */
   @Nullable
-  private File findStoragePathIfLoaded(final DataSegment segment)
+  private File findStoragePathIfCached(final DataSegment segment)
   {
     for (StorageLocation location : locations) {
       String storageDir = getSegmentDir(segment);
@@ -202,7 +202,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        File segmentDir = findStoragePathIfLoaded(segment);
+        File segmentDir = findStoragePathIfCached(segment);
         if (segmentDir != null) {
           return segmentDir;
         }
@@ -341,7 +341,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     synchronized (lock) {
       try {
         // May be the segment was already loaded [This check is required to account for restart scenarios]
-        if (null != findStoragePathIfLoaded(segment)) {
+        if (null != findStoragePathIfCached(segment)) {
           return true;
         }
 
@@ -411,7 +411,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        File loc = findStoragePathIfLoaded(segment);
+        File loc = findStoragePathIfCached(segment);
 
         if (loc == null) {
           log.warn("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment.getId());
