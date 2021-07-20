@@ -35,6 +35,10 @@ export const EMPTY_ARRAY: any[] = [];
 
 export type NumberLike = number | BigInt;
 
+export function isNumberLikeNaN(x: NumberLike): boolean {
+  return isNaN(Number(x));
+}
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);

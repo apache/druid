@@ -57,6 +57,7 @@ import {
   formatMillions,
   formatPercent,
   getDruidErrorMessage,
+  isNumberLikeNaN,
   LocalStorageKeys,
   lookupBy,
   NumberLike,
@@ -156,18 +157,18 @@ interface DatasourceQueryResultRow {
   readonly num_segments: NumberLike;
   readonly num_segments_to_load: NumberLike;
   readonly num_segments_to_drop: NumberLike;
-  readonly minute_aligned_segments: number;
-  readonly hour_aligned_segments: number;
-  readonly day_aligned_segments: number;
-  readonly month_aligned_segments: number;
-  readonly year_aligned_segments: number;
+  readonly minute_aligned_segments: NumberLike;
+  readonly hour_aligned_segments: NumberLike;
+  readonly day_aligned_segments: NumberLike;
+  readonly month_aligned_segments: NumberLike;
+  readonly year_aligned_segments: NumberLike;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
-  readonly min_segment_rows: number;
-  readonly avg_segment_rows: number;
-  readonly max_segment_rows: number;
+  readonly min_segment_rows: NumberLike;
+  readonly avg_segment_rows: NumberLike;
+  readonly max_segment_rows: NumberLike;
   readonly total_rows: NumberLike;
-  readonly avg_row_size: number;
+  readonly avg_row_size: NumberLike;
 }
 
 function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryResultRow {
@@ -1109,7 +1110,12 @@ ORDER BY 1`;
               width: 220,
               Cell: ({ value, original }) => {
                 const { min_segment_rows, max_segment_rows } = original as Datasource;
-                if (isNaN(value) || isNaN(min_segment_rows) || isNaN(max_segment_rows)) return '-';
+                if (
+                  isNumberLikeNaN(value) ||
+                  isNumberLikeNaN(min_segment_rows) ||
+                  isNumberLikeNaN(max_segment_rows)
+                )
+                  return '-';
                 return (
                   <>
                     <BracedText
@@ -1144,20 +1150,20 @@ ORDER BY 1`;
                   year_aligned_segments,
                 } = original as Datasource;
                 const segmentGranularities: string[] = [];
-                if (!num_segments || isNaN(year_aligned_segments)) return '-';
-                if (Number(num_segments) - minute_aligned_segments) {
+                if (!num_segments || isNumberLikeNaN(year_aligned_segments)) return '-';
+                if (num_segments !== minute_aligned_segments) {
                   segmentGranularities.push('Sub minute');
                 }
-                if (minute_aligned_segments - hour_aligned_segments) {
+                if (minute_aligned_segments !== hour_aligned_segments) {
                   segmentGranularities.push('Minute');
                 }
-                if (hour_aligned_segments - day_aligned_segments) {
+                if (hour_aligned_segments !== day_aligned_segments) {
                   segmentGranularities.push('Hour');
                 }
-                if (day_aligned_segments - month_aligned_segments) {
+                if (day_aligned_segments !== month_aligned_segments) {
                   segmentGranularities.push('Day');
                 }
-                if (month_aligned_segments - year_aligned_segments) {
+                if (month_aligned_segments !== year_aligned_segments) {
                   segmentGranularities.push('Month');
                 }
                 if (year_aligned_segments) {
@@ -1173,7 +1179,7 @@ ORDER BY 1`;
               filterable: false,
               width: 100,
               Cell: ({ value }) => {
-                if (isNaN(value)) return '-';
+                if (isNumberLikeNaN(value)) return '-';
                 return <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />;
               },
             },
@@ -1184,7 +1190,7 @@ ORDER BY 1`;
               filterable: false,
               width: 100,
               Cell: ({ value }) => {
-                if (isNaN(value)) return '-';
+                if (isNumberLikeNaN(value)) return '-';
                 return <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />;
               },
             },
@@ -1195,7 +1201,7 @@ ORDER BY 1`;
               filterable: false,
               width: 100,
               Cell: ({ value }) => {
-                if (isNaN(value)) return '-';
+                if (isNumberLikeNaN(value)) return '-';
                 return (
                   <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
                 );
