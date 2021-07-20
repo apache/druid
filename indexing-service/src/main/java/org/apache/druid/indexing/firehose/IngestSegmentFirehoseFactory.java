@@ -119,7 +119,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
-    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null SegmentLoaderFactory");
+    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
   }
 

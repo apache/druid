@@ -29,7 +29,17 @@ import org.apache.druid.timeline.DataSegment;
  */
 public interface SegmentLoader
 {
+  /**
+   * Builds a {@link Segment} by downloading if necessary
+   * @param segment - Segment to load
+   * @param lazy - Whether column metadata de-serialization is to be deferred to access time. Setting this flag to true can speed up segment loading
+   * @param loadFailed - Callback to invoke if lazy loading fails during column access.
+   * @throws SegmentLoadingException - If there is an error in loading the segment
+   */
   Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 
+  /**
+   * cleanup any state used by this segment
+   */
   void cleanup(DataSegment segment);
 }

@@ -29,7 +29,19 @@ import java.io.File;
  */
 public interface SegmentCacheManager
 {
+  /**
+   * Checks whether a segment is already cached.
+   */
   boolean isSegmentCached(DataSegment segment);
+
+  /**
+   * This method fetches the files for the given segment if the segment is not downloaded already.
+   * @throws SegmentLoadingException if there is an error in downloading files
+   */
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Cleanup the cache space used by the segment
+   */
   void cleanup(DataSegment segment);
 }

@@ -45,7 +45,7 @@ public class DruidInputSourceTest
 {
   private final IndexIO indexIO = EasyMock.createMock(IndexIO.class);
   private final CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-  private final SegmentCacheManagerFactory segmentLoaderFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
   private final RetryPolicyFactory retryPolicyFactory = EasyMock.createMock(RetryPolicyFactory.class);
   private final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
 
@@ -63,7 +63,7 @@ public class DruidInputSourceTest
     final InjectableValues.Std injectableValues = (InjectableValues.Std) mapper.getInjectableValues();
     injectableValues.addValue(IndexIO.class, indexIO);
     injectableValues.addValue(CoordinatorClient.class, coordinatorClient);
-    injectableValues.addValue(SegmentCacheManagerFactory.class, segmentLoaderFactory);
+    injectableValues.addValue(SegmentCacheManagerFactory.class, segmentCacheManagerFactory);
     injectableValues.addValue(RetryPolicyFactory.class, retryPolicyFactory);
     injectableValues.addValue(TaskConfig.class, taskConfig);
   }
@@ -90,7 +90,7 @@ public class DruidInputSourceTest
             null,
             indexIO,
             coordinatorClient,
-            segmentLoaderFactory,
+            segmentCacheManagerFactory,
             retryPolicyFactory,
             taskConfig
         ),
@@ -124,7 +124,7 @@ public class DruidInputSourceTest
             ImmutableList.of("b"),
             indexIO,
             coordinatorClient,
-            segmentLoaderFactory,
+            segmentCacheManagerFactory,
             retryPolicyFactory,
             taskConfig
         ),
@@ -164,7 +164,7 @@ public class DruidInputSourceTest
             null,
             indexIO,
             coordinatorClient,
-            segmentLoaderFactory,
+            segmentCacheManagerFactory,
             retryPolicyFactory,
             taskConfig
         ),

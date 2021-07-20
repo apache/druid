@@ -188,7 +188,7 @@ public class CompactionTaskTest
   private static List<DataSegment> SEGMENTS;
 
   private TaskToolbox toolbox;
-  private SegmentCacheManagerFactory segmentLoaderFactory;
+  private SegmentCacheManagerFactory segmentCacheManagerFactory;
 
   @BeforeClass
   public static void setupClass()
@@ -361,7 +361,7 @@ public class CompactionTaskTest
         testIndexIO,
         SEGMENT_MAP
     );
-    segmentLoaderFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
   }
 
   @Test
@@ -369,7 +369,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -379,7 +379,7 @@ public class CompactionTaskTest
 
     final Builder builder2 = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -397,7 +397,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -426,7 +426,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -455,7 +455,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -471,7 +471,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
@@ -492,7 +492,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
@@ -511,7 +511,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -586,14 +586,14 @@ public class CompactionTaskTest
         toolbox.getChatHandlerProvider(),
         toolbox.getRowIngestionMetersFactory(),
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         toolbox.getAppenderatorsManager()
     );
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -790,7 +790,7 @@ public class CompactionTaskTest
             null,
             toolbox.getRowIngestionMetersFactory(),
             COORDINATOR_CLIENT,
-            segmentLoaderFactory,
+            segmentCacheManagerFactory,
             RETRY_POLICY_FACTORY,
             toolbox.getAppenderatorsManager()
         );
@@ -848,7 +848,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -921,7 +921,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -995,7 +995,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1069,7 +1069,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1133,7 +1133,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1177,7 +1177,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1214,7 +1214,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1257,7 +1257,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1281,7 +1281,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1295,7 +1295,7 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -1316,7 +1316,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1354,7 +1354,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null)),
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1393,7 +1393,7 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null)
         ),
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1431,7 +1431,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -1468,7 +1468,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null),
         COORDINATOR_CLIENT,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
         IOConfig.DEFAULT_DROP_EXISTING
     );
@@ -2014,7 +2014,7 @@ public class CompactionTaskTest
         @JacksonInject ChatHandlerProvider chatHandlerProvider,
         @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
         @JacksonInject CoordinatorClient coordinatorClient,
-        @JacksonInject SegmentCacheManagerFactory segmentLoaderFactory,
+        @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
         @JacksonInject RetryPolicyFactory retryPolicyFactory,
         @JacksonInject AppenderatorsManager appenderatorsManager
     )

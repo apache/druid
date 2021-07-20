@@ -172,7 +172,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.metrics = metrics;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
-    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null SegmentLoaderFactory");
+    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
     this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
   }

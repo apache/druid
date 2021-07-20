@@ -168,7 +168,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return taskStorage;
   }
 
-  public SegmentCacheManagerFactory getSegmentLoaderFactory()
+  public SegmentCacheManagerFactory getSegmentCacheManagerFactory()
   {
     return segmentCacheManagerFactory;
   }
