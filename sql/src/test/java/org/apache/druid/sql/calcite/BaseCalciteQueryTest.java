@@ -224,12 +224,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
-  public static Map<String, Object> getTimeseriesContextWithFloorTime(Map<String, Object> context,
-                                                                      String timestampResultField)
+  public static Map<String, Object> getTimeseriesContextWithFloorTime(
+      Map<String, Object> context,
+      String timestampResultField
+  )
   {
-    return ImmutableMap.<String, Object>builder().putAll(context)
-                                                .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
-                                                .build();
+    return ImmutableMap.<String, Object>builder()
+                       .putAll(context)
+                       .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                       .build();
   }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES

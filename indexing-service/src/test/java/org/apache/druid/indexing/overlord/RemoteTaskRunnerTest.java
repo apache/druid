@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -54,6 +55,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,6 +90,7 @@ public class RemoteTaskRunnerTest
     cf = rtrTestUtils.getCuratorFramework();
 
     task = TestTasks.unending("task id with spaces");
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
   @After
@@ -131,6 +134,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     remoteTaskRunner.addPendingTask(task);
+    remoteTaskRunner.runPendingTasks();
     Assert.assertFalse(workerRunningTask(task.getId()));
 
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
@@ -352,6 +356,8 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get();
 
     Assert.assertEquals(status.getStatusCode(), TaskState.FAILED);
+    Assert.assertNotNull(status.getErrorMsg());
+    Assert.assertTrue(status.getErrorMsg().contains("The worker that this task was assigned disappeared"));
   }
 
   @Test
@@ -446,6 +452,8 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get();
 
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assert.assertNotNull(status.getErrorMsg());
+    Assert.assertTrue(status.getErrorMsg().contains("Canceled for worker cleanup"));
     RemoteTaskRunnerConfig config = remoteTaskRunner.getRemoteTaskRunnerConfig();
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -515,6 +523,38 @@ public class RemoteTaskRunnerTest
 
     Assert.assertEquals(task.getId(), result.get().getId());
     Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
+  }
+
+  @Test
+  public void testRunPendingTaskFailToAssignTask() throws Exception
+  {
+    doSetup();
+    RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
+    // modify taskId to make task assignment failed
+    RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);
+    Mockito.when(wankyItem.getTaskId()).thenReturn(originalItem.getTaskId()).thenReturn("wrongId");
+    remoteTaskRunner.runPendingTask(wankyItem);
+    TaskStatus taskStatus = originalItem.getResult().get(0, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertEquals(
+        "Failed to assign this task. See overlord logs for more details.",
+        taskStatus.getErrorMsg()
+    );
+  }
+
+  @Test
+  public void testRunPendingTaskTimeoutToAssign() throws Exception
+  {
+    makeWorker();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    RemoteTaskRunnerWorkItem workItem = remoteTaskRunner.addPendingTask(task);
+    remoteTaskRunner.runPendingTask(workItem);
+    TaskStatus taskStatus = workItem.getResult().get(0, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertNotNull(taskStatus.getErrorMsg());
+    Assert.assertTrue(
+        taskStatus.getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
+    );
   }
 
   private void doSetup() throws Exception

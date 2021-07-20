@@ -229,7 +229,6 @@ public class DetermineHashedPartitionsJobTest
             false,
             null,
             null,
-            null,
             false,
             false,
             null,

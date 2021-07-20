@@ -76,7 +76,7 @@ import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -268,7 +268,7 @@ public class JettyTest extends BaseJettyTest
   public void testTimeouts() throws Exception
   {
     // test for request timeouts properly not locking up all threads
-    final Executor executor = Executors.newFixedThreadPool(100);
+    final ExecutorService executor = Executors.newFixedThreadPool(100);
     final AtomicLong count = new AtomicLong(0);
     final CountDownLatch latch = new CountDownLatch(1000);
     for (int i = 0; i < 10000; i++) {

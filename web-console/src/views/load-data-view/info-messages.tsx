@@ -46,7 +46,7 @@ export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectM
         {inlineMode ? (
           <>
             <p>To get started, please paste some data in the box to the left.</p>
-            <p>Click &quot;Apply&quot to verify your data with Druid.</p>
+            <p>Click &quot;Apply&quot; to verify your data with Druid.</p>
           </>
         ) : (
           <p>To get started, please specify what data you want to ingest.</p>
@@ -171,6 +171,11 @@ export const PartitionMessage = React.memo(function PartitionMessage() {
     <FormGroup>
       <Callout>
         <p>Configure how Druid will partition data.</p>
+        <p>
+          Druid datasources are always partitioned by time into time chunks (
+          <Code>Primary partitioning</Code>), and each time chunk contains one or more segments (
+          <Code>Secondary partitioning</Code>).
+        </p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/index.html#partitioning`} />
       </Callout>
     </FormGroup>

@@ -468,7 +468,7 @@ This is only valid for dataSource which has compaction enabled.
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+Returns the status and statistics from the auto compaction run of all dataSources which have auto compaction enabled in the latest run.
 The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
