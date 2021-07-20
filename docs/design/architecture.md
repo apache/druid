@@ -177,7 +177,8 @@ clarity-cloud0_2018-05-21T16:00:00.000Z_2018-05-21T17:00:00.000Z_2018-05-21T15:5
 You may be wondering what the "version number" described in the previous section is for. Or, you might not be, in which
 case good for you and you can skip this section!
 
-The version number provides a form of _multi-version concurrency control_ (MVCC) to
+The version number provides a form of [_multi-version concurrency control_](
+https://en.wikipedia.org/wiki/Multiversion_concurrency_control) (MVCC) to
 support batch-mode overwriting. If all you ever do is append data, then there will be just a
 single version for each time chunk. But when you overwrite data, Druid will seamlessly switch from
 querying the old version to instead query the new, updated versions. Specifically, a new set of
