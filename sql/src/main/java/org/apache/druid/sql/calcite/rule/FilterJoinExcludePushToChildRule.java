@@ -40,6 +40,7 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
@@ -309,8 +310,8 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
    */
   private void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType)
   {
-    if (joinType != JoinRelType.INNER) {
-      return; // only works for inner joins
+    if (joinType != JoinRelType.INNER || !NullHandling.sqlCompatible()) {
+      return; // only works for inner joins in SQL mode
     }
 
     ImmutableList.Builder<RexNode> isNotNullFiltersBuilder = ImmutableList.builder();
