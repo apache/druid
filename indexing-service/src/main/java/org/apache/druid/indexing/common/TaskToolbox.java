@@ -57,7 +57,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -101,7 +101,7 @@ public class TaskToolbox
   private final Provider<MonitorScheduler> monitorSchedulerProvider;
   private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
-  private final SegmentLoader segmentLoader;
+  private final SegmentCacheManager segmentCacheManager;
   private final ObjectMapper jsonMapper;
   private final File taskWorkDir;
   private final IndexIO indexIO;
@@ -144,7 +144,7 @@ public class TaskToolbox
       QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       @Nullable Provider<MonitorScheduler> monitorSchedulerProvider,
-      SegmentLoader segmentLoader,
+      SegmentCacheManager segmentCacheManager,
       ObjectMapper jsonMapper,
       File taskWorkDir,
       IndexIO indexIO,
@@ -183,7 +183,7 @@ public class TaskToolbox
     this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.monitorSchedulerProvider = monitorSchedulerProvider;
-    this.segmentLoader = segmentLoader;
+    this.segmentCacheManager = segmentCacheManager;
     this.jsonMapper = jsonMapper;
     this.taskWorkDir = taskWorkDir;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
@@ -318,7 +318,7 @@ public class TaskToolbox
   {
     Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
     for (DataSegment segment : segments) {
-      retVal.put(segment, segmentLoader.getSegmentFiles(segment));
+      retVal.put(segment, segmentCacheManager.getSegmentFiles(segment));
     }
 
     return retVal;
