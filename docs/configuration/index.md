@@ -1735,7 +1735,8 @@ of these queries.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.internal.query.config.context|A string formatted `key:value` map query context to add to internally generated broker queries.|null|
+|`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
+
 
 #### SQL
 
