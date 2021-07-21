@@ -174,7 +174,7 @@ public class StorageLocationTest
     Assert.assertEquals(900L, loc.availableSizeBytes());
     Assert.assertTrue(loc.contains("testPath"));
 
-    Assert.assertEquals(reserved, loc.reserve("testPath", "segmentId", 100L));
+    Assert.assertNull(loc.reserve("testPath", "segmentId", 100L));
 
     Assert.assertTrue(loc.release("testPath", 100L));
     Assert.assertEquals(1000L, loc.availableSizeBytes());
