@@ -18079,6 +18079,57 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  public void testLeftJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext) throws Exception
+  {
+    // Cannot vectorize due to 'concat' expression.
+    cannotVectorize();
+
+    // disable the cost model where inner join is treated like a filter
+    // this leads to cost(left join) < cost(converted inner join) for the below query
+    queryContext = QueryContextForJoinProvider.withOverrides(queryContext,
+                                                             ImmutableMap.of("computeInnerJoinCostAsFilter", "false"));
+    testQuery(
+        "SELECT dim1, l1.k\n"
+        + "FROM foo\n"
+        + "LEFT JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k\n"
+        + "WHERE l1.k = 'abc'\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery
+                                .builder()
+                                .setDataSource(new LookupDataSource("lookyloo"))
+                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                .setGranularity(Granularities.ALL)
+                                .setVirtualColumns(
+                                    expressionVirtualColumn("v0", "concat(\"k\",'')", ValueType.STRING)
+                                )
+                                .setDimensions(new DefaultDimensionSpec("v0", "d0"))
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "j0.d0")
+                .filters(selector("j0.d0", "abc", null))
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", "abc"}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext) throws Exception
   {
     // Cannot vectorize due to 'concat' expression.

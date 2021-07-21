@@ -53,6 +53,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -72,6 +73,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   private final Filter leftFilter;
   private final PartialDruidQuery partialQuery;
   private final Join joinRel;
+  private final PlannerConfig plannerConfig;
   private RelNode left;
   private RelNode right;
 
@@ -90,6 +92,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     this.right = joinRel.getRight();
     this.leftFilter = leftFilter;
     this.partialQuery = partialQuery;
+    this.plannerConfig = queryMaker.getPlannerContext().getPlannerConfig();
   }
 
   /**
@@ -316,7 +319,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       cost = CostEstimates.COST_JOIN_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();
-      if (joinRel.getJoinType() == JoinRelType.INNER) {
+      if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
         cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
       }
     }
