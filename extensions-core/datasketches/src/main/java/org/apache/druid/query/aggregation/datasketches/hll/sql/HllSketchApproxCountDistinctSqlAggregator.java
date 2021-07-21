@@ -29,12 +29,10 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 
 import java.util.Collections;
-import java.util.List;
 
 public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
 {
@@ -51,12 +49,10 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
   protected Aggregation toAggregation(
       String name,
       boolean finalizeAggregations,
-      List<VirtualColumn> virtualColumns,
       AggregatorFactory aggregatorFactory
   )
   {
     return Aggregation.create(
-        virtualColumns,
         Collections.singletonList(aggregatorFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
             name,

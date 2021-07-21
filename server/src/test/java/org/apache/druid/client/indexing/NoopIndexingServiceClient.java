@@ -108,6 +108,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    return Collections.emptyMap();
+  }
+
+  @Override
   public SamplerResponse sample(SamplerSpec samplerSpec)
   {
     return new SamplerResponse(0, 0, Collections.emptyList());

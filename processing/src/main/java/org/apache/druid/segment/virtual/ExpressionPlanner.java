@@ -80,17 +80,13 @@ public class ExpressionPlanner
       //    SINGLE_INPUT_MAPPABLE
       // is set when a single input string column, which can be multi-valued, but if so, it must be implicitly mappable
       // (i.e. the expression is not treating its input as an array and not wanting to output an array)
-      if (capabilities != null) {
+      if (capabilities != null && !analysis.hasInputArrays() && !analysis.isOutputArray()) {
         boolean isSingleInputMappable = false;
-        boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse() &&
-                                      !analysis.hasInputArrays() &&
-                                      !analysis.isOutputArray();
+        boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse();
         if (capabilities.getType() == ValueType.STRING) {
           isSingleInputScalar &= capabilities.isDictionaryEncoded().isTrue();
           isSingleInputMappable = capabilities.isDictionaryEncoded().isTrue() &&
-                                  !capabilities.hasMultipleValues().isUnknown() &&
-                                  !analysis.hasInputArrays() &&
-                                  !analysis.isOutputArray();
+                                  !capabilities.hasMultipleValues().isUnknown();
         }
 
         // if satisfied, set single input output type and flags
@@ -155,8 +151,7 @@ public class ExpressionPlanner
     final boolean shouldComputeOutput = ExpressionPlan.none(
         traits,
         ExpressionPlan.Trait.UNKNOWN_INPUTS,
-        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
-        ExpressionPlan.Trait.NEEDS_APPLIED
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS
     );
 
     if (shouldComputeOutput) {
@@ -168,16 +163,12 @@ public class ExpressionPlanner
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
 
       // single input mappable may not produce array output explicitly, only through implicit mapping
+      traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR);
       traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE);
     }
 
-    // if implicit mapping is in play, output will be multi-valued but may still use SINGLE_INPUT_MAPPABLE optimization
-    if (ExpressionPlan.is(traits, ExpressionPlan.Trait.NEEDS_APPLIED)) {
-      traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
-    }
-
     // vectorized expressions do not support incomplete, multi-valued inputs or outputs, or implicit mapping
-    // they also do support unknown inputs, but they also do not currently have to deal with them, as missing
+    // they also do not support unknown inputs, but they also do not currently have to deal with them, as missing
     // capabilites is indicative of a non-existent column instead of an unknown schema. If this ever changes,
     // this check should also change
     boolean supportsVector = ExpressionPlan.none(
@@ -194,7 +185,9 @@ public class ExpressionPlanner
       outputType = expression.getOutputType(inspector);
       traits.add(ExpressionPlan.Trait.VECTORIZABLE);
     }
+
     return new ExpressionPlan(
+        inspector,
         expression,
         analysis,
         traits,

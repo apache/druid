@@ -19,15 +19,8 @@
 
 package org.apache.druid.query.aggregation.bloom.sql;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -40,122 +33,63 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterSerializersModule;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
-import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
-public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
+public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
-  private static final Injector INJECTOR = Guice.createInjector(
-      binder -> {
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupProvider(
-                ImmutableMap.of(
-                    "a", "xa",
-                    "abc", "xabc"
-                )
-            )
-        );
-      }
-  );
-
-  private static ObjectMapper jsonMapper =
-      INJECTOR
-          .getInstance(Key.get(ObjectMapper.class, Json.class))
-          .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
   private static final String DATA_SOURCE = "numfoo";
 
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
+  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
+      ImmutableSet.of(new BloomFilterSqlAggregator()),
+      ImmutableSet.of()
+  );
 
-  @BeforeClass
-  public static void setUpClass()
+  @Override
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create(jsonMapper);
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
-
-  @Before
-  public void setUp() throws Exception
-  {
+    CalciteTests.getJsonMapper().registerModule(new BloomFilterSerializersModule());
     InputRowParser parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("t", "iso", null),
             new DimensionsSpec(
                 ImmutableList.<DimensionSchema>builder()
-                    .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                    .add(new DoubleDimensionSchema("d1"))
-                    .add(new FloatDimensionSchema("f1"))
-                    .add(new LongDimensionSchema("l1"))
-                    .build(),
+                             .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                             .add(new DoubleDimensionSchema("d1"))
+                             .add(new FloatDimensionSchema("f1"))
+                             .add(new LongDimensionSchema("l1"))
+                             .build(),
                 null,
                 null
             )
@@ -178,7 +112,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                     .rows(CalciteTests.ROWS1_WITH_NUMERIC_DIMS)
                     .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -188,52 +122,18 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                    .build(),
         index
     );
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-
-    final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new BloomFilterSqlAggregator()),
-        ImmutableSet.of()
-    );
-
-    SchemaPlus rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-    sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
-        new PlannerFactory(
-            rootSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            CalciteTests.createExprMacroTable(),
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            jsonMapper,
-            CalciteTests.DRUID_SCHEMA_NAME
-        )
-    );
   }
 
-  @After
-  public void tearDown() throws Exception
+  @Override
+  public DruidOperatorTable createOperatorTable()
   {
-    walker.close();
-    walker = null;
+    return OPERATOR_TABLE;
   }
 
   @Test
   public void testBloomFilterAgg() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(dim1, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -245,52 +145,37 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
       }
     }
 
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
-
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new DefaultDimensionSpec("dim1", "a0:dim1"),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(dim1, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("dim1", "a0:dim1"),
+                              TEST_NUM_ENTRIES
+                          )
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+        )
     );
   }
 
   @Test
   public void testBloomFilterTwoAggs() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(dim1, 1000),\n"
-                       + "BLOOM_FILTER(dim2, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
@@ -315,19 +200,12 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
       }
     }
 
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1),
-            jsonMapper.writeValueAsString(expected2)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
-
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(dim1, 1000),\n"
+        + "BLOOM_FILTER(dim2, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE3)
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
               .granularity(Granularities.ALL)
@@ -345,27 +223,22 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                       )
                   )
               )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+              .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+              .build()
+        ),
+        ImmutableList.of(
+            new Object[] {
+                CalciteTests.getJsonMapper().writeValueAsString(expected1),
+                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+            }
+        )
     );
   }
 
   @Test
   public void testBloomFilterAggExtractionFn() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(SUBSTRING(dim1, 1, 1), 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -377,56 +250,43 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         expected1.addString(raw.substring(0, 1));
       }
     }
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
 
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new ExtractionDimensionSpec(
-                              "dim1",
-                              "a0:dim1",
-                              new SubstringDimExtractionFn(0, 1)
-                          ),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(SUBSTRING(dim1, 1, 1), 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new ExtractionDimensionSpec(
+                                  "dim1",
+                                  "a0:dim1",
+                                  new SubstringDimExtractionFn(0, 1)
+                              ),
+                              TEST_NUM_ENTRIES
+                          )
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+        )
     );
+
   }
 
   @Test
   public void testBloomFilterAggLong() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(l1, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected3 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -441,52 +301,38 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         expected3.addLong(((Number) raw).longValue());
       }
     }
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected3)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
 
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new DefaultDimensionSpec("l1", "a0:l1", ValueType.LONG),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(l1, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("l1", "a0:l1", ValueType.LONG),
+                              TEST_NUM_ENTRIES
+                          )
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected3)}
+        )
     );
   }
 
   @Test
   public void testBloomFilterAggLongVirtualColumn() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(l1 * 2, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
-
+    cannotVectorize();
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("l1");
@@ -500,59 +346,46 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         expected1.addLong(2 * ((Number) raw).longValue());
       }
     }
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
 
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .virtualColumns(
-                  new ExpressionVirtualColumn(
-                      "v0",
-                      "(\"l1\" * 2)",
-                      ValueType.LONG,
-                      TestExprMacroTable.INSTANCE
-                  )
-              )
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new DefaultDimensionSpec("v0", "a0:v0"),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(l1 * 2, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "(\"l1\" * 2)",
+                          ValueType.LONG,
+                          TestExprMacroTable.INSTANCE
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("v0", "a0:v0"),
+                              TEST_NUM_ENTRIES
+                          )
+                      )
+                  )
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+        )
     );
   }
 
   @Test
   public void testBloomFilterAggFloatVirtualColumn() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(f1 * 2, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -567,60 +400,46 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         expected1.addFloat(2 * ((Number) raw).floatValue());
       }
     }
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
 
-    // Verify query
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .virtualColumns(
-                  new ExpressionVirtualColumn(
-                      "v0",
-                      "(\"f1\" * 2)",
-                      ValueType.FLOAT,
-                      TestExprMacroTable.INSTANCE
-                  )
-              )
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new DefaultDimensionSpec("v0", "a0:v0"),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(f1 * 2, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "(\"f1\" * 2)",
+                          ValueType.FLOAT,
+                          TestExprMacroTable.INSTANCE
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("v0", "a0:v0"),
+                              TEST_NUM_ENTRIES
+                          )
+                      )
+                  )
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+        )
     );
   }
 
   @Test
   public void testBloomFilterAggDoubleVirtualColumn() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT\n"
-                       + "BLOOM_FILTER(d1 * 2, 1000)\n"
-                       + "FROM numfoo";
-
-    final List<Object[]> results =
-        sqlLifecycle.runSimple(
-            sql,
-            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            CalciteTestBase.DEFAULT_PARAMETERS,
-            authenticationResult
-        ).toList();
+    cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -635,42 +454,141 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         expected1.addDouble(2 * ((Number) raw).doubleValue());
       }
     }
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            jsonMapper.writeValueAsString(expected1)
-        }
-    );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
 
-    // Verify query
-    Assert.assertEquals(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE3)
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-              .granularity(Granularities.ALL)
-              .virtualColumns(
-                  new ExpressionVirtualColumn(
-                      "v0",
-                      "(\"d1\" * 2)",
-                      ValueType.DOUBLE,
-                      TestExprMacroTable.INSTANCE
-                  )
-              )
-              .aggregators(
-                  ImmutableList.of(
-                      new BloomFilterAggregatorFactory(
-                          "a0:agg",
-                          new DefaultDimensionSpec("v0", "a0:v0"),
-                          TEST_NUM_ENTRIES
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(d1 * 2, 1000)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "(\"d1\" * 2)",
+                          ValueType.DOUBLE,
+                          TestExprMacroTable.INSTANCE
                       )
                   )
-              )
-              .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
-              .build(),
-        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("v0", "a0:v0"),
+                              TEST_NUM_ENTRIES
+                          )
+                      )
+                  )
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+        )
+    );
+  }
+
+  @Test
+  public void testEmptyTimeseriesResults() throws Exception
+  {
+    // makes empty bloom filters
+    cannotVectorize();
+
+    BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
+    BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
+
+    testQuery(
+        "SELECT\n"
+        + "BLOOM_FILTER(dim1, 1000),\n"
+        + "BLOOM_FILTER(l1, 1000)\n"
+        + "FROM numfoo where dim2 = 0",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .filters(BaseCalciteQueryTest.bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .aggregators(
+                      ImmutableList.of(
+                          new BloomFilterAggregatorFactory(
+                              "a0:agg",
+                              new DefaultDimensionSpec("dim1", "a0:dim1"),
+                              TEST_NUM_ENTRIES
+                          ),
+                          new BloomFilterAggregatorFactory(
+                              "a1:agg",
+                              new DefaultDimensionSpec("l1", "a1:l1", ValueType.LONG),
+                              TEST_NUM_ENTRIES
+                          )
+                      )
+                  )
+                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[] {
+                CalciteTests.getJsonMapper().writeValueAsString(expected1),
+                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByAggregatorDefaultValues() throws Exception
+  {
+    // makes empty bloom filters
+    cannotVectorize();
+
+    BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
+    BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
+
+    testQuery(
+        "SELECT\n"
+        + "dim2,\n"
+        + "BLOOM_FILTER(dim1, 1000) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "BLOOM_FILTER(l1, 1000) FILTER(WHERE dim1 = 'nonexistent')\n"
+        + "FROM numfoo WHERE dim2 = 'a' GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim2", "a", null))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new BloomFilterAggregatorFactory(
+                                        "a0:agg",
+                                        new DefaultDimensionSpec("dim1", "a0:dim1"),
+                                        TEST_NUM_ENTRIES
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new BloomFilterAggregatorFactory(
+                                        "a1:agg",
+                                        new DefaultDimensionSpec("l1", "a1:l1", ValueType.LONG),
+                                        TEST_NUM_ENTRIES
+                                    ),
+                                    selector("dim1", "nonexistent", null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[] {
+                "a",
+                CalciteTests.getJsonMapper().writeValueAsString(expected1),
+                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+            }
+        )
     );
   }
 }

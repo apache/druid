@@ -30,6 +30,7 @@ import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,6 +54,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -105,12 +107,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
+ * and populates data using {@link CalciteTests#createMockWalker}.
+ */
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
+
+  final boolean useDefault = NullHandling.replaceWithDefault();
 
   @BeforeClass
   public static void setupNullValues()
@@ -175,10 +183,22 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                   .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT = DEFAULT_QUERY_CONTEXT_BUILDER.build();
 
+  public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false)
+                                   .build();
+
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", false,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
+      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+  );
+
+  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
+      PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
+      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -200,22 +220,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_DEFAULT = ImmutableMap.of(
+  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      "skipEmptyBuckets", true,
+      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
-  public static Map<String, Object> getTimeseriesContextWithFloorTime(Map<String, Object> context,
-                                                                      String timestampResultField)
+  public static Map<String, Object> getTimeseriesContextWithFloorTime(
+      Map<String, Object> context,
+      String timestampResultField
+  )
   {
-    return ImmutableMap.<String, Object>builder().putAll(context)
-                                                .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
-                                                .build();
+    return ImmutableMap.<String, Object>builder()
+                       .putAll(context)
+                       .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                       .build();
   }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
@@ -242,7 +265,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put("skipEmptyBuckets", true);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
 
@@ -455,6 +478,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         conglomerate,
         temporaryFolder.newFolder()
     );
+  }
+
+  public DruidOperatorTable createOperatorTable()
+  {
+    return CalciteTests.createOperatorTable();
+  }
+
+  public ExprMacroTable createMacroTable()
+  {
+    return CalciteTests.createExprMacroTable();
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -681,8 +714,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         parameters,
         sql,
         authenticationResult,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
@@ -762,8 +795,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(),
+        createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
@@ -945,5 +978,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         QueryStackTests.getProcessingConfig(true, numMergeBuffers)
     );
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+  }
+
+  protected Map<String, Object> withTimestampResultContext(
+      Map<String, Object> input,
+      String timestampResultField,
+      int timestampResultFieldIndex,
+      Granularity granularity
+  )
+  {
+    Map<String, Object> output = new HashMap<>(input);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
+    return output;
   }
 }

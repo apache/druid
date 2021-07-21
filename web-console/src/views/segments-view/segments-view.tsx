@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import { SqlExpression, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -30,6 +31,7 @@ import {
   BracedText,
   MoreButton,
   RefreshButton,
+  SegmentTimeline,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
@@ -49,6 +51,7 @@ import {
   getNeedleAndMode,
   LocalStorageKeys,
   makeBooleanFilter,
+  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -142,7 +145,7 @@ interface SegmentQueryResultRow {
   partitioning: string;
   size: number;
   partition_num: number;
-  num_rows: number;
+  num_rows: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
@@ -160,6 +163,7 @@ export interface SegmentsViewState {
   terminateDatasourceId?: string;
   hiddenColumns: LocalStorageBackedArray<string>;
   groupByInterval: boolean;
+  showSegmentTimeline: boolean;
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
@@ -251,6 +255,7 @@ END AS "partitioning"`,
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
       groupByInterval: false,
+      showSegmentTimeline: false,
     };
 
     this.segmentsQueryManager = new QueryManager({
@@ -745,13 +750,18 @@ END AS "partitioning"`,
       datasourceTableActionDialogId,
       actions,
       hiddenColumns,
+      showSegmentTimeline,
     } = this.state;
     const { capabilities } = this.props;
     const { groupByInterval } = this.state;
 
     return (
       <>
-        <div className="segments-view app-view">
+        <div
+          className={classNames('segments-view app-view', {
+            'show-segment-timeline': showSegmentTimeline,
+          })}
+        >
           <ViewControlBar label="Segments">
             <RefreshButton
               onRefresh={auto => this.segmentsQueryManager.rerunLastQuery(auto)}
@@ -779,6 +789,12 @@ END AS "partitioning"`,
               </Button>
             </ButtonGroup>
             {this.renderBulkSegmentsActions()}
+            <Switch
+              checked={showSegmentTimeline}
+              label="Show segment timeline"
+              onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+              disabled={!capabilities.hasSqlOrCoordinatorAccess()}
+            />
             <TableColumnSelector
               columns={tableColumns[capabilities.getMode()]}
               onChange={column =>
@@ -793,6 +809,7 @@ END AS "partitioning"`,
               tableColumnsHidden={hiddenColumns.storedArray}
             />
           </ViewControlBar>
+          {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
           {this.renderSegmentsTable()}
         </div>
         {this.renderTerminateSegmentAction()}

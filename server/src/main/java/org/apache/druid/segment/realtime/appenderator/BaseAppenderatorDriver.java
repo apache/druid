@@ -172,7 +172,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Allocated segments for a sequence
    */
-  static class SegmentsForSequence
+  public static class SegmentsForSequence
   {
     // Interval Start millis -> List of Segments for this interval
     // there might be multiple segments for a start interval, for example one segment
@@ -215,7 +215,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       return intervalToSegmentStates.get(timestamp);
     }
 
-    Stream<SegmentWithState> allSegmentStateStream()
+    public Stream<SegmentWithState> allSegmentStateStream()
     {
       return intervalToSegmentStates
           .values()
@@ -261,7 +261,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   }
 
   @VisibleForTesting
-  Map<String, SegmentsForSequence> getSegments()
+  public Map<String, SegmentsForSequence> getSegments()
   {
     return segments;
   }
@@ -348,14 +348,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
           for (SegmentIdWithShardSpec identifier : appenderator.getSegments()) {
             if (identifier.equals(newSegment)) {
               throw new ISE(
-                  "Allocated segment[%s] which conflicts with existing segment[%s].",
+                  "Allocated segment[%s] which conflicts with existing segment[%s]. row: %s, seq: %s",
                   newSegment,
-                  identifier
+                  identifier,
+                  row,
+                  sequenceName
               );
             }
           }
 
-          log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
           addSegment(sequenceName, newSegment);
         } else {
           // Well, we tried.

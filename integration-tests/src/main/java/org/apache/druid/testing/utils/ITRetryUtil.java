@@ -52,23 +52,49 @@ public class ITRetryUtil
       String taskMessage
   )
   {
-    try {
-      int currentTry = 0;
-      while (callable.call() != expectedValue) {
-        if (currentTry > retryCount) {
-          throw new ISE("Max number of retries[%d] exceeded for Task[%s]. Failing.", retryCount, taskMessage);
-        }
-        LOG.info(
-            "Attempt[%d]: Task %s still not complete. Next retry in %d ms",
-            currentTry, taskMessage, delayInMillis
-        );
-        Thread.sleep(delayInMillis);
+    int currentTry = 0;
+    Exception lastException = null;
 
-        currentTry++;
+    while (true) {
+      try {
+        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
+        if (currentTry > retryCount || callable.call() == expectedValue) {
+          break;
+        }
       }
+      catch (Exception e) {
+        // just continue retrying if there is an exception (it may be transient!) but save the last:
+        lastException = e;
+      }
+
+      LOG.info(
+          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
+          currentTry, retryCount, taskMessage, delayInMillis
+      );
+      try {
+        Thread.sleep(delayInMillis);
+      }
+      catch (InterruptedException e) {
+        // Ignore
+      }
+      currentTry++;
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+
+    if (currentTry > retryCount) {
+      if (lastException != null) {
+        throw new ISE(
+            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+            retryCount,
+            taskMessage,
+            lastException
+        );
+      } else {
+        throw new ISE(
+            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+            retryCount,
+            taskMessage
+        );
+      }
     }
   }
 

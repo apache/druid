@@ -31,7 +31,9 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.loading.CacheTestSegmentCacheManager;
 import org.apache.druid.segment.loading.CacheTestSegmentLoader;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -80,7 +82,8 @@ public class SegmentLoadDropHandlerTest
   private TestStorageLocation testStorageLocation;
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
-  private CacheTestSegmentLoader segmentLoader;
+  private CacheTestSegmentCacheManager segmentCacheManager;
+  private SegmentLoader segmentLoader;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
@@ -116,6 +119,7 @@ public class SegmentLoadDropHandlerTest
 
     scheduledRunnable = new ArrayList<>();
 
+    segmentCacheManager = new CacheTestSegmentCacheManager();
     segmentLoader = new CacheTestSegmentLoader();
     segmentManager = new SegmentManager(segmentLoader);
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
@@ -239,6 +243,7 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
+        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
@@ -273,7 +278,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -312,7 +317,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -409,6 +414,7 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
+        segmentCacheManager,
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
 
@@ -495,6 +501,7 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
+        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );

@@ -57,6 +57,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Batch;
@@ -73,6 +74,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -1421,6 +1423,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("commit_metadata_sha1", BaseEncoding.base16().encode(
                 Hashing.sha1().hashBytes(jsonMapper.writeValueAsBytes(metadata)).asBytes()))
             .execute()
+    );
+  }
+
+  @Override
+  public int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    List<String> datasourcesToDelete = connector.getDBI().withHandle(
+        handle -> handle
+            .createQuery(
+                StringUtils.format(
+                    "SELECT dataSource FROM %1$s WHERE created_date < '%2$s'",
+                    dbTables.getDataSourceTable(),
+                    dateTime.toString()
+                )
+            )
+            .mapTo(String.class)
+            .list()
+    );
+    datasourcesToDelete.removeAll(excludeDatasources);
+    return connector.getDBI().withHandle(
+        handle -> {
+          final PreparedBatch batch = handle.prepareBatch(
+              StringUtils.format(
+                  "DELETE FROM %1$s WHERE dataSource = :dataSource AND created_date < '%2$s'",
+                  dbTables.getDataSourceTable(),
+                  dateTime.toString()
+              )
+          );
+          for (String datasource : datasourcesToDelete) {
+            batch.bind("dataSource", datasource).add();
+          }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
+        }
     );
   }
 }

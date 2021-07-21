@@ -34,11 +34,11 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
   Switch,
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -126,6 +126,7 @@ import {
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
+  alphanumericCompare,
   deepDelete,
   deepGet,
   deepSet,
@@ -712,7 +713,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     comboType: IngestionComboTypeWithExtra,
     disabled?: boolean,
   ): JSX.Element | undefined {
-    const { overlordModules, selectedComboType } = this.state;
+    const { overlordModules, selectedComboType, spec } = this.state;
     if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
     const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
@@ -722,10 +723,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         elevation={1}
-        onClick={() => {
-          this.setState({
-            selectedComboType: selectedComboType !== comboType ? comboType : undefined,
-          });
+        onClick={e => {
+          if (e.altKey && e.shiftKey) {
+            this.updateSpec(updateIngestionType(spec, comboType as any));
+            this.updateStep('connect');
+          } else {
+            this.setState({
+              selectedComboType: selectedComboType !== comboType ? comboType : undefined,
+            });
+          }
         }}
       >
         <img
@@ -1303,8 +1309,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForParser(initRun = false) {
     const { spec, sampleStrategy } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
-    const inputFormatColumns: string[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
@@ -1340,7 +1344,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: headerAndRowsFromSampleResponse({
           sampleResponse,
           ignoreTimeColumn: true,
-          columnOrder: inputFormatColumns,
         }),
         lastData: parserQueryState.getSomeData(),
       }),
@@ -1573,8 +1576,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForTimestamp(initRun = false) {
     const { spec, cacheRows } = this.state;
-    const inputFormatColumns: string[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
       this.setState(({ timestampQueryState }) => ({
@@ -1613,7 +1614,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: {
           headerAndRows: headerAndRowsFromSampleResponse({
             sampleResponse,
-            columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
           }),
           spec,
         },
@@ -1768,8 +1768,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForTransform(initRun = false) {
     const { spec, cacheRows } = this.state;
-    const inputFormatColumns: string[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
       this.setState(({ transformQueryState }) => ({
@@ -1807,7 +1805,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       transformQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse({
           sampleResponse,
-          columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
         }),
         lastData: transformQueryState.getSomeData(),
       }),
@@ -1991,8 +1988,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForFilter(initRun = false) {
     const { spec, cacheRows } = this.state;
-    const inputFormatColumns: string[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     if (!cacheRows) {
       this.setState(({ filterQueryState }) => ({
@@ -2025,7 +2020,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         filterQueryState: new QueryState({
           data: headerAndRowsFromSampleResponse({
             sampleResponse,
-            columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
             parsedOnly: true,
           }),
           lastData: filterQueryState.getSomeData(),
@@ -2048,7 +2042,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const headerAndRowsNoFilter = headerAndRowsFromSampleResponse({
       sampleResponse: sampleResponseNoFilter,
-      columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       parsedOnly: true,
     });
 
@@ -2129,7 +2122,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {this.renderColumnFilterControls()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          onNextStep: () => {
+            if (!filterQueryState.data) return false;
+
+            let newSpec = spec;
+            if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
+              const currentRollup = deepGet(newSpec, 'spec.dataSchema.granularitySpec.rollup');
+              newSpec = updateSchemaWithSample(
+                newSpec,
+                filterQueryState.data,
+                'specific',
+                typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
+              );
+            }
+
+            this.updateSpec(newSpec);
+            return true;
+          },
+        })}
       </>
     );
   }
@@ -2301,6 +2312,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
+    const schemaToolsMenu = this.renderSchemaToolsMenu();
     return (
       <>
         <div className="main">{mainFill}</div>
@@ -2453,6 +2465,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   }}
                 />
               </FormGroup>
+              {schemaToolsMenu && (
+                <FormGroup>
+                  <Popover2 content={schemaToolsMenu}>
+                    <Button icon={IconNames.BUILD} />
+                  </Popover2>
+                </FormGroup>
+              )}
             </>
           )}
           {this.renderAutoDimensionControls()}
@@ -2467,6 +2486,59 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       </>
     );
   }
+
+  private readonly renderSchemaToolsMenu = () => {
+    const { spec } = this.state;
+    const dimensions: DimensionSpec[] | undefined = deepGet(
+      spec,
+      `spec.dataSchema.dimensionsSpec.dimensions`,
+    );
+    const metrics: MetricSpec[] | undefined = deepGet(spec, `spec.dataSchema.metricsSpec`);
+
+    if (!dimensions && !metrics) return;
+    return (
+      <Menu>
+        {dimensions && (
+          <MenuItem
+            icon={IconNames.ARROWS_HORIZONTAL}
+            text="Order dimensions alphabetically"
+            onClick={() => {
+              if (!dimensions) return;
+              const newSpec = deepSet(
+                spec,
+                `spec.dataSchema.dimensionsSpec.dimensions`,
+                dimensions
+                  .slice()
+                  .sort((d1, d2) =>
+                    alphanumericCompare(getDimensionSpecName(d1), getDimensionSpecName(d2)),
+                  ),
+              );
+              this.updateSpec(newSpec);
+            }}
+          />
+        )}
+        {metrics && (
+          <MenuItem
+            icon={IconNames.ARROWS_HORIZONTAL}
+            text="Order metrics alphabetically"
+            onClick={() => {
+              if (!metrics) return;
+              const newSpec = deepSet(
+                spec,
+                `spec.dataSchema.metricsSpec`,
+                metrics
+                  .slice()
+                  .sort((m1, m2) =>
+                    alphanumericCompare(getMetricSpecName(m1), getMetricSpecName(m2)),
+                  ),
+              );
+              this.updateSpec(newSpec);
+            }}
+          />
+        )}
+      </Menu>
+    );
+  };
 
   private readonly onAutoDimensionSelect = (selectedAutoDimension: string) => {
     this.setState({
@@ -2689,27 +2761,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           model={selectedDimensionSpec}
           onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
         />
-        {reorderDimensionMenu && (
+        {selectedDimensionSpecIndex !== -1 && (
           <FormGroup>
-            <Popover content={reorderDimensionMenu}>
+            <Popover2 content={reorderDimensionMenu}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         {selectedDimensionSpecIndex !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
           <FormGroup>
-            <Popover content={convertToMetricMenu}>
+            <Popover2 content={convertToMetricMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to metric"
                 rightIcon={IconNames.CARET_DOWN}
                 disabled={dimensions.length <= 1}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         <div className="control-buttons">
@@ -2801,13 +2873,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         {selectedMetricSpecIndex !== -1 && dimensionMode === 'specific' && (
           <FormGroup>
-            <Popover content={convertToDimensionMenu}>
+            <Popover2 content={convertToDimensionMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </Popover2>
           </FormGroup>
         )}
         <div className="control-buttons">

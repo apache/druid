@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.query;
 
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,9 +37,11 @@ import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -79,9 +82,32 @@ public class ITWikipediaQueryTest
     }
   }
 
-  @Test
-  public void testWikipediaQueriesFromFile() throws Exception
+  /**
+   * A combination of request Content-Type and Accept HTTP header
+   * The first is Content-Type which can not be null while the 2nd is Accept which could be null
+   * <p>
+   * When Accept is null, its value defaults to value of Content-Type
+   */
+  @DataProvider
+  public static Object[][] encodingCombination()
   {
+    return new Object[][]{
+        {MediaType.APPLICATION_JSON, null},
+        {MediaType.APPLICATION_JSON, MediaType.APPLICATION_JSON},
+        {MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE},
+        {SmileMediaTypes.APPLICATION_JACKSON_SMILE, null},
+        {SmileMediaTypes.APPLICATION_JACKSON_SMILE, MediaType.APPLICATION_JSON},
+        {SmileMediaTypes.APPLICATION_JACKSON_SMILE, SmileMediaTypes.APPLICATION_JACKSON_SMILE},
+        };
+  }
+
+  @Test(dataProvider = "encodingCombination")
+  public void testWikipediaQueriesFromFile(String contentType, String accept)
+      throws Exception
+  {
+    // run tests on a new query helper
+    TestQueryHelper queryHelper = this.queryHelper.withEncoding(contentType, accept);
+
     queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
   }
 

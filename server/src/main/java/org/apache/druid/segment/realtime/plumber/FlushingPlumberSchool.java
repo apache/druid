@@ -27,8 +27,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -38,8 +38,6 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
-
-import java.util.concurrent.ExecutorService;
 
 /**
  * This plumber just drops segments at the end of a flush duration instead of handing them off. It is only useful if you want to run
@@ -54,7 +52,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
@@ -69,7 +67,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-      @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject QueryProcessingPool queryProcessingPool,
       @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
@@ -86,7 +84,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         segmentAnnouncer,
         null,
         null,
-        queryExecutorService,
+        queryProcessingPool,
         joinableFactory,
         indexMergerV9,
         indexIO,
@@ -100,7 +98,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.queryExecutorService = queryExecutorService;
+    this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
@@ -127,7 +125,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
+        queryProcessingPool,
         joinableFactory,
         indexMergerV9,
         indexIO,

@@ -148,7 +148,7 @@ public class BalanceSegmentsProfiler
         )
         .withEmitter(emitter)
         .withDatabaseRuleManager(manager)
-        .withReplicationManager(new ReplicationThrottler(2, 500))
+        .withReplicationManager(new ReplicationThrottler(2, 500, false))
         .build();
 
     BalanceSegmentsTester tester = new BalanceSegmentsTester(coordinator);

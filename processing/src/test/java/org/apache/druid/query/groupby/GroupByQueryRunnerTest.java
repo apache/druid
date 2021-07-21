@@ -49,10 +49,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryContexts;
@@ -2566,9 +2566,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -2684,7 +2681,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithNoResult()
   {
-    // Cannot vectorize due to "cardinality" aggregator.
+    // Cannot vectorize due to first, last aggregators.
     cannotVectorize();
 
     GroupByQuery query = makeQueryBuilder()
@@ -7920,7 +7917,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -7988,7 +7985,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8055,7 +8052,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8585,7 +8582,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
-        .overrideContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
     final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
@@ -8684,7 +8681,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByCardinalityAggWithExtractionFn()
   {
-    // Cannot vectorize due to "cardinality" aggregator.
+    // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
     String helloJsFn = "function(str) { return 'hello' }";
@@ -8776,9 +8773,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByCardinalityAggOnFloat()
   {
-    // Cannot vectorize due to "cardinality" aggregator.
-    cannotVectorize();
-
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -8854,6 +8848,78 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             2L,
             "numVals",
             2.000977198748901d
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality-agg");
+  }
+
+  @Test
+  public void testGroupByCardinalityAggOnMultiStringExpression()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+        )
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "numVals",
+                ImmutableList.of(DefaultDimensionSpec.of("v0")),
+                false
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "rows",
+            26L,
+            "numVals",
+            13.041435202975777d
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality-agg");
+  }
+
+  @Test
+  public void testGroupByCardinalityAggOnHyperUnique()
+  {
+    // Cardinality aggregator on complex columns (like hyperUnique) returns 0.
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "cardinality",
+                ImmutableList.of(DefaultDimensionSpec.of("quality_uniques")),
+                false
+            ),
+            new HyperUniquesAggregatorFactory("hyperUnique", "quality_uniques", false, false)
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "rows",
+            26L,
+            "cardinality",
+            NullHandling.replaceWithDefault() ? 1.0002442201269182 : 0.0d,
+            "hyperUnique",
+            9.019833517963864d
         )
     );
 
@@ -10895,7 +10961,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     ChainedExecutionQueryRunner ceqr = new ChainedExecutionQueryRunner(
-        Execs.directExecutor(),
+        DirectQueryProcessingPool.INSTANCE,
         (query1, future) -> {
           return;
         },
@@ -11117,28 +11183,35 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "v",
                 "qualityDouble * qualityLong",
                 ValueType.LONG,
-                ExprMacroTable.nil()
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "two",
+                "2",
+                null,
+                TestExprMacroTable.INSTANCE
             )
         )
         .setDimensions(
             new DefaultDimensionSpec("v", "v", ValueType.LONG)
         )
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("twosum", null, "1 + two", TestExprMacroTable.INSTANCE))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .setLimit(5)
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(query, "2011-04-01", "v", 10000000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 12100000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L),
-        makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L)
+        makeRow(query, "2011-04-01", "v", 10000000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 12100000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L, "twosum", 6L),
+        makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L, "twosum", 18L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
+
 
   @Test
   public void testGroupByWithExpressionAggregator()
@@ -11156,6 +11229,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0",
                 null,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -11168,6 +11242,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of("index"),
                 null,
                 "0.0",
+                null,
                 null,
                 "__acc + index",
                 null,
@@ -11391,6 +11466,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0",
                 null,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -11404,6 +11480,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0.0",
                 null,
+                true,
                 "__acc + index",
                 null,
                 null,
@@ -11416,6 +11493,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
                 "acc",
                 "[]",
+                null,
                 null,
                 "array_set_add(acc, market)",
                 "array_set_add_all(acc, array_agg_distinct)",
@@ -11674,6 +11752,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 ImmutableSet.of(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION),
                 "acc",
                 "[]",
+                null,
                 null,
                 "array_set_add(acc, placementish)",
                 "array_set_add_all(acc, array_agg_distinct)",

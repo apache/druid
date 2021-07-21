@@ -43,8 +43,8 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
-  private final AbstractQueryResourceTestClient queryClient;
-  private final ObjectMapper jsonMapper;
+  protected final AbstractQueryResourceTestClient queryClient;
+  protected final ObjectMapper jsonMapper;
   protected final String broker;
   protected final String brokerTLS;
   protected final String router;
@@ -57,12 +57,31 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
       IntegrationTestingConfig config
   )
   {
+    this(
+        jsonMapper,
+        queryClient,
+        config.getBrokerUrl(),
+        config.getBrokerTLSUrl(),
+        config.getRouterUrl(),
+        config.getRouterTLSUrl()
+    );
+  }
+
+  AbstractTestQueryHelper(
+      ObjectMapper jsonMapper,
+      AbstractQueryResourceTestClient queryClient,
+      String broker,
+      String brokerTLS,
+      String router,
+      String routerTLS
+  )
+  {
     this.jsonMapper = jsonMapper;
     this.queryClient = queryClient;
-    this.broker = config.getBrokerUrl();
-    this.brokerTLS = config.getBrokerTLSUrl();
-    this.router = config.getRouterUrl();
-    this.routerTLS = config.getRouterTLSUrl();
+    this.broker = broker;
+    this.brokerTLS = brokerTLS;
+    this.router = router;
+    this.routerTLS = routerTLS;
   }
 
   public abstract String getQueryURL(String schemeAndHost);

@@ -36,7 +36,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
@@ -45,7 +45,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
@@ -84,7 +84,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   private final Long maxInputSegmentBytesPerTask;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
-  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final RetryPolicyFactory retryPolicyFactory;
 
   private List<InputSplit<List<WindowedSegmentId>>> splits;
@@ -102,7 +102,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       @JsonProperty("maxInputSegmentBytesPerTask") @Deprecated @Nullable Long maxInputSegmentBytesPerTask,
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
-      @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
@@ -119,7 +119,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
-    this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
+    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
   }
 
@@ -136,7 +136,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         maxInputSegmentBytesPerTask,
         indexIO,
         coordinatorClient,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         retryPolicyFactory
     );
   }
@@ -202,7 +202,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     // Note: this requires enough local storage space to fit all of the segments, even though
     // IngestSegmentFirehose iterates over the segments in series. We may want to change this
     // to download files lazily, perhaps sharing code with PrefetchableTextFilesFirehoseFactory.
-    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(temporaryDirectory);
     Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
     for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
@@ -210,7 +210,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
 
         segmentFileMap.computeIfAbsent(segment, k -> {
           try {
-            return segmentLoader.getSegmentFiles(segment);
+            return segmentCacheManager.getSegmentFiles(segment);
           }
           catch (SegmentLoadingException e) {
             throw new RuntimeException(e);

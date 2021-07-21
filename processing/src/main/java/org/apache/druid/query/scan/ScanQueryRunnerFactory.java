@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
@@ -54,7 +55,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
@@ -83,7 +83,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
-      final ExecutorService queryExecutor,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {

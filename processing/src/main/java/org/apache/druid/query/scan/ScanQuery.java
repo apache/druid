@@ -427,7 +427,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
    * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
    * exclusions (see spotbugs-exclude.xml).
    */
-  @SuppressWarnings({"EqualsAndHashcode"})
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
   static class ScanRowsLimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
   {
     @Override

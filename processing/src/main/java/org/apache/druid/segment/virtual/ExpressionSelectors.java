@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -184,10 +184,10 @@ public class ExpressionSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
+    if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
       if (plan.getSingleInputType() == ValueType.STRING) {
-        return new SingleStringInputDimensionSelector(
+        return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );
@@ -308,7 +308,7 @@ public class ExpressionSelectors
         return supplier.get();
       };
     } else {
-      return Parser.withSuppliers(suppliers);
+      return InputBindings.withSuppliers(suppliers);
     }
   }
 

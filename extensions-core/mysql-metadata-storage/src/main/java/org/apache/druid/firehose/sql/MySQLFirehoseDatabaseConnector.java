@@ -23,18 +23,15 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.Sets;
-import com.mysql.jdbc.NonRegisteringDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
-import org.apache.druid.utils.Throwables;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
 
-import java.sql.SQLException;
-import java.util.Properties;
+import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 
 
@@ -43,17 +40,27 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
 {
   private final DBI dbi;
   private final MetadataStorageConnectorConfig connectorConfig;
+  @Nullable
+  private final String driverClassName;
 
   @JsonCreator
   public MySQLFirehoseDatabaseConnector(
       @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
+      @JsonProperty("driverClassName") @Nullable String driverClassName,
       @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
     this.connectorConfig = connectorConfig;
+    this.driverClassName = driverClassName;
     final BasicDataSource datasource = getDatasource(connectorConfig, securityConfig);
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName("com.mysql.jdbc.Driver");
+    if (driverClassName != null) {
+      datasource.setDriverClassName(driverClassName);
+    } else if (connectorConfig.getConnectURI().startsWith(ConnectionUriUtils.MARIADB_PREFIX)) {
+      datasource.setDriverClassName(ConnectionUriUtils.MARIADB_DRIVER);
+    } else {
+      datasource.setDriverClassName(ConnectionUriUtils.MYSQL_DRIVER);
+    }
     this.dbi = new DBI(datasource);
   }
 
@@ -63,6 +70,13 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
     return connectorConfig;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getDriverClassName()
+  {
+    return driverClassName;
+  }
+
   @Override
   public DBI getDBI()
   {
@@ -70,37 +84,30 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
   }
 
   @Override
-  public Set<String> findPropertyKeysFromConnectURL(String connectUrl)
+  public Set<String> findPropertyKeysFromConnectURL(String connectUrl, boolean allowUnknown)
   {
-    // This method should be in sync with
-    // - org.apache.druid.server.lookup.jdbc.JdbcDataFetcher.checkConnectionURL()
-    // - org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace.checkConnectionURL()
-    Properties properties;
-    try {
-      NonRegisteringDriver driver = new NonRegisteringDriver();
-      properties = driver.parseURL(connectUrl, null);
-    }
-    catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
-    catch (Throwable e) {
-      if (Throwables.isThrowable(e, NoClassDefFoundError.class)
-          || Throwables.isThrowable(e, ClassNotFoundException.class)) {
-        if (e.getMessage().contains("com/mysql/jdbc/NonRegisteringDriver")) {
-          throw new RuntimeException(
-              "Failed to find MySQL driver class. Please check the MySQL connector version 5.1.48 is in the classpath",
-              e
-          );
-        }
-      }
-      throw new RuntimeException(e);
-    }
+    return ConnectionUriUtils.tryParseJdbcUriParameters(connectUrl, allowUnknown);
+  }
 
-    if (properties == null) {
-      throw new IAE("Invalid URL format for MySQL: [%s]", connectUrl);
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
     }
-    Set<String> keys = Sets.newHashSetWithExpectedSize(properties.size());
-    properties.forEach((k, v) -> keys.add((String) k));
-    return keys;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MySQLFirehoseDatabaseConnector that = (MySQLFirehoseDatabaseConnector) o;
+    return connectorConfig.equals(that.connectorConfig) && Objects.equals(
+        driverClassName,
+        that.driverClassName
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig, driverClassName);
   }
 }

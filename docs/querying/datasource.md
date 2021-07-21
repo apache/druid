@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql.md#from), table datasources reside in the the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -92,7 +92,7 @@ SELECT k, v FROM lookup.countries
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
-they reside in the the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
+they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
 Lookup datasources are key-value oriented and always have exactly two columns: `k` (the key) and `v` (the value), and
@@ -289,8 +289,8 @@ GROUP BY
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
 
-In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all tables
-other than the leftmost "base" table must fit in memory. It also means that the join condition must be an equality. This
+In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all datasources
+other than the leftmost "base" datasource must fit in memory. It also means that the join condition must be an equality. This
 feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
 [query](#query) datasources.
 

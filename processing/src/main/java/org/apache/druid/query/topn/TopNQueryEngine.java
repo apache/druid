@@ -202,7 +202,7 @@ public class TopNQueryEngine
   }
 
   /**
-   * {@link ExtractionFn} which are one to one may have their execution deferred until as late as possible, since the
+   * {@link ExtractionFn} which are one to one may have their execution deferred until as late as possible, since
    * which value is used as the grouping key itself doesn't particularly matter. For top-n, this method allows the
    * query to be transformed in {@link TopNQueryQueryToolChest#preMergeQueryDecoration} to strip off the
    * {@link ExtractionFn} on the broker, so that a more optimized algorithm (e.g. {@link PooledTopNAlgorithm}) can be

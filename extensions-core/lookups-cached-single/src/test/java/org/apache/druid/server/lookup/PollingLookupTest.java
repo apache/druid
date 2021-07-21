@@ -102,6 +102,7 @@ public class PollingLookupTest extends InitializedNullHandlingTest
     }
 
     @Override
+    @SuppressWarnings("EqualsHashCode")
     public boolean equals(Object obj)
     {
       return obj instanceof MockDataFetcher;

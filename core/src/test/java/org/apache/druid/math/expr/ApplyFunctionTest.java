@@ -48,7 +48,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     builder.put("d", new String[] {null});
     builder.put("e", new String[] {null, "foo", "bar"});
     builder.put("f", new String[0]);
-    bindings = Parser.withMap(builder.build());
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test
@@ -171,6 +171,8 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertExpr(final String expression, final Object[] expectedResult)
@@ -196,6 +198,8 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertExpr(final String expression, final Double[] expectedResult)
@@ -224,5 +228,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

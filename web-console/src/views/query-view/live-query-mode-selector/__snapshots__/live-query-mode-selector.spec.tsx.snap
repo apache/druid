@@ -1,8 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
-<Blueprint3.Popover
-  boundary="scrollParent"
+<Blueprint3.Popover2
+  boundary="clippingParents"
   captureDismiss={false}
   content={
     <Blueprint3.Menu>
@@ -47,14 +47,13 @@ exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
   inheritDarkTheme={true}
   interactionKind="click"
   minimal={true}
-  modifiers={Object {}}
   openOnTargetFocus={true}
   portalClassName="live-query-mode-selector-portal"
   position="bottom-left"
+  positioningStrategy="absolute"
   targetTagName="span"
   transitionDuration={300}
   usePortal={true}
-  wrapperTagName="span"
 >
   <Blueprint3.Button
     className="live-query-mode-selector"
@@ -70,12 +69,12 @@ exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
       Auto
     </span>
   </Blueprint3.Button>
-</Blueprint3.Popover>
+</Blueprint3.Popover2>
 `;
 
 exports[`LiveQueryModeSelector matches snapshot on 1`] = `
-<Blueprint3.Popover
-  boundary="scrollParent"
+<Blueprint3.Popover2
+  boundary="clippingParents"
   captureDismiss={false}
   content={
     <Blueprint3.Menu>
@@ -120,14 +119,13 @@ exports[`LiveQueryModeSelector matches snapshot on 1`] = `
   inheritDarkTheme={true}
   interactionKind="click"
   minimal={true}
-  modifiers={Object {}}
   openOnTargetFocus={true}
   portalClassName="live-query-mode-selector-portal"
   position="bottom-left"
+  positioningStrategy="absolute"
   targetTagName="span"
   transitionDuration={300}
   usePortal={true}
-  wrapperTagName="span"
 >
   <Blueprint3.Button
     className="live-query-mode-selector"
@@ -143,5 +141,5 @@ exports[`LiveQueryModeSelector matches snapshot on 1`] = `
       On
     </span>
   </Blueprint3.Button>
-</Blueprint3.Popover>
+</Blueprint3.Popover2>
 `;

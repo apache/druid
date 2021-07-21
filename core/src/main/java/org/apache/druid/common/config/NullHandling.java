@@ -94,11 +94,6 @@ public class NullHandling
     //CHECKSTYLE.ON: Regexp
   }
 
-  public static boolean needsEmptyToNull(@Nullable String value)
-  {
-    return replaceWithDefault() && Strings.isNullOrEmpty(value);
-  }
-
   @Nullable
   public static String defaultStringValue()
   {

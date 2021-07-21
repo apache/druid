@@ -25,22 +25,21 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 
-import javax.annotation.Nullable;
-
-public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
+/**
+ * {@link ColumnSelectorFactory} which can create selectors for both virtual and non-virtual columns
+ */
+public class VirtualizedColumnSelectorFactory extends VirtualizedColumnInspector implements ColumnSelectorFactory
 {
   private final ColumnSelectorFactory baseFactory;
-  private final VirtualColumns virtualColumns;
 
   public VirtualizedColumnSelectorFactory(
       ColumnSelectorFactory baseFactory,
       VirtualColumns virtualColumns
   )
   {
+    super(baseFactory, virtualColumns);
     this.baseFactory = Preconditions.checkNotNull(baseFactory, "baseFactory");
-    this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
   }
 
   @Override
@@ -60,17 +59,6 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.makeColumnValueSelector(columnName, baseFactory);
     } else {
       return baseFactory.makeColumnValueSelector(columnName);
-    }
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(baseFactory, columnName);
-    } else {
-      return baseFactory.getColumnCapabilities(columnName);
     }
   }
 }

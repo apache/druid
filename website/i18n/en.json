@@ -134,6 +134,9 @@
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
       },
+      "development/extensions-contrib/prometheus": {
+        "title": "Prometheus Emitter"
+      },
       "development/extensions-contrib/redis-cache": {
         "title": "Druid Redis Cache"
       },
@@ -217,7 +220,7 @@
         "title": "Amazon Kinesis ingestion",
         "sidebar_label": "Amazon Kinesis"
       },
-      "development/extensions-core/druid-kubernetes": {
+      "development/extensions-core/kubernetes": {
         "title": "Kubernetes"
       },
       "development/extensions-core/lookups-cached-global": {
@@ -323,6 +326,10 @@
       },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
+      },
+      "operations/clean-metadata-store": {
+        "title": "Automated cleanup for metadata records",
+        "sidebar_label": "Automated metadata cleanup"
       },
       "operations/deep-storage-migration": {
         "title": "Deep storage migration"
@@ -500,6 +507,9 @@
       "querying/topnquery": {
         "title": "TopN queries",
         "sidebar_label": "TopN"
+      },
+      "querying/using-caching": {
+        "title": "Using query caching"
       },
       "querying/virtual-columns": {
         "title": "Virtual columns"
