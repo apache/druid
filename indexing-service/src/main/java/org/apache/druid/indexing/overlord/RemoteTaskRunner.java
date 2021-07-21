@@ -939,11 +939,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
       // on a worker - this avoids overflowing a worker with tasks
       Stopwatch timeoutStopwatch = Stopwatch.createStarted();
-      while (!isWorkerRunningTask(theZkWorker, task.getId())) {
+      while (!isWorkerRunningTask(theZkWorker, task.getId()) && !completeTasks.containsKey(task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
         statusLock.wait(waitMs);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
-        if (elapsed >= waitMs) {
+        if (elapsed >= waitMs && !completeTasks.containsKey(task.getId())) {
           log.makeAlert(
               "Task assignment timed out on worker [%s], never ran task [%s]! Timeout: (%s >= %s)!",
               worker,
