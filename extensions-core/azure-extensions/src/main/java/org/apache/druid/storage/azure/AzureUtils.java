@@ -42,8 +42,8 @@ import java.util.Iterator;
 public class AzureUtils
 {
 
-  @VisibleForTesting
-  static String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
+//  @VisibleForTesting
+//  static String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   // The azure storage hadoop access pattern is:
   // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
@@ -89,14 +89,14 @@ public class AzureUtils
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.
    */
-  public static String maybeRemoveAzurePathPrefix(String blobPath)
+  public static String maybeRemoveAzurePathPrefix(String azureStorageHostAddress,String blobPath)
   {
-    boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
+    boolean blobPathIsHadoop = blobPath.contains(azureStorageHostAddress);
 
     if (blobPathIsHadoop) {
       // Remove azure's hadoop prefix to match realtime ingestion path
       return blobPath.substring(
-          blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
+          blobPath.indexOf(azureStorageHostAddress) + azureStorageHostAddress.length() + 1);
     } else {
       return blobPath;
     }
@@ -155,73 +155,5 @@ public class AzureUtils
   {
     return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }
-  //change static value by reflect
-  public static boolean changeStaticValue( Object source,  Class<?> target,  String name,
-                                           Object value) {
-    Field field = null;
-    int modify = 0;
-    Field modifiersField = null;
-    boolean removeFinal = false;
-    try {
-      field = target.getDeclaredField(name);
-      modify = field.getModifiers();
-      // the basic type of final modifier cannot be modified
-      if (field.getType().isPrimitive() && Modifier.isFinal(modify)) {
-        return false;
-      }
-      // get access
-      if (!Modifier.isPublic(modify) || Modifier.isFinal(modify)) {
-        field.setAccessible(true);
-      }
-      // static final
-      removeFinal = Modifier.isStatic(modify) && Modifier.isFinal(modify);
-      if (removeFinal) {
-        modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, modify & ~Modifier.FINAL);
-      }
-      // call the set method by data type
-      if (value != null && field.getType().isPrimitive()) {
-        if ("int".equals(field.getType().getName()) && value instanceof Number) {
-          field.setInt(source, ((Number) value).intValue());
-        } else if ("boolean".equals(field.getType().getName()) && value instanceof Boolean) {
-          field.setBoolean(source, (Boolean) value);
-        } else if ("byte".equals(field.getType().getName()) && value instanceof Byte) {
-          field.setByte(source, (Byte) value);
-        } else if ("char".equals(field.getType().getName()) && value instanceof Character) {
-          field.setChar(source, (Character) value);
-        } else if ("double".equals(field.getType().getName()) && value instanceof Number) {
-          field.setDouble(source, ((Number) value).doubleValue());
-        } else if ("long".equals(field.getType().getName()) && value instanceof Number) {
-          field.setLong(source, ((Number) value).longValue());
-        } else if ("float".equals(field.getType().getName()) && value instanceof Number) {
-          field.setFloat(source, ((Number) value).floatValue());
-        } else if ("short".equals(field.getType().getName()) && value instanceof Number) {
-          field.setShort(source, ((Number) value).shortValue());
-        } else {
-          return false;
-        }
-      } else {
-        field.set(source, value);
-      }
-    } catch (Exception e) {
-      return false;
-    } finally {
-      try {
-        // permission restore
-        if (field != null) {
-          if (removeFinal && modifiersField != null) {
-            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-            modifiersField.setAccessible(false);
-          }
-          if (!Modifier.isPublic(modify) || Modifier.isFinal(modify)) {
-            field.setAccessible(false);
-          }
-        }
-      } catch (IllegalAccessException e) {
-        //
-      }
-    }
-    return true;
-  }
+
 }

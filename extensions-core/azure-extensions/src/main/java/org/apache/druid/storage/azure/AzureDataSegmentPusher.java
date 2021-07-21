@@ -79,7 +79,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
         segmentConfig.getContainer(),
         accountConfig.getAccount(),
-        AzureUtils.AZURE_STORAGE_HOST_ADDRESS,
+        accountConfig.getHostAddress(),
         prefixIsNullOrEmpty ? "" : StringUtils.maybeRemoveTrailingSlash(prefix) + '/'
     );
 

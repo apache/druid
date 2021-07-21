@@ -40,15 +40,18 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   private static final String SEGMENT_FILE_NAME = "segment";
   private static final String CONTAINER_NAME = "container";
   private static final String BLOB_PATH = "path/to/storage/index.zip";
-  private static final String BLOB_PATH_HADOOP = AzureUtils.AZURE_STORAGE_HOST_ADDRESS + "/path/to/storage/index.zip";
+//  private static final String BLOB_PATH_HADOOP = AzureUtils.AZURE_STORAGE_HOST_ADDRESS + "/path/to/storage/index.zip";
   private AzureStorage azureStorage;
   private AzureByteSourceFactory byteSourceFactory;
+  private AzureAccountConfig accountConfig;
 
   @Before
   public void before()
   {
     azureStorage = createMock(AzureStorage.class);
     byteSourceFactory = createMock(AzureByteSourceFactory.class);
+    accountConfig = new AzureAccountConfig();
+    accountConfig.setHostAddress("blob.core.chinacloudapi.cn");
   }
 
   @Test
@@ -66,7 +69,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory,accountConfig);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, toDir);
 
@@ -98,9 +101,9 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory,accountConfig);
 
-      FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH_HADOOP, toDir);
+      FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME,accountConfig.getHostAddress()+"/"+ BLOB_PATH, toDir);
 
       File expected = new File(toDir, SEGMENT_FILE_NAME);
       Assert.assertEquals(value.length(), result.size());
@@ -133,7 +136,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory,accountConfig);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
     }
@@ -161,7 +164,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory,accountConfig);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
 

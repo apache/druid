@@ -30,6 +30,9 @@ import javax.validation.constraints.NotNull;
 public class AzureAccountConfig
 {
   @JsonProperty
+  private String hostAddress="blob.core.windows.net";
+
+  @JsonProperty
   private String protocol = "https";
 
   @JsonProperty
@@ -43,9 +46,6 @@ public class AzureAccountConfig
   @JsonProperty
   @NotNull
   private String key;
-
-  @JsonProperty
-  private String hostAddress;
 
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
@@ -96,6 +96,5 @@ public class AzureAccountConfig
 
   public void setHostAddress(String hostAddress) {
     this.hostAddress = hostAddress;
-    AzureUtils.changeStaticValue(null,AzureUtils.class,"AZURE_STORAGE_HOST_ADDRESS",hostAddress);
   }
 }

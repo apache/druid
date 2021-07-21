@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -33,9 +34,9 @@ public class AzureUtilsTest
   private static final String CONTAINER_NAME = "container1";
   private static final String BLOB_NAME = "blob1";
   private static final String BLOB_PATH_WITH_LEADING_SLASH = "/" + BLOB_NAME;
-  private static final String BLOB_PATH_WITH_LEADING_AZURE_PREFIX = AzureUtils.AZURE_STORAGE_HOST_ADDRESS
-                                                                    + "/"
-                                                                    + BLOB_NAME;
+//  private static final String BLOB_PATH_WITH_LEADING_AZURE_PREFIX = AzureUtils.AZURE_STORAGE_HOST_ADDRESS
+//                                                                    + "/"
+//                                                                    + BLOB_NAME;
   private static final URI URI_WITH_PATH_WITH_LEADING_SLASH;
 
   private static final URISyntaxException URI_SYNTAX_EXCEPTION = new URISyntaxException("", "");
@@ -51,6 +52,13 @@ public class AzureUtilsTest
       "",
       new RuntimeException()
   );
+  private AzureAccountConfig accountConfig;
+
+  @Before
+  public void before()
+  {
+    accountConfig = new AzureAccountConfig();
+  }
 
   static {
     try {
@@ -74,14 +82,14 @@ public class AzureUtilsTest
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathHasLeadingAzurePathPrefix_returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(accountConfig.getHostAddress(),accountConfig.getHostAddress()+"/"+BLOB_NAME);
     Assert.assertEquals(BLOB_NAME, path);
   }
 
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathDoesNotHaveAzurePathPrefix__returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(accountConfig.getHostAddress(),BLOB_NAME);
     Assert.assertEquals(BLOB_NAME, path);
   }
 
@@ -140,10 +148,5 @@ public class AzureUtilsTest
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON);
     Assert.assertFalse(retry);
   }
-  @Test
-  public void test_changeStaticValue_modifyDefaultAzureStorageHostAddress_returnsModifiedHostPath(){
-    AzureAccountConfig config = new AzureAccountConfig();
-    config.setHostAddress("blob.core.chinacloudapi.cn");
-    Assert.assertEquals(config.getHostAddress(),AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
-  }
 }
+
