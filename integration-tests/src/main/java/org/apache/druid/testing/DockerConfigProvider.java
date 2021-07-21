@@ -412,7 +412,8 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public String getS3AssumeRoleWithoutExternalId(){
+      public String getS3AssumeRoleWithoutExternalId()
+      {
         return s3AssumeRoleWithoutExternalId;
       }
 
