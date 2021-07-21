@@ -50,7 +50,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
 
   void doTestS3WithValidAssumeRoleAndExternalIdShouldSucceed() throws Exception
   {
-    if (config.getS3AssumeRoleExternalId() != null && config.getS3AssumeRoleWithExternalId() != null) {
+    if (config.getS3AssumeRoleExternalId() == null || config.getS3AssumeRoleWithExternalId() == null) {
       return;
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
@@ -118,7 +118,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
 
   void doTestS3WithAssumeRoleAndInvalidExternalIdShouldFail() throws Exception
   {
-    if (config.getS3AssumeRoleExternalId() != null && config.getS3AssumeRoleWithExternalId() != null) {
+    if (config.getS3AssumeRoleExternalId() == null || config.getS3AssumeRoleWithExternalId() == null) {
       return;
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
@@ -195,7 +195,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
 
   void doTestS3WithValidAssumeRoleWithoutExternalIdShouldSucceed() throws Exception
   {
-    if (config.getS3AssumeRoleWithoutExternalId() != null) {
+    if (config.getS3AssumeRoleWithoutExternalId() == null) {
       return;
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
