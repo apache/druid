@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -35,6 +36,8 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
@@ -64,9 +67,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleTaskBackgroundRunnerTest
 {
@@ -94,6 +99,7 @@ public class SingleTaskBackgroundRunnerTest
         false
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
+    EmittingLogger.registerEmitter(emitter);
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         null,
@@ -197,6 +203,111 @@ public class SingleTaskBackgroundRunnerTest
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
     Assert.assertTrue(holder.get());
+  }
+
+  @Test
+  public void testStopRestorableTaskExceptionAfterStop()
+  {
+    // statusChanged callback can be called by multiple threads.
+    AtomicReference<TaskStatus> statusHolder = new AtomicReference<>();
+    runner.registerListener(
+        new TaskRunnerListener()
+        {
+          @Override
+          public String getListenerId()
+          {
+            return "testStopRestorableTaskExceptionAfterStop";
+          }
+
+          @Override
+          public void locationChanged(String taskId, TaskLocation newLocation)
+          {
+            // do nothing
+          }
+
+          @Override
+          public void statusChanged(String taskId, TaskStatus status)
+          {
+            statusHolder.set(status);
+          }
+        },
+        Execs.directExecutor()
+    );
+    runner.run(
+        new RestorableTask(new BooleanHolder())
+        {
+          @Override
+          public TaskStatus run(TaskToolbox toolbox)
+          {
+            throw new Error("task failure test");
+          }
+        }
+    );
+    runner.stop();
+    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assert.assertEquals(
+        "Failed to stop gracefully with exception. See task logs for more details.",
+        statusHolder.get().getErrorMsg()
+    );
+  }
+
+  @Test
+  public void testStopNonRestorableTask() throws InterruptedException
+  {
+    // latch to wait for SingleTaskBackgroundRunnerCallable to be executed before stopping the task
+    // We need this latch because TaskRunnerListener is currently racy.
+    // See https://github.com/apache/druid/issues/11445 for more details.
+    CountDownLatch runLatch = new CountDownLatch(1);
+    // statusChanged callback can be called by multiple threads.
+    AtomicReference<TaskStatus> statusHolder = new AtomicReference<>();
+    runner.registerListener(
+        new TaskRunnerListener()
+        {
+          @Override
+          public String getListenerId()
+          {
+            return "testStopNonRestorableTask";
+          }
+
+          @Override
+          public void locationChanged(String taskId, TaskLocation newLocation)
+          {
+            // do nothing
+          }
+
+          @Override
+          public void statusChanged(String taskId, TaskStatus status)
+          {
+            if (status.getStatusCode() == TaskState.RUNNING) {
+              runLatch.countDown();
+            } else {
+              statusHolder.set(status);
+            }
+          }
+        },
+        Execs.directExecutor()
+    );
+    runner.run(
+        new NoopTask(
+            null,
+            null,
+            "datasource",
+            10000, // 10 sec
+            0,
+            null,
+            null,
+            null
+        )
+    );
+
+    Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));
+    runner.stop();
+
+    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assert.assertEquals(
+        "Canceled as task execution process stopped",
+        statusHolder.get().getErrorMsg()
+    );
   }
 
   private static class RestorableTask extends AbstractTask

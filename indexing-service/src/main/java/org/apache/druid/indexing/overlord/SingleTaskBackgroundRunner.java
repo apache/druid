@@ -208,10 +208,31 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+          // Creating a new status to only feed listeners seems quite strange.
+          // This is currently OK because we have no listeners yet registered in peon.
+          // However, we should fix this in the near future by always retrieving task status
+          // from one single source of truth that is also propagated to the overlord.
+          // See https://github.com/apache/druid/issues/11445.
+          TaskRunnerUtils.notifyStatusChanged(
+              listeners,
+              task.getId(),
+              TaskStatus.failure(
+                  task.getId(),
+                  "Failed to stop gracefully with exception. See task logs for more details."
+              )
+          );
         }
       } else {
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+        // Creating a new status to only feed listeners seems quite strange.
+        // This is currently OK because we have no listeners yet registered in peon.
+        // However, we should fix this in the near future by always retrieving task status
+        // from one single source of truth that is also propagated to the overlord.
+        // See https://github.com/apache/druid/issues/11445.
+        TaskRunnerUtils.notifyStatusChanged(
+            listeners,
+            task.getId(),
+            TaskStatus.failure(task.getId(), "Canceled as task execution process stopped")
+        );
       }
 
       elapsed = System.currentTimeMillis() - start;
@@ -417,7 +438,6 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     {
       return task.getDataSource();
     }
-
   }
 
   private class SingleTaskBackgroundRunnerCallable implements Callable<TaskStatus>

@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
@@ -55,6 +57,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  */
@@ -261,6 +264,35 @@ public class WorkerTaskManagerTest
     Assert.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
     Assert.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
     Assert.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
+  }
+
+  @Test(timeout = 30_000L)
+  public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
+  {
+    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    {
+      @Override
+      public TaskStatus run(TaskToolbox toolbox)
+      {
+        throw new Error("task failure test");
+      }
+    };
+    workerTaskManager.start();
+    workerTaskManager.assignTask(task);
+
+    Map<String, TaskAnnouncement> completeTasks;
+    do {
+      completeTasks = workerTaskManager.getCompletedTasks();
+    } while (completeTasks.isEmpty());
+
+    Assert.assertEquals(1, completeTasks.size());
+    TaskAnnouncement announcement = completeTasks.get(task.getId());
+    Assert.assertNotNull(announcement);
+    Assert.assertEquals(TaskState.FAILED, announcement.getStatus());
+    Assert.assertEquals(
+        "Failed to run task with an exception. See middleManager or indexer logs for more details.",
+        announcement.getTaskStatus().getErrorMsg()
+    );
   }
 
   private NoopTask createNoopTask(String id)
