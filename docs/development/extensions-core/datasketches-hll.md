@@ -44,7 +44,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
 
 
-> The default `lgK` value has proven to be sufficient for most use cases; expect only very negligable improvements in accuracy with `lgK` values over `16` in normal circumstances.
+> The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.
 
 #### HLLSketchBuild Aggregator
 
@@ -59,7 +59,7 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
-> It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/index.html#rollup) to create a [metric](../../ingestion/index.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations _and_ improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
+> It is very common to use `HLLSketchBuild` in combination with [roll-up](../../ingestion/index.html#rollup) to create a [metric](../../ingestion/index.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations _and_ improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
 >
 > ```
 > :
