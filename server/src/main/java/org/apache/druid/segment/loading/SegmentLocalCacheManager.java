@@ -128,7 +128,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   static String getSegmentDir(DataSegment segment)
   {
-    return DataSegmentPusher.getDefaultStorageDir(segment, false); //lgtm [java/path-injection]
+    return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
 
   @Override

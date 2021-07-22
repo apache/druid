@@ -120,13 +120,12 @@ public class StorageLocation
 
   public synchronized boolean isReserved(String segmentDir)
   {
-    final File segmentFile = new File(path, segmentDir);
-    return files.contains(segmentFile);
+    return files.contains(segmentDirectoryAsFile(segmentDir));
   }
 
   public File segmentDirectoryAsFile(String segmentDir)
   {
-    return new File(path, segmentDir);
+    return new File(path, segmentDir);  //lgtm [java/path-injection]
   }
 
   /**
