@@ -35,7 +35,8 @@ public interface SegmentLoader
   /**
    * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
    * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
-   * by the {@link org.apache.druid.server.SegmentManager}
+   * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}
+   * or a different {@link ReferenceCountingSegment}. Caller should not assume any particular behavior.
    *
    * Returning a {@code ReferenceCountingSegment} will let custom implementations keep track of reference count for
    * segments that the custom implementations are creating. That way, custom implementations can know when the segment

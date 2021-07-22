@@ -30,12 +30,19 @@ import java.io.File;
 public interface SegmentCacheManager
 {
   /**
-   * Checks whether a segment is already cached.
+   * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
+   * has been successful for a segment but is not downloaded yet.
    */
   boolean isSegmentCached(DataSegment segment);
 
   /**
-   * This method fetches the files for the given segment if the segment is not downloaded already.
+   * This method fetches the files for the given segment if the segment is not downloaded already. It
+   * is not required to {@link #reserve(DataSegment)} before calling this method. If caller has not reserved
+   * the space explicitly via {@link #reserve(DataSegment)}, the implementation should reserve space on caller's
+   * behalf.
+   * If the space has been explicitly reserved already
+   *    - implementation should use only the reserved space to store segment files.
+   *    - implementation should not release the location in case of download erros and leave it to the caller.
    * @throws SegmentLoadingException if there is an error in downloading files
    */
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
@@ -63,13 +70,18 @@ public interface SegmentCacheManager
 
   /**
    * Reverts the effects of {@link #reserve(DataSegment)} (DataSegment)} by releasing the location reserved for this segment.
+   * Callers, that explicitly reserve the space via {@link #reserve(DataSegment)}, should use this method to release the space.
+   *
+   * Implementation can throw error if the space is being released but there is data present. Callers
+   * are supposed to ensure that any data is removed via {@link #cleanup(DataSegment)}
    * @param segment - Segment to release the location for.
    * @return - True if any location was reserved and released, false otherwise.
    */
   boolean release(DataSegment segment);
 
   /**
-   * Cleanup the cache space used by the segment
+   * Cleanup the cache space used by the segment. It will not release the space if the space has been
+   * explicitly reserved via {@link #reserve(DataSegment)}
    */
   void cleanup(DataSegment segment);
 }

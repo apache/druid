@@ -125,9 +125,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
   }
 
+
   static String getSegmentDir(DataSegment segment)
   {
-    return DataSegmentPusher.getDefaultStorageDir(segment, false);
+    return DataSegmentPusher.getDefaultStorageDir(segment, false); //lgtm [java/path-injection]
   }
 
   @Override
