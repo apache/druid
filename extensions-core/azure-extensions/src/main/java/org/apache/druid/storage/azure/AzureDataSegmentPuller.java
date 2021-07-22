@@ -46,7 +46,7 @@ public class AzureDataSegmentPuller
       AzureAccountConfig accountConfig)
   {
     this.byteSourceFactory = byteSourceFactory;
-    this.accountConfig=accountConfig;
+    this.accountConfig = accountConfig;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(
@@ -63,7 +63,7 @@ public class AzureDataSegmentPuller
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
       );
 
-      final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(accountConfig.getHostAddress(),blobPath);
+      final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(accountConfig.getHostAddress(), blobPath);
 
       final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(

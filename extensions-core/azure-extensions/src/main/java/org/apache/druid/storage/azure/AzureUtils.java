@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
@@ -30,8 +29,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
@@ -41,9 +38,6 @@ import java.util.Iterator;
  */
 public class AzureUtils
 {
-
-//  @VisibleForTesting
-//  static String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   // The azure storage hadoop access pattern is:
   // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
@@ -89,7 +83,7 @@ public class AzureUtils
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.
    */
-  public static String maybeRemoveAzurePathPrefix(String azureStorageHostAddress,String blobPath)
+  public static String maybeRemoveAzurePathPrefix(String azureStorageHostAddress, String blobPath)
   {
     boolean blobPathIsHadoop = blobPath.contains(azureStorageHostAddress);
 

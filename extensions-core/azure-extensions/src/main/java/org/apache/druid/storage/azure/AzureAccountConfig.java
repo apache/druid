@@ -30,7 +30,7 @@ import javax.validation.constraints.NotNull;
 public class AzureAccountConfig
 {
   @JsonProperty
-  private String hostAddress="blob.core.windows.net";
+  private String hostAddress = "blob.core.windows.net";
 
   @JsonProperty
   private String protocol = "https";
@@ -90,11 +90,13 @@ public class AzureAccountConfig
     return key;
   }
 
-  public String getHostAddress() {
+  public String getHostAddress()
+  {
     return hostAddress;
   }
 
-  public void setHostAddress(String hostAddress) {
+  public void setHostAddress(String hostAddress)
+  {
     this.hostAddress = hostAddress;
   }
 }
