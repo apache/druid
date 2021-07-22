@@ -186,7 +186,7 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
     }
 
     // once the filters are pushed to join from top, try to remove redudant 'IS NOT NULL' filters
-    removeRedundantIsNotNullFilters(joinFilters, joinType);
+    removeRedundantIsNotNullFilters(joinFilters, joinType, NullHandling.sqlCompatible());
 
     // if nothing actually got pushed and there is nothing leftover,
     // then this rule is a no-op
@@ -307,10 +307,11 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
    * the equi-condition will never return true for null input, thus making the 'IS NOT NULL' filter a no-op.
    * @param joinFilters
    * @param joinType
+   * @param isSqlCompatible
    */
-  private void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType)
+  static void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType, boolean isSqlCompatible)
   {
-    if (joinType != JoinRelType.INNER || !NullHandling.sqlCompatible()) {
+    if (joinType != JoinRelType.INNER || !isSqlCompatible) {
       return; // only works for inner joins in SQL mode
     }
 
