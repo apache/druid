@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringS
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -555,14 +556,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     final TaskState state = runNextPhase(runner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(runner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else if (state.isFailure()) {
+      final String errorMessage = "Failed while running single phase parallel. See task logs for more details.";
+      taskStatus = TaskStatus.failure(getId(), errorMessage);
+    } else {
+      final String errorMessage = "Task is in an invalid state after running.";
+      throw new ISE(errorMessage, state);
     }
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -637,7 +645,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       state = runNextPhase(cardinalityRunner);
       if (state.isFailure()) {
-        return TaskStatus.failure(getId());
+        String errMsg = StringUtils.format(
+            "Hash partition task failed while in phase[%s]. See task logs for details",
+            PartialDimensionCardinalityTask.TYPE
+        );
+        return TaskStatus.failure(getId(), errMsg);
       }
 
       if (cardinalityRunner.getReports().isEmpty()) {
@@ -683,7 +695,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
-      return TaskStatus.failure(getId());
+      String errMsg = "Hash partition task failed while in partial segment generation phase. See task logs for details";
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // 2. Partial segment merge phase
@@ -701,15 +714,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     state = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else if (state.isFailure()) {
+      String errMsg = "Hash partition task failed while in partial segment merge phase. See task logs for details";
+      taskStatus = TaskStatus.fromCode(getId(), state);
+    } else {
+      throw new ISE("Invalid state for Hash paritiion task while in partial segment merge phase[%s]", state);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -1046,8 +1065,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {
       return indexTask.run(toolbox);
     } else {
-      LOG.info("Task is asked to stop. Finish as failed");
-      return TaskStatus.failure(getId());
+      String msg = "Task was asked to stop. Finish as failed";
+      LOG.info(msg);
+      return TaskStatus.failure(getId(), msg);
     }
   }
 

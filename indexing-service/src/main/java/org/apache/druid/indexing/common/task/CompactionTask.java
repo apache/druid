@@ -439,8 +439,12 @@ public class CompactionTask extends AbstractBatchIndexTask
         .collect(Collectors.toList());
 
     if (indexTaskSpecs.isEmpty()) {
-      log.warn("Can't find segments from inputSpec[%s], nothing to do.", ioConfig.getInputSpec());
-      return TaskStatus.failure(getId());
+      String msg = StringUtils.format(
+          "Can't find segments from inputSpec[%s], nothing to do.",
+          ioConfig.getInputSpec()
+      );
+      log.warn(msg);
+      return TaskStatus.failure(getId(), msg);
     } else {
       registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
       final int totalNumSpecs = indexTaskSpecs.size();
@@ -450,8 +454,9 @@ public class CompactionTask extends AbstractBatchIndexTask
       for (ParallelIndexSupervisorTask eachSpec : indexTaskSpecs) {
         final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
-          log.info("Task is asked to stop. Finish as failed.");
-          return TaskStatus.failure(getId());
+          String errMsg = "Task was asked to stop. Finish as failed.";
+          log.info(errMsg);
+          return TaskStatus.failure(getId(), errMsg);
         }
         try {
           if (eachSpec.isReady(toolbox.getTaskActionClient())) {
@@ -472,8 +477,10 @@ public class CompactionTask extends AbstractBatchIndexTask
         }
       }
 
-      log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
-      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
+      String msg = StringUtils.format("Ran [%d] specs, [%d] succeeded, [%d] failed",
+                                         totalNumSpecs, totalNumSpecs - failCnt, failCnt);
+      log.info(msg);
+      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId(), msg);
     }
   }
 
