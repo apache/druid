@@ -148,12 +148,12 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
-            return new SegmentForTesting(
+            return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
-            );
+            ), segment.getShardSpec());
           }
 
           @Override
