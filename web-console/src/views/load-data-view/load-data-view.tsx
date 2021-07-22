@@ -2828,6 +2828,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, selectedMetricSpec, selectedMetricSpecIndex } = this.state;
     if (!selectedMetricSpec) return;
     const dimensionMode = getDimensionMode(spec);
+    const selectedMetricSpecFieldName = selectedMetricSpec.fieldName;
 
     const close = () => {
       this.setState({
@@ -2837,6 +2838,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     const convertToDimension = (type: string) => {
+      if (!selectedMetricSpecFieldName) return;
       const specWithoutMetric = deepDelete(
         spec,
         `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
@@ -2847,7 +2849,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         `spec.dataSchema.dimensionsSpec.dimensions.[append]`,
         {
           type,
-          name: selectedMetricSpec.fieldName,
+          name: selectedMetricSpecFieldName,
         },
       );
 
@@ -2871,17 +2873,19 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           model={selectedMetricSpec}
           onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
         />
-        {selectedMetricSpecIndex !== -1 && dimensionMode === 'specific' && (
-          <FormGroup>
-            <Popover2 content={convertToDimensionMenu}>
-              <Button
-                icon={IconNames.EXCHANGE}
-                text="Convert to dimension"
-                rightIcon={IconNames.CARET_DOWN}
-              />
-            </Popover2>
-          </FormGroup>
-        )}
+        {selectedMetricSpecIndex !== -1 &&
+          dimensionMode === 'specific' &&
+          selectedMetricSpecFieldName && (
+            <FormGroup>
+              <Popover2 content={convertToDimensionMenu}>
+                <Button
+                  icon={IconNames.EXCHANGE}
+                  text="Convert to dimension"
+                  rightIcon={IconNames.CARET_DOWN}
+                />
+              </Popover2>
+            </FormGroup>
+          )}
         <div className="control-buttons">
           <Button
             text="Apply"

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { filterMap, oneOf, typeIs } from '../utils';
+import { filterMap, typeIs } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
 import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
@@ -87,24 +87,37 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'fieldName',
     type: 'string',
-    defined: m => m.type !== 'filtered',
+    defined: typeIs(
+      'longSum',
+      'doubleSum',
+      'floatSum',
+      'longMin',
+      'doubleMin',
+      'floatMin',
+      'longMax',
+      'doubleMax',
+      'floatMax',
+      'thetaSketch',
+      'HLLSketchBuild',
+      'HLLSketchMerge',
+      'quantilesDoublesSketch',
+      'momentSketch',
+      'fixedBucketsHistogram',
+      'hyperUnique',
+    ),
     info: <>The column name for the aggregator to operate on.</>,
   },
   {
     name: 'maxStringBytes',
     type: 'number',
     defaultValue: 1024,
-    defined: m => {
-      return oneOf(m.type, 'stringFirst', 'stringLast');
-    },
+    defined: typeIs('stringFirst', 'stringLast'),
   },
   {
     name: 'filterNullValues',
     type: 'boolean',
     defaultValue: false,
-    defined: m => {
-      return oneOf(m.type, 'stringFirst', 'stringLast');
-    },
+    defined: typeIs('stringFirst', 'stringLast'),
   },
   // filtered
   {
