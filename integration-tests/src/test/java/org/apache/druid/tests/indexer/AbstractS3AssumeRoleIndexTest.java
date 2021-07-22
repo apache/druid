@@ -26,6 +26,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.testng.Assert;
+import org.testng.SkipException;
 
 import java.io.Closeable;
 import java.util.UUID;
@@ -51,7 +52,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
   void doTestS3WithValidAssumeRoleAndExternalIdShouldSucceed() throws Exception
   {
     if (config.getS3AssumeRoleExternalId() == null || config.getS3AssumeRoleWithExternalId() == null) {
-      return;
+      throw new SkipException("S3 Assume Role and external Id must be set for this test");
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -119,7 +120,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
   void doTestS3WithAssumeRoleAndInvalidExternalIdShouldFail() throws Exception
   {
     if (config.getS3AssumeRoleExternalId() == null || config.getS3AssumeRoleWithExternalId() == null) {
-      return;
+      throw new SkipException("S3 Assume Role and external Id must be set for this test");
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try {
@@ -196,7 +197,7 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
   void doTestS3WithValidAssumeRoleWithoutExternalIdShouldSucceed() throws Exception
   {
     if (config.getS3AssumeRoleWithoutExternalId() == null) {
-      return;
+      throw new SkipException("S3 Assume Role must be set for this test");
     }
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
