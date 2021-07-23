@@ -189,7 +189,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 Returns a list of the names of datasources with at least one used segment in the cluster.
 
-This method reads from the metadata database, whereas `/druid/coordinator/v1/metadata/datasources` reads from the cached server view held by the coordinator that is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
+This method reads from the metadata database, whereas `/druid/coordinator/v1/datasources` reads from the cached server view held by the coordinator that is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
@@ -243,7 +243,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 Returns a list of datasource names found in the cluster.
 
-This method reads from the server view held by the coordinator that is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation), whereas `/druid/coordinator/v1/datasources` reads from metadata database.
+This method reads from the server view held by the coordinator that is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation), whereas `/druid/coordinator/v1/metadata/datasources` reads from metadata database.
 
 * `/druid/coordinator/v1/datasources?simple`
 
