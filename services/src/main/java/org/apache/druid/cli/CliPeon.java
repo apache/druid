@@ -211,10 +211,9 @@ public class CliPeon extends GuiceRunnable
 
             bindRowIngestionMeters(binder);
             bindChatHandler(binder);
+            configureIntermediaryData(binder);
             bindTaskConfigAndClients(binder);
             bindPeonDataSegmentHandlers(binder);
-
-            configureIntermediaryData(binder);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
