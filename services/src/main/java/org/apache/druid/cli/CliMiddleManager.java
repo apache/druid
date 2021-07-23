@@ -61,6 +61,8 @@ import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
@@ -166,6 +168,23 @@ public class CliMiddleManager extends ServerRunnable
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+
+            configureIntermediaryData(binder);
+          }
+
+          private void configureIntermediaryData(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder,
+                "druid.processing.intermediaryData.storage.type",
+                Key.get(IntermediaryDataManager.class),
+                Key.get(LocalIntermediaryDataManager.class)
+            );
+            final MapBinder<String, IntermediaryDataManager> biddy = PolyBind.optionBinder(
+                binder,
+                Key.get(IntermediaryDataManager.class)
+            );
+            biddy.addBinding("local").to(LocalIntermediaryDataManager.class);
           }
 
           @Provides

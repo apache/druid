@@ -88,6 +88,8 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -211,6 +213,8 @@ public class CliPeon extends GuiceRunnable
             bindChatHandler(binder);
             bindTaskConfigAndClients(binder);
             bindPeonDataSegmentHandlers(binder);
+
+            configureIntermediaryData(binder);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
@@ -423,7 +427,6 @@ public class CliPeon extends GuiceRunnable
 
     configureTaskActionClient(binder);
     binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-    binder.bind(ShuffleClient.class).to(HttpShuffleClient.class).in(LazySingleton.class);
 
     binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
           .to(ParallelIndexTaskClientFactory.class)
@@ -452,4 +455,30 @@ public class CliPeon extends GuiceRunnable
     binder.bind(CoordinatorClient.class).in(LazySingleton.class);
   }
 
+  private static void configureIntermediaryData(Binder binder)
+  {
+    PolyBind.createChoice(
+        binder,
+        "druid.processing.intermediaryData.storage.type",
+        Key.get(IntermediaryDataManager.class),
+        Key.get(LocalIntermediaryDataManager.class)
+    );
+    final MapBinder<String, IntermediaryDataManager> intermediaryDataManagerBiddy = PolyBind.optionBinder(
+        binder,
+        Key.get(IntermediaryDataManager.class)
+    );
+    intermediaryDataManagerBiddy.addBinding("local").to(LocalIntermediaryDataManager.class).in(LazySingleton.class);
+
+    PolyBind.createChoice(
+        binder,
+        "druid.processing.intermediaryData.storage.type",
+        Key.get(ShuffleClient.class),
+        Key.get(HttpShuffleClient.class)
+    );
+    final MapBinder<String, ShuffleClient> shuffleClientBiddy = PolyBind.optionBinder(
+        binder,
+        Key.get(ShuffleClient.class)
+    );
+    shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
+  }
 }
