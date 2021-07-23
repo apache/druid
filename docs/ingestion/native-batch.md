@@ -366,12 +366,13 @@ Druid currently supports only one partition function.
 #### Single-dimension range partitioning
 
 > Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
-> With this technique, segment sizes could be skewed along with the distribution of keys inside your chosen `partitionDimension`.
+> Be aware that, with this technique, segment sizes could be skewed if your chosen `partitionDimension` is also skewed in source data.
 
-> While it is technically possible to concatenate dimensions into a single dimension
-> to specify in `partitionDimension`, remember you _must_ address the concatenated dimension at query time
+> While it is technically possible to concatenate multiple dimensions into a single new dimension
+> that you go on to specify in `partitionDimension`, remember that you _must_ then use this newly concatenated dimension at query time
 > in order for segment pruning to be effective.
 
 |property|description|default|required?|
