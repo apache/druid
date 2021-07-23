@@ -564,12 +564,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         waitForSegmentAvailability(runner.getReports());
       }
       taskStatus = TaskStatus.success(getId());
-    } else if (state.isFailure()) {
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure());
       final String errorMessage = "Failed while running single phase parallel. See task logs for more details.";
       taskStatus = TaskStatus.failure(getId(), errorMessage);
-    } else {
-      final String errorMessage = "Task is in an invalid state after running.";
-      throw new ISE(errorMessage, state);
     }
     toolbox.getTaskReportFileWriter().write(
         getId(),
@@ -722,11 +721,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         waitForSegmentAvailability(mergeRunner.getReports());
       }
       taskStatus = TaskStatus.success(getId());
-    } else if (state.isFailure()) {
-      String errMsg = "Hash partition task failed while in partial segment merge phase. See task logs for details";
-      taskStatus = TaskStatus.fromCode(getId(), state);
     } else {
-      throw new ISE("Invalid state for Hash paritiion task while in partial segment merge phase[%s]", state);
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure());
+      String errMsg = "Hash partition task failed while in partial segment merge phase. See task logs for details";
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
     toolbox.getTaskReportFileWriter().write(
