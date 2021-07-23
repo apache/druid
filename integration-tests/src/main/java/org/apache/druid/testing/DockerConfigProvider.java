@@ -58,6 +58,15 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   private String cloudRegion;
 
   @JsonProperty
+  private String s3AssumeRoleWithExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleWithoutExternalId;
+
+  @JsonProperty
   private String hadoopGcsCredentialsPath;
 
   @JsonProperty
@@ -388,6 +397,24 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudRegion()
       {
         return cloudRegion;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithExternalId()
+      {
+        return s3AssumeRoleWithExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleExternalId()
+      {
+        return s3AssumeRoleExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithoutExternalId()
+      {
+        return s3AssumeRoleWithoutExternalId;
       }
 
       @Override

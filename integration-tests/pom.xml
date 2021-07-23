@@ -409,6 +409,12 @@
             <version>0.9.3</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sts</artifactId>
+            <version>${aws.sdk.version}</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
