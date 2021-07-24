@@ -114,7 +114,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   }
 
   @Test(timeout = 5000L)
-  public void testSubTaskFail() throws Exception
+  public void testSubTaskFailsAtPartialSegmentGeneration() throws Exception
   {
 
     final ParallelIndexSupervisorTask task =
@@ -135,7 +135,35 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     final TaskStatus taskStatus = task.run(toolbox);
 
     Assert.assertTrue(taskStatus.isFailure());
+    Assert.assertEquals("Hash partition task failed while in partial segment generation phase. See task logs for details",
+                        taskStatus.getErrorMsg());
+  }
 
+  @Test(timeout = 5000L)
+  public void testSubTaskFailsWhenAttemptedToRunWhileStopped() throws Exception
+  {
+
+    final ParallelIndexSupervisorTask task =
+        newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+                "test_*",
+                new HashedPartitionsSpec(null, 3,
+                                         ImmutableList.of("dim1", "dim2")
+                ),
+                2, false
+        );
+
+    final TaskActionClient actionClient = createActionClient(task);
+    final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    task.stopGracefully(null);
+    final TaskStatus taskStatus = task.run(toolbox);
+
+    Assert.assertTrue(taskStatus.isFailure());
+    Assert.assertEquals("Attempting to run a task that has been stopped. See overlord & task logs for more details.",
+                        taskStatus.getErrorMsg());
 
   }
+
 }
