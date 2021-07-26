@@ -621,7 +621,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.18
+version: 1.21
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -2999,20 +2999,6 @@ notices:
   - commons-net: |
       Apache Commons Net
       Copyright 2001-2012 The Apache Software Foundation
-
----
-
-name: Apache Commons Compress
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.19
-libraries:
-  - org.apache.commons: commons-compress
-notices:
-  - commons-compress: |
-      Apache Commons Compress
-      Copyright 2002-2012 The Apache Software Foundation
 
 ---
 
