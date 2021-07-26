@@ -209,7 +209,7 @@ public class CliIndexer extends ServerRunnable
           public DataNodeService getDataNodeService(DruidServerConfig serverConfig)
           {
             return new DataNodeService(
-                DruidServer.DEFAULT_TIER,
+                serverConfig.getTier(),
                 serverConfig.getMaxSize(),
                 ServerType.INDEXER_EXECUTOR,
                 DruidServer.DEFAULT_PRIORITY
