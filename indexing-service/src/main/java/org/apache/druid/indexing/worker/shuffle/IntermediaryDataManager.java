@@ -56,7 +56,7 @@ public interface IntermediaryDataManager
   long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir) throws IOException;
 
   /**
-   * Find the partition file
+   * Find the partition file. Note that the returned ByteSource method size() should be fast.
    *
    * @param supervisorTaskId - Supervisor task id of the partition file to find
    * @param subTaskId - Sub task id of the partition file to find
