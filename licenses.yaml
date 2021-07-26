@@ -350,7 +350,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.7.1
+version: 2.8.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
