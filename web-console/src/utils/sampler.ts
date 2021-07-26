@@ -259,7 +259,7 @@ function cleanupQueryGranularity(queryGranularity: any): any {
 }
 
 export async function sampleForConnect(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponseWithExtraInfo> {
   const samplerType = getSpecType(spec);
@@ -324,7 +324,7 @@ export async function sampleForConnect(
 }
 
 export async function sampleForParser(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
@@ -353,7 +353,7 @@ export async function sampleForParser(
 }
 
 export async function sampleForTimestamp(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
@@ -425,7 +425,7 @@ export async function sampleForTimestamp(
 }
 
 export async function sampleForTransform(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
@@ -481,7 +481,7 @@ export async function sampleForTransform(
 }
 
 export async function sampleForFilter(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
@@ -539,7 +539,7 @@ export async function sampleForFilter(
 }
 
 export async function sampleForSchema(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);

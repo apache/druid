@@ -406,12 +406,12 @@ export function isLookupInvalid(
   lookupName: string | undefined,
   lookupVersion: string | undefined,
   lookupTier: string | undefined,
-  lookupSpec: unknown,
+  lookupSpec: Partial<LookupSpec>,
 ) {
   return (
     !lookupName ||
     !lookupVersion ||
     !lookupTier ||
-    Boolean(AutoForm.issueWithModel(lookupSpec as LookupSpec, LOOKUP_FIELDS))
+    AutoForm.isValidateModel(lookupSpec, LOOKUP_FIELDS)
   );
 }

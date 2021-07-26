@@ -57,17 +57,17 @@ export const MAX_INLINE_DATA_LENGTH = 65536;
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
-  type: IngestionType;
-  spec: IngestionSpecInner;
+  readonly type: IngestionType;
+  readonly spec: IngestionSpecInner;
 }
 
 export interface IngestionSpecInner {
-  ioConfig: IoConfig;
-  dataSchema: DataSchema;
-  tuningConfig?: TuningConfig;
+  readonly ioConfig: IoConfig;
+  readonly dataSchema: DataSchema;
+  readonly tuningConfig?: TuningConfig;
 }
 
-export function isEmptyIngestionSpec(spec: IngestionSpec) {
+export function isEmptyIngestionSpec(spec: Partial<IngestionSpec>) {
   return Object.keys(spec).length === 0;
 }
 
@@ -106,7 +106,9 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
+export function getIngestionComboType(
+  spec: Partial<IngestionSpec>,
+): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -188,7 +190,7 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
-export function getIngestionDocLink(spec: IngestionSpec): string {
+export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
   const type = getSpecType(spec);
 
   switch (type) {
@@ -228,7 +230,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
   }
 }
 
-export function getIssueWithSpec(spec: IngestionSpec): string | undefined {
+export function getIssueWithSpec(spec: Partial<IngestionSpec>): string | undefined {
   if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
     return 'missing spec.dataSchema.dataSource';
   }
@@ -257,12 +259,12 @@ export interface DataSchema {
 
 export type DimensionMode = 'specific' | 'auto-detect';
 
-export function getDimensionMode(spec: IngestionSpec): DimensionMode {
+export function getDimensionMode(spec: Partial<IngestionSpec>): DimensionMode {
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
-export function getRollup(spec: IngestionSpec): boolean {
+export function getRollup(spec: Partial<IngestionSpec>): boolean {
   const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
@@ -276,7 +278,7 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   );
 }
 
-export function isTask(spec: IngestionSpec) {
+export function isTask(spec: Partial<IngestionSpec>) {
   const type = String(getSpecType(spec));
   return (
     type.startsWith('index_') ||
@@ -284,7 +286,7 @@ export function isTask(spec: IngestionSpec) {
   );
 }
 
-export function isDruidSource(spec: IngestionSpec): boolean {
+export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
@@ -586,7 +588,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               </p>
             </>
           ),
-          adjustment: (ioConfig: IoConfig) => {
+          adjustment: ioConfig => {
             return deepSet(
               ioConfig,
               'inputSource.properties.secretAccessKey.type',
@@ -1222,13 +1224,13 @@ function basenameFromFilename(filename: string): string | undefined {
   return filename.split('.')[0];
 }
 
-export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
+export function fillDataSourceNameIfNeeded(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
   const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
   return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(spec: IngestionSpec): string | undefined {
+export function guessDataSourceName(spec: Partial<IngestionSpec>): string | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig');
   if (!ioConfig) return;
 
@@ -1332,7 +1334,7 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
-export function adjustForceGuaranteedRollup(spec: IngestionSpec) {
+export function adjustForceGuaranteedRollup(spec: Partial<IngestionSpec>) {
   if (getSpecType(spec) !== 'index_parallel') return spec;
 
   const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
@@ -1345,12 +1347,12 @@ export function adjustForceGuaranteedRollup(spec: IngestionSpec) {
   return spec;
 }
 
-export function invalidPartitionConfig(spec: IngestionSpec): boolean {
+export function invalidPartitionConfig(spec: Partial<IngestionSpec>): boolean {
   return (
     // Bad primary partitioning, or...
     !deepGet(spec, 'spec.dataSchema.granularitySpec.segmentGranularity') ||
     // Bad secondary partitioning
-    Boolean(AutoForm.issueWithModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined)))
+    AutoForm.isValidateModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined))
   );
 }
 
@@ -1398,7 +1400,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
 ];
 
 export function getSecondaryPartitionRelatedFormFields(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   dimensionSuggestions: string[] | undefined,
 ): Field<IngestionSpec>[] {
   const specType = getSpecType(spec);
@@ -2014,9 +2016,9 @@ export interface Bitmap {
 // --------------
 
 export function updateIngestionType(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   comboType: IngestionComboType,
-): IngestionSpec {
+): Partial<IngestionSpec> {
   const [ingestionType, inputSourceType] = comboType.split(':');
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
@@ -2062,7 +2064,10 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
   return;
 }
 
-export function fillInputFormatIfNeeded(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+export function fillInputFormatIfNeeded(
+  spec: Partial<IngestionSpec>,
+  sampleData: string[],
+): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
@@ -2107,15 +2112,15 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
 }
 
 function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
-  const inputFormat: InputFormat = { type };
+  let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
-    inputFormat.pattern = '(.*)';
-    inputFormat.columns = ['column1'];
+    inputFormat = deepSet(inputFormat, 'pattern', '(.*)');
+    inputFormat = deepSet(inputFormat, 'columns', ['column1']);
   }
 
   if (typeof findColumnsFromHeader === 'boolean') {
-    inputFormat.findColumnsFromHeader = findColumnsFromHeader;
+    inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
   }
 
   return inputFormat;
@@ -2148,7 +2153,7 @@ export function getColumnTypeFromHeaderAndRows(
   );
 }
 
-function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
+function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
   const typeHints: Record<string, string> = {};
   const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
   for (const currentDimension of currentDimensions) {
@@ -2168,12 +2173,12 @@ function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
 }
 
 export function updateSchemaWithSample(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   headerAndRows: HeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,
-): IngestionSpec {
+): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
 
   let newSpec = spec;
@@ -2221,7 +2226,7 @@ export function updateSchemaWithSample(
 
 // ------------------------
 
-export function upgradeSpec(spec: any): any {
+export function upgradeSpec(spec: any): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.firehose')) {
     switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 'static-s3':
@@ -2252,7 +2257,7 @@ export function upgradeSpec(spec: any): any {
   return spec;
 }
 
-export function downgradeSpec(spec: any): any {
+export function downgradeSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputSource')) {
     spec = deepMove(spec, 'spec.ioConfig.inputFormat.type', 'spec.ioConfig.inputFormat.format');
     spec = deepSet(spec, 'spec.dataSchema.parser', { type: 'string' });

@@ -23,25 +23,28 @@ import { HeaderAndRows } from '../utils/sampler';
 import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface DimensionsSpec {
-  dimensions?: (string | DimensionSpec)[];
-  dimensionExclusions?: string[];
-  spatialDimensions?: any[];
+  readonly dimensions?: (string | DimensionSpec)[];
+  readonly dimensionExclusions?: string[];
+  readonly spatialDimensions?: any[];
 }
 
 export interface DimensionSpec {
-  type: string;
-  name: string;
-  createBitmapIndex?: boolean;
+  readonly type: string;
+  readonly name: string;
+  readonly createBitmapIndex?: boolean;
 }
 
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'name',
     type: 'string',
+    required: true,
+    placeholder: 'dimension_name',
   },
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: ['string', 'long', 'float', 'double'],
   },
   {

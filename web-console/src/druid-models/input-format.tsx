@@ -26,15 +26,15 @@ import { oneOf, typeIs } from '../utils';
 import { FlattenSpec } from './flatten-spec';
 
 export interface InputFormat {
-  type: string;
-  findColumnsFromHeader?: boolean;
-  skipHeaderRows?: number;
-  columns?: string[];
-  listDelimiter?: string;
-  pattern?: string;
-  function?: string;
-  flattenSpec?: FlattenSpec;
-  keepNullColumns?: boolean;
+  readonly type: string;
+  readonly findColumnsFromHeader?: boolean;
+  readonly skipHeaderRows?: number;
+  readonly columns?: string[];
+  readonly listDelimiter?: string;
+  readonly pattern?: string;
+  readonly function?: string;
+  readonly flattenSpec?: FlattenSpec;
+  readonly keepNullColumns?: boolean;
 }
 
 export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
@@ -143,7 +143,7 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
   return AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS);
 }
 
-export const inputFormatCanFlatten = typeIs<InputFormat>(
+export const inputFormatCanFlatten: (inputFormat: InputFormat) => boolean = typeIs(
   'json',
   'parquet',
   'orc',

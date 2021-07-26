@@ -27,32 +27,35 @@ import { HeaderAndRows } from '../utils/sampler';
 import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface MetricSpec {
-  type: string;
-  name?: string;
-  fieldName?: string;
-  maxStringBytes?: number;
-  filterNullValues?: boolean;
-  fieldNames?: string[];
-  fnAggregate?: string;
-  fnCombine?: string;
-  fnReset?: string;
-  fields?: string[];
-  byRow?: boolean;
-  round?: boolean;
-  isInputHyperUnique?: boolean;
-  filter?: any;
-  aggregator?: MetricSpec;
+  readonly type: string;
+  readonly name?: string;
+  readonly fieldName?: string;
+  readonly maxStringBytes?: number;
+  readonly filterNullValues?: boolean;
+  readonly fieldNames?: string[];
+  readonly fnAggregate?: string;
+  readonly fnCombine?: string;
+  readonly fnReset?: string;
+  readonly fields?: string[];
+  readonly byRow?: boolean;
+  readonly round?: boolean;
+  readonly isInputHyperUnique?: boolean;
+  readonly filter?: any;
+  readonly aggregator?: MetricSpec;
 }
 
 export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'name',
     type: 'string',
+    required: true,
     info: <>The metric name as it will appear in Druid.</>,
+    placeholder: 'metric_name',
   },
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: [
       'count',
       {
@@ -105,6 +108,8 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       'fixedBucketsHistogram',
       'hyperUnique',
     ),
+    required: true,
+    placeholder: 'column_name',
     info: <>The column name for the aggregator to operate on.</>,
   },
   {
@@ -124,11 +129,13 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     name: 'filter',
     type: 'json',
     defined: typeIs('filtered'),
+    required: true,
   },
   {
     name: 'aggregator',
     type: 'json',
     defined: typeIs('filtered'),
+    required: true,
   },
   // thetaSketch
   {

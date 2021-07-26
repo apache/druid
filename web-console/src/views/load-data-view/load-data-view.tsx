@@ -301,8 +301,8 @@ export interface LoadDataViewProps {
 
 export interface LoadDataViewState {
   step: Step;
-  spec: IngestionSpec;
-  specPreview: IngestionSpec;
+  spec: Partial<IngestionSpec>;
+  specPreview: Partial<IngestionSpec>;
   cacheRows?: CacheRows;
   // dialogs / modals
   continueToSpec: boolean;
@@ -328,24 +328,23 @@ export interface LoadDataViewState {
 
   // for flatten
   selectedFlattenFieldIndex: number;
-  selectedFlattenField?: FlattenField;
+  selectedFlattenField?: Partial<FlattenField>;
 
   // for timestamp
   timestampQueryState: QueryState<{
     headerAndRows: HeaderAndRows;
-    spec: IngestionSpec;
+    spec: Partial<IngestionSpec>;
   }>;
 
   // for transform
   transformQueryState: QueryState<HeaderAndRows>;
   selectedTransformIndex: number;
-  selectedTransform?: Transform;
+  selectedTransform?: Partial<Transform>;
 
   // for filter
   filterQueryState: QueryState<HeaderAndRows>;
   selectedFilterIndex: number;
-  selectedFilter?: DruidFilter;
-  newFilterValue?: Record<string, any>;
+  selectedFilter?: Partial<DruidFilter>;
 
   // for schema
   schemaQueryState: QueryState<{
@@ -355,9 +354,9 @@ export interface LoadDataViewState {
   }>;
   selectedAutoDimension?: string;
   selectedDimensionSpecIndex: number;
-  selectedDimensionSpec?: DimensionSpec;
+  selectedDimensionSpec?: Partial<DimensionSpec>;
   selectedMetricSpecIndex: number;
-  selectedMetricSpec?: MetricSpec;
+  selectedMetricSpec?: Partial<MetricSpec>;
 
   // for final step
   submitting: boolean;
@@ -452,6 +451,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   isStepEnabled(step: Step): boolean {
+    if (this.isSomethingSelected()) return false;
+
     const { spec, cacheRows } = this.state;
     const druidSource = isDruidSource(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
@@ -489,7 +490,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState(state => ({ step: newStep, specPreview: state.spec }));
   };
 
-  private readonly updateSpec = (newSpec: IngestionSpec) => {
+  private readonly updateSpec = (newSpec: Partial<IngestionSpec>) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
@@ -500,7 +501,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSONBig.stringify(newSpec));
   };
 
-  private readonly updateSpecPreview = (newSpecPreview: IngestionSpec) => {
+  private readonly updateSpecPreview = (newSpecPreview: Partial<IngestionSpec>) => {
     this.setState({ specPreview: newSpecPreview });
   };
 
@@ -560,6 +561,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'spec':
         return;
     }
+  }
+
+  private isSomethingSelected(): boolean {
+    const {
+      selectedFlattenField,
+      selectedTransform,
+      selectedFilter,
+      selectedDimensionSpec,
+      selectedMetricSpec,
+    } = this.state;
+    return Boolean(
+      selectedFlattenField ||
+        selectedTransform ||
+        selectedFilter ||
+        selectedDimensionSpec ||
+        selectedMetricSpec,
+    );
   }
 
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
@@ -676,7 +694,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           text={`Next: ${VIEW_TITLE[nextStep]}`}
           rightIcon={IconNames.ARROW_RIGHT}
           intent={Intent.PRIMARY}
-          disabled={disabled || !this.isPreviewSpecSame()}
+          disabled={disabled || this.isSomethingSelected() || !this.isPreviewSpecSame()}
           onClick={() => {
             if (disabled) return;
             if (onNextStep && !onNextStep()) return;
@@ -1042,7 +1060,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private readonly handleResetSpec = () => {
     this.setState({ showResetConfirm: false, continueToSpec: true });
-    this.updateSpec({} as any);
+    this.updateSpec({});
     this.updateStep('welcome');
   };
 
@@ -1471,11 +1489,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }
 
             if (possibleTimestampSpec) {
-              const newSpec: IngestionSpec = deepSet(
-                spec,
-                'spec.dataSchema.timestampSpec',
-                possibleTimestampSpec,
-              );
+              const newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', possibleTimestampSpec);
               this.updateSpec(newSpec);
             }
 
@@ -1517,6 +1531,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Apply"
               intent={Intent.PRIMARY}
+              disabled={AutoForm.isValidateModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
               onClick={() => {
                 this.updateSpec(
                   deepSet(
@@ -1556,7 +1571,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             disabled={!this.isPreviewSpecSame()}
             onClick={() => {
               this.setState({
-                selectedFlattenField: { type: 'path', name: '', expr: '' },
+                selectedFlattenField: { type: 'path' },
                 selectedFlattenFieldIndex: -1,
               });
             }}
@@ -1818,7 +1833,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       specialColumnsOnly,
       transformQueryState,
       selectedTransform,
-      // selectedTransformIndex,
     } = this.state;
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
@@ -1936,6 +1950,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Apply"
               intent={Intent.PRIMARY}
+              disabled={Boolean(AutoForm.issueWithModel(selectedTransform, TRANSFORM_FIELDS))}
               onClick={() => {
                 this.updateSpec(
                   deepSet(
@@ -1975,7 +1990,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onClick={() => {
               this.setState({
                 selectedTransformIndex: -1,
-                selectedTransform: { type: 'expression', name: '', expression: '' },
+                selectedTransform: { type: 'expression' },
               });
             }}
           />
@@ -2169,12 +2184,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           fields={FILTER_FIELDS}
           model={selectedFilter}
           onChange={f => this.setState({ selectedFilter: f })}
-          showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type)}
+          showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
         />
         <div className="control-buttons">
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
+            disabled={AutoForm.isValidateModel(selectedFilter, FILTER_FIELDS)}
             onClick={() => {
               const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
               const newFilter = joinFilter(
@@ -2443,7 +2459,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     this.setState({
                       selectedDimensionSpecIndex: -1,
                       selectedDimensionSpec: {
-                        name: 'new_dimension',
                         type: 'string',
                       },
                     });
@@ -2457,9 +2472,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     this.setState({
                       selectedMetricSpecIndex: -1,
                       selectedMetricSpec: {
-                        name: 'sum_blah',
                         type: 'doubleSum',
-                        fieldName: '',
                       },
                     });
                   }}
@@ -2788,6 +2801,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
+            disabled={Boolean(
+              AutoForm.issueWithModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS),
+            )}
             onClick={() => {
               this.updateSpec(
                 deepSet(
@@ -2890,6 +2906,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
+            disabled={AutoForm.isValidateModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
             onClick={() => {
               this.updateSpec(
                 deepSet(

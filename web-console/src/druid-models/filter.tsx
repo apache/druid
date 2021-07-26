@@ -84,33 +84,39 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: KNOWN_FILTER_TYPES,
   },
   {
     name: 'dimension',
     type: 'string',
     defined: typeIs('selector', 'in', 'interval', 'regex', 'like'),
+    required: true,
   },
   {
     name: 'value',
     type: 'string',
     defined: typeIs('selector'),
+    required: true,
   },
   {
     name: 'values',
     type: 'string-array',
     defined: typeIs('in'),
+    required: true,
   },
   {
     name: 'intervals',
     type: 'string-array',
     defined: typeIs('interval'),
+    required: true,
     placeholder: 'ex: 2020-01-01/2020-06-01',
   },
   {
     name: 'pattern',
     type: 'string',
     defined: typeIs('regex', 'like'),
+    required: true,
   },
 
   {
@@ -119,6 +125,7 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     type: 'string',
     suggestions: ['selector', 'in', 'interval', 'regex', 'like'],
     defined: typeIs('not'),
+    required: true,
   },
   {
     name: 'field.dimension',
