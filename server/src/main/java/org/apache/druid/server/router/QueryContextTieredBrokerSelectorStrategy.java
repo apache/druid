@@ -19,40 +19,79 @@
 
 package org.apache.druid.server.router;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 
+import javax.annotation.Nullable;
+
 /**
- * Implementation of {@link TieredBrokerSelectorStrategy} which uses the flag
+ * Implementation of {@link TieredBrokerSelectorStrategy} which uses the parameter
  * {@link QueryContexts#BROKER_SERVICE_NAME} in the Query context to select the
- * Broker tier.
+ * Broker Service.
+ * <p>
+ * If the {@link #fallbackBrokerService} is set to a valid Broker Service Name,
+ * then all queries that do not specify a valid value for
+ * {@link QueryContexts#BROKER_SERVICE_NAME} would be directed to the
+ * {@code #fallbackBrokerService}. Note that the {@code fallbackBrokerService}
+ * can be different from the {@link TieredBrokerConfig#getDefaultBrokerServiceName()}.
  */
 public class QueryContextTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
-
   private static final Logger log = new Logger(QueryContextTieredBrokerSelectorStrategy.class);
+
+  private final String fallbackBrokerService;
+
+  @JsonCreator
+  public QueryContextTieredBrokerSelectorStrategy(
+      @JsonProperty("fallbackBrokerService") @Nullable String fallbackBrokerService
+  )
+  {
+    this.fallbackBrokerService = fallbackBrokerService;
+  }
 
   @Override
   public Optional<String> getBrokerServiceName(TieredBrokerConfig tierConfig, Query query)
   {
     try {
-      String brokerServiceName = QueryContexts.getBrokerServiceName(query);
+      final String contextBrokerService = QueryContexts.getBrokerServiceName(query);
 
-      // Verify that the brokerServiceName is valid
-      if (StringUtils.isEmpty(brokerServiceName)
-          || !tierConfig.getTierToBrokerMap().containsValue(brokerServiceName)) {
-        log.debug("Could not find Broker Service [%s] in TieredBrokerConfig", brokerServiceName);
-        return Optional.absent();
+      if (isValidBrokerService(contextBrokerService, tierConfig)) {
+        // If the broker service in the query context is valid, use that
+        return Optional.of(contextBrokerService);
+      } else if (isValidBrokerService(fallbackBrokerService, tierConfig)) {
+        // If the fallbackBrokerService is valid, use that
+        return Optional.of(fallbackBrokerService);
       } else {
-        return Optional.of(brokerServiceName);
+        log.debug(
+            "Could not find Broker Service [%s] or fallback [%s] in TieredBrokerConfig",
+            contextBrokerService,
+            fallbackBrokerService
+        );
+        return Optional.absent();
       }
     }
     catch (Exception e) {
       log.error(e, "Error getting Broker Service name from Query Context");
-      return Optional.absent();
+      return isValidBrokerService(fallbackBrokerService, tierConfig)
+             ? Optional.of(fallbackBrokerService) : Optional.absent();
     }
+  }
+
+  private boolean isValidBrokerService(String brokerServiceName, TieredBrokerConfig tierConfig)
+  {
+    return !StringUtils.isEmpty(brokerServiceName)
+           && tierConfig.getTierToBrokerMap().containsValue(brokerServiceName);
+  }
+
+  @VisibleForTesting
+  String getFallbackBrokerService()
+  {
+    return fallbackBrokerService;
   }
 }
