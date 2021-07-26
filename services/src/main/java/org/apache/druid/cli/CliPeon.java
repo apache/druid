@@ -454,7 +454,7 @@ public class CliPeon extends GuiceRunnable
     binder.bind(CoordinatorClient.class).in(LazySingleton.class);
   }
 
-  private static void configureIntermediaryData(Binder binder)
+  static void configureIntermediaryData(Binder binder)
   {
     PolyBind.createChoice(
         binder,
