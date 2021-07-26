@@ -164,6 +164,7 @@ import {
   SampleStrategy,
 } from '../../utils/sampler';
 
+import { ApplyCancelButtons } from './apply-cancel-buttons/apply-cancel-buttons';
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
 import {
@@ -1527,40 +1528,28 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={selectedFlattenField}
             onChange={f => this.setState({ selectedFlattenField: f })}
           />
-          <div className="control-buttons">
-            <Button
-              text="Apply"
-              intent={Intent.PRIMARY}
-              disabled={AutoForm.isValidModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
-              onClick={() => {
-                this.updateSpec(
-                  deepSet(
-                    spec,
-                    `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
-                    selectedFlattenField,
-                  ),
-                );
-                close();
-              }}
-            />
-            <Button text="Cancel" onClick={close} />
-            {selectedFlattenFieldIndex !== -1 && (
-              <Button
-                className="right"
-                icon={IconNames.TRASH}
-                intent={Intent.DANGER}
-                onClick={() => {
-                  this.updateSpec(
-                    deepDelete(
-                      spec,
-                      `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
-                    ),
-                  );
-                  close();
-                }}
-              />
-            )}
-          </div>
+          <ApplyCancelButtons
+            onClose={close}
+            disableApply={AutoForm.isValidModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
+            onApply={() =>
+              this.updateSpec(
+                deepSet(
+                  spec,
+                  `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                  selectedFlattenField,
+                ),
+              )
+            }
+            showDelete={selectedFlattenFieldIndex !== -1}
+            onDelete={() =>
+              this.updateSpec(
+                deepDelete(
+                  spec,
+                  `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                ),
+              )
+            }
+          />
         </div>
       );
     } else {
@@ -1946,40 +1935,28 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={selectedTransform}
             onChange={selectedTransform => this.setState({ selectedTransform })}
           />
-          <div className="control-buttons">
-            <Button
-              text="Apply"
-              intent={Intent.PRIMARY}
-              disabled={AutoForm.isValidModel(selectedTransform, TRANSFORM_FIELDS)}
-              onClick={() => {
-                this.updateSpec(
-                  deepSet(
-                    spec,
-                    `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
-                    selectedTransform,
-                  ),
-                );
-                close();
-              }}
-            />
-            <Button text="Cancel" onClick={close} />
-            {selectedTransformIndex !== -1 && (
-              <Button
-                className="right"
-                icon={IconNames.TRASH}
-                intent={Intent.DANGER}
-                onClick={() => {
-                  this.updateSpec(
-                    deepDelete(
-                      spec,
-                      `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
-                    ),
-                  );
-                  close();
-                }}
-              />
-            )}
-          </div>
+          <ApplyCancelButtons
+            onClose={close}
+            disableApply={AutoForm.isValidModel(selectedTransform, TRANSFORM_FIELDS)}
+            onApply={() =>
+              this.updateSpec(
+                deepSet(
+                  spec,
+                  `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                  selectedTransform,
+                ),
+              )
+            }
+            showDelete={selectedTransformIndex !== -1}
+            onDelete={() =>
+              this.updateSpec(
+                deepDelete(
+                  spec,
+                  `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                ),
+              )
+            }
+          />
         </div>
       );
     } else {
@@ -2186,39 +2163,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           onChange={f => this.setState({ selectedFilter: f })}
           showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
         />
-        <div className="control-buttons">
-          <Button
-            text="Apply"
-            intent={Intent.PRIMARY}
-            disabled={AutoForm.isValidModel(selectedFilter, FILTER_FIELDS)}
-            onClick={() => {
-              const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
-              const newFilter = joinFilter(
-                deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
-              );
-              this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-              close();
-            }}
-          />
-          <Button text="Cancel" onClick={close} />
-          {selectedFilterIndex !== -1 && (
-            <Button
-              className="right"
-              icon={IconNames.TRASH}
-              intent={Intent.DANGER}
-              onClick={() => {
-                const curFilter = splitFilter(
-                  deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
-                );
-                const newFilter = joinFilter(
-                  deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
-                );
-                this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-                close();
-              }}
-            />
-          )}
-        </div>
+        <ApplyCancelButtons
+          onClose={close}
+          disableApply={AutoForm.isValidModel(selectedFilter, FILTER_FIELDS)}
+          onApply={() => {
+            const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+            const newFilter = joinFilter(
+              deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
+            );
+            this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
+          }}
+          showDelete={selectedFilterIndex !== -1}
+          onDelete={() => {
+            const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+            const newFilter = joinFilter(
+              deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
+            );
+            this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
+          }}
+        />
       </div>
     );
   }
@@ -2797,43 +2760,29 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </Popover2>
           </FormGroup>
         )}
-        <div className="control-buttons">
-          <Button
-            text="Apply"
-            intent={Intent.PRIMARY}
-            disabled={AutoForm.isValidModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS)}
-            onClick={() => {
-              this.updateSpec(
-                deepSet(
-                  spec,
-                  `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-                  selectedDimensionSpec,
-                ),
-              );
-              close();
-            }}
-          />
-          <Button text="Cancel" onClick={close} />
-          {selectedDimensionSpecIndex !== -1 && (
-            <Button
-              className="right"
-              icon={IconNames.TRASH}
-              intent={Intent.DANGER}
-              disabled={dimensions.length <= 1}
-              onClick={() => {
-                if (dimensions.length <= 1) return; // Guard against removing the last dimension
-
-                this.updateSpec(
-                  deepDelete(
-                    spec,
-                    `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-                  ),
-                );
-                close();
-              }}
-            />
-          )}
-        </div>
+        <ApplyCancelButtons
+          onClose={close}
+          disableApply={AutoForm.isValidModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS)}
+          onApply={() =>
+            this.updateSpec(
+              deepSet(
+                spec,
+                `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+                selectedDimensionSpec,
+              ),
+            )
+          }
+          showDelete={selectedDimensionSpecIndex !== -1}
+          disableDelete={dimensions.length <= 1}
+          onDelete={() =>
+            this.updateSpec(
+              deepDelete(
+                spec,
+                `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              ),
+            )
+          }
+        />
       </div>
     );
   }
@@ -2900,37 +2849,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Popover2>
             </FormGroup>
           )}
-        <div className="control-buttons">
-          <Button
-            text="Apply"
-            intent={Intent.PRIMARY}
-            disabled={AutoForm.isValidModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
-            onClick={() => {
-              this.updateSpec(
-                deepSet(
-                  spec,
-                  `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
-                  selectedMetricSpec,
-                ),
-              );
-              close();
-            }}
-          />
-          <Button text="Cancel" onClick={close} />
-          {selectedMetricSpecIndex !== -1 && (
-            <Button
-              className="right"
-              icon={IconNames.TRASH}
-              intent={Intent.DANGER}
-              onClick={() => {
-                this.updateSpec(
-                  deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
-                );
-                close();
-              }}
-            />
-          )}
-        </div>
+        <ApplyCancelButtons
+          onClose={close}
+          disableApply={AutoForm.isValidModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
+          onApply={() =>
+            this.updateSpec(
+              deepSet(
+                spec,
+                `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
+                selectedMetricSpec,
+              ),
+            )
+          }
+          showDelete={selectedMetricSpecIndex !== -1}
+          onDelete={() =>
+            this.updateSpec(
+              deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
+            )
+          }
+        />
       </div>
     );
   }
