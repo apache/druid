@@ -1531,7 +1531,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Apply"
               intent={Intent.PRIMARY}
-              disabled={AutoForm.isValidateModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
+              disabled={AutoForm.isValidModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
               onClick={() => {
                 this.updateSpec(
                   deepSet(
@@ -1950,7 +1950,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Apply"
               intent={Intent.PRIMARY}
-              disabled={Boolean(AutoForm.issueWithModel(selectedTransform, TRANSFORM_FIELDS))}
+              disabled={AutoForm.isValidModel(selectedTransform, TRANSFORM_FIELDS)}
               onClick={() => {
                 this.updateSpec(
                   deepSet(
@@ -2190,7 +2190,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
-            disabled={AutoForm.isValidateModel(selectedFilter, FILTER_FIELDS)}
+            disabled={AutoForm.isValidModel(selectedFilter, FILTER_FIELDS)}
             onClick={() => {
               const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
               const newFilter = joinFilter(
@@ -2801,9 +2801,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
-            disabled={Boolean(
-              AutoForm.issueWithModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS),
-            )}
+            disabled={AutoForm.isValidModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS)}
             onClick={() => {
               this.updateSpec(
                 deepSet(
@@ -2906,7 +2904,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Button
             text="Apply"
             intent={Intent.PRIMARY}
-            disabled={AutoForm.isValidateModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
+            disabled={AutoForm.isValidModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
             onClick={() => {
               this.updateSpec(
                 deepSet(

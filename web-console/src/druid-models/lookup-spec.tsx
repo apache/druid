@@ -409,9 +409,6 @@ export function isLookupInvalid(
   lookupSpec: Partial<LookupSpec>,
 ) {
   return (
-    !lookupName ||
-    !lookupVersion ||
-    !lookupTier ||
-    AutoForm.isValidateModel(lookupSpec, LOOKUP_FIELDS)
+    !lookupName || !lookupVersion || !lookupTier || AutoForm.isValidModel(lookupSpec, LOOKUP_FIELDS)
   );
 }
