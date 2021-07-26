@@ -321,7 +321,7 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
  * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
  * @param spec
  */
-export function cleanSpec(spec: IngestionSpec): IngestionSpec {
+export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
   return {
     type: spec.type,
     spec: spec.spec,

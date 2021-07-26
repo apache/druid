@@ -130,8 +130,10 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
-  const inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
-  if (flattenSpec) inputFormat.flattenSpec = flattenSpec;
+  let inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
+  if (flattenSpec) {
+    inputFormat = deepSet(inputFormat, 'flattenSpec', flattenSpec);
+  }
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat', inputFormat);
 
   return sampleSpec;
@@ -433,7 +435,7 @@ export async function sampleForTransform(
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
   // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = {};
+  let specialDimensionSpec: DimensionsSpec = {};
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -453,11 +455,15 @@ export async function sampleForTransform(
       'transform-pre',
     );
 
-    specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse({
-        sampleResponse: sampleResponseHack,
-        ignoreTimeColumn: true,
-      }).concat(getDimensionNamesFromTransforms(transforms)),
+    specialDimensionSpec = deepSet(
+      specialDimensionSpec,
+      'dimensions',
+      dedupe(
+        headerFromSampleResponse({
+          sampleResponse: sampleResponseHack,
+          ignoreTimeColumn: true,
+        }).concat(getDimensionNamesFromTransforms(transforms)),
+      ),
     );
   }
 
@@ -490,7 +496,7 @@ export async function sampleForFilter(
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
 
   // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = {};
+  let specialDimensionSpec: DimensionsSpec = {};
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -510,11 +516,15 @@ export async function sampleForFilter(
       'filter-pre',
     );
 
-    specialDimensionSpec.dimensions = dedupe(
-      headerFromSampleResponse({
-        sampleResponse: sampleResponseHack,
-        ignoreTimeColumn: true,
-      }).concat(getDimensionNamesFromTransforms(transforms)),
+    specialDimensionSpec = deepSet(
+      specialDimensionSpec,
+      'dimensions',
+      dedupe(
+        headerFromSampleResponse({
+          sampleResponse: sampleResponseHack,
+          ignoreTimeColumn: true,
+        }).concat(getDimensionNamesFromTransforms(transforms)),
+      ),
     );
   }
 
