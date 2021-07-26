@@ -25,6 +25,7 @@ cp -r client_tls docker/client_tls
 
 # install druid jars
 rm -rf $SHARED_DIR/docker
+mkdir -p $SHARED_DIR
 cp -R docker $SHARED_DIR/docker
 mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
 
