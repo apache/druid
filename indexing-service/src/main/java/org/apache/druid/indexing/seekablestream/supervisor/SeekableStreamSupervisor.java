@@ -93,6 +93,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -1206,6 +1207,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                        .keySet()
                        .forEach(partition -> {
                          final int groupId = getTaskGroupIdForPartition(partition);
+                         retryDiscoverTaskForKillGroup(groupId);
                          killTaskGroupForPartitions(
                              ImmutableSet.of(partition),
                              "DataSourceMetadata is updated while reset"
@@ -1225,6 +1227,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             resetMetadata.getSeekableStreamSequenceNumbers().getStream(),
             ioConfig.getStream()
         );
+      }
+    }
+  }
+
+  private void retryDiscoverTaskForKillGroup(final int taskGroupId) {
+    TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
+    if(Objects.isNull(taskGroup) || taskGroup.tasks.isEmpty()) {
+      try {
+        log.warn("activelyReadingTaskGroups [%d] tasks is empty, retry discover task", taskGroupId);
+        discoverTasks();
+      } catch (ExecutionException | InterruptedException | TimeoutException e) {
+        log.warn(e, "Exception in retry discover task dataSource [%s]", dataSource);
       }
     }
   }
