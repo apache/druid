@@ -21,13 +21,11 @@ package org.apache.druid.spark.clients
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.google.common.net.HostAndPort
-import org.apache.druid.java.util.common.{ISE, Intervals, JodaUtils, StringUtils}
-import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler,
-  StringFullResponseHolder}
+import org.apache.druid.java.util.common.{IAE, ISE, Intervals, JodaUtils, StringUtils}
+import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler, StringFullResponseHolder}
 import org.apache.druid.java.util.http.client.{HttpClient, Request}
 import org.apache.druid.query.Druids
-import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis,
-  SegmentMetadataQuery}
+import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis, SegmentMetadataQuery}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.spark.mixins.Logging
@@ -37,8 +35,7 @@ import org.joda.time.{Duration, Interval}
 import java.net.URL
 import java.util.{List => JList}
 import javax.ws.rs.core.MediaType
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter,
-  mapAsScalaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 
 /**
   * Going with SegmentMetadataQueries despite the significant overhead because there's no other way
@@ -93,7 +90,7 @@ class DruidClient(
       MAPPER.readValue[JList[SegmentAnalysis]](
         response.getContent, new TypeReference[JList[SegmentAnalysis]]() {})
     if (segments.size() == 0) {
-      throw new ISE(
+      throw new IAE(
         s"No segments found for intervals [${intervals.mkString(",")}] on $dataSource"
       )
     }

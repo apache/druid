@@ -19,10 +19,11 @@
 
 package org.apache.druid.spark.mixins
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.druid.java.util.common.logger.Logger
 
 /**
-  * Simplified version of org.apache.spark.internal.Logging.
+  * Simplified version of org.apache.spark.internal.Logging. Uses
+  * org.apache.druid.java.util.common.logger.Logger instead of slf4j's Logger directly.
   */
 trait Logging {
 
@@ -37,7 +38,7 @@ trait Logging {
     */
   protected def log: Logger = {
     if (logger == null) {
-      logger = LoggerFactory.getLogger(logName)
+      logger= new Logger(logName)
     }
     logger
   }
@@ -81,9 +82,7 @@ trait Logging {
     * @param msg the message string to be logged
     */
   protected def logWarn(msg: => String): Unit = {
-    if (log.isWarnEnabled) {
-      log.warn(msg)
-    }
+    log.warn(msg)
   }
 
   /**
@@ -93,9 +92,7 @@ trait Logging {
     * @param exception the exception to log in addition to the message
     */
   protected def logWarn(msg: => String, exception: Throwable): Unit = {
-    if (log.isWarnEnabled) {
-      log.warn(msg, exception)
-    }
+    log.warn(exception, msg)
   }
 
   /**
@@ -104,9 +101,7 @@ trait Logging {
     * @param msg the message string to be logged
     */
   protected def logError(msg: => String): Unit = {
-    if (log.isErrorEnabled) {
-      log.error(msg)
-    }
+    log.error(msg)
   }
 
   /**
@@ -116,8 +111,6 @@ trait Logging {
     * @param exception the exception to log in addition to the message
     */
   protected def logError(msg: => String, exception: Throwable): Unit = {
-    if (log.isErrorEnabled) {
-      log.error(msg, exception)
-    }
+      log.error(exception, msg)
   }
 }
