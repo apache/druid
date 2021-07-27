@@ -137,7 +137,7 @@ public class TieredBrokerHostSelectorTest
         },
         druidNodeDiscoveryProvider,
         Arrays.asList(
-            new QueryContextTieredBrokerSelectorStrategy(null),
+            new ManualTieredBrokerSelectorStrategy(null),
             new TimeBoundaryTieredBrokerSelectorStrategy(),
             new PriorityTieredBrokerSelectorStrategy(0, 1)
         )

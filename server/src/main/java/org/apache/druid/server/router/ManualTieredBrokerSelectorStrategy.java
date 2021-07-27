@@ -35,24 +35,24 @@ import javax.annotation.Nullable;
  * {@link QueryContexts#BROKER_SERVICE_NAME} in the Query context to select the
  * Broker Service.
  * <p>
- * If the {@link #fallbackBrokerService} is set to a valid Broker Service Name,
+ * If the {@link #defaultManualBrokerService} is set to a valid Broker Service Name,
  * then all queries that do not specify a valid value for
  * {@link QueryContexts#BROKER_SERVICE_NAME} would be directed to the
  * {@code #fallbackBrokerService}. Note that the {@code fallbackBrokerService}
  * can be different from the {@link TieredBrokerConfig#getDefaultBrokerServiceName()}.
  */
-public class QueryContextTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
+public class ManualTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
-  private static final Logger log = new Logger(QueryContextTieredBrokerSelectorStrategy.class);
+  private static final Logger log = new Logger(ManualTieredBrokerSelectorStrategy.class);
 
-  private final String fallbackBrokerService;
+  private final String defaultManualBrokerService;
 
   @JsonCreator
-  public QueryContextTieredBrokerSelectorStrategy(
-      @JsonProperty("fallbackBrokerService") @Nullable String fallbackBrokerService
+  public ManualTieredBrokerSelectorStrategy(
+      @JsonProperty("defaultManualBrokerService") @Nullable String defaultManualBrokerService
   )
   {
-    this.fallbackBrokerService = fallbackBrokerService;
+    this.defaultManualBrokerService = defaultManualBrokerService;
   }
 
   @Override
@@ -64,22 +64,22 @@ public class QueryContextTieredBrokerSelectorStrategy implements TieredBrokerSel
       if (isValidBrokerService(contextBrokerService, tierConfig)) {
         // If the broker service in the query context is valid, use that
         return Optional.of(contextBrokerService);
-      } else if (isValidBrokerService(fallbackBrokerService, tierConfig)) {
+      } else if (isValidBrokerService(defaultManualBrokerService, tierConfig)) {
         // If the fallbackBrokerService is valid, use that
-        return Optional.of(fallbackBrokerService);
+        return Optional.of(defaultManualBrokerService);
       } else {
         log.debug(
             "Could not find Broker Service [%s] or fallback [%s] in TieredBrokerConfig",
             contextBrokerService,
-            fallbackBrokerService
+            defaultManualBrokerService
         );
         return Optional.absent();
       }
     }
     catch (Exception e) {
       log.error(e, "Error getting Broker Service name from Query Context");
-      return isValidBrokerService(fallbackBrokerService, tierConfig)
-             ? Optional.of(fallbackBrokerService) : Optional.absent();
+      return isValidBrokerService(defaultManualBrokerService, tierConfig)
+             ? Optional.of(defaultManualBrokerService) : Optional.absent();
     }
   }
 
@@ -90,8 +90,8 @@ public class QueryContextTieredBrokerSelectorStrategy implements TieredBrokerSel
   }
 
   @VisibleForTesting
-  String getFallbackBrokerService()
+  String getDefaultManualBrokerService()
   {
-    return fallbackBrokerService;
+    return defaultManualBrokerService;
   }
 }

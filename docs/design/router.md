@@ -109,16 +109,16 @@ Including this strategy means all timeBoundary queries are always routed to the 
 
 Queries with a priority set to less than minPriority are routed to the lowest priority Broker. Queries with priority set to greater than maxPriority are routed to the highest priority Broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic.
 
-#### queryContext
+#### manual
 
-This strategy reads the parameter `brokerService` from the query context and routes the query accordingly. If no valid `brokerService` is specified in the query context, the field `fallbackBrokerService` is used if set to a valid non-null value.
+This strategy reads the parameter `brokerService` from the query context and routes the query accordingly. If no valid `brokerService` is specified in the query context, the field `defaultManualBrokerService` is used if set to a valid non-null value.
 
 *Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerService` is found in the query context.
 
 ```json
 {
-  "type": "queryContext",
-  "fallbackBrokerService": "druid:broker-hot"
+  "type": "manual",
+  "defaultManualBrokerService": "druid:broker-hot"
 }
 ```
 

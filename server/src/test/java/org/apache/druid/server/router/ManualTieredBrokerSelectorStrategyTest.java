@@ -38,7 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class QueryContextTieredBrokerSelectorStrategyTest
+public class ManualTieredBrokerSelectorStrategyTest
 {
   private TieredBrokerConfig tieredBrokerConfig;
   private Druids.TimeseriesQueryBuilder queryBuilder;
@@ -82,30 +82,30 @@ public class QueryContextTieredBrokerSelectorStrategyTest
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
 
-    String json = "{\"type\":\"queryContext\"}";
+    String json = "{\"type\":\"manual\"}";
     TieredBrokerSelectorStrategy strategy = mapper.readValue(
         json,
         TieredBrokerSelectorStrategy.class
     );
-    assertTrue(strategy instanceof QueryContextTieredBrokerSelectorStrategy);
+    assertTrue(strategy instanceof ManualTieredBrokerSelectorStrategy);
 
-    QueryContextTieredBrokerSelectorStrategy queryContextStrategy =
-        (QueryContextTieredBrokerSelectorStrategy) strategy;
-    assertNull(queryContextStrategy.getFallbackBrokerService());
+    ManualTieredBrokerSelectorStrategy queryContextStrategy =
+        (ManualTieredBrokerSelectorStrategy) strategy;
+    assertNull(queryContextStrategy.getDefaultManualBrokerService());
 
-    json = "{\"type\":\"queryContext\",\"fallbackBrokerService\":\"hotBroker\"}";
+    json = "{\"type\":\"manual\",\"defaultManualBrokerService\":\"hotBroker\"}";
     queryContextStrategy = mapper.readValue(
         json,
-        QueryContextTieredBrokerSelectorStrategy.class
+        ManualTieredBrokerSelectorStrategy.class
     );
-    assertEquals(queryContextStrategy.getFallbackBrokerService(), "hotBroker");
+    assertEquals(queryContextStrategy.getDefaultManualBrokerService(), "hotBroker");
   }
 
   @Test
   public void testGetBrokerServiceName()
   {
-    final QueryContextTieredBrokerSelectorStrategy strategy =
-        new QueryContextTieredBrokerSelectorStrategy(null);
+    final ManualTieredBrokerSelectorStrategy strategy =
+        new ManualTieredBrokerSelectorStrategy(null);
 
     assertEquals(
         Optional.absent(),
@@ -143,8 +143,8 @@ public class QueryContextTieredBrokerSelectorStrategyTest
   @Test
   public void testGetBrokerServiceName_withFallback()
   {
-    final QueryContextTieredBrokerSelectorStrategy strategy =
-        new QueryContextTieredBrokerSelectorStrategy(Names.BROKER_SVC_MEDIUM);
+    final ManualTieredBrokerSelectorStrategy strategy =
+        new ManualTieredBrokerSelectorStrategy(Names.BROKER_SVC_MEDIUM);
 
     assertEquals(
         Optional.of(Names.BROKER_SVC_MEDIUM),
@@ -173,8 +173,8 @@ public class QueryContextTieredBrokerSelectorStrategyTest
   @Test
   public void testGetBrokerServiceName_withInvalidFallback()
   {
-    final QueryContextTieredBrokerSelectorStrategy strategy =
-        new QueryContextTieredBrokerSelectorStrategy("noSuchBroker");
+    final ManualTieredBrokerSelectorStrategy strategy =
+        new ManualTieredBrokerSelectorStrategy("noSuchBroker");
 
     assertEquals(
         Optional.absent(),
