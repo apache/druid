@@ -100,6 +100,7 @@ public class ForkingTaskRunner
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
   private final StartupLoggingConfig startupLoggingConfig;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
 
@@ -122,6 +123,7 @@ public class ForkingTaskRunner
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.startupLoggingConfig = startupLoggingConfig;
+    this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -673,9 +675,9 @@ public class ForkingTaskRunner
   public Map<String, Long> getTotalTaskSlotCount()
   {
     if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(config.getPorts().size()));
+      return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getPorts().size()));
     }
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
   }
 
   @Override
@@ -683,25 +685,25 @@ public class ForkingTaskRunner
   {
     Map<String, Long> totalTaskSlots = getTotalTaskSlotCount();
     Map<String, Long> usedTaskSlots = getUsedTaskSlotCount();
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Math.max(totalTaskSlots.get(WorkerConfig.DEFAULT_CATEGORY) - usedTaskSlots.get(WorkerConfig.DEFAULT_CATEGORY), 0));
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(totalTaskSlots.get(workerConfig.getCategory()) - usedTaskSlots.get(workerConfig.getCategory()), 0));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, Long.valueOf(portFinder.findUsedPortCount()));
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
   }
 
   @Override
   public Map<String, Long> getLazyTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
