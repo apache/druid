@@ -110,7 +110,9 @@ The available grammar is:
 }
 ```
 
-If `markAsUnused` is true, the kill task will first mark any segments within the specified interval as unused, before deleting the unused segments within the interval.
+If `markAsUnused` is true (default is false), the kill task will first mark any segments within the specified interval as unused, before deleting the unused segments within the interval.
+
+**WARNING!** The kill task permanently removes all information about the affected segments from the metadata store and deep storage. These segments cannot be recovered after the kill task runs, this operation cannot be undone. 
 
 ## Retention
 
