@@ -95,7 +95,9 @@ A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/
 
 ## Kill Task
 
-Kill tasks delete all information about a segment and removes it from deep storage. Segments to kill must be unused (used==0) in the Druid segment table. The available grammar is:
+Kill tasks delete all information about a segment and removes it from deep storage. Segments to kill must be unused (used==0) in the Druid segment table.
+
+The available grammar is:
 
 ```json
 {
@@ -103,9 +105,12 @@ Kill tasks delete all information about a segment and removes it from deep stora
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_segments_in_this_interval_will_die!>,
+    "markAsUnused": <true|false>,
     "context": <task context>
 }
 ```
+
+If `markAsUnused` is true, the kill task will first mark any segments within the specified interval as unused, before deleting the unused segments within the interval.
 
 ## Retention
 
