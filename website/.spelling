@@ -477,7 +477,9 @@ defaultUser
 inputSegmentSizeBytes
 skipOffsetFromLatest
  - ../docs/design/router.md
+brokerService
 c3.2xlarge
+defaultManualBrokerService
 maxPriority
 minPriority
 runtime.properties
@@ -1426,6 +1428,7 @@ fieldAccess
 finalizingFieldAccess
 hyperUniqueCardinality
  - ../docs/querying/query-context.md
+brokerService
 bySegment
 doubleSum
 druid.broker.cache.populateCache
