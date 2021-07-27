@@ -66,7 +66,7 @@ public class QueryContexts
   public static final String USE_CACHE_KEY = "useCache";
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
   public static final String BY_SEGMENT_KEY = "bySegment";
-  public static final String BROKER_SERVICE_NAME = "brokerServiceName";
+  public static final String BROKER_SERVICE_NAME = "brokerService";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;

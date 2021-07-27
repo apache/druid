@@ -111,9 +111,9 @@ Queries with a priority set to less than minPriority are routed to the lowest pr
 
 #### queryContext
 
-This strategy reads the parameter `brokerServiceName` from the query context and routes the query accordingly. If no valid `brokerServiceName` is specified in the query context, the field `fallbackBrokerService` is used if set to a valid non-null value.
+This strategy reads the parameter `brokerService` from the query context and routes the query accordingly. If no valid `brokerService` is specified in the query context, the field `fallbackBrokerService` is used if set to a valid non-null value.
 
-*Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerServiceName` is found in the query context.
+*Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerService` is found in the query context.
 
 ```json
 {

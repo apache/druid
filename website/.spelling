@@ -477,9 +477,12 @@ defaultUser
 inputSegmentSizeBytes
 skipOffsetFromLatest
  - ../docs/design/router.md
+brokerService
 c3.2xlarge
+fallbackBrokerService
 maxPriority
 minPriority
+queryContext
 runtime.properties
 timeBoundary
  - ../docs/design/segments.md
@@ -1426,6 +1429,7 @@ fieldAccess
 finalizingFieldAccess
 hyperUniqueCardinality
  - ../docs/querying/query-context.md
+brokerService
 bySegment
 doubleSum
 druid.broker.cache.populateCache
@@ -1445,6 +1449,7 @@ parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
 queryId
+queryContext
 row-matchers
 serializeDateTimeAsLong
 serializeDateTimeAsLongInner
