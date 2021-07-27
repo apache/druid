@@ -124,6 +124,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
 
+  private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
    * Base name for the {@link SubTaskSpec} ID.
@@ -568,7 +570,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       // there is only success or failure after running....
       Preconditions.checkState(state.isFailure());
-      final String errorMessage = "Failed while running single phase parallel. See task logs for more details.";
+      final String errorMessage = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          runner.getName()
+      );
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     toolbox.getTaskReportFileWriter().write(
@@ -647,8 +652,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       state = runNextPhase(cardinalityRunner);
       if (state.isFailure()) {
         String errMsg = StringUtils.format(
-            "Hash partition task failed while in phase[%s]. See task logs for details",
-            PartialDimensionCardinalityTask.TYPE
+            TASK_PHASE_FAILURE_MSG,
+            cardinalityRunner.getName()
         );
         return TaskStatus.failure(getId(), errMsg);
       }
@@ -696,7 +701,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
-      String errMsg = "Hash partition task failed while in partial segment generation phase. See task logs for details";
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
       return TaskStatus.failure(getId(), errMsg);
     }
 
@@ -726,7 +734,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       // there is only success or failure after running....
       Preconditions.checkState(state.isFailure());
-      String errMsg = "Hash partition task failed while in partial segment merge phase. See task logs for details";
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
@@ -775,7 +786,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState indexingState = runNextPhase(indexingRunner);
     if (indexingState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialRangeSegmentGenerateTask.TYPE + " failed");
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // partition (interval, partitionId) -> partition locations
@@ -792,14 +807,23 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     TaskState mergeState = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(mergeState.isFailure());
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          mergeRunner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), mergeState);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)

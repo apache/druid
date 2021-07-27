@@ -155,7 +155,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Hash partition task failed while in phase[partial_dimension_cardinality]. See task logs for details",
+        "Failed in phase[TestRunner[0]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -183,7 +183,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Hash partition task failed while in partial segment generation phase. See task logs for details",
+        "Failed in phase[TestRunner[0]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -212,7 +212,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Hash partition task failed while in partial segment merge phase. See task logs for details",
+        "Failed in phase[TestRunner[1]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -265,7 +265,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     @Override
     public String getName()
     {
-      return null;
+      return StringUtils.format("TestRunner[%s]", numRuns);
     }
 
     @Override

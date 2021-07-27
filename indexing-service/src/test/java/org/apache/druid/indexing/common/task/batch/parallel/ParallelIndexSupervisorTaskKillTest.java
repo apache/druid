@@ -127,7 +127,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     Assert.assertTrue(task.isReady(actionClient));
 
     final TaskStatus taskStatus = task.run(toolbox);
-    Assert.assertEquals("Failed while running single phase parallel. See task logs for more details.",
+    Assert.assertEquals("Failed in phase[segment generation]. See task logs for details.",
                         taskStatus.getErrorMsg());
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
