@@ -38,7 +38,7 @@ import javax.annotation.Nullable;
  * If the {@link #defaultManualBrokerService} is set to a valid Broker Service Name,
  * then all queries that do not specify a valid value for
  * {@link QueryContexts#BROKER_SERVICE_NAME} would be directed to the
- * {@code #fallbackBrokerService}. Note that the {@code fallbackBrokerService}
+ * {@code #defaultManualBrokerService}. Note that the {@code defaultManualBrokerService}
  * can be different from the {@link TieredBrokerConfig#getDefaultBrokerServiceName()}.
  */
 public class ManualTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
@@ -68,8 +68,8 @@ public class ManualTieredBrokerSelectorStrategy implements TieredBrokerSelectorS
         // If the fallbackBrokerService is valid, use that
         return Optional.of(defaultManualBrokerService);
       } else {
-        log.debug(
-            "Could not find Broker Service [%s] or fallback [%s] in TieredBrokerConfig",
+        log.warn(
+            "Could not find Broker Service [%s] or default [%s] in TieredBrokerConfig",
             contextBrokerService,
             defaultManualBrokerService
         );
