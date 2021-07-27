@@ -111,7 +111,7 @@ Queries with a priority set to less than minPriority are routed to the lowest pr
 
 #### manual
 
-This strategy reads the parameter `brokerService` from the query context and routes the query accordingly. If no valid `brokerService` is specified in the query context, the field `defaultManualBrokerService` is used if set to a valid non-null value.
+This strategy reads the parameter `brokerService` from the query context and routes the query to that broker service. If no valid `brokerService` is specified in the query context, the field `defaultManualBrokerService` is used to determine target broker service given the value is valid and non-null. A value is considered valid if it is present in `druid.router.tierToBrokerMap`
 
 *Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerService` is found in the query context.
 
@@ -216,4 +216,3 @@ druid.router.http.numMaxThreads=100
 
 druid.server.http.numThreads=100
 ```
-
