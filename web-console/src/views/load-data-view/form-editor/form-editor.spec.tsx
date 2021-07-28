@@ -28,6 +28,7 @@ describe('FormEditor', () => {
         fields={[]}
         initValue={{}}
         onClose={() => {}}
+        onDirty={() => {}}
         onApply={() => {}}
         showDelete
         onDelete={() => {}}

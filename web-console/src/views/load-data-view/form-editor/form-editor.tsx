@@ -29,6 +29,7 @@ export interface FormEditorProps<T> {
   initValue: T;
   showCustom?: (thing: Partial<T>) => boolean;
   onClose: () => void;
+  onDirty: () => void;
   onApply: (thing: T) => void;
   showDelete?: boolean;
   disableDelete?: boolean;
@@ -41,6 +42,7 @@ export function FormEditor<T>(props: FormEditorProps<T>) {
     fields,
     initValue,
     showCustom,
+    onDirty,
     onApply,
     onClose,
     showDelete,
@@ -56,7 +58,10 @@ export function FormEditor<T>(props: FormEditorProps<T>) {
       <AutoForm
         fields={fields}
         model={currentValue}
-        onChange={setCurrentValue}
+        onChange={m => {
+          onDirty();
+          setCurrentValue(m);
+        }}
         showCustom={showCustom}
       />
       {children}
