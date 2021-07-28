@@ -99,9 +99,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (pagination.page) {
-      setPagination(changePage(pagination, 0));
-    }
+    setPagination(pagination => {
+      return pagination.page ? changePage(pagination, 0) : pagination;
+    });
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
