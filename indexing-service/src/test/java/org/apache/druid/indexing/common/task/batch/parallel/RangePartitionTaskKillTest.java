@@ -501,26 +501,26 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     final ParallelIndexIngestionSpec ingestionSpec;
 
-      Preconditions.checkArgument(parseSpec == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
-          new LocalInputSource(inputDir, filter),
-          inputFormat,
-          appendToExisting,
-          null
-      );
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-              granularitySpec,
-              null
-          ),
-          ioConfig,
-          tuningConfig
-      );
+    Preconditions.checkArgument(parseSpec == null);
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        null,
+        new LocalInputSource(inputDir, filter),
+        inputFormat,
+        appendToExisting,
+        null
+    );
+    ingestionSpec = new ParallelIndexIngestionSpec(
+        new DataSchema(
+            DATASOURCE,
+            timestampSpec,
+            dimensionsSpec,
+            new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
+            granularitySpec,
+            null
+        ),
+        ioConfig,
+        tuningConfig
+    );
 
     return new ParallelIndexSupervisorTaskTest(
         null,
