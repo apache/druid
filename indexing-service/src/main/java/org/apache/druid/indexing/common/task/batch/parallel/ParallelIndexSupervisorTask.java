@@ -760,7 +760,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState distributionState = runNextPhase(distributionRunner);
     if (distributionState.isFailure()) {
-      String errMsg = StringUtils.format(TASK_PHASE_FAILURE_MSG,distributionRunner.getName());
+      String errMsg = StringUtils.format(TASK_PHASE_FAILURE_MSG, distributionRunner.getName());
       return TaskStatus.failure(getId(), errMsg);
     }
 

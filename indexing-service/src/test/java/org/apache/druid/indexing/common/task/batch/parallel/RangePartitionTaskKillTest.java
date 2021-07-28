@@ -345,7 +345,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
       this.firstMap = new HashMap<>();
       Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
-      intervalToDistribution.put(new Interval(0, 1000), new StringSketch());
+      intervalToDistribution.put(Intervals.of("2011-04-01/2011-04-02"), new StringSketch());
       this.firstMap.put("A", new DimensionDistributionReport("id", intervalToDistribution));
 
       this.secondMap = Collections.emptyMap();
