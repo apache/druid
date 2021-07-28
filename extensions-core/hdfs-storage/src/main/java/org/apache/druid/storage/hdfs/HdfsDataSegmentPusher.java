@@ -111,7 +111,21 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         fullyQualifiedStorageDirectory.get(),
         storageDir
     );
+    final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
+    final String outIndexFilePath = StringUtils.format(
+        "%s/%s/%d_%sindex.zip",
+        fullyQualifiedStorageDirectory.get(),
+        storageDir,
+        segment.getShardSpec().getPartitionNum(),
+        uniquePrefix
+    );
 
+    return pushToPath(inDir, segment, outIndexFilePath);
+  }
+
+  @Override
+  public DataSegment pushToPath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
+  {
     Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory.get(),
@@ -130,19 +144,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
         size = CompressionUtils.zip(inDir, out);
       }
-
-      final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
-      final Path outIndexFile = new Path(StringUtils.format(
-          "%s/%s/%d_%sindex.zip",
-          fullyQualifiedStorageDirectory.get(),
-          storageDir,
-          segment.getShardSpec().getPartitionNum(),
-          uniquePrefix
-      ));
-
+      final Path outIndexFile = new Path(outIndexFilePath);
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
-                           .withSize(size)
-                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
+          .withSize(size)
+          .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());

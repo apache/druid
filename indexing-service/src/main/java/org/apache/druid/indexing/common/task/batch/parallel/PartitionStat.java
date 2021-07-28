@@ -20,6 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -30,6 +33,11 @@ import java.util.Objects;
  * set of data of the same time chunk (primary partition key) and the same secondary partition key
  * ({@link T}). This class holds the statistics of a single partition created by a task.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "generic", value = GenericPartitionStat.class),
+    @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionStat.class)
+})
 abstract class PartitionStat<T>
 {
   // Host and port of the task executor
@@ -110,6 +118,8 @@ abstract class PartitionStat<T>
    * @return Definition of secondary partition. For example, for range partitioning, this should include the start/end.
    */
   abstract T getSecondaryPartition();
+
+  public abstract PartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec secondaryParition);
 
   @Override
   public boolean equals(Object o)

@@ -75,7 +75,12 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
         this.config.getBasePath(),
         getStorageDir(inSegment, useUniquePath)
     );
+    return pushToPath(indexFilesDir, inSegment, segmentPath);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String segmentPath)
+  {
     File descriptorFile = null;
     File zipOutFile = null;
 

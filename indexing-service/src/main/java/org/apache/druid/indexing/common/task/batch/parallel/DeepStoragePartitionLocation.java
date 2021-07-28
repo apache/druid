@@ -19,38 +19,37 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
+import org.joda.time.Interval;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
-/**
- * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
- * This report is collected by {@link ParallelIndexSupervisorTask} and
- * used to generate {@link PartialSegmentMergeIOConfig}.
- */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
+public class DeepStoragePartitionLocation extends GenericPartitionLocation
 {
-  private final String taskId;
-  private final List<T> partitionStats;
+  private final Map<String, Object> loadSpec;
 
-  GeneratedPartitionsReport(String taskId, List<T> partitionStats)
+  @JsonCreator
+  public DeepStoragePartitionLocation(
+      @JsonProperty("host") String host,
+      @JsonProperty("port") int port,
+      @JsonProperty("useHttps") boolean useHttps,
+      @JsonProperty("subTaskId") String subTaskId,
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("shardSpec") BuildingShardSpec shardSpec,
+      @JsonProperty("loadSpec") Map<String, Object> loadSpec
+  )
   {
-    this.taskId = taskId;
-    this.partitionStats = partitionStats;
+    super(host, port, useHttps, subTaskId, interval, shardSpec);
+    this.loadSpec = loadSpec;
   }
 
-  @Override
   @JsonProperty
-  public String getTaskId()
+  public Map<String, Object> getLoadSpec()
   {
-    return taskId;
-  }
-
-  @JsonProperty
-  public List<T> getPartitionStats()
-  {
-    return partitionStats;
+    return loadSpec;
   }
 
   @Override
@@ -62,23 +61,22 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Sub
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
-    return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats);
+    if (!super.equals(o)) {
+      return false;
+    }
+    DeepStoragePartitionLocation that = (DeepStoragePartitionLocation) o;
+    return loadSpec.equals(that.loadSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, partitionStats);
+    return Objects.hash(super.hashCode(), loadSpec);
   }
 
   @Override
   public String toString()
   {
-    return "GeneratedPartitionsReport{" +
-        "taskId='" + taskId + '\'' +
-        ", partitionStats=" + partitionStats +
-        '}';
+    return super.toString() + "loadSpec = " + loadSpec.toString();
   }
 }

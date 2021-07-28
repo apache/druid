@@ -104,14 +104,19 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     log.debug("Uploading [%s] to Google.", indexFilesDir);
+    final String storageDir = this.getStorageDir(segment, useUniquePath);
+    return pushToPath(indexFilesDir, segment, storageDir);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDir) throws IOException
+  {
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
     File indexFile = null;
 
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
-      final String storageDir = this.getStorageDir(segment, useUniquePath);
       final String indexPath = buildPath(storageDir + "/" + "index.zip");
 
       final DataSegment outSegment = segment

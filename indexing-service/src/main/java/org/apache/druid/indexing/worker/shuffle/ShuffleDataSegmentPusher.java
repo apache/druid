@@ -64,8 +64,8 @@ public class ShuffleDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
-    final long unzippedSize = intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, file);
-    return segment.withSize(unzippedSize)
+    final DataSegment pushedSegment = intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, file);
+    return pushedSegment.withSize(pushedSegment.getSize())
                   .withBinaryVersion(SegmentUtils.getVersionFromDir(file));
   }
 

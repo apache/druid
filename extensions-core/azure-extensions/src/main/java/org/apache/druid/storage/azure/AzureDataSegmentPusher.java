@@ -124,7 +124,13 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     log.info("Uploading [%s] to Azure.", indexFilesDir);
+    final String azurePath = getAzurePath(segment, useUniquePath);
+    return pushToPath(indexFilesDir, segment, azurePath);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDir) throws IOException
+  {
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
     File zipOutFile = null;
 
@@ -132,10 +138,8 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final File outFile = zipOutFile = File.createTempFile("index", ".zip");
       final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-      final String azurePath = getAzurePath(segment, useUniquePath);
-
       return AzureUtils.retryAzureOperation(
-          () -> uploadDataSegment(segment, binaryVersion, size, outFile, azurePath),
+          () -> uploadDataSegment(segment, binaryVersion, size, outFile, storageDir),
           accountConfig.getMaxTries()
       );
     }

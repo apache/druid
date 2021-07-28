@@ -29,7 +29,9 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -52,7 +54,6 @@ import org.joda.time.Period;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -268,7 +269,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
    * supervisorTaskId.
    */
   @Override
-  public long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
+  public DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
   {
     // Get or create the location iterator for supervisorTask.
@@ -341,7 +342,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
                 subTaskId,
                 destFile
             );
-            return unzippedSizeBytes;
+            return segment;
           }
           catch (Exception e) {
             location.release(partitionFilePath, tempZippedFile.length());
@@ -384,6 +385,20 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     return Optional.empty();
   }
 
+  @Override
+  public GenericPartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment)
+  {
+    return new GenericPartitionStat(
+        toolbox.getTaskExecutorNode().getHost(),
+        toolbox.getTaskExecutorNode().getPortToUse(),
+        toolbox.getTaskExecutorNode().isEnableTlsPort(),
+        segment.getInterval(),
+        (BucketNumberedShardSpec) segment.getShardSpec(),
+        null, // numRows is not supported yet
+        null  // sizeBytes is not supported yet
+    );
+  }
+
   private DateTime getExpiryTimeFromNow()
   {
     return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
@@ -404,29 +419,5 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
       }
     }
     supervisorTaskCheckTimes.remove(supervisorTaskId);
-  }
-
-  private static String getPartitionFilePath(
-      String supervisorTaskId,
-      String subTaskId,
-      Interval interval,
-      int bucketId
-  )
-  {
-    return Paths.get(getPartitionDir(supervisorTaskId, interval, bucketId), subTaskId).toString();
-  }
-
-  private static String getPartitionDir(
-      String supervisorTaskId,
-      Interval interval,
-      int bucketId
-  )
-  {
-    return Paths.get(
-        supervisorTaskId,
-        interval.getStart().toString(),
-        interval.getEnd().toString(),
-        String.valueOf(bucketId)
-    ).toString();
   }
 }

@@ -23,63 +23,49 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
-/**
- * Generic partition description ({@link ShardSpec}) and statistics created by {@link PartialSegmentGenerateTask}. Each
- * partition is a set of data of the same time chunk (primary partition key) and the same {@link ShardSpec} (secondary
- * partition key). The {@link ShardSpec} is later used by {@link PartialGenericSegmentMergeTask} to merge the partial
- * segments.
- */
-public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
+public class DeepStoragePartitionStat extends GenericPartitionStat
 {
-  static final String PROP_SHARD_SPEC = "shardSpec";
-
-  // Secondary partition key
-  private final BucketNumberedShardSpec shardSpec;
+  private final Map<String, Object> loadSpec;
 
   @JsonCreator
-  public GenericPartitionStat(
+  public DeepStoragePartitionStat(
       @JsonProperty("taskExecutorHost") String taskExecutorHost,
       @JsonProperty("taskExecutorPort") int taskExecutorPort,
       @JsonProperty("useHttps") boolean useHttps,
       @JsonProperty("interval") Interval interval,
       @JsonProperty(PROP_SHARD_SPEC) BucketNumberedShardSpec shardSpec,
       @JsonProperty("numRows") @Nullable Integer numRows,
-      @JsonProperty("sizeBytes") @Nullable Long sizeBytes
+      @JsonProperty("sizeBytes") @Nullable Long sizeBytes,
+      @JsonProperty("loadSpec") Map<String, Object> loadSpec
   )
   {
-    super(taskExecutorHost, taskExecutorPort, useHttps, interval, numRows, sizeBytes);
-    this.shardSpec = shardSpec;
+    super(taskExecutorHost, taskExecutorPort, useHttps, interval, shardSpec, numRows, sizeBytes);
+    this.loadSpec = loadSpec;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getLoadSpec()
+  {
+    return loadSpec;
   }
 
   @Override
-  public int getBucketId()
+  public DeepStoragePartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec secondaryParition)
   {
-    return shardSpec.getBucketId();
-  }
-
-  @JsonProperty(PROP_SHARD_SPEC)
-  @Override
-  BucketNumberedShardSpec getSecondaryPartition()
-  {
-    return shardSpec;
-  }
-
-  @Override
-  public GenericPartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec secondaryParition)
-  {
-    return new GenericPartitionLocation(
+    return new DeepStoragePartitionLocation(
         getTaskExecutorHost(),
         getTaskExecutorPort(),
         isUseHttps(),
         subtaskId,
         getInterval(),
-        secondaryParition
+        secondaryParition,
+        getLoadSpec()
     );
   }
 
@@ -95,13 +81,21 @@ public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
     if (!super.equals(o)) {
       return false;
     }
-    GenericPartitionStat that = (GenericPartitionStat) o;
-    return Objects.equals(shardSpec, that.shardSpec);
+    DeepStoragePartitionStat that = (DeepStoragePartitionStat) o;
+    return loadSpec.equals(that.loadSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), shardSpec);
+    return Objects.hash(super.hashCode(), loadSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DeepStoragePartitionStat{" +
+        "loadSpec=" + loadSpec +
+        "} " + super.toString();
   }
 }

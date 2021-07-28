@@ -21,6 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Interval;
 
@@ -31,6 +33,11 @@ import java.util.Objects;
  * This class represents the intermediary data server where the partition of {@link #interval} and
  * {@link #getBucketId()} is stored.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "generic", value = GenericPartitionLocation.class),
+    @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionLocation.class)
+})
 abstract class PartitionLocation<T>
 {
   private final String host;

@@ -67,9 +67,14 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     final File baseStorageDir = config.getStorageDirectory();
     final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
-
     log.debug("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
+    return pushToPath(dataSegmentFile, segment, outDir.getAbsolutePath());
+  }
 
+  @Override
+  public DataSegment pushToPath(File dataSegmentFile, DataSegment segment, String storageDir) throws IOException
+  {
+    File outDir = new File(storageDir);
     if (dataSegmentFile.equals(outDir)) {
       long size = 0;
       for (File file : dataSegmentFile.listFiles()) {
@@ -81,7 +86,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
     }
 
-    final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
+    final File tmpOutDir = new File(config.getStorageDirectory(), makeIntermediateDir());
     log.debug("Creating intermediate directory[%s] for segment[%s].", tmpOutDir.toString(), segment.getId());
     org.apache.commons.io.FileUtils.forceMkdir(tmpOutDir);
 

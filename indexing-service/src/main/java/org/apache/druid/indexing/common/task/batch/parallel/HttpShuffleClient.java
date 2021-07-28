@@ -24,9 +24,11 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.utils.CompressionUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.File;
@@ -40,6 +42,8 @@ import java.util.concurrent.ExecutionException;
  */
 public class HttpShuffleClient implements ShuffleClient
 {
+  private static final Logger LOG = new Logger(HttpShuffleClient.class);
+
   @VisibleForTesting
   static final int NUM_FETCH_RETRIES = 3;
 
@@ -82,6 +86,16 @@ public class HttpShuffleClient implements ShuffleClient
         NUM_FETCH_RETRIES,
         StringUtils.format("Failed to fetch file[%s]", uri)
     );
-    return zippedFile;
+    final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
+    try {
+      org.apache.commons.io.FileUtils.forceMkdir(unzippedDir);
+      CompressionUtils.unzip(zippedFile, unzippedDir);
+    }
+    finally {
+      if (!zippedFile.delete()) {
+        LOG.warn("Failed to delete temp file[%s]", zippedFile);
+      }
+    }
+    return unzippedDir;
   }
 }

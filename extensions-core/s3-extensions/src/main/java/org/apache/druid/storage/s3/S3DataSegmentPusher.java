@@ -80,15 +80,19 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
-
     log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
+    return pushToPath(indexFilesDir, inSegment, s3Path);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String s3Path) throws IOException
+  {
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
     final DataSegment outSegment = inSegment.withSize(indexSize)
-                                            .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+        .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+        .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
     try {
       return S3Utils.retryS3Operation(

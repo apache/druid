@@ -879,14 +879,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 return partitionStat.getSecondaryPartition().convert(partitionId);
               }
           );
-          return new GenericPartitionLocation(
-              partitionStat.getTaskExecutorHost(),
-              partitionStat.getTaskExecutorPort(),
-              partitionStat.isUseHttps(),
-              subtaskId,
-              partitionStat.getInterval(),
-              shardSpec
-          );
+          return partitionStat.toPartitionLocation(subtaskId, shardSpec);
         };
 
     return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);

@@ -81,7 +81,12 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
         this.getStorageDir(segment, useUniquePath)
     );
+    return pushToPath(indexFilesDir, segment, key);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String key) throws IOException
+  {
     // Create index
     final File compressedIndexFile = File.createTempFile("druid", "index.zip");
     long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
@@ -92,12 +97,12 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     try (final InputStream fileStream = Files.newInputStream(compressedIndexFile.toPath())) {
       long start = System.currentTimeMillis();
       ChunkedStorage.newWriter(indexStorage, key, fileStream)
-                    .withConcurrencyLevel(CONCURRENCY).call();
+          .withConcurrencyLevel(CONCURRENCY).call();
       byte[] json = jsonMapper.writeValueAsBytes(segment);
       MutationBatch mutation = this.keyspace.prepareMutationBatch();
       mutation.withRow(descriptorStorage, key)
-              .putColumn("lastmodified", System.currentTimeMillis(), null)
-              .putColumn("descriptor", json, null);
+          .putColumn("lastmodified", System.currentTimeMillis(), null)
+          .putColumn("descriptor", json, null);
       mutation.execute();
       log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
     }
@@ -106,8 +111,8 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     }
 
     segment = segment.withSize(indexSize)
-                     .withLoadSpec(ImmutableMap.of("type", "c*", "key", key))
-                     .withBinaryVersion(version);
+        .withLoadSpec(ImmutableMap.of("type", "c*", "key", key))
+        .withBinaryVersion(version);
 
     log.info("Deleting zipped index File[%s]", compressedIndexFile);
     compressedIndexFile.delete();

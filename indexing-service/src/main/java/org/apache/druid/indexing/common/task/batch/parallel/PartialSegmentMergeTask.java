@@ -49,7 +49,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -226,20 +225,10 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         );
         FileUtils.forceMkdir(partitionDir);
         for (P location : entryPerBucketId.getValue()) {
-          final File zippedFile = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
-          try {
-            final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
-            FileUtils.forceMkdir(unzippedDir);
-            CompressionUtils.unzip(zippedFile, unzippedDir);
-            intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
-                                   .computeIfAbsent(bucketId, k -> new ArrayList<>())
-                                   .add(unzippedDir);
-          }
-          finally {
-            if (!zippedFile.delete()) {
-              LOG.warn("Failed to delete temp file[%s]", zippedFile);
-            }
-          }
+          final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
+          intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
+              .computeIfAbsent(bucketId, k -> new ArrayList<>())
+              .add(unzippedDir);
         }
       }
     }
