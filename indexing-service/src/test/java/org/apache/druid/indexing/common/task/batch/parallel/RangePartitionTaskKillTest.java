@@ -20,13 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
-import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -54,17 +48,11 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,10 +61,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+/**
+ * Force and verify the failure modes for range partitioning task
+ */
 public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexingTest
 {
   private static final int NUM_PARTITION = 2;
-  private static final int NUM_FILE = 10;
   private static final int NUM_ROW = 20;
   private static final int DIM_FILE_CARDINALITY = 2;
   private static final int YEAR = 2017;
@@ -85,20 +75,12 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
   private static final String DIM1 = "dim1";
   private static final String DIM2 = "dim2";
   private static final String LIST_DELIMITER = "|";
-  private static final List<String> DIMS = ImmutableList.of(DIM1, DIM2);
   private static final String TEST_FILE_NAME_PREFIX = "test_";
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(TIME, "auto", null);
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
   );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      LIST_DELIMITER,
-      Arrays.asList(TIME, DIM1, DIM2, "val"),
-      false,
-      0
-  );
+
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TIME, DIM1, DIM2, "val"),
       LIST_DELIMITER,
@@ -107,94 +89,17 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
       0
   );
 
-  // Interpret empty values in CSV as null
-  @Rule
-  public final ProvideSystemProperty noDefaultNullValue = new ProvideSystemProperty(
-      NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING,
-      "false"
-  );
-
   private File inputDir;
-  private SetMultimap<Interval, List<Object>> intervalToDims;
-
-  private final int maxNumConcurrentSubTasks;
-  private final boolean useMultivalueDim;
-  @Nullable
-  private final Interval intervalToIndex;
 
   public RangePartitionTaskKillTest()
   {
     super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
-    this.maxNumConcurrentSubTasks = 1;
-    this.useMultivalueDim = false;
-    this.intervalToIndex = INTERVAL_TO_INDEX;
   }
 
   @Before
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
-    intervalToDims = createInputFiles(inputDir, useMultivalueDim);
-  }
-
-  private static SetMultimap<Interval, List<Object>> createInputFiles(File inputDir, boolean useMultivalueDim)
-      throws IOException
-  {
-    SetMultimap<Interval, List<Object>> intervalToDims = HashMultimap.create();
-
-    for (int fileIndex = 0; fileIndex < NUM_FILE; fileIndex++) {
-      Path path = new File(inputDir, TEST_FILE_NAME_PREFIX + fileIndex).toPath();
-      try (final Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-        for (int i = 0; i < (NUM_ROW / DIM_FILE_CARDINALITY); i++) {
-          for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
-            int rowIndex = i * DIM_FILE_CARDINALITY + d;
-            String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
-
-            // This is the original row
-            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
-
-            // This row should get rolled up with original row
-            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
-
-            // This row should not get rolled up with original row
-            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
-          }
-        }
-      }
-    }
-
-    return intervalToDims;
-  }
-
-  @Nullable
-  private static String createDim1Value(int rowIndex, int fileIndex, boolean useMultivalueDim)
-  {
-    if (rowIndex == fileIndex) {
-      return null;
-    }
-
-    String dim1Value = String.valueOf(fileIndex);
-    return useMultivalueDim ? dim1Value + LIST_DELIMITER + dim1Value : dim1Value;
-  }
-
-  private static void writeRow(
-      Writer writer,
-      int day,
-      @Nullable String dim1Value,
-      int fileIndex,
-      Multimap<Interval, List<Object>> intervalToDims
-  ) throws IOException
-  {
-    Interval interval = Intervals.of("%s-12-%d/%s-12-%d", YEAR, day + 1, YEAR, day + 2);
-    String startDate = interval.getStart().toString("y-M-d");
-    String dim2Value = "test file " + fileIndex;
-    String row = startDate + ",";
-    if (dim1Value != null) {
-      row += dim1Value;
-    }
-    row += "," + dim2Value + "\n";
-    writer.write(row);
-    intervalToDims.put(interval, Arrays.asList(dim1Value, dim2Value));
   }
 
   @Test(timeout = 5000L)
@@ -325,9 +230,9 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     private int numRuns;
 
     // These maps are a hacky way to provide some sort of mock object in the runner to make the run continue
-    // until it fails:
-    private Map<String, DimensionDistributionReport> firstMap;
-    private Map<Interval, StringDistribution> secondMap;
+    // until it fails (whatever they contain is nonsense other that it allows the code to make progress):
+    private final Map<String, DimensionDistributionReport> firstMap;
+    private final Map<String, DimensionDistributionReport> secondMap;
 
     public ParallelIndexSupervisorTaskTest(
         String id,
@@ -359,10 +264,10 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     )
     {
       ParallelIndexTaskRunner<T, R> runner;
+      // to make the code go through first runner needs to return a suitable non-empty report
+      // and the second & third runners are fine by returning an empty report
       if (numRuns < succeedsBeforeFailing && numRuns == 0) {
         runner = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, firstMap);
-      } else if (numRuns < succeedsBeforeFailing && numRuns == 2) {
-        runner = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, secondMap);
       } else {
         runner = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap);
       }
@@ -376,12 +281,11 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
       implements ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport>
   {
 
-    private boolean succeeds;
+    private final boolean succeeds;
 
-    private Map<String, DimensionDistributionReport> distributionMap;
-    private static boolean firstMapDone = false;
+    private final Map<String, DimensionDistributionReport> distributionMap;
 
-    TestRunner(boolean succeeds, Map distributionMap)
+    TestRunner(boolean succeeds, Map<String, DimensionDistributionReport> distributionMap)
     {
       this.succeeds = succeeds;
       this.distributionMap = distributionMap;

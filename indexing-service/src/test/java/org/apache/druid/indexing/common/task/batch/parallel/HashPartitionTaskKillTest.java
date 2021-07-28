@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -69,19 +68,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+/**
+ * Force and verify the failure modes for hash partitioning task
+ */
 public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexingTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))
-  );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim1", "dim2", "val"),
-      false,
-      0
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
@@ -93,15 +87,12 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
 
   private File inputDir;
-  // sorted input intervals
-  private List<Interval> inputIntervals;
 
 
   public HashPartitionTaskKillTest()
   {
     super(LockGranularity.TIME_CHUNK, true, 0, 0);
   }
-
 
   @Before
   public void setup() throws IOException
@@ -127,7 +118,8 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", i + 1, i + 10, i));
       }
     }
-    inputIntervals = new ArrayList<>(intervals);
+    // sorted input intervals
+    List<Interval> inputIntervals = new ArrayList<>(intervals);
     inputIntervals.sort(Comparators.intervalsByStartThenEnd());
   }
 
@@ -149,7 +141,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
-
 
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
@@ -252,7 +243,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
             new TestRunner(false);
       }
     }
-
   }
 
   static class TestRunner
@@ -261,7 +251,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     // These variables are at the class level since they are used to control after how many invocations of
     // run the runner should fail
-    private boolean succeeds;
+    private final boolean succeeds;
 
     TestRunner(boolean succeeds)
     {
