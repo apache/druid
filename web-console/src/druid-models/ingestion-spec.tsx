@@ -1352,7 +1352,7 @@ export function invalidPartitionConfig(spec: Partial<IngestionSpec>): boolean {
     // Bad primary partitioning, or...
     !deepGet(spec, 'spec.dataSchema.granularitySpec.segmentGranularity') ||
     // Bad secondary partitioning
-    AutoForm.isValidModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined))
+    !AutoForm.isValidModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined))
   );
 }
 

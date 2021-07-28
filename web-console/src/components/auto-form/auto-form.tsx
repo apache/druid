@@ -123,7 +123,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   static isValidModel<M>(model: Partial<M> | undefined, fields: readonly Field<M>[]): model is M {
-    return Boolean(AutoForm.issueWithModel(model, fields));
+    return !AutoForm.issueWithModel(model, fields);
   }
 
   static issueWithModel<M>(

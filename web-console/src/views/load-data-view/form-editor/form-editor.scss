@@ -16,17 +16,27 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+@import '~@blueprintjs/core/src/common/colors';
+@import '../../../variables';
 
-import { ApplyCancelButtons } from './apply-cancel-buttons';
+.form-editor {
+  background: rgba($gray3, 0.15);
+  padding: 10px;
+  border-radius: $pt-border-radius;
+  margin-bottom: 15px;
 
-describe('ApplyCancelButtons', () => {
-  it('matches snapshot', () => {
-    const applyCancelButtons = (
-      <ApplyCancelButtons onClose={() => {}} onApply={() => {}} showDelete onDelete={() => {}} />
-    );
-    const { container } = render(applyCancelButtons);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .apply-cancel-buttons {
+    position: relative;
+    text-align: right;
+
+    .bp3-button {
+      margin-left: 15px;
+    }
+
+    .delete {
+      position: absolute;
+      left: 0;
+      margin-left: 0;
+    }
+  }
+}

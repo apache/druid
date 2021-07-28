@@ -164,9 +164,9 @@ import {
   SampleStrategy,
 } from '../../utils/sampler';
 
-import { ApplyCancelButtons } from './apply-cancel-buttons/apply-cancel-buttons';
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
+import { FormEditor } from './form-editor/form-editor';
 import {
   ConnectMessage,
   FilterMessage,
@@ -452,8 +452,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   isStepEnabled(step: Step): boolean {
-    if (this.isSomethingSelected()) return false;
-
     const { spec, cacheRows } = this.state;
     const druidSource = isDruidSource(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
@@ -564,22 +562,38 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   }
 
-  private isSomethingSelected(): boolean {
-    const {
-      selectedFlattenField,
-      selectedTransform,
-      selectedFilter,
-      selectedDimensionSpec,
-      selectedMetricSpec,
-    } = this.state;
-    return Boolean(
-      selectedFlattenField ||
-        selectedTransform ||
-        selectedFilter ||
-        selectedDimensionSpec ||
-        selectedMetricSpec,
-    );
-  }
+  // private isSomethingSelected(): boolean {
+  //   const {
+  //     selectedFlattenField,
+  //     selectedTransform,
+  //     selectedFilter,
+  //     selectedDimensionSpec,
+  //     selectedMetricSpec,
+  //   } = this.state;
+  //   return Boolean(
+  //     selectedFlattenField ||
+  //       selectedTransform ||
+  //       selectedFilter ||
+  //       selectedDimensionSpec ||
+  //       selectedMetricSpec,
+  //   );
+  // }
+
+  private readonly resetSelected = () => {
+    this.setState({
+      selectedFlattenFieldIndex: -1,
+      selectedFlattenField: undefined,
+      selectedTransformIndex: -1,
+      selectedTransform: undefined,
+      selectedFilterIndex: -1,
+      selectedFilter: undefined,
+      selectedAutoDimension: undefined,
+      selectedDimensionSpecIndex: -1,
+      selectedDimensionSpec: undefined,
+      selectedMetricSpecIndex: -1,
+      selectedMetricSpec: undefined,
+    });
+  };
 
   renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
     return (
@@ -695,7 +709,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           text={`Next: ${VIEW_TITLE[nextStep]}`}
           rightIcon={IconNames.ARROW_RIGHT}
           intent={Intent.PRIMARY}
-          disabled={disabled || this.isSomethingSelected() || !this.isPreviewSpecSame()}
+          disabled={disabled || !this.isPreviewSpecSame()}
           onClick={() => {
             if (disabled) return;
             if (onNextStep && !onNextStep()) return;
@@ -1502,6 +1516,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
+    const { spec } = this.state;
+    const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
+    if (!inputFormatCanFlatten(inputFormat)) return;
+
     this.setState({
       selectedFlattenFieldIndex: index,
       selectedFlattenField: field,
@@ -1510,47 +1528,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderFlattenControls(): JSX.Element | undefined {
     const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
-    const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    if (!inputFormatCanFlatten(inputFormat)) return;
-
-    const close = () => {
-      this.setState({
-        selectedFlattenFieldIndex: -1,
-        selectedFlattenField: undefined,
-      });
-    };
 
     if (selectedFlattenField) {
       return (
-        <div className="edit-controls">
-          <AutoForm
-            fields={FLATTEN_FIELD_FIELDS}
-            model={selectedFlattenField}
-            onChange={f => this.setState({ selectedFlattenField: f })}
-          />
-          <ApplyCancelButtons
-            onClose={close}
-            disableApply={AutoForm.isValidModel(selectedFlattenField, FLATTEN_FIELD_FIELDS)}
-            onApply={() =>
-              this.updateSpec(
-                deepSet(
-                  spec,
-                  `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
-                  selectedFlattenField,
-                ),
-              )
-            }
-            showDelete={selectedFlattenFieldIndex !== -1}
-            onDelete={() =>
-              this.updateSpec(
-                deepDelete(
-                  spec,
-                  `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
-                ),
-              )
-            }
-          />
-        </div>
+        <FormEditor
+          fields={FLATTEN_FIELD_FIELDS}
+          initValue={selectedFlattenField}
+          onClose={this.resetSelected}
+          onApply={flattenField =>
+            this.updateSpec(
+              deepSet(
+                spec,
+                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                flattenField,
+              ),
+            )
+          }
+          showDelete={selectedFlattenFieldIndex !== -1}
+          onDelete={() =>
+            this.updateSpec(
+              deepDelete(
+                spec,
+                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+              ),
+            )
+          }
+        />
       );
     } else {
       return (
@@ -1920,44 +1923,31 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderTransformControls() {
     const { spec, selectedTransform, selectedTransformIndex } = this.state;
 
-    const close = () => {
-      this.setState({
-        selectedTransformIndex: -1,
-        selectedTransform: undefined,
-      });
-    };
-
     if (selectedTransform) {
       return (
-        <div className="edit-controls">
-          <AutoForm
-            fields={TRANSFORM_FIELDS}
-            model={selectedTransform}
-            onChange={selectedTransform => this.setState({ selectedTransform })}
-          />
-          <ApplyCancelButtons
-            onClose={close}
-            disableApply={AutoForm.isValidModel(selectedTransform, TRANSFORM_FIELDS)}
-            onApply={() =>
-              this.updateSpec(
-                deepSet(
-                  spec,
-                  `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
-                  selectedTransform,
-                ),
-              )
-            }
-            showDelete={selectedTransformIndex !== -1}
-            onDelete={() =>
-              this.updateSpec(
-                deepDelete(
-                  spec,
-                  `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
-                ),
-              )
-            }
-          />
-        </div>
+        <FormEditor
+          fields={TRANSFORM_FIELDS}
+          initValue={selectedTransform}
+          onClose={this.resetSelected}
+          onApply={transform =>
+            this.updateSpec(
+              deepSet(
+                spec,
+                `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                transform,
+              ),
+            )
+          }
+          showDelete={selectedTransformIndex !== -1}
+          onDelete={() =>
+            this.updateSpec(
+              deepDelete(
+                spec,
+                `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+              ),
+            )
+          }
+        />
       );
     } else {
       return (
@@ -2148,41 +2138,28 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, selectedFilter, selectedFilterIndex } = this.state;
     if (!selectedFilter) return;
 
-    const close = () => {
-      this.setState({
-        selectedFilterIndex: -1,
-        selectedFilter: undefined,
-      });
-    };
-
     return (
-      <div className="edit-controls">
-        <AutoForm
-          fields={FILTER_FIELDS}
-          model={selectedFilter}
-          onChange={f => this.setState({ selectedFilter: f })}
-          showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
-        />
-        <ApplyCancelButtons
-          onClose={close}
-          disableApply={AutoForm.isValidModel(selectedFilter, FILTER_FIELDS)}
-          onApply={() => {
-            const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
-            const newFilter = joinFilter(
-              deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
-            );
-            this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-          }}
-          showDelete={selectedFilterIndex !== -1}
-          onDelete={() => {
-            const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
-            const newFilter = joinFilter(
-              deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
-            );
-            this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-          }}
-        />
-      </div>
+      <FormEditor
+        fields={FILTER_FIELDS}
+        initValue={selectedFilter}
+        showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
+        onClose={this.resetSelected}
+        onApply={filter => {
+          const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+          const newFilter = joinFilter(
+            deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, filter),
+          );
+          this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
+        }}
+        showDelete={selectedFilterIndex !== -1}
+        onDelete={() => {
+          const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+          const newFilter = joinFilter(
+            deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
+          );
+          this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
+        }}
+      />
     );
   }
 
@@ -2622,12 +2599,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, selectedAutoDimension } = this.state;
     if (!selectedAutoDimension) return;
 
-    const close = () => {
-      this.setState({
-        selectedAutoDimension: undefined,
-      });
-    };
-
     return (
       <div className="edit-controls">
         <FormGroup label="Name">
@@ -2646,12 +2617,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   selectedAutoDimension,
                 ),
               );
-              close();
+              this.resetSelected();
             }}
           />
         </FormGroup>
         <FormGroup>
-          <Button text="Close" onClick={close} />
+          <Button text="Close" onClick={this.resetSelected} />
         </FormGroup>
       </div>
     );
@@ -2662,20 +2633,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!selectedDimensionSpec) return;
     const dimensionMode = getDimensionMode(spec);
 
-    const close = () => {
-      this.setState({
-        selectedDimensionSpecIndex: -1,
-        selectedDimensionSpec: undefined,
-      });
-    };
-
     const dimensions = deepGet(spec, `spec.dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
     const moveTo = (newIndex: number) => {
       const newDimension = moveElement(dimensions, selectedDimensionSpecIndex, newIndex);
       const newSpec = deepSet(spec, `spec.dataSchema.dimensionsSpec.dimensions`, newDimension);
       this.updateSpec(newSpec);
-      close();
+      this.resetSelected();
     };
 
     const reorderDimensionMenu = (
@@ -2698,7 +2662,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
 
       this.updateSpec(specWithMetric);
-      close();
+      this.resetSelected();
     };
 
     const convertToMetricMenu = (
@@ -2731,12 +2695,30 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
 
     return (
-      <div className="edit-controls">
-        <AutoForm
-          fields={DIMENSION_SPEC_FIELDS}
-          model={selectedDimensionSpec}
-          onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
-        />
+      <FormEditor
+        fields={DIMENSION_SPEC_FIELDS}
+        initValue={selectedDimensionSpec}
+        onClose={this.resetSelected}
+        onApply={dimensionSpec =>
+          this.updateSpec(
+            deepSet(
+              spec,
+              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              dimensionSpec,
+            ),
+          )
+        }
+        showDelete={selectedDimensionSpecIndex !== -1}
+        disableDelete={dimensions.length <= 1}
+        onDelete={() =>
+          this.updateSpec(
+            deepDelete(
+              spec,
+              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+            ),
+          )
+        }
+      >
         {selectedDimensionSpecIndex !== -1 && (
           <FormGroup>
             <Popover2 content={reorderDimensionMenu}>
@@ -2760,30 +2742,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </Popover2>
           </FormGroup>
         )}
-        <ApplyCancelButtons
-          onClose={close}
-          disableApply={AutoForm.isValidModel(selectedDimensionSpec, DIMENSION_SPEC_FIELDS)}
-          onApply={() =>
-            this.updateSpec(
-              deepSet(
-                spec,
-                `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-                selectedDimensionSpec,
-              ),
-            )
-          }
-          showDelete={selectedDimensionSpecIndex !== -1}
-          disableDelete={dimensions.length <= 1}
-          onDelete={() =>
-            this.updateSpec(
-              deepDelete(
-                spec,
-                `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-              ),
-            )
-          }
-        />
-      </div>
+      </FormEditor>
     );
   }
 
@@ -2792,13 +2751,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!selectedMetricSpec) return;
     const dimensionMode = getDimensionMode(spec);
     const selectedMetricSpecFieldName = selectedMetricSpec.fieldName;
-
-    const close = () => {
-      this.setState({
-        selectedMetricSpecIndex: -1,
-        selectedMetricSpec: undefined,
-      });
-    };
 
     const convertToDimension = (type: string) => {
       if (!selectedMetricSpecFieldName) return;
@@ -2817,7 +2769,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
 
       this.updateSpec(specWithDimension);
-      close();
+      this.resetSelected();
     };
 
     const convertToDimensionMenu = (
@@ -2830,12 +2782,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
 
     return (
-      <div className="edit-controls">
-        <AutoForm
-          fields={METRIC_SPEC_FIELDS}
-          model={selectedMetricSpec}
-          onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
-        />
+      <FormEditor
+        fields={METRIC_SPEC_FIELDS}
+        initValue={selectedMetricSpec}
+        onClose={this.resetSelected}
+        onApply={metricSpec =>
+          this.updateSpec(
+            deepSet(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`, metricSpec),
+          )
+        }
+        showDelete={selectedMetricSpecIndex !== -1}
+        onDelete={() =>
+          this.updateSpec(
+            deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
+          )
+        }
+      >
         {selectedMetricSpecIndex !== -1 &&
           dimensionMode === 'specific' &&
           selectedMetricSpecFieldName && (
@@ -2849,26 +2811,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Popover2>
             </FormGroup>
           )}
-        <ApplyCancelButtons
-          onClose={close}
-          disableApply={AutoForm.isValidModel(selectedMetricSpec, METRIC_SPEC_FIELDS)}
-          onApply={() =>
-            this.updateSpec(
-              deepSet(
-                spec,
-                `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
-                selectedMetricSpec,
-              ),
-            )
-          }
-          showDelete={selectedMetricSpecIndex !== -1}
-          onDelete={() =>
-            this.updateSpec(
-              deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
-            )
-          }
-        />
-      </div>
+      </FormEditor>
     );
   }
 

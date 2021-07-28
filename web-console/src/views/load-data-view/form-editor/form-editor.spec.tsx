@@ -16,16 +16,24 @@
  * limitations under the License.
  */
 
-.apply-cancel-buttons {
-  position: relative;
+import { render } from '@testing-library/react';
+import React from 'react';
 
-  .bp3-button {
-    margin-right: 15px;
-  }
+import { FormEditor } from './form-editor';
 
-  .delete {
-    position: absolute;
-    right: 0;
-    margin-right: 0;
-  }
-}
+describe('FormEditor', () => {
+  it('matches snapshot', () => {
+    const applyCancelButtons = (
+      <FormEditor
+        fields={[]}
+        initValue={{}}
+        onClose={() => {}}
+        onApply={() => {}}
+        showDelete
+        onDelete={() => {}}
+      />
+    );
+    const { container } = render(applyCancelButtons);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
