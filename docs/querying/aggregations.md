@@ -126,7 +126,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 ### `doubleMean` aggregator
 
-Computes and returns arithmetic mean of a column values as 64 bit float value. This is a query time aggregator only and should not be used during indexing.
+Computes and returns arithmetic mean of a column values as 64 bit float value. `doubleMean` is a query time aggregator only. It is not available for indexing.
 
 ```json
 { "type" : "doubleMean", "name" : <output_name>, "fieldName" : <metric_name> }
