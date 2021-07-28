@@ -144,4 +144,16 @@ abstract class PartitionStat<T>
   {
     return Objects.hash(taskExecutorHost, taskExecutorPort, useHttps, interval, numRows, sizeBytes);
   }
+
+  @Override public String toString()
+  {
+    return "PartitionStat{" +
+        "taskExecutorHost='" + taskExecutorHost + '\'' +
+        ", taskExecutorPort=" + taskExecutorPort +
+        ", useHttps=" + useHttps +
+        ", interval=" + interval +
+        ", numRows=" + numRows +
+        ", sizeBytes=" + sizeBytes +
+        '}';
+  }
 }

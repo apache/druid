@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -66,12 +67,14 @@ public class HttpShuffleClientTest
   @Before
   public void setup() throws IOException
   {
-    segmentFile = temporaryFolder.newFile();
-    try (Writer writer = Files.newBufferedWriter(segmentFile.toPath(), StandardCharsets.UTF_8)) {
+    File temp = temporaryFolder.newFile();
+    try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
         writer.write(StringUtils.format("let's write some data.\n"));
       }
     }
+    segmentFile = new File(temp.getAbsolutePath() + ".zip");
+    CompressionUtils.zip(segmentFile.getParentFile(), segmentFile);
   }
 
   @Test

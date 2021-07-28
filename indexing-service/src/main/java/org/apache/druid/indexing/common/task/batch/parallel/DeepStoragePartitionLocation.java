@@ -77,6 +77,8 @@ public class DeepStoragePartitionLocation extends GenericPartitionLocation
   @Override
   public String toString()
   {
-    return super.toString() + "loadSpec = " + loadSpec.toString();
+    return "DeepStoragePartitionLocation{" +
+        "loadSpec=" + loadSpec +
+        "} " + super.toString();
   }
 }
