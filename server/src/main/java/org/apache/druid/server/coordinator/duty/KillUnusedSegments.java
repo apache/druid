@@ -30,6 +30,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -70,13 +71,19 @@ public class KillUnusedSegments implements CoordinatorDuty
         "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
     );
 
-    // Operators must explicitly set this configuration if they are going to enable Segment Killing
-    Preconditions.checkArgument(
-        config.getCoordinatorKillDurationToRetain() != null,
-        "druid.coordinator.kill.durationToRetain must be non-null"
-    );
-    this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
     this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
+
+    // Operators must explicitly set this configuration if they are going to enable Segment Killing and do not set ignoreRetainDuration to true
+    if (!ignoreRetainDuration) {
+      Preconditions.checkArgument(
+          config.getCoordinatorKillDurationToRetain() != null,
+          "druid.coordinator.kill.durationToRetain must be non-null if ignoreRetainDuration is false"
+      );
+      this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
+    } else {
+      // Provide dummy value that will not be used since ignoreRetainDuration overrides it.
+      this.retainDuration = new Duration("PT0S").getMillis();
+    }
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
@@ -135,6 +142,14 @@ public class KillUnusedSegments implements CoordinatorDuty
     return params;
   }
 
+  /**
+   * For a given datasource and limit of segments that can be killed in one task, determine the interval to be
+   * submitted with the kill task.
+   *
+   * @param dataSource dataSource whose unused segments are being killed.
+   * @param limit the maximum number of segments that can be included in the kill task.
+   * @return {@link Interval} to be used in the kill task.
+   */
   @VisibleForTesting
   @Nullable
   Interval findIntervalForKill(String dataSource, int limit)
@@ -153,7 +168,7 @@ public class KillUnusedSegments implements CoordinatorDuty
    * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
    * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return a DateTime object
    * for 9999-12-31T23:59. This static date has to be used because the metastore is not comparing date objects, but rather
-   * varchar columns. This means DateTimes.MAX is less than the 21st century and beyond for comparisions due to its
+   * varchar columns. This means DateTimes.MAX is less than the 21st century and beyond for according to the metastore, due to its
    * year starting with a '1'
    *
    * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
