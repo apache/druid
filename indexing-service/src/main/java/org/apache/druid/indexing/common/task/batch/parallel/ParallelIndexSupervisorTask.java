@@ -736,7 +736,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Preconditions.checkState(state.isFailure());
       String errMsg = StringUtils.format(
           TASK_PHASE_FAILURE_MSG,
-          indexingRunner.getName()
+          mergeRunner.getName()
       );
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
@@ -748,7 +748,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return taskStatus;
   }
 
-  private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
     ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
@@ -759,7 +760,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState distributionState = runNextPhase(distributionRunner);
     if (distributionState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialDimensionDistributionTask.TYPE + " failed");
+      String errMsg = StringUtils.format(TASK_PHASE_FAILURE_MSG,distributionRunner.getName());
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     Map<Interval, PartitionBoundaries> intervalToPartitions =

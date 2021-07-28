@@ -132,7 +132,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   }
 
   @Test(timeout = 5000L)
-  public void failsInDetermineIntervalsPhase() throws Exception
+  public void failsInFirstPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
         newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
@@ -155,13 +155,13 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[0]]. See task logs for details.",
+        "Failed in phase[TestRunner[false]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
   @Test(timeout = 5000L)
-  public void failsInPartialSegmentGeneratePhase() throws Exception
+  public void failsInSecondPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
         newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
@@ -183,13 +183,13 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[0]]. See task logs for details.",
+        "Failed in phase[TestRunner[false]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
   @Test(timeout = 5000L)
-  public void failsInPartialSegmentMergePhase() throws Exception
+  public void failsInThirdPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
         newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
@@ -212,7 +212,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[1]]. See task logs for details.",
+        "Failed in phase[TestRunner[false]]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -220,6 +220,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   static class ParallelIndexSupervisorTaskTest extends ParallelIndexSupervisorTask
   {
     private final int succeedsBeforeFailing;
+    private int numRuns = 0;
 
     public ParallelIndexSupervisorTaskTest(
         String id,
@@ -242,8 +243,14 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
     )
     {
-      return (ParallelIndexTaskRunner<T, R>)
-          new TestRunner(succeedsBeforeFailing);
+      if (numRuns < succeedsBeforeFailing) {
+        numRuns++;
+        return (ParallelIndexTaskRunner<T, R>)
+            new TestRunner(true);
+      } else {
+        return (ParallelIndexTaskRunner<T, R>)
+            new TestRunner(false);
+      }
     }
 
   }
@@ -254,25 +261,23 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     // These variables are at the class level since they are used to control after how many invocations of
     // run the runner should fail
-    private static int succeedsBeforeFailing;
-    private static int numRuns = 0;
+    private boolean succeeds;
 
-    TestRunner(int succeedsBeforeFailing)
+    TestRunner(boolean succeeds)
     {
-      TestRunner.succeedsBeforeFailing = succeedsBeforeFailing;
+      this.succeeds = succeeds;
     }
 
     @Override
     public String getName()
     {
-      return StringUtils.format("TestRunner[%s]", numRuns);
+      return StringUtils.format("TestRunner[%s]", succeeds);
     }
 
     @Override
     public TaskState run() 
     {
-      if (numRuns < succeedsBeforeFailing) {
-        numRuns++;
+      if (succeeds) {
         return TaskState.SUCCESS;
       }
       return TaskState.FAILED;
