@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
@@ -48,13 +49,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 public class ShuffleDataSegmentPusherTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private IntermediaryDataManager intermediaryDataManager;
+  private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;
 
   @Before
@@ -75,7 +77,7 @@ public class ShuffleDataSegmentPusherTest
         false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
-    intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     intermediaryDataManager.start();
     segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);
   }
@@ -96,15 +98,20 @@ public class ShuffleDataSegmentPusherTest
     Assert.assertEquals(9, pushed.getBinaryVersion().intValue());
     Assert.assertEquals(14, pushed.getSize()); // 10 bytes data + 4 bytes version
 
-    final File zippedSegment = intermediaryDataManager.findPartitionFile(
+    final Optional<ByteSource> zippedSegment = intermediaryDataManager.findPartitionFile(
         "supervisorTaskId",
         "subTaskId",
         segment.getInterval(),
         segment.getShardSpec().getPartitionNum()
     );
-    Assert.assertNotNull(zippedSegment);
+    Assert.assertTrue(zippedSegment.isPresent());
     final File tempDir = temporaryFolder.newFolder();
-    final FileCopyResult result = CompressionUtils.unzip(zippedSegment, tempDir);
+    final FileCopyResult result = CompressionUtils.unzip(
+        zippedSegment.get(),
+        tempDir,
+        org.apache.druid.java.util.common.FileUtils.IS_EXCEPTION,
+        false
+    );
     final List<File> unzippedFiles = new ArrayList<>(result.getFiles());
     unzippedFiles.sort(Comparator.comparing(File::getName));
     final File dataFile = unzippedFiles.get(0);

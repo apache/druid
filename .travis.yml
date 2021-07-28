@@ -610,6 +610,11 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
 
+    - <<: *integration_query
+      name: "(Compile=openjdk8, Run=openjdk8) query integration test (mariaDB)"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
     # START - Integration tests for Compile with Java 8 and Run with Java 11
@@ -683,6 +688,11 @@ jobs:
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
+    - <<: *integration_query
+      name: "(Compile=openjdk8, Run=openjdk11) query integration test (mariaDB)"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
     - &integration_batch_index_k8s
@@ -703,7 +713,7 @@ jobs:
       stage: cron
       install: skip
       script: |-
-        ${MVN} dependency-check:aggregate -pl '!integration-tests' || { echo "
+        ${MVN} dependency-check:purge dependency-check:aggregate -pl '!integration-tests' || { echo "
 
         The OWASP dependency check has found security vulnerabilities. Please use a newer version
         of the dependency that does not have vulnerabilities. To see a report run

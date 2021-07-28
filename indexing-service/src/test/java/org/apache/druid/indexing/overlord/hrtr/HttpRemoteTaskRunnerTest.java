@@ -49,16 +49,20 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -79,6 +83,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class HttpRemoteTaskRunnerTest
 {
+  @Before
+  public void setup()
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
   /*
   Simulates startup of Overlord and Workers being discovered with no previously known tasks. Fresh tasks are given
   and expected to be completed.
@@ -733,6 +743,18 @@ public class HttpRemoteTaskRunnerTest
 
     Assert.assertTrue(future1.get().isFailure());
     Assert.assertTrue(future2.get().isFailure());
+    Assert.assertNotNull(future1.get().getErrorMsg());
+    Assert.assertNotNull(future2.get().getErrorMsg());
+    Assert.assertTrue(
+        future1.get().getErrorMsg().startsWith(
+            "The worker that this task was assigned disappeared and did not report cleanup within timeout"
+        )
+    );
+    Assert.assertTrue(
+        future2.get().getErrorMsg().startsWith(
+            "The worker that this task was assigned disappeared and did not report cleanup within timeout"
+        )
+    );
 
     AtomicInteger ticks = new AtomicInteger();
     Set<String> actualShutdowns = new ConcurrentHashSet<>();
@@ -1251,6 +1273,230 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(task2.getId(), TaskLocation.create("worker", 3, 4)),
             ImmutableList.of(task2.getId(), TaskStatus.success(task2.getId()))
         )
+    );
+  }
+
+  @Test
+  public void testTimeoutInAssigningTasks() throws Exception
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig()
+        {
+          @Override
+          public int getPendingTasksRunnerNumThreads()
+          {
+            return 1;
+          }
+
+          @Override
+          public Period getTaskAssignmentTimeout()
+          {
+            return new Period("PT1S");
+          }
+        },
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        new NoopProvisioningStrategy<>(),
+        druidNodeDiscoveryProvider,
+        EasyMock.createNiceMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return new WorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
+            ImmutableList.of()
+        )
+        {
+          @Override
+          public void start()
+          {
+            disabled.set(false);
+          }
+
+          @Override
+          public void stop()
+          {
+          }
+
+          @Override
+          public boolean isInitialized()
+          {
+            return true;
+          }
+
+          @Override
+          public void waitForInitialization()
+          {
+          }
+
+          @Override
+          public boolean assignTask(Task task)
+          {
+            // Always returns true
+            return true;
+          }
+
+          @Override
+          public void shutdownTask(String taskId)
+          {
+          }
+        };
+      }
+    };
+
+    taskRunner.start();
+
+    DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
+        new DruidNode("service", "host1", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
+
+    Future<TaskStatus> future = taskRunner.run(NoopTask.create("task-id", 0));
+    Assert.assertTrue(future.get().isFailure());
+    Assert.assertNotNull(future.get().getErrorMsg());
+    Assert.assertTrue(
+        future.get().getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
+    );
+  }
+
+  @Test
+  public void testExceptionThrownInAssigningTasks() throws Exception
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig()
+        {
+          @Override
+          public int getPendingTasksRunnerNumThreads()
+          {
+            return 1;
+          }
+
+          @Override
+          public Period getTaskAssignmentTimeout()
+          {
+            return new Period("PT1S");
+          }
+        },
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        new NoopProvisioningStrategy<>(),
+        druidNodeDiscoveryProvider,
+        EasyMock.createNiceMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return new WorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
+            ImmutableList.of()
+        )
+        {
+          @Override
+          public void start()
+          {
+            disabled.set(false);
+          }
+
+          @Override
+          public void stop()
+          {
+          }
+
+          @Override
+          public boolean isInitialized()
+          {
+            return true;
+          }
+
+          @Override
+          public void waitForInitialization()
+          {
+          }
+
+          @Override
+          public boolean assignTask(Task task)
+          {
+            throw new RuntimeException("Assign failure test");
+          }
+
+          @Override
+          public void shutdownTask(String taskId)
+          {
+          }
+        };
+      }
+    };
+
+    taskRunner.start();
+
+    DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
+        new DruidNode("service", "host1", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
+
+    Future<TaskStatus> future = taskRunner.run(NoopTask.create("task-id", 0));
+    Assert.assertTrue(future.get().isFailure());
+    Assert.assertNotNull(future.get().getErrorMsg());
+    Assert.assertTrue(
+        StringUtils.format("Actual message is: %s", future.get().getErrorMsg()),
+        future.get().getErrorMsg().startsWith("Failed to assign this task")
     );
   }
 

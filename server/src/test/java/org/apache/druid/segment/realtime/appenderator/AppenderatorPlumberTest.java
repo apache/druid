@@ -34,11 +34,11 @@ import org.junit.Test;
 public class AppenderatorPlumberTest
 {
   private final AppenderatorPlumber plumber;
-  private final AppenderatorTester appenderatorTester;
+  private final StreamAppenderatorTester streamAppenderatorTester;
 
   public AppenderatorPlumberTest() throws Exception
   {
-    this.appenderatorTester = new AppenderatorTester(10);
+    this.streamAppenderatorTester = new StreamAppenderatorTester(10);
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
     segmentAnnouncer.announceSegment(EasyMock.anyObject());
@@ -84,26 +84,27 @@ public class AppenderatorPlumberTest
         null
     );
 
-    this.plumber = new AppenderatorPlumber(appenderatorTester.getSchema(),
-        tuningConfig, appenderatorTester.getMetrics(),
-        segmentAnnouncer, segmentPublisher, handoffNotifier,
-        appenderatorTester.getAppenderator());
+    this.plumber = new AppenderatorPlumber(streamAppenderatorTester.getSchema(),
+                                           tuningConfig, streamAppenderatorTester.getMetrics(),
+                                           segmentAnnouncer, segmentPublisher, handoffNotifier,
+                                           streamAppenderatorTester.getAppenderator());
 
   }
 
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    Appenderator appenderator = appenderatorTester.getAppenderator();
+    Appenderator appenderator = streamAppenderatorTester.getAppenderator();
 
     // startJob
     Assert.assertEquals(null, plumber.startJob());
 
     // getDataSource
-    Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+    Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
-    InputRow[] rows = new InputRow[] {AppenderatorTest.ir("2000", "foo", 1), 
-        AppenderatorTest.ir("2000", "bar", 2), AppenderatorTest.ir("2000", "qux", 4)};
+    InputRow[] rows = new InputRow[] {
+        StreamAppenderatorTest.ir("2000", "foo", 1),
+        StreamAppenderatorTest.ir("2000", "bar", 2), StreamAppenderatorTest.ir("2000", "qux", 4)};
     // add
     Assert.assertEquals(1, plumber.add(rows[0], null).getRowCount());
 

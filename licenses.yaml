@@ -545,13 +545,13 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.11.0
 libraries:
   - commons-io: commons-io
 notices:
   - commons-io: |
       Apache Commons IO
-      Copyright 2002-2017 The Apache Software Foundation
+      Copyright 2002-2021 The Apache Software Foundation
 
 ---
 
@@ -621,7 +621,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.18
+version: 1.21
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -3002,20 +3002,6 @@ notices:
 
 ---
 
-name: Apache Commons Compress
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.19
-libraries:
-  - org.apache.commons: commons-compress
-notices:
-  - commons-compress: |
-      Apache Commons Compress
-      Copyright 2002-2012 The Apache Software Foundation
-
----
-
 name: Apache Commons Math
 license_category: binary
 module: hadoop-client
@@ -5164,7 +5150,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.11.6
+version: 0.11.10
 
 ---
 

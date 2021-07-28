@@ -61,7 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class AppenderatorTest extends InitializedNullHandlingTest
+public class StreamAppenderatorTest extends InitializedNullHandlingTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
       si("2000/2001", "A", 0),
@@ -72,7 +72,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -83,7 +83,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(null, appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add
       commitMetadata.put("x", "1");
@@ -157,7 +157,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             1024,
             null,
@@ -193,15 +193,15 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
           182 + nullHandlingOverhead,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
     }
   }
 
@@ -209,7 +209,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testMaxBytesInMemoryInMultipleSinksWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             1024,
             null,
@@ -243,21 +243,21 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
-      Assert.assertEquals(182 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(182 + nullHandlingOverhead, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
           364 + 2 * nullHandlingOverhead,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
     }
   }
 
   @Test
   public void testMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 15000, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 15000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -285,38 +285,38 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // We do multiple more adds to the same sink to cause persist.
       for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
       // currHydrant in the sink has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
       // 1 dimension columns, 2 metric column, 1 time column.
-      int mappedIndexSize = 1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
+      int mappedIndexSize = 1012 + (2 * StreamAppenderator.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                            StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                            StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // Add a single row after persisted
@@ -325,11 +325,11 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // We do multiple more adds to the same sink to cause persist.
@@ -342,28 +342,28 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       // currHydrant in the sink has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
       // 1 dimension columns, 2 metric column, 1 time column. However, we have two indexes now from the two pervious
       // persists.
-      mappedIndexSize = 2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
+      mappedIndexSize = 2 * (1012 + (2 * StreamAppenderator.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                             StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                             StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
     }
   }
 
   @Test(expected = RuntimeException.class)
   public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 5180, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 5180, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -394,7 +394,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testTaskDoesNotFailAsExceededMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
-        final AppenderatorTester tester = new AppenderatorTester(
+        final StreamAppenderatorTester tester = new StreamAppenderatorTester(
             100,
             10,
             null,
@@ -429,13 +429,13 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       // Expected 0 since we persisted after the add
       Assert.assertEquals(
           0,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       // Expected 0 since we persisted after the add
       Assert.assertEquals(
           0,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
     }
   }
@@ -443,7 +443,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testTaskCleanupInMemoryCounterAfterCloseWithRowInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 10000, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 10000, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -471,24 +471,24 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // Close with row still in memory (no persist)
       appenderator.close();
 
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
     }
   }
 
   @Test
   public void testMaxBytesInMemoryInMultipleSinks() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, 31100, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, 31100, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -518,19 +518,19 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
           (2 * currentInMemoryIndexSize) + sinkSizeOverhead,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // We do multiple more adds to the same sink to cause persist.
@@ -538,27 +538,27 @@ public class AppenderatorTest extends InitializedNullHandlingTest
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
         appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
       // currHydrant in the sink has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
       // 1 dimension columns, 2 metric column, 1 time column.
-      int mappedIndexSize = 2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
-                            AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
+      int mappedIndexSize = 2 * (1012 + (2 * StreamAppenderator.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                                 StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                                 StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // Add a single row after persisted to sink 0
@@ -567,29 +567,29 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           0,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       // Now add a single row to sink 1
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bob", 1), committerSupplier);
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
           (2 * currentInMemoryIndexSize) + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // We do multiple more adds to the both sink to cause persist.
@@ -603,32 +603,32 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       // currHydrant in the sink has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
           currentInMemoryIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       // Mapped index size is the memory still needed after we persisted indexes. Note that the segments have
       // 1 dimension columns, 2 metric column, 1 time column. However, we have two indexes now from the two pervious
       // persists.
-      mappedIndexSize = 2 * (2 * (1012 + (2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
-                             AppenderatorImpl.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
-                             AppenderatorImpl.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER));
+      mappedIndexSize = 2 * (2 * (1012 + (2 * StreamAppenderator.ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+                                  StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
+                                  StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER));
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
     }
   }
 
   @Test
   public void testIgnoreMaxBytesInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(100, -1, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(100, -1, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -650,33 +650,33 @@ public class AppenderatorTest extends InitializedNullHandlingTest
         };
       };
 
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //we still calculate the size even when ignoring it to make persist decision
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
-          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+          ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
-      int sinkSizeOverhead = 2 * AppenderatorImpl.ROUGH_OVERHEAD_PER_SINK;
+      int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
           (364 + 2 * nullHandlingOverhead) + sinkSizeOverhead,
-          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+          ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
     }
   }
 
   @Test
   public void testMaxRowsInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = new Supplier<Committer>()
@@ -703,23 +703,23 @@ public class AppenderatorTest extends InitializedNullHandlingTest
         }
       };
 
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 1), committerSupplier);
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 1), committerSupplier);
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.persistAll(committerSupplier.get());
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.close();
     }
   }
@@ -727,7 +727,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testMaxRowsInMemoryDisallowIncrementalPersists() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, false)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = () -> {
@@ -749,23 +749,23 @@ public class AppenderatorTest extends InitializedNullHandlingTest
         };
       };
 
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.startJob();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier, false);
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier, false);
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier, false);
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 1), committerSupplier, false);
-      Assert.assertEquals(3, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(3, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 1), committerSupplier, false);
-      Assert.assertEquals(4, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(4, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier, false);
-      Assert.assertEquals(5, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(5, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.persistAll(committerSupplier.get());
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.close();
     }
   }
@@ -774,7 +774,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testRestoreFromDisk() throws Exception
   {
     final RealtimeTuningConfig tuningConfig;
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       tuningConfig = tester.getTuningConfig();
 
@@ -816,7 +816,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 5), committerSupplier);
       appenderator.close();
 
-      try (final AppenderatorTester tester2 = new AppenderatorTester(
+      try (final StreamAppenderatorTester tester2 = new StreamAppenderatorTester(
           2,
           -1,
           tuningConfig.getBasePersistDirectory(),
@@ -833,7 +833,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test(timeout = 60_000L)
   public void testTotalRowCount() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
       final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
@@ -876,7 +876,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   public void testVerifyRowIngestionMetrics() throws Exception
   {
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    try (final AppenderatorTester tester = new AppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(5, 10000L, null, false, rowIngestionMeters)) {
       final Appenderator appenderator = tester.getAppenderator();
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());
@@ -892,7 +892,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testQueryByIntervals() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -906,7 +906,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query1: 2000/2001
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001")))
                                            .aggregators(
                                                Arrays.asList(
@@ -932,7 +932,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query2: 2000/2002
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2002")))
                                            .aggregators(
                                                Arrays.asList(
@@ -962,7 +962,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query3: 2000/2001T01
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001T01")))
                                            .aggregators(
                                                Arrays.asList(
@@ -991,7 +991,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query4: 2000/2001T01, 2001T03/2001T04
       final TimeseriesQuery query4 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(
                                                ImmutableList.of(
                                                    Intervals.of("2000/2001T01"),
@@ -1028,7 +1028,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testQueryBySegments() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -1042,7 +1042,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query1: segment #2
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1078,7 +1078,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query2: segment #2, partial
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1114,7 +1114,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
 
       // Query3: segment #2, two disjoint intervals
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .aggregators(
                                                Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -1154,7 +1154,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
       );
 
       final ScanQuery query4 = Druids.newScanQueryBuilder()
-                                     .dataSource(AppenderatorTester.DATASOURCE)
+                                     .dataSource(StreamAppenderatorTester.DATASOURCE)
                                      .intervals(
                                          new MultipleSpecificSegmentSpec(
                                              ImmutableList.of(
@@ -1194,7 +1194,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
-        AppenderatorTester.DATASOURCE,
+        StreamAppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)

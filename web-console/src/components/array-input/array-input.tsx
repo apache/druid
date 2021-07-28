@@ -32,30 +32,30 @@ export interface ArrayInputProps {
 }
 
 export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps) {
-  const { className, placeholder, large, disabled, intent } = props;
-  const [stringValue, setStringValue] = useState<string>();
+  const { className, placeholder, large, disabled, intent, onChange } = props;
+  const [intermediateValue, setIntermediateValue] = useState<string | undefined>();
 
   const handleChange = (e: any) => {
-    const { onChange } = props;
     const stringValue = e.target.value;
-    const newValues: string[] = stringValue.split(/[,\s]+/).map((v: string) => v.trim());
-    const newValuesFiltered = compact(newValues);
-    if (stringValue === '') {
-      onChange(undefined);
-      setStringValue(undefined);
-    } else if (newValues.length === newValuesFiltered.length) {
-      onChange(newValuesFiltered);
-      setStringValue(undefined);
-    } else {
-      setStringValue(stringValue);
-    }
+    setIntermediateValue(stringValue);
+
+    onChange(
+      stringValue === ''
+        ? undefined
+        : compact(stringValue.split(/[,\s]+/).map((v: string) => v.trim())),
+    );
   };
 
   return (
     <TextArea
       className={className}
-      value={stringValue ?? props.values?.join(', ') ?? ''}
+      value={
+        typeof intermediateValue !== 'undefined'
+          ? intermediateValue
+          : props.values?.join(', ') || ''
+      }
       onChange={handleChange}
+      onBlur={() => setIntermediateValue(undefined)}
       placeholder={placeholder}
       large={large}
       disabled={disabled}

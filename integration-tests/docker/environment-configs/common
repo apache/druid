@@ -68,6 +68,10 @@ druid_indexer_logs_directory=/shared/tasklogs
 druid_sql_enable=true
 druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies
 druid_request_logging_type=slf4j
+druid_coordinator_kill_supervisor_on=true
+druid_coordinator_kill_supervisor_period=PT10S
+druid_coordinator_kill_supervisor_durationToRetain=PT0M
+druid_coordinator_period_metadataStoreManagementPeriod=PT10S
 
 # Testing the legacy config from https://github.com/apache/druid/pull/10267
 # Can remove this when the flag is no longer needed

@@ -145,4 +145,36 @@ public class QueryContextsTest
         false
     )));
   }
+
+  @Test
+  public void testGetBrokerServiceName()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        new HashMap<>()
+    );
+
+    Assert.assertNull(QueryContexts.getBrokerServiceName(query));
+
+    query.getContext().put(QueryContexts.BROKER_SERVICE_NAME, "hotBroker");
+    Assert.assertEquals("hotBroker", QueryContexts.getBrokerServiceName(query));
+  }
+
+  @Test
+  public void testGetBrokerServiceName_withNonStringValue()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        new HashMap<>()
+    );
+
+    query.getContext().put(QueryContexts.BROKER_SERVICE_NAME, 100);
+
+    exception.expect(ClassCastException.class);
+    QueryContexts.getBrokerServiceName(query);
+  }
 }

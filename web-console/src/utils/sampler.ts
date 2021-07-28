@@ -40,13 +40,7 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import {
-  alphanumericCompare,
-  EMPTY_ARRAY,
-  filterMap,
-  oneOf,
-  sortWithPrefixSuffix,
-} from './general';
+import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap, oneOf } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -153,11 +147,10 @@ export interface HeaderFromSampleResponseOptions {
 export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
   const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
 
-  let columns = sortWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
+  let columns = arrangeWithPrefixSuffix(
+    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))),
     columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
-    alphanumericCompare,
   );
 
   if (ignoreTimeColumn) {
@@ -436,7 +429,6 @@ export async function sampleForTransform(
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
-  const inputFormatColumns: string[] = deepGet(spec, 'spec.ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
@@ -465,7 +457,6 @@ export async function sampleForTransform(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
@@ -494,7 +485,6 @@ export async function sampleForFilter(
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
-  const inputFormatColumns: string[] = deepGet(spec, 'spec.ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
@@ -524,7 +514,6 @@ export async function sampleForFilter(
       headerFromSampleResponse({
         sampleResponse: sampleResponseHack,
         ignoreTimeColumn: true,
-        columnOrder: [TIME_COLUMN].concat(inputFormatColumns),
       }).concat(getDimensionNamesFromTransforms(transforms)),
     );
   }
