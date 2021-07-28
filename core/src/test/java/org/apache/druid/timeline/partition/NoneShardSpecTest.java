@@ -56,6 +56,6 @@ public class NoneShardSpecTest
     final String jsonStr = "{\"type\": \"none\",\"partitionNum\": 2}";
     ObjectMapper mapper = new TestObjectMapper();
     final ShardSpec noneShardSpec = mapper.readValue(jsonStr, ShardSpec.class);
-    noneShardSpec.equals(NoneShardSpec.instance());
+    Assert.assertEquals(NoneShardSpec.instance(), noneShardSpec);
   }
 }
