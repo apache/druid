@@ -300,6 +300,11 @@ export interface LoadDataViewProps {
   goToIngestion: (taskGroupId: string | undefined, supervisor?: string) => void;
 }
 
+interface SelectedIndex<T> {
+  value: Partial<T>;
+  index: number;
+}
+
 export interface LoadDataViewState {
   step: Step;
   spec: Partial<IngestionSpec>;
@@ -328,8 +333,7 @@ export interface LoadDataViewState {
   parserQueryState: QueryState<HeaderAndRows>;
 
   // for flatten
-  selectedFlattenFieldIndex: number;
-  selectedFlattenField?: Partial<FlattenField>;
+  selectedFlattenField?: SelectedIndex<FlattenField>;
 
   // for timestamp
   timestampQueryState: QueryState<{
@@ -339,13 +343,11 @@ export interface LoadDataViewState {
 
   // for transform
   transformQueryState: QueryState<HeaderAndRows>;
-  selectedTransformIndex: number;
-  selectedTransform?: Partial<Transform>;
+  selectedTransform?: SelectedIndex<Transform>;
 
   // for filter
   filterQueryState: QueryState<HeaderAndRows>;
-  selectedFilterIndex: number;
-  selectedFilter?: Partial<DruidFilter>;
+  selectedFilter?: SelectedIndex<DruidFilter>;
 
   // for schema
   schemaQueryState: QueryState<{
@@ -354,10 +356,8 @@ export interface LoadDataViewState {
     metricsSpec: MetricSpec[] | undefined;
   }>;
   selectedAutoDimension?: string;
-  selectedDimensionSpecIndex: number;
-  selectedDimensionSpec?: Partial<DimensionSpec>;
-  selectedMetricSpecIndex: number;
-  selectedMetricSpec?: Partial<MetricSpec>;
+  selectedDimensionSpec?: SelectedIndex<DimensionSpec>;
+  selectedMetricSpec?: SelectedIndex<MetricSpec>;
 
   // for final step
   submitting: boolean;
@@ -389,24 +389,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       // for parser
       parserQueryState: QueryState.INIT,
 
-      // for flatten
-      selectedFlattenFieldIndex: -1,
-
       // for timestamp
       timestampQueryState: QueryState.INIT,
 
       // for transform
       transformQueryState: QueryState.INIT,
-      selectedTransformIndex: -1,
 
       // for filter
       filterQueryState: QueryState.INIT,
-      selectedFilterIndex: -1,
 
       // for dimensions
       schemaQueryState: QueryState.INIT,
-      selectedDimensionSpecIndex: -1,
-      selectedMetricSpecIndex: -1,
 
       // for final step
       submitting: false,
@@ -581,16 +574,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private readonly resetSelected = () => {
     this.setState({
-      selectedFlattenFieldIndex: -1,
       selectedFlattenField: undefined,
-      selectedTransformIndex: -1,
       selectedTransform: undefined,
-      selectedFilterIndex: -1,
       selectedFilter: undefined,
       selectedAutoDimension: undefined,
-      selectedDimensionSpecIndex: -1,
       selectedDimensionSpec: undefined,
-      selectedMetricSpecIndex: -1,
       selectedMetricSpec: undefined,
     });
   };
@@ -1521,35 +1509,34 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!inputFormatCanFlatten(inputFormat)) return;
 
     this.setState({
-      selectedFlattenFieldIndex: index,
-      selectedFlattenField: field,
+      selectedFlattenField: { value: field, index },
     });
   };
 
   renderFlattenControls(): JSX.Element | undefined {
-    const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
+    const { spec, selectedFlattenField } = this.state;
 
     if (selectedFlattenField) {
       return (
         <FormEditor
           fields={FLATTEN_FIELD_FIELDS}
-          initValue={selectedFlattenField}
+          initValue={selectedFlattenField.value}
           onClose={this.resetSelected}
           onApply={flattenField =>
             this.updateSpec(
               deepSet(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
                 flattenField,
               ),
             )
           }
-          showDelete={selectedFlattenFieldIndex !== -1}
+          showDelete={selectedFlattenField.index !== -1}
           onDelete={() =>
             this.updateSpec(
               deepDelete(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
               ),
             )
           }
@@ -1563,8 +1550,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             disabled={!this.isPreviewSpecSame()}
             onClick={() => {
               this.setState({
-                selectedFlattenField: { type: 'path' },
-                selectedFlattenFieldIndex: -1,
+                selectedFlattenField: { value: { type: 'path' }, index: -1 },
               });
             }}
           />
@@ -1855,7 +1841,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               columnFilter={columnFilter}
               transformedColumnsOnly={specialColumnsOnly}
               transforms={transforms}
-              selectedColumnName={transformTableSelectedColumnName(data, selectedTransform)}
+              selectedColumnName={transformTableSelectedColumnName(data, selectedTransform?.value)}
               onTransformSelect={this.onTransformSelect}
             />
           )}
@@ -1880,8 +1866,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 intent={Intent.PRIMARY}
                 onClick={() => {
                   this.setState({
-                    selectedTransformIndex: transforms.length - 1,
-                    selectedTransform: transforms[transforms.length - 1],
+                    selectedTransform: {
+                      value: transforms[transforms.length - 1],
+                      index: transforms.length - 1,
+                    },
                   });
                 }}
               />
@@ -1915,35 +1903,34 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private readonly onTransformSelect = (transform: Transform, index: number) => {
     this.setState({
-      selectedTransformIndex: index,
-      selectedTransform: transform,
+      selectedTransform: { value: transform, index },
     });
   };
 
   renderTransformControls() {
-    const { spec, selectedTransform, selectedTransformIndex } = this.state;
+    const { spec, selectedTransform } = this.state;
 
     if (selectedTransform) {
       return (
         <FormEditor
           fields={TRANSFORM_FIELDS}
-          initValue={selectedTransform}
+          initValue={selectedTransform.value}
           onClose={this.resetSelected}
           onApply={transform =>
             this.updateSpec(
               deepSet(
                 spec,
-                `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                `spec.dataSchema.transformSpec.transforms.${selectedTransform.index}`,
                 transform,
               ),
             )
           }
-          showDelete={selectedTransformIndex !== -1}
+          showDelete={selectedTransform.index !== -1}
           onDelete={() =>
             this.updateSpec(
               deepDelete(
                 spec,
-                `spec.dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                `spec.dataSchema.transformSpec.transforms.${selectedTransform.index}`,
               ),
             )
           }
@@ -1956,8 +1943,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             text="Add column transform"
             onClick={() => {
               this.setState({
-                selectedTransformIndex: -1,
-                selectedTransform: { type: 'expression' },
+                selectedTransform: { value: { type: 'expression' }, index: -1 },
               });
             }}
           />
@@ -2064,7 +2050,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleData={data}
               columnFilter={columnFilter}
               dimensionFilters={dimensionFilters}
-              selectedFilterName={filterTableSelectedColumnName(data, selectedFilter)}
+              selectedFilterName={filterTableSelectedColumnName(data, selectedFilter?.value)}
               onFilterSelect={this.onFilterSelect}
             />
           )}
@@ -2094,8 +2080,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   text="Add column filter"
                   onClick={() => {
                     this.setState({
-                      selectedFilter: { type: 'selector', dimension: '', value: '' },
-                      selectedFilterIndex: -1,
+                      selectedFilter: { value: { type: 'selector' }, index: -1 },
                     });
                   }}
                 />
@@ -2129,33 +2114,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private readonly onFilterSelect = (filter: DruidFilter, index: number) => {
     this.setState({
-      selectedFilterIndex: index,
-      selectedFilter: filter,
+      selectedFilter: { value: filter, index },
     });
   };
 
   renderColumnFilterControls() {
-    const { spec, selectedFilter, selectedFilterIndex } = this.state;
+    const { spec, selectedFilter } = this.state;
     if (!selectedFilter) return;
 
     return (
       <FormEditor
         fields={FILTER_FIELDS}
-        initValue={selectedFilter}
+        initValue={selectedFilter.value}
         showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
         onClose={this.resetSelected}
         onApply={filter => {
           const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
           const newFilter = joinFilter(
-            deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, filter),
+            deepSet(curFilter, `dimensionFilters.${selectedFilter.index}`, filter),
           );
           this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
         }}
-        showDelete={selectedFilterIndex !== -1}
+        showDelete={selectedFilter.index !== -1}
         onDelete={() => {
           const curFilter = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
           const newFilter = joinFilter(
-            deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
+            deepDelete(curFilter, `dimensionFilters.${selectedFilter.index}`),
           );
           this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
         }}
@@ -2224,9 +2208,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       schemaQueryState,
       selectedAutoDimension,
       selectedDimensionSpec,
-      selectedDimensionSpecIndex,
       selectedMetricSpec,
-      selectedMetricSpecIndex,
     } = this.state;
     const rollup = Boolean(deepGet(spec, 'spec.dataSchema.granularitySpec.rollup'));
     const somethingSelected = Boolean(
@@ -2253,8 +2235,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleBundle={data}
               columnFilter={columnFilter}
               selectedAutoDimension={selectedAutoDimension}
-              selectedDimensionSpecIndex={selectedDimensionSpecIndex}
-              selectedMetricSpecIndex={selectedMetricSpecIndex}
+              selectedDimensionSpecIndex={selectedDimensionSpec ? selectedDimensionSpec.index : -1}
+              selectedMetricSpecIndex={selectedMetricSpec ? selectedMetricSpec.index : -1}
               onAutoDimensionSelect={this.onAutoDimensionSelect}
               onDimensionSelect={this.onDimensionSelect}
               onMetricSelect={this.onMetricSelect}
@@ -2397,9 +2379,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   disabled={dimensionMode !== 'specific'}
                   onClick={() => {
                     this.setState({
-                      selectedDimensionSpecIndex: -1,
                       selectedDimensionSpec: {
-                        type: 'string',
+                        value: {
+                          type: 'string',
+                        },
+                        index: -1,
                       },
                     });
                   }}
@@ -2410,9 +2394,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   text="Add metric"
                   onClick={() => {
                     this.setState({
-                      selectedMetricSpecIndex: -1,
                       selectedMetricSpec: {
-                        type: 'doubleSum',
+                        value: {
+                          type: 'doubleSum',
+                        },
+                        index: -1,
                       },
                     });
                   }}
@@ -2497,35 +2483,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({
       selectedAutoDimension,
       selectedDimensionSpec: undefined,
-      selectedDimensionSpecIndex: -1,
       selectedMetricSpec: undefined,
-      selectedMetricSpecIndex: -1,
     });
   };
 
-  private readonly onDimensionSelect = (
-    selectedDimensionSpec: DimensionSpec | undefined,
-    selectedDimensionSpecIndex: number,
-  ) => {
+  private readonly onDimensionSelect = (dimensionSpec: DimensionSpec, index: number) => {
     this.setState({
       selectedAutoDimension: undefined,
-      selectedDimensionSpec,
-      selectedDimensionSpecIndex,
+      selectedDimensionSpec: { value: dimensionSpec, index },
       selectedMetricSpec: undefined,
-      selectedMetricSpecIndex: -1,
     });
   };
 
-  private readonly onMetricSelect = (
-    selectedMetricSpec: MetricSpec | undefined,
-    selectedMetricSpecIndex: number,
-  ) => {
+  private readonly onMetricSelect = (metricSpec: MetricSpec, index: number) => {
     this.setState({
       selectedAutoDimension: undefined,
       selectedDimensionSpec: undefined,
-      selectedDimensionSpecIndex: -1,
-      selectedMetricSpec,
-      selectedMetricSpecIndex,
+      selectedMetricSpec: { value: metricSpec, index },
     });
   };
 
@@ -2629,21 +2603,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderDimensionSpecControls() {
-    const { spec, selectedDimensionSpec, selectedDimensionSpecIndex } = this.state;
+    const { spec, selectedDimensionSpec } = this.state;
     if (!selectedDimensionSpec) return;
     const dimensionMode = getDimensionMode(spec);
 
     const dimensions = deepGet(spec, `spec.dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
     const moveTo = (newIndex: number) => {
-      const newDimension = moveElement(dimensions, selectedDimensionSpecIndex, newIndex);
+      const newDimension = moveElement(dimensions, selectedDimensionSpec.index, newIndex);
       const newSpec = deepSet(spec, `spec.dataSchema.dimensionsSpec.dimensions`, newDimension);
       this.updateSpec(newSpec);
       this.resetSelected();
     };
 
     const reorderDimensionMenu = (
-      <ReorderMenu things={dimensions} selectedIndex={selectedDimensionSpecIndex} moveTo={moveTo} />
+      <ReorderMenu
+        things={dimensions}
+        selectedIndex={selectedDimensionSpec.index}
+        moveTo={moveTo}
+      />
     );
 
     const convertToMetric = (type: string, prefix: string) => {
@@ -2651,14 +2629,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         dimensionMode === 'specific'
           ? deepDelete(
               spec,
-              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpec.index}`,
             )
           : spec;
 
       const specWithMetric = deepSet(specWithoutDimension, `spec.dataSchema.metricsSpec.[append]`, {
-        name: `${prefix}_${selectedDimensionSpec.name}`,
+        name: `${prefix}_${selectedDimensionSpec.value.name}`,
         type,
-        fieldName: selectedDimensionSpec.name,
+        fieldName: selectedDimensionSpec.value.name,
       });
 
       this.updateSpec(specWithMetric);
@@ -2697,29 +2675,29 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <FormEditor
         fields={DIMENSION_SPEC_FIELDS}
-        initValue={selectedDimensionSpec}
+        initValue={selectedDimensionSpec.value}
         onClose={this.resetSelected}
         onApply={dimensionSpec =>
           this.updateSpec(
             deepSet(
               spec,
-              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpec.index}`,
               dimensionSpec,
             ),
           )
         }
-        showDelete={selectedDimensionSpecIndex !== -1}
+        showDelete={selectedDimensionSpec.index !== -1}
         disableDelete={dimensions.length <= 1}
         onDelete={() =>
           this.updateSpec(
             deepDelete(
               spec,
-              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpec.index}`,
             ),
           )
         }
       >
-        {selectedDimensionSpecIndex !== -1 && (
+        {selectedDimensionSpec.index !== -1 && (
           <FormGroup>
             <Popover2 content={reorderDimensionMenu}>
               <Button
@@ -2730,7 +2708,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </Popover2>
           </FormGroup>
         )}
-        {selectedDimensionSpecIndex !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
+        {selectedDimensionSpec.index !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
           <FormGroup>
             <Popover2 content={convertToMetricMenu}>
               <Button
@@ -2747,16 +2725,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderMetricSpecControls() {
-    const { spec, selectedMetricSpec, selectedMetricSpecIndex } = this.state;
+    const { spec, selectedMetricSpec } = this.state;
     if (!selectedMetricSpec) return;
     const dimensionMode = getDimensionMode(spec);
-    const selectedMetricSpecFieldName = selectedMetricSpec.fieldName;
+    const selectedMetricSpecFieldName = selectedMetricSpec.value.fieldName;
 
     const convertToDimension = (type: string) => {
       if (!selectedMetricSpecFieldName) return;
       const specWithoutMetric = deepDelete(
         spec,
-        `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
+        `spec.dataSchema.metricsSpec.${selectedMetricSpec.index}`,
       );
 
       const specWithDimension = deepSet(
@@ -2784,21 +2762,21 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <FormEditor
         fields={METRIC_SPEC_FIELDS}
-        initValue={selectedMetricSpec}
+        initValue={selectedMetricSpec.value}
         onClose={this.resetSelected}
         onApply={metricSpec =>
           this.updateSpec(
-            deepSet(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`, metricSpec),
+            deepSet(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpec.index}`, metricSpec),
           )
         }
-        showDelete={selectedMetricSpecIndex !== -1}
+        showDelete={selectedMetricSpec.index !== -1}
         onDelete={() =>
           this.updateSpec(
-            deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
+            deepDelete(spec, `spec.dataSchema.metricsSpec.${selectedMetricSpec.index}`),
           )
         }
       >
-        {selectedMetricSpecIndex !== -1 &&
+        {selectedMetricSpec.index !== -1 &&
           dimensionMode === 'specific' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
