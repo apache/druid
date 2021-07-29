@@ -447,14 +447,14 @@ public class CompactSegments implements CoordinatorDuty
     Map<String, CompactionStatistics> allSkippedStatistics = iterator.totalSkippedStatistics();
     for (Map.Entry<String, CompactionStatistics> compactionStatisticsEntry : allSkippedStatistics.entrySet()) {
       final String dataSource = compactionStatisticsEntry.getKey();
-      final CompactionStatistics dataSourceCompactedStatistics = compactionStatisticsEntry.getValue();
+      final CompactionStatistics dataSourceSkippedStatistics = compactionStatisticsEntry.getValue();
       AutoCompactionSnapshot.Builder builder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
           dataSource,
           k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
       );
-      builder.incrementBytesSkipped(dataSourceCompactedStatistics.getByteSum());
-      builder.incrementSegmentCountSkipped(dataSourceCompactedStatistics.getSegmentNumberCountSum());
-      builder.incrementIntervalCountSkipped(dataSourceCompactedStatistics.getSegmentIntervalCountSum());
+      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getByteSum());
+      builder.incrementSegmentCountSkipped(dataSourceSkippedStatistics.getSegmentNumberCountSum());
+      builder.incrementIntervalCountSkipped(dataSourceSkippedStatistics.getSegmentIntervalCountSum());
     }
 
     for (Map.Entry<String, AutoCompactionSnapshot.Builder> autoCompactionSnapshotBuilderEntry : currentRunAutoCompactionSnapshotBuilders.entrySet()) {
