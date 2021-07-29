@@ -22,10 +22,12 @@ package org.apache.druid.spark.clients
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.google.common.net.HostAndPort
 import org.apache.druid.java.util.common.{IAE, ISE, Intervals, JodaUtils, StringUtils}
-import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler, StringFullResponseHolder}
+import org.apache.druid.java.util.http.client.response.{StringFullResponseHandler,
+  StringFullResponseHolder}
 import org.apache.druid.java.util.http.client.{HttpClient, Request}
 import org.apache.druid.query.Druids
-import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis, SegmentMetadataQuery}
+import org.apache.druid.query.metadata.metadata.{ColumnAnalysis, SegmentAnalysis,
+  SegmentMetadataQuery}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.spark.mixins.Logging
@@ -35,7 +37,9 @@ import org.joda.time.{Duration, Interval}
 import java.net.URL
 import java.util.{List => JList}
 import javax.ws.rs.core.MediaType
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
+import scala.annotation.tailrec
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter,
+  mapAsScalaMapConverter, seqAsJavaListConverter}
 
 /**
   * Going with SegmentMetadataQueries despite the significant overhead because there's no other way
@@ -116,6 +120,16 @@ class DruidClient(
     }
   }
 
+  /*
+   * Marking this method as tail recursive because it is for now. If a finally block,
+   * special error handling, or more involved set up and tear down code is added, this
+   * method may no longer be tail recursive and so compilation will fail. Because the
+   * number of retries is user-configurable and will likely be relatively small,
+   * latency in communication with a Druid cluster for Segment Metadata will be dominated
+   * by the query time, and Scala will optimize tail recursive calls regardless of annotation,
+   * future developers shouldn't be concerned if they need to remove this annotation.
+   */
+  @tailrec
   private def sendRequestWithRetry(
                                     url: String,
                                     retryCount: Int,
