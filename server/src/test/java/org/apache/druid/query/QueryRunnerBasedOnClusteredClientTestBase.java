@@ -46,6 +46,7 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -108,7 +109,11 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
 
   protected QueryRunnerBasedOnClusteredClientTestBase()
   {
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER, USE_PARALLEL_MERGE_POOL_CONFIGURED);
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
+        CLOSER,
+        USE_PARALLEL_MERGE_POOL_CONFIGURED,
+        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+    );
 
     toolChestWarehouse = new QueryToolChestWarehouse()
     {
