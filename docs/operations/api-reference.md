@@ -187,9 +187,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of datasources with at least one used segment in the cluster.
-
-This method reads from the metadata database, whereas `/druid/coordinator/v1/datasources` reads from the cached server view held by the coordinator that is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
+Returns a list of the names of datasources with at least one used segment in the cluster, retrieved from the metadata database. Users should call this API to get the eventual state that the system will be in.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
