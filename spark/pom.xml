@@ -34,7 +34,7 @@
     </parent>
 
     <properties>
-        <scala.version>2.12.12</scala.version>
+        <scala.version>${scala.major.version}.12</scala.version>
         <scala.major.version>2.12</scala.major.version>
         <spark.version>2.4.8</spark.version>
         <!-- These two properties allow -Dcheckstyle.skip to suppress scalastyle checks as well -->

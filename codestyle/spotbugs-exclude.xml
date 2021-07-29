@@ -46,7 +46,7 @@
     </Match>
     <!-- Spot Bugs doesn't work for Scala -->
     <Match>
-        <Package name="~org\.apache\.druid.spark.*"/>
+        <Package name="~org\.apache\.druid\.spark.*"/>
     </Match>
 
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
