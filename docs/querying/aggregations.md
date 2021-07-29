@@ -128,6 +128,8 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 Computes and returns arithmetic mean of a column values as 64 bit float value. `doubleMean` is a query time aggregator only. It is not available for indexing.
 
+To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-quantiles.html#aggregator) from the DataSketches extension.
+
 ```json
 { "type" : "doubleMean", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
