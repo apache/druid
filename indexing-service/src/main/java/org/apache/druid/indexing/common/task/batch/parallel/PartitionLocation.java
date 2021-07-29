@@ -33,7 +33,7 @@ import java.util.Objects;
  * This class represents the intermediary data server where the partition of {@link #interval} and
  * {@link #getBucketId()} is stored.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionLocation.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "generic", value = GenericPartitionLocation.class),
     @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionLocation.class)

@@ -33,7 +33,7 @@ import java.util.Objects;
  * set of data of the same time chunk (primary partition key) and the same secondary partition key
  * ({@link T}). This class holds the statistics of a single partition created by a task.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionStat.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "generic", value = GenericPartitionStat.class),
     @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionStat.class)

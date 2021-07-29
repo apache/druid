@@ -39,6 +39,12 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   public static final String SHUFFLE_DATA_DIR_PREFIX = "shuffle-data";
   private final DataSegmentPusher dataSegmentPusher;
 
+  @Inject
+  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher)
+  {
+    this.dataSegmentPusher = dataSegmentPusher;
+  }
+
   @Override
   public DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
@@ -51,12 +57,6 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
         bucketNumberedShardSpec.getBucketId() // we must use the bucket ID instead of partition ID
     );
     return dataSegmentPusher.pushToPath(segmentDir, segment, SHUFFLE_DATA_DIR_PREFIX + "/" + partitionFilePath);
-  }
-
-  @Inject
-  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher)
-  {
-    this.dataSegmentPusher = dataSegmentPusher;
   }
 
   @Override
