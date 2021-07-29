@@ -25,7 +25,15 @@ describe('FormEditor', () => {
   it('matches snapshot', () => {
     const applyCancelButtons = (
       <FormEditor
-        fields={[]}
+        fields={[
+          {
+            name: 'type',
+            label: 'Input format',
+            type: 'string',
+            required: true,
+            info: 'Info',
+          },
+        ]}
         initValue={{}}
         onClose={() => {}}
         onDirty={() => {}}
