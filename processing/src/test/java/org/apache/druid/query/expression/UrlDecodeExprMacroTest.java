@@ -19,15 +19,26 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.virtual.ExpressionPlannerTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 public class UrlDecodeExprMacroTest extends MacroTestBase
 {
+
+  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(ImmutableList.of(new UrlDecodeExprMacro()));
 
   public UrlDecodeExprMacroTest()
   {
@@ -43,13 +54,32 @@ public class UrlDecodeExprMacroTest extends MacroTestBase
   @Test
   public void testEmpty()
   {
-    Assert.assertNull(eval(""));
+    // allow test to work if property is set or not set
+    if (System.getProperty("druid.generic.useDefaultValueForNull") != null) {
+      Assert.assertEquals("", eval(""));
+    } else {
+      Assert.assertNull(eval(""));
+    }
   }
 
   @Test
   public void testBlank()
   {
     Assert.assertEquals(" ", eval(" "));
+  }
+
+  @Test(expected = IAE.class)
+  public void testInvalidNoArguments()
+  {
+    Expr expr = apply(Collections.emptyList());
+    expr.eval(ExprUtils.nilBindings());
+  }
+
+  @Test(expected = IAE.class)
+  public void testInvalidNumberOfArguments()
+  {
+    Expr expr = apply(Arrays.asList(ExprEval.of("a").toExpr(), ExprEval.of("b").toExpr()));
+    expr.eval(ExprUtils.nilBindings());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -80,6 +110,28 @@ public class UrlDecodeExprMacroTest extends MacroTestBase
   public void testInvalid()
   {
     Assert.assertEquals("http://druid.apache.org/", eval("http://druid.apache.org/%"));
+  }
+
+
+  @Test
+  public void testBindings()
+  {
+    Expr.ObjectBinding bindings = InputBindings.withMap(
+        ImmutableMap.<String, Object>builder()
+                    .put("url", "http://druid.apache.org/a/b/c%20c")
+                    .put("url_empty", "")
+                    .put("number", 27L)
+                    .build()
+    );
+
+    Expr expr = Parser.parse("urldecode(url)", MACRO_TABLE);
+
+    Assert.assertEquals(ExprType.STRING, expr.getOutputType(ExpressionPlannerTest.SYNTHETIC_INSPECTOR));
+
+    Assert.assertEquals("http://druid.apache.org/a/b/c c", Parser.parse("urldecode(url)", MACRO_TABLE).eval(bindings).value());
+
+    Assert.assertEquals(null, Parser.parse("urldecode(url_empty)", MACRO_TABLE).eval(bindings).value());
+    Assert.assertEquals(null, Parser.parse("urldecode(number)", MACRO_TABLE).eval(bindings).value());
   }
 
   private Object eval(String url)

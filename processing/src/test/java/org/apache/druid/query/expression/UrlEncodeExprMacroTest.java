@@ -19,15 +19,26 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.virtual.ExpressionPlannerTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 public class UrlEncodeExprMacroTest extends MacroTestBase
 {
+
+  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(ImmutableList.of(new UrlEncodeExprMacro()));
 
   public UrlEncodeExprMacroTest()
   {
@@ -43,7 +54,12 @@ public class UrlEncodeExprMacroTest extends MacroTestBase
   @Test
   public void testEmpty()
   {
-    Assert.assertNull(eval(""));
+    // allow test to work if property is set or not set
+    if (System.getProperty("druid.generic.useDefaultValueForNull") != null) {
+      Assert.assertEquals("", eval(""));
+    } else {
+      Assert.assertNull(eval(""));
+    }
   }
 
   @Test
@@ -67,6 +83,40 @@ public class UrlEncodeExprMacroTest extends MacroTestBase
     Assert.assertEquals("a+b", eval("a b"));
   }
 
+  @Test(expected = IAE.class)
+  public void testInvalidNoArguments()
+  {
+    Expr expr = apply(Collections.emptyList());
+    expr.eval(ExprUtils.nilBindings());
+  }
+
+  @Test(expected = IAE.class)
+  public void testInvalidNumberOfArguments()
+  {
+    Expr expr = apply(Arrays.asList(ExprEval.of("a").toExpr(), ExprEval.of("b").toExpr()));
+    expr.eval(ExprUtils.nilBindings());
+  }
+
+  @Test
+  public void testBindings()
+  {
+    Expr.ObjectBinding bindings = InputBindings.withMap(
+        ImmutableMap.<String, Object>builder()
+                    .put("url", "http://druid.apache.org")
+                    .put("url_empty", "")
+                    .put("number", 27L)
+                    .build()
+    );
+
+    Expr expr = Parser.parse("urlencode(url)", MACRO_TABLE);
+
+    Assert.assertEquals(ExprType.STRING, expr.getOutputType(ExpressionPlannerTest.SYNTHETIC_INSPECTOR));
+
+    Assert.assertEquals("http%3A%2F%2Fdruid.apache.org", expr.eval(bindings).value());
+
+    Assert.assertEquals(null, Parser.parse("urlencode(url_empty)", MACRO_TABLE).eval(bindings).value());
+    Assert.assertEquals(null, Parser.parse("urlencode(number)", MACRO_TABLE).eval(bindings).value());
+  }
 
   private Object eval(String url)
   {
