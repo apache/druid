@@ -495,8 +495,9 @@ public class DruidSchema extends AbstractSchema
             } else {
               if (segmentsMap.remove(segment.getId()) == null) {
                 log.warn("Unknown segment[%s] was removed from the cluster. Ignoring this event.", segment.getId());
+              } else {
+                totalSegments--;
               }
-              totalSegments--;
               if (segmentsMap.isEmpty()) {
                 tables.remove(segment.getDataSource());
                 log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
