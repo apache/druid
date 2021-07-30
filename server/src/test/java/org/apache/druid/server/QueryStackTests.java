@@ -272,7 +272,7 @@ public class QueryStackTests
       final Closer closer,
       final DruidProcessingConfig processingConfig,
       final Supplier<Integer> minTopNThresholdSupplier
-      )
+  )
   {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
