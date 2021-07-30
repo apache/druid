@@ -958,6 +958,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               .build(),
           };
     }
+
+    public static Map<String, Object> withOverrides(Map<String, Object> originalContext, Map<String, Object> overrides)
+    {
+      Map<String, Object> contextWithOverrides = new HashMap<>(originalContext);
+      contextWithOverrides.putAll(overrides);
+      return contextWithOverrides;
+    }
   }
 
   protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)

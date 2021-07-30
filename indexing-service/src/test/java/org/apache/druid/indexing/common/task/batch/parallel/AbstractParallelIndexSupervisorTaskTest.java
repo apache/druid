@@ -26,7 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
+import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -66,6 +66,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -229,7 +230,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner();
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalIndexingServiceClient(objectMapper, taskRunner);
-    intermediaryDataManager = new IntermediaryDataManager(
+    intermediaryDataManager = new LocalIntermediaryDataManager(
         new WorkerConfig(),
         new TaskConfig(
             null,
@@ -717,19 +718,19 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         P location
     ) throws IOException
     {
-      final File zippedFile = intermediaryDataManager.findPartitionFile(
+      final java.util.Optional<ByteSource> zippedFile = intermediaryDataManager.findPartitionFile(
           supervisorTaskId,
           location.getSubTaskId(),
           location.getInterval(),
           location.getBucketId()
       );
-      if (zippedFile == null) {
+      if (!zippedFile.isPresent()) {
         throw new ISE("Can't find segment file for location[%s] at path[%s]", location);
       }
       final File fetchedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
       FileUtils.writeAtomically(
           fetchedFile,
-          out -> Files.asByteSource(zippedFile).copyTo(out)
+          out -> zippedFile.get().copyTo(out)
       );
       return fetchedFile;
     }

@@ -67,6 +67,7 @@ public class QueryContexts
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
   public static final String LOG_QUERY_EXCEPTION_STACK_TRACE_KEY = "logQueryExceptionStackTrace";
   public static final String BY_SEGMENT_KEY = "bySegment";
+  public static final String BROKER_SERVICE_NAME = "brokerService";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -415,6 +416,11 @@ public class QueryContexts
   public static <T> boolean allowReturnPartialResults(Query<T> query, boolean defaultValue)
   {
     return query.getContextBoolean(RETURN_PARTIAL_RESULTS_KEY, defaultValue);
+  }
+
+  public static <T> String getBrokerServiceName(Query<T> query)
+  {
+    return query.getContextValue(BROKER_SERVICE_NAME);
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)
