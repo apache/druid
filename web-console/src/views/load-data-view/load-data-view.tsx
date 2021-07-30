@@ -209,12 +209,27 @@ function showRawLine(line: SampleEntry): string {
 }
 
 function showDruidLine(line: SampleEntry): string {
-  if (!line.parsed) return 'No parse';
-  return `Druid row: ${JSONBig.stringify(line.parsed)}`;
+  if (!line.input) return 'Invalid row';
+  return `Druid row: ${JSONBig.stringify(line.input)}`;
 }
 
 function showBlankLine(line: SampleEntry): string {
   return line.parsed ? `[Row: ${JSONBig.stringify(line.parsed)}]` : '[Binary data]';
+}
+
+function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolean): string {
+  if (sampleEntries.length) {
+    if (isDruidSource) {
+      return sampleEntries.map(showDruidLine).join('\n');
+    }
+
+    return (sampleEntries.every(l => !l.parsed)
+      ? sampleEntries.map(showBlankLine)
+      : sampleEntries.map(showRawLine)
+    ).join('\n');
+  } else {
+    return 'No data returned from sampler';
+  }
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
@@ -1128,7 +1143,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       inputQueryState: new QueryState({ data: sampleResponse }),
     };
     if (isDruidSource(spec)) {
-      deltaState.cacheRows = getCacheRowsFromSampleResponse(sampleResponse, true);
+      deltaState.cacheRows = getCacheRowsFromSampleResponse(sampleResponse);
     }
     this.setState(deltaState as LoadDataViewState);
   }
@@ -1164,22 +1179,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else {
       const data = inputQueryState.getSomeData();
       const inputData = data ? data.data : undefined;
+
       mainFill = (
         <>
           {inputData && (
             <TextArea
               className="raw-lines"
               readOnly
-              value={
-                inputData.length
-                  ? (inputData.every(l => !l.parsed)
-                      ? inputData.map(showBlankLine)
-                      : druidSource
-                      ? inputData.map(showDruidLine)
-                      : inputData.map(showRawLine)
-                    ).join('\n')
-                  : 'No data returned from sampler'
-              }
+              value={formatSampleEntries(inputData, druidSource)}
             />
           )}
           {inputQueryState.isLoading() && <Loader />}

@@ -101,12 +101,8 @@ function dedupe(xs: string[]): string[] {
   });
 }
 
-export function getCacheRowsFromSampleResponse(
-  sampleResponse: SampleResponse,
-  useParsed = false,
-): CacheRows {
-  const key = useParsed ? 'parsed' : 'input';
-  return filterMap(sampleResponse.data, d => d[key]).slice(0, 20);
+export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
+  return filterMap(sampleResponse.data, d => d.input).slice(0, 20);
 }
 
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
