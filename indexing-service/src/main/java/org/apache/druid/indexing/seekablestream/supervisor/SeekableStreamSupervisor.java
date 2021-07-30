@@ -274,6 +274,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private interface Notice
   {
+    /**
+     * Returns a descriptive label for this notice type. Used for metrics emission and logging.
+     *
+     * @return task type label
+     */
+    String getType();
+
     void handle() throws ExecutionException, InterruptedException, TimeoutException;
   }
 
@@ -312,6 +319,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class RunNotice implements Notice
   {
+    private static final String TYPE = "run_notice";
+
     @Override
     public void handle()
     {
@@ -323,12 +332,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       runInternal();
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   // change taskCount without resubmitting.
   private class DynamicAllocationTasksNotice implements Notice
   {
     Callable<Integer> scaleAction;
+    private static final String TYPE = "dynamic_allocation_tasks_notice";
 
     DynamicAllocationTasksNotice(Callable<Integer> scaleAction)
     {
@@ -381,6 +397,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
         }
       }
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
     }
   }
 
@@ -458,6 +480,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class ShutdownNotice implements Notice
   {
+    private static final String TYPE = "shutdown_notice";
+
     @Override
     public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
@@ -468,11 +492,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         stopLock.notifyAll();
       }
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   private class ResetNotice implements Notice
   {
     final DataSourceMetadata dataSourceMetadata;
+    private static final String TYPE = "reset_notice";
 
     ResetNotice(DataSourceMetadata dataSourceMetadata)
     {
@@ -484,12 +515,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       resetInternal(dataSourceMetadata);
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   protected class CheckpointNotice implements Notice
   {
     private final int taskGroupId;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata;
+    private static final String TYPE = "checkpoint_notice";
 
     CheckpointNotice(
         int taskGroupId,
@@ -559,6 +597,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       return true;
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
     }
   }
 
@@ -908,7 +952,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     notice.handle();
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
-                    log.debug("Handled notice [%s] from notices queue in [%d] ms, current notices queue size [%d]", notice.getClass().getName(), timeElapsed.toMillis(), getNoticesQueueSize());
+                    String noticeType = notice.getType();
+                    log.debug("Handled notice [%s] from notices queue in [%d] ms, current notices queue size [%d] for datasource [%s]", noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource);
+                    emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
                     stateManager.recordThrowableEvent(e);
@@ -3588,6 +3634,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * default implementation, schedules periodic fetch of latest offsets and {@link #emitLag} reporting for Kafka and Kinesis
+   * and periodic reporting of {@Link #emitNoticesQueueSize} for various data sources.
    */
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
   {
@@ -3606,6 +3653,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     reportingExec.scheduleAtFixedRate(
         this::emitLag,
+        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
+        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        TimeUnit.MILLISECONDS
+    );
+    reportingExec.scheduleAtFixedRate(
+        this::emitNoticesQueueSize,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
         spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
         TimeUnit.MILLISECONDS
@@ -3656,6 +3709,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
     return earliestOffset != null
            && makeSequenceNumber(earliestOffset).compareTo(makeSequenceNumber(offsetFromMetadata)) <= 0;
+  }
+
+  protected void emitNoticeProcessTime(String noticeType, long timeInMillis)
+  {
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+              .setDimension("noticeType", noticeType)
+              .setDimension("dataSource", dataSource)
+              .build("ingest/notices/time", timeInMillis)
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit notices process time");
+    }
+  }
+
+  protected void emitNoticesQueueSize()
+  {
+    if (spec.isSuspended()) {
+      // don't emit metrics if supervisor is suspended
+      return;
+    }
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+              .setDimension("dataSource", dataSource)
+              .build("ingest/notices/queueSize", getNoticesQueueSize())
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit notices queue size");
+    }
   }
 
   protected void emitLag()
