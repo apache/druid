@@ -127,7 +127,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   public void failsInFirstPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
-        newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
                 "test_*",
                 new HashedPartitionsSpec(null, null, // num shards is null to force it to go to first phase
                                          ImmutableList.of("dim1", "dim2")
@@ -146,7 +146,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-1]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -155,7 +155,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   public void failsInSecondPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
-        newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
                 "test_*",
                 new HashedPartitionsSpec(null, 3,
                                          ImmutableList.of("dim1", "dim2")
@@ -174,7 +174,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-2]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -183,12 +183,18 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   public void failsInThirdPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
-        newTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT, null, INTERVAL_TO_INDEX, inputDir,
+        createTestTask(TIMESTAMP_SPEC, DIMENSIONS_SPEC, INPUT_FORMAT,
+                null,
+                INTERVAL_TO_INDEX,
+                inputDir,
                 "test_*",
                 new HashedPartitionsSpec(null, 3,
                                          ImmutableList.of("dim1", "dim2")
                 ),
-                2, false, true, 1
+                2,
+                false,
+                true,
+                1
         );
 
     final TaskActionClient actionClient = createActionClient(task);
@@ -203,8 +209,95 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-3]. See task logs for details.",
         taskStatus.getErrorMsg()
+    );
+  }
+
+  private ParallelIndexSupervisorTask createTestTask(
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable ParseSpec parseSpec,
+      Interval interval,
+      File inputDir,
+      String filter,
+      PartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks,
+      boolean appendToExisting,
+      boolean useInputFormatApi,
+      int succeedsBeforeFailing
+  )
+  {
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
+        SEGMENT_GRANULARITY,
+        Granularities.MINUTE,
+        interval == null ? null : Collections.singletonList(interval)
+    );
+
+    ParallelIndexTuningConfig tuningConfig = newTuningConfig(
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        !appendToExisting
+    );
+
+    final ParallelIndexIngestionSpec ingestionSpec;
+
+    if (useInputFormatApi) {
+      Preconditions.checkArgument(parseSpec == null);
+      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new LocalInputSource(inputDir, filter),
+          inputFormat,
+          appendToExisting,
+          null
+      );
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              DATASOURCE,
+              timestampSpec,
+              dimensionsSpec,
+              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
+              granularitySpec,
+              null
+          ),
+          ioConfig,
+          tuningConfig
+      );
+    } else {
+      Preconditions.checkArgument(inputFormat == null);
+      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          new LocalFirehoseFactory(inputDir, filter, null),
+          appendToExisting
+      );
+      //noinspection unchecked
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              getObjectMapper().convertValue(
+                  new StringInputRowParser(parseSpec, null),
+                  Map.class
+              ),
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              granularitySpec,
+              null,
+              getObjectMapper()
+          ),
+          ioConfig,
+          tuningConfig
+      );
+    }
+
+    return new ParallelIndexSupervisorTaskTest(
+        null,
+        null,
+        null,
+        ingestionSpec,
+        null,
+        Collections.emptyMap(),
+        succeedsBeforeFailing
     );
   }
 
@@ -221,7 +314,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         @Nullable String baseSubtaskSpecName,
         Map<String, Object> context,
         int succedsBeforeFailing
-
     )
     {
       super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
@@ -234,14 +326,29 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
     )
     {
-      if (numRuns < succeedsBeforeFailing) {
-        numRuns++;
-        return (ParallelIndexTaskRunner<T, R>)
-            new TestRunner(true);
+
+      // for the hash partition task it is kind of hacky to figure out what is the failure phase
+      // basically we force the failure in first phase by having numShards being null (this is
+      // determined by the implementation of the run method -- which may change and suddenly this test
+      // will break requiring messing with the logic below).
+      // For the other two subsequent failures we need to have numShards non-null, so it bypasses
+      // the first failure, so the conditions for failure in the different phase are given below:
+      ParallelIndexTaskRunner<T, R> retVal;
+      if (succeedsBeforeFailing == 0
+          && this.getIngestionSchema().getTuningConfig().getNumShards() == null) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-1");
+      } else if (succeedsBeforeFailing == 0
+                 && this.getIngestionSchema().getTuningConfig().getNumShards() != null) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-2");
+      } else if (succeedsBeforeFailing == 1
+                 && numRuns == 1
+                 && this.getIngestionSchema().getTuningConfig().getNumShards() != null) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-3");
       } else {
-        return (ParallelIndexTaskRunner<T, R>)
-            new TestRunner(false);
+        numRuns++;
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, "SUCCESFUL-PHASE");
       }
+      return retVal;
     }
   }
 
@@ -249,19 +356,25 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       implements ParallelIndexTaskRunner<PartialDimensionCardinalityTask, DimensionCardinalityReport>
   {
 
-    // These variables are at the class level since they are used to control after how many invocations of
+    // These variables are at the class level since they are used to controlling after how many invocations of
     // run the runner should fail
     private final boolean succeeds;
+    private final String phase;
 
-    TestRunner(boolean succeeds)
+    TestRunner(boolean succeeds, String phase)
     {
       this.succeeds = succeeds;
+      this.phase = phase;
     }
 
     @Override
     public String getName()
     {
-      return StringUtils.format("TestRunner[%s]", succeeds);
+      if (succeeds) {
+        return StringUtils.format(phase);
+      } else {
+        return StringUtils.format(phase);
+      }
     }
 
     @Override
@@ -344,92 +457,5 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
 
   }
 
-  protected ParallelIndexSupervisorTask newTask(
-      @Nullable TimestampSpec timestampSpec,
-      @Nullable DimensionsSpec dimensionsSpec,
-      @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
-      Interval interval,
-      File inputDir,
-      String filter,
-      PartitionsSpec partitionsSpec,
-      int maxNumConcurrentSubTasks,
-      boolean appendToExisting,
-      boolean useInputFormatApi,
-      int succeedsBeforeFailing
-
-  )
-  {
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        SEGMENT_GRANULARITY,
-        Granularities.MINUTE,
-        interval == null ? null : Collections.singletonList(interval)
-    );
-
-    ParallelIndexTuningConfig tuningConfig = newTuningConfig(
-        partitionsSpec,
-        maxNumConcurrentSubTasks,
-        !appendToExisting
-    );
-
-    final ParallelIndexIngestionSpec ingestionSpec;
-
-    if (useInputFormatApi) {
-      Preconditions.checkArgument(parseSpec == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
-          new LocalInputSource(inputDir, filter),
-          inputFormat,
-          appendToExisting,
-          null
-      );
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-              granularitySpec,
-              null
-          ),
-          ioConfig,
-          tuningConfig
-      );
-    } else {
-      Preconditions.checkArgument(inputFormat == null);
-      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDir, filter, null),
-          appendToExisting
-      );
-      //noinspection unchecked
-      ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "dataSource",
-              getObjectMapper().convertValue(
-                  new StringInputRowParser(parseSpec, null),
-                  Map.class
-              ),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec,
-              null,
-              getObjectMapper()
-          ),
-          ioConfig,
-          tuningConfig
-      );
-    }
-
-    return new ParallelIndexSupervisorTaskTest(
-        null,
-        null,
-        null,
-        ingestionSpec,
-        null,
-        Collections.emptyMap(),
-        succeedsBeforeFailing
-    );
-  }
 
 }

@@ -137,7 +137,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-1]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -177,7 +177,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-2]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -217,7 +217,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(
-        "Failed in phase[TestRunner[false]]. See task logs for details.",
+        "Failed in phase[PHASE-3]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
@@ -263,18 +263,29 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
     )
     {
-      ParallelIndexTaskRunner<T, R> runner;
-      // to make the code go through first runner needs to return a suitable non-empty report
-      // and the second & third runners are fine by returning an empty report
-      if (numRuns < succeedsBeforeFailing && numRuns == 0) {
-        runner = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, firstMap);
-      } else {
-        runner = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap);
-      }
-      numRuns++;
-      return runner;
-    }
 
+      // Below are the conditions to determine phase:
+      ParallelIndexTaskRunner<T, R> retVal;
+      if (succeedsBeforeFailing == 0) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, firstMap, "PHASE-1");
+      } else if (succeedsBeforeFailing == 1
+                 && numRuns == 1) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap, "PHASE-2");
+      } else if (succeedsBeforeFailing == 2
+                 && numRuns == 2) {
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, secondMap, "PHASE-3");
+      } else {
+        numRuns++;
+        Map<String, DimensionDistributionReport> map;
+        if (numRuns < 2) {
+          map = firstMap;
+        } else {
+          map = secondMap;
+        }
+        retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(true, map, "SUCCESFUL-PHASE");
+      }
+      return retVal;
+    }
   }
 
   static class TestRunner
@@ -282,19 +293,25 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
   {
 
     private final boolean succeeds;
+    private final String phase;
 
     private final Map<String, DimensionDistributionReport> distributionMap;
 
-    TestRunner(boolean succeeds, Map<String, DimensionDistributionReport> distributionMap)
+    TestRunner(boolean succeeds, Map<String, DimensionDistributionReport> distributionMap, String phase)
     {
       this.succeeds = succeeds;
       this.distributionMap = distributionMap;
+      this.phase = phase;
     }
 
     @Override
     public String getName()
     {
-      return StringUtils.format("TestRunner[%s]", succeeds);
+      if (succeeds) {
+        return StringUtils.format(phase);
+      } else {
+        return StringUtils.format(phase);
+      }
     }
 
     @Override

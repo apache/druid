@@ -569,7 +569,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.success(getId());
     } else {
       // there is only success or failure after running....
-      Preconditions.checkState(state.isFailure());
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
       final String errorMessage = StringUtils.format(
           TASK_PHASE_FAILURE_MSG,
           runner.getName()
@@ -733,7 +733,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.success(getId());
     } else {
       // there is only success or failure after running....
-      Preconditions.checkState(state.isFailure());
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
       String errMsg = StringUtils.format(
           TASK_PHASE_FAILURE_MSG,
           mergeRunner.getName()
@@ -818,7 +818,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.success(getId());
     } else {
       // there is only success or failure after running....
-      Preconditions.checkState(mergeState.isFailure());
+      Preconditions.checkState(mergeState.isFailure(), "Unrecognized state after task is complete[%s]", mergeState);
       String errMsg = StringUtils.format(
           TASK_PHASE_FAILURE_MSG,
           mergeRunner.getName()
