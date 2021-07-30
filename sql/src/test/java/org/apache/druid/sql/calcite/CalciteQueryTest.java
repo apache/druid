@@ -380,12 +380,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new QueryDataSource(
                             GroupByQuery.builder()
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                                .setGranularity(Granularities.ALL)
-                                .setDimFilter(new NotDimFilter(new SelectorDimFilter("dim4", "a", null)))
-                                .setDataSource(new TableDataSource("numfoo"))
-                                .setDimensions(new DefaultDimensionSpec("dim4", "_d0"))
-                                .setContext(context)
-                                .build()
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimFilter(new NotDimFilter(new SelectorDimFilter("dim4", "a", null)))
+                                        .setDataSource(new TableDataSource("numfoo"))
+                                        .setDimensions(new DefaultDimensionSpec("dim4", "_d0"))
+                                        .setContext(context)
+                                        .build()
                         ),
                         "j0.",
                         "(\"dim4\" == \"j0._d0\")",
