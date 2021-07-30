@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.vavr.collection.Stream;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,7 +42,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -51,6 +49,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -81,7 +80,7 @@ public class BalancerStrategyBenchmark
   );
 
   @Setup(Level.Trial)
-  public void setup() throws IOException
+  public void setup()
   {
     switch (mode) {
       case "50percentOfSegmentsToConsiderPerMove":
@@ -94,7 +93,7 @@ public class BalancerStrategyBenchmark
     }
     
     List<List<DataSegment>> segmentList = new ArrayList<>(NUMBER_OF_SERVERS);
-    Stream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));
+    IntStream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));
     for (int i = 0; i < numberOfSegments; i++) {
       segmentList.get(RANDOM.nextInt(NUMBER_OF_SERVERS)).add(
           new DataSegment(
