@@ -65,6 +65,7 @@ public class QueryContexts
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   public static final String USE_CACHE_KEY = "useCache";
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
+  public static final String LOG_QUERY_EXCEPTION_STACK_TRACE_KEY = "logQueryExceptionStackTrace";
   public static final String BY_SEGMENT_KEY = "bySegment";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -87,6 +88,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
+  public static final boolean DEFAULT_LOG_QUERY_EXCEPTION_STACK_TRACE = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -319,6 +321,11 @@ public class QueryContexts
   public static <T> boolean isSecondaryPartitionPruningEnabled(Query<T> query)
   {
     return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
+  }
+
+  public static <T> boolean isLogQueryExceptionStackTrace(Query<T> query)
+  {
+    return parseBoolean(query, LOG_QUERY_EXCEPTION_STACK_TRACE_KEY, DEFAULT_LOG_QUERY_EXCEPTION_STACK_TRACE);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

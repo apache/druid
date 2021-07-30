@@ -145,4 +145,28 @@ public class QueryContextsTest
         false
     )));
   }
+
+  @Test
+  public void testDefaultLogQueryExceptionStackTrace()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of()
+    );
+    Assert.assertFalse(QueryContexts.isLogQueryExceptionStackTrace(query));
+  }
+
+  @Test
+  public void testEnabledLogQueryExceptionStackTrace()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.LOG_QUERY_EXCEPTION_STACK_TRACE_KEY, true)
+    );
+    Assert.assertTrue(QueryContexts.isLogQueryExceptionStackTrace(query));
+  }
 }
