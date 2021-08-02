@@ -1718,9 +1718,11 @@ TuningConfig
 _N_
 _default
 _default_tier
+_hot_tier
 addr
 affinityConfig
 allowAll
+allowedTiers
 ANDed
 array_mod
 autoscale

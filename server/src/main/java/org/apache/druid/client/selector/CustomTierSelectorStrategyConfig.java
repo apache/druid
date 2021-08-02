@@ -31,8 +31,16 @@ public class CustomTierSelectorStrategyConfig
   @JsonProperty
   private List<Integer> priorities = new ArrayList<>();
 
+  @JsonProperty
+  private List<String> allowedTiers = new ArrayList<>();
+
   public List<Integer> getPriorities()
   {
     return priorities;
+  }
+
+  public List<String> getAllowedTiers()
+  {
+    return allowedTiers;
   }
 }

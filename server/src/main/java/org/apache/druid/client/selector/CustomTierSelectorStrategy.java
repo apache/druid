@@ -21,16 +21,34 @@ package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.Iterables;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Query;
+import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
+ * Implementation of {@link TierSelectorStrategy} that can be used to specify:
+ * <ul>
+ *   <li>a custom priority order in which tiers should be selected</li>
+ *   <li>a list of allowed tiers</li>
+ * </ul>
  */
 public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  private static final Logger log = new Logger(CustomTierSelectorStrategy.class);
+
   private final Comparator<Integer> comparator;
+  private final List<String> allowedHistoricalTiers;
 
   @JsonCreator
   public CustomTierSelectorStrategy(
@@ -39,6 +57,8 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
+    this.allowedHistoricalTiers = config.getAllowedTiers() == null
+                                  ? new ArrayList<>() : config.getAllowedTiers();
 
     final Map<Integer, Integer> lookup = new HashMap<>();
     int pos = 0;
@@ -61,6 +81,73 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
         return Integer.compare(p2, p1);
       }
     };
+
+    log.info(
+        "Initialized CustomTierSelectorStrategy with Allowed Tiers %s and Priorities %s",
+        allowedHistoricalTiers.isEmpty() ? "[ALL]" : allowedHistoricalTiers,
+        config.getPriorities()
+    );
+  }
+
+  @Override
+  public <T> List<QueryableDruidServer> pick(
+      Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment,
+      int numServersToPick
+  )
+  {
+    List<QueryableDruidServer> pickedServers = new ArrayList<>(numServersToPick);
+    for (Set<QueryableDruidServer> serversAtPriority : prioritizedServers.values()) {
+      // Only the servers belonging to the allowedHistoricalTiers are eligible
+      Set<QueryableDruidServer> eligibleServers = serversAtPriority
+          .stream()
+          .filter(this::isEligibleServer)
+          .collect(Collectors.toSet());
+
+      pickedServers.addAll(
+          serverSelectorStrategy.pick(
+              query,
+              eligibleServers,
+              segment,
+              numServersToPick - pickedServers.size()
+          )
+      );
+
+      if (pickedServers.size() == numServersToPick) {
+        return pickedServers;
+      }
+    }
+
+    return pickedServers;
+  }
+
+  @Nullable
+  @Override
+  public <T> QueryableDruidServer pick(
+      Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment
+  )
+  {
+    return Iterables.getOnlyElement(pick(query, prioritizedServers, segment, 1), null);
+  }
+
+  /**
+   * A server is considered eligible if
+   * <ul>
+   *   <li>all tiers are allowed (i.e. allowedHistoricalTiers is empty)</li>
+   *   <li>OR this server's tier is present in allowedHistoricalTiers</li>
+   * </ul>
+   */
+  private boolean isEligibleServer(QueryableDruidServer server)
+  {
+    if (allowedHistoricalTiers.isEmpty()) {
+      return true;
+    } else {
+      return server.getServer() != null && server.getServer().getMetadata() != null
+             && allowedHistoricalTiers.contains(server.getServer().getMetadata().getTier());
+    }
   }
 
   @Override
