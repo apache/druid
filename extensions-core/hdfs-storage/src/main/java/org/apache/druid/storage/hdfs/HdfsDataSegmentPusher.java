@@ -105,27 +105,30 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
     final String storageDir = this.getStorageDir(segment, false);
 
-    log.debug(
-        "Copying segment[%s] to HDFS at location[%s/%s]",
-        segment.getId(),
-        fullyQualifiedStorageDirectory.get(),
-        storageDir
-    );
+
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
-    final String outIndexFilePath = StringUtils.format(
-        "%s/%s/%d_%sindex.zip",
-        fullyQualifiedStorageDirectory.get(),
+    final String outIndexFilePathSuffix = StringUtils.format(
+        "%s/%d_%sindex.zip",
         storageDir,
         segment.getShardSpec().getPartitionNum(),
         uniquePrefix
     );
 
-    return pushToPath(inDir, segment, outIndexFilePath);
+    return pushToPath(inDir, segment, outIndexFilePathSuffix);
   }
 
   @Override
-  public DataSegment pushToPath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
+  public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
+    log.debug(
+        "Copying segment[%s] to HDFS at location[%s/%s]",
+        segment.getId(),
+        fullyQualifiedStorageDirectory.get(),
+        storageDirSuffix
+    );
+
+    final String storageDir = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
+
     Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory.get(),
@@ -144,10 +147,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
         size = CompressionUtils.zip(inDir, out);
       }
-      final Path outIndexFile = new Path(outIndexFilePath);
+      final Path outIndexFile = new Path(storageDir);
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
-          .withSize(size)
-          .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
+                           .withSize(size)
+                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());

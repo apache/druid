@@ -51,7 +51,7 @@ public class NoopDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment pushToPath(File file, DataSegment segment, String storageDir)
+  public DataSegment pushToPath(File file, DataSegment segment, String storageDirSuffix)
   {
     return segment;
   }

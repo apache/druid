@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -125,6 +127,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     this.indexingServiceClient = indexingServiceClient;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -163,12 +166,18 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     );
   }
 
+  @Override
   @LifecycleStop
-  public void stop() throws InterruptedException
+  public void stop()
   {
     if (supervisorTaskChecker != null) {
       supervisorTaskChecker.shutdownNow();
-      supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
+      try {
+        supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
+      }
+      catch (InterruptedException e) {
+        Throwables.propagate(e);
+      }
     }
     supervisorTaskCheckTimes.clear();
   }
@@ -342,7 +351,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
                 subTaskId,
                 destFile
             );
-            return segment;
+            return segment.withSize(unzippedSizeBytes).withBinaryVersion(SegmentUtils.getVersionFromDir(segmentDir));
           }
           catch (Exception e) {
             location.release(partitionFilePath, tempZippedFile.length());
@@ -365,7 +374,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   {
     IdUtils.validateId("supervisorTaskId", supervisorTaskId);
     for (StorageLocation location : shuffleDataLocations) {
-      final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, bucketId));
+      final File partitionDir = new File(location.getPath(), getPartitionDirPath(supervisorTaskId, interval, bucketId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
         final File[] segmentFiles = partitionDir.listFiles();

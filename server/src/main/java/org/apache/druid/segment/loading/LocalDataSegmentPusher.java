@@ -65,16 +65,17 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
-    final File baseStorageDir = config.getStorageDirectory();
-    final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
-    log.debug("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
-    return pushToPath(dataSegmentFile, segment, outDir.getAbsolutePath());
+    return pushToPath(dataSegmentFile, segment, this.getStorageDir(segment, useUniquePath));
   }
 
   @Override
-  public DataSegment pushToPath(File dataSegmentFile, DataSegment segment, String storageDir) throws IOException
+  public DataSegment pushToPath(File dataSegmentFile, DataSegment segment, String storageDirSuffix) throws IOException
   {
-    File outDir = new File(storageDir);
+    final File baseStorageDir = config.getStorageDirectory();
+    final File outDir = new File(baseStorageDir, storageDirSuffix);
+
+    log.debug("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
+
     if (dataSegmentFile.equals(outDir)) {
       long size = 0;
       for (File file : dataSegmentFile.listFiles()) {
@@ -95,8 +96,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       final long size = compressSegment(dataSegmentFile, tmpIndexFile);
 
       final DataSegment dataSegment = segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
-                                       .withSize(size)
-                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
+                                             .withSize(size)
+                                             .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
       org.apache.commons.io.FileUtils.forceMkdir(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());

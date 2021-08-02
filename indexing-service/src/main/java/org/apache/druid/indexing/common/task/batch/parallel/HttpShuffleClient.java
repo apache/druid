@@ -68,7 +68,8 @@ public class HttpShuffleClient implements ShuffleClient
     // Note that this method can be called by different threads at the same time with ThreadingTaskRunner.
     final byte[] buffer = new byte[BUFFER_SIZE];
     final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
-    final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
+    final GenericPartitionLocation partitionLocation = (GenericPartitionLocation) location;
+    final URI uri = partitionLocation.toIntermediaryDataServerURI(supervisorTaskId);
     FileUtils.copyLarge(
         uri,
         u -> {

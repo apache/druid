@@ -109,7 +109,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDir) throws IOException
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
     File indexFile = null;
@@ -117,7 +117,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
-      final String indexPath = buildPath(storageDir + "/" + "index.zip");
+      final String indexPath = buildPath(storageDirSuffix + "/" + "index.zip");
 
       final DataSegment outSegment = segment
           .withSize(indexSize)

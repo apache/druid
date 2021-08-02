@@ -23,7 +23,7 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStoragePartitionStat;
-import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -46,9 +46,28 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   }
 
   @Override
+  public void start()
+  {
+    // nothing
+  }
+
+  @Override
+  public void stop()
+  {
+    // nothing
+  }
+
+  @Override
   public DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
   {
+    if (!(segment.getShardSpec() instanceof BucketNumberedShardSpec)) {
+      throw new IAE(
+          "Invalid shardSpec type. Expected [%s] but got [%s]",
+          BucketNumberedShardSpec.class.getName(),
+          segment.getShardSpec().getClass().getName()
+      );
+    }
     final BucketNumberedShardSpec<?> bucketNumberedShardSpec = (BucketNumberedShardSpec<?>) segment.getShardSpec();
     final String partitionFilePath = getPartitionFilePath(
         supervisorTaskId,
@@ -60,16 +79,11 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   }
 
   @Override
-  public GenericPartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment)
+  public DeepStoragePartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment)
   {
     return new DeepStoragePartitionStat(
-        toolbox.getTaskExecutorNode().getHost(),
-        toolbox.getTaskExecutorNode().getPortToUse(),
-        toolbox.getTaskExecutorNode().isEnableTlsPort(),
         segment.getInterval(),
         (BucketNumberedShardSpec) segment.getShardSpec(),
-        null, // numRows is not supported yet
-        null, // sizeBytes is not supported yet
         segment.getLoadSpec()
     );
   }
@@ -78,7 +92,7 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   @Override
   public Optional<ByteSource> findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId)
   {
-    return Optional.empty();
+    throw new UnsupportedOperationException("Not supported, get partition file using segment loadspec");
   }
 
   @Override

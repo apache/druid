@@ -25,27 +25,27 @@ import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
-public class DeepStoragePartitionStat extends GenericPartitionStat
+public class DeepStoragePartitionStat implements PartitionStat<BucketNumberedShardSpec, BuildingShardSpec>
 {
+  static final String PROP_SHARD_SPEC = "shardSpec";
   private final Map<String, Object> loadSpec;
+  // Primary partition key
+  private final Interval interval;
+  // Secondary partition key
+  private final BucketNumberedShardSpec shardSpec;
 
   @JsonCreator
   public DeepStoragePartitionStat(
-      @JsonProperty("taskExecutorHost") String taskExecutorHost,
-      @JsonProperty("taskExecutorPort") int taskExecutorPort,
-      @JsonProperty("useHttps") boolean useHttps,
       @JsonProperty("interval") Interval interval,
       @JsonProperty(PROP_SHARD_SPEC) BucketNumberedShardSpec shardSpec,
-      @JsonProperty("numRows") @Nullable Integer numRows,
-      @JsonProperty("sizeBytes") @Nullable Long sizeBytes,
       @JsonProperty("loadSpec") Map<String, Object> loadSpec
   )
   {
-    super(taskExecutorHost, taskExecutorPort, useHttps, interval, shardSpec, numRows, sizeBytes);
+    this.interval = interval;
+    this.shardSpec = shardSpec;
     this.loadSpec = loadSpec;
   }
 
@@ -55,18 +55,36 @@ public class DeepStoragePartitionStat extends GenericPartitionStat
     return loadSpec;
   }
 
+  @JsonProperty
+  @Override
+  public Interval getInterval()
+  {
+    return interval;
+  }
+
+  @JsonProperty
+  public BucketNumberedShardSpec getShardSpec()
+  {
+    return shardSpec;
+  }
+
+  @JsonProperty(PROP_SHARD_SPEC)
+  @Override
+  public BucketNumberedShardSpec getSecondaryPartition()
+  {
+    return shardSpec;
+  }
+
+  @Override
+  public int getBucketId()
+  {
+    return shardSpec.getBucketId();
+  }
+
   @Override
   public DeepStoragePartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec secondaryParition)
   {
-    return new DeepStoragePartitionLocation(
-        getTaskExecutorHost(),
-        getTaskExecutorPort(),
-        isUseHttps(),
-        subtaskId,
-        getInterval(),
-        secondaryParition,
-        getLoadSpec()
-    );
+    return new DeepStoragePartitionLocation(subtaskId, interval, secondaryParition, loadSpec);
   }
 
   @Override
@@ -78,24 +96,23 @@ public class DeepStoragePartitionStat extends GenericPartitionStat
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    if (!super.equals(o)) {
-      return false;
-    }
     DeepStoragePartitionStat that = (DeepStoragePartitionStat) o;
-    return loadSpec.equals(that.loadSpec);
+    return loadSpec.equals(that.loadSpec) && interval.equals(that.interval) && shardSpec.equals(that.shardSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), loadSpec);
+    return Objects.hash(loadSpec, interval, shardSpec);
   }
 
   @Override
   public String toString()
   {
     return "DeepStoragePartitionStat{" +
-        "loadSpec=" + loadSpec +
-        "} " + super.toString();
+           "loadSpec=" + loadSpec +
+           ", interval=" + interval +
+           ", shardSpec=" + shardSpec +
+           '}';
   }
 }

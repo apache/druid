@@ -79,20 +79,21 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
-    log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
-    return pushToPath(indexFilesDir, inSegment, s3Path);
+    return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));
   }
 
   @Override
-  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String s3Path) throws IOException
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
+    log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
+
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
     final DataSegment outSegment = inSegment.withSize(indexSize)
-        .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-        .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+                                            .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
     try {
       return S3Utils.retryS3Operation(

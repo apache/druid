@@ -68,7 +68,7 @@ public interface DataSegmentPusher
    */
   DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException;
 
-  default DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDir) throws IOException
+  default DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     throw new UnsupportedOperationException("not supported");
   }

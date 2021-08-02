@@ -22,7 +22,7 @@ package org.apache.druid.indexing.worker.shuffle;
 import com.google.common.io.ByteSource;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
+import org.apache.druid.indexing.common.task.batch.parallel.PartitionStat;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -46,6 +46,10 @@ import java.util.Optional;
 @ExtensionPoint
 public interface IntermediaryDataManager
 {
+  void start();
+
+  void stop();
+
   /**
    * Write a segment into one of configured locations
    *
@@ -54,7 +58,7 @@ public interface IntermediaryDataManager
    * @param segment - Segment to write
    * @param segmentDir - Directory of the segment to write
    *
-   * @return size of the writen segment
+   * @return the writen segment
    */
   DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir) throws IOException;
 
@@ -78,7 +82,7 @@ public interface IntermediaryDataManager
    */
   void deletePartitions(String supervisorTaskId) throws IOException;
 
-  GenericPartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment);
+  PartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment);
 
   default String getPartitionFilePath(
       String supervisorTaskId,
@@ -87,10 +91,10 @@ public interface IntermediaryDataManager
       int bucketId
   )
   {
-    return Paths.get(getPartitionDir(supervisorTaskId, interval, bucketId), subTaskId).toString();
+    return Paths.get(getPartitionDirPath(supervisorTaskId, interval, bucketId), subTaskId).toString();
   }
 
-  default String getPartitionDir(
+  default String getPartitionDirPath(
       String supervisorTaskId,
       Interval interval,
       int bucketId

@@ -35,10 +35,21 @@ import java.util.Objects;
  * partition key). The {@link ShardSpec} is later used by {@link PartialGenericSegmentMergeTask} to merge the partial
  * segments.
  */
-public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
+public class GenericPartitionStat implements PartitionStat<BucketNumberedShardSpec, BuildingShardSpec>
 {
   static final String PROP_SHARD_SPEC = "shardSpec";
 
+  // Host and port of the task executor
+  private final String taskExecutorHost;
+  private final int taskExecutorPort;
+  private final boolean useHttps;
+  // Primary partition key
+  private final Interval interval;
+  // numRows and sizeBytes are always null currently and will be filled properly in the future.
+  @Nullable
+  private final Integer numRows;
+  @Nullable
+  private final Long sizeBytes;
   // Secondary partition key
   private final BucketNumberedShardSpec shardSpec;
 
@@ -53,8 +64,52 @@ public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
       @JsonProperty("sizeBytes") @Nullable Long sizeBytes
   )
   {
-    super(taskExecutorHost, taskExecutorPort, useHttps, interval, numRows, sizeBytes);
+    this.taskExecutorHost = taskExecutorHost;
+    this.taskExecutorPort = taskExecutorPort;
+    this.useHttps = useHttps;
+    this.interval = interval;
+    this.numRows = numRows == null ? 0 : numRows;
+    this.sizeBytes = sizeBytes == null ? 0 : sizeBytes;
     this.shardSpec = shardSpec;
+  }
+
+  @JsonProperty
+  public final String getTaskExecutorHost()
+  {
+    return taskExecutorHost;
+  }
+
+  @JsonProperty
+  public final int getTaskExecutorPort()
+  {
+    return taskExecutorPort;
+  }
+
+  @JsonProperty
+  public final boolean isUseHttps()
+  {
+    return useHttps;
+  }
+
+  @JsonProperty
+  @Override
+  public final Interval getInterval()
+  {
+    return interval;
+  }
+
+  @Nullable
+  @JsonProperty
+  public final Integer getNumRows()
+  {
+    return numRows;
+  }
+
+  @Nullable
+  @JsonProperty
+  public final Long getSizeBytes()
+  {
+    return sizeBytes;
   }
 
   @Override
@@ -65,7 +120,7 @@ public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
 
   @JsonProperty(PROP_SHARD_SPEC)
   @Override
-  BucketNumberedShardSpec getSecondaryPartition()
+  public BucketNumberedShardSpec getSecondaryPartition()
   {
     return shardSpec;
   }
@@ -103,5 +158,19 @@ public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), shardSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GenericPartitionStat{" +
+           "taskExecutorHost='" + taskExecutorHost + '\'' +
+           ", taskExecutorPort=" + taskExecutorPort +
+           ", useHttps=" + useHttps +
+           ", interval=" + interval +
+           ", numRows=" + numRows +
+           ", sizeBytes=" + sizeBytes +
+           ", shardSpec=" + shardSpec +
+           '}';
   }
 }

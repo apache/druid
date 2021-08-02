@@ -198,17 +198,17 @@ public class HttpShuffleClientTest
     return new HttpShuffleClient(httpClient);
   }
 
-  private static class TestPartitionLocation extends PartitionLocation<Integer>
+  private static class TestPartitionLocation extends GenericPartitionLocation
   {
     private TestPartitionLocation()
     {
-      super(HOST, PORT, false, SUBTASK_ID, INTERVAL, PARTITION_ID);
+      super(HOST, PORT, false, SUBTASK_ID, INTERVAL, null);
     }
 
     @Override
-    int getBucketId()
+    public int getBucketId()
     {
-      return getSecondaryPartition();
+      return PARTITION_ID;
     }
   }
 }

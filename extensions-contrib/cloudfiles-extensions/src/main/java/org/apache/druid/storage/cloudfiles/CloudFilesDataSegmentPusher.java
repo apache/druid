@@ -71,16 +71,16 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
   {
-    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(
-        this.config.getBasePath(),
-        getStorageDir(inSegment, useUniquePath)
-    );
-    return pushToPath(indexFilesDir, inSegment, segmentPath);
+    return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));
   }
 
   @Override
-  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String segmentPath)
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix)
   {
+    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(
+        this.config.getBasePath(),
+        storageDirSuffix
+        );
     File descriptorFile = null;
     File zipOutFile = null;
 
