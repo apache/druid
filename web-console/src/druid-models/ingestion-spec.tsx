@@ -32,6 +32,7 @@ import {
   filterMap,
   oneOf,
   typeIs,
+  whitelistKeys,
 } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
@@ -318,14 +319,18 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
- * @param spec
+ * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * @param spec - the spec to clean
+ * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  return {
-    type: spec.type,
-    spec: spec.spec,
-  };
+export function cleanSpec(
+  spec: Partial<IngestionSpec>,
+  allowSuspended?: boolean,
+): Partial<IngestionSpec> {
+  return whitelistKeys(
+    spec,
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+  ) as IngestionSpec;
 }
 
 export interface GranularitySpec {

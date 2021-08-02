@@ -18,7 +18,7 @@
 
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import ace, { Editor } from 'brace';
+import ace, { Ace } from 'ace-builds';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -35,7 +35,7 @@ import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './query-input.scss';
 
-const langTools = ace.acequire('ace/ext/language_tools');
+const langTools = ace.require('ace/ext/language_tools');
 
 export interface QueryInputProps {
   queryString: string;
@@ -57,7 +57,7 @@ export interface QueryInputState {
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
-  private aceEditor: Editor | undefined;
+  private aceEditor: Ace.Editor | undefined;
 
   static replaceDefaultAutoCompleter(): void {
     if (!langTools) return;
@@ -99,7 +99,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     const functionList: any[] = SQL_FUNCTIONS.map(([name, args, description]) => {
       return {
         value: name,
-        score: 80,
+        score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
         meta: 'function',
         syntax: `${name}(${args})`,
         description,
@@ -125,7 +125,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
 
   static makeDocHtml(item: any) {
     return `
-<div class="doc-name">${escape(item.caption)}</div>
+<div class="doc-name">${escape(item.value)}</div>
 <div class="doc-syntax">${item.syntax}</div>
 <div class="doc-description">${escape(item.description)}</div>`;
   }
@@ -234,6 +234,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             <AceEditor
               mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
+              className="no-background placeholder-padding"
               name="ace-editor"
               onChange={this.handleChange}
               focus
@@ -253,9 +254,9 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               }}
               style={{}}
               placeholder="SELECT * FROM ..."
-              onLoad={(editor: any) => {
+              onLoad={editor => {
                 editor.renderer.setPadding(10);
-                editor.renderer.setScrollMargin(10);
+                editor.renderer.setScrollMargin(10, 10, 0, 0);
                 this.aceEditor = editor;
               }}
             />

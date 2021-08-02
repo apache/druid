@@ -24,7 +24,7 @@ import { deepSet } from '../../../utils';
 
 import { ParseTimeTable } from './parse-time-table';
 
-describe('parse time table', () => {
+describe('ParseTimeTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],

@@ -23,7 +23,7 @@ import { Capabilities } from '../../utils';
 
 import { IngestionView } from './ingestion-view';
 
-describe('tasks view', () => {
+describe('IngestionView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <IngestionView
