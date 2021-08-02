@@ -19,8 +19,10 @@
 
 package org.apache.druid.client.selector;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.QueryRunner;
@@ -45,6 +47,40 @@ import static org.junit.Assert.assertTrue;
 public class CustomTierSelectorStrategyTest
 {
   private static final QueryRunner QUERY_RUNNER = Mockito.mock(QueryRunner.class);
+
+  @Test
+  public void testConfigSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+
+    // Verify empty config
+    String json = "{}";
+    CustomTierSelectorStrategyConfig config = objectMapper
+        .readValue(json, CustomTierSelectorStrategyConfig.class);
+    assertTrue(config.getPriorities().isEmpty());
+    assertTrue(config.getAllowedTiers().isEmpty());
+
+    // Verify config with empty priorities, non-empty allowedTiers
+    json = "{\"allowedTiers\":[\"t1\",\"t2\"]}";
+    config = objectMapper
+        .readValue(json, CustomTierSelectorStrategyConfig.class);
+    assertTrue(config.getPriorities().isEmpty());
+    assertEquals(Arrays.asList("t1", "t2"), config.getAllowedTiers());
+
+    // Verify config with non-empty priorities, empty allowedTiers
+    json = "{\"priorities\":[1, 2]}";
+    config = objectMapper
+        .readValue(json, CustomTierSelectorStrategyConfig.class);
+    assertEquals(Arrays.asList(1, 2), config.getPriorities());
+    assertTrue(config.getAllowedTiers().isEmpty());
+
+    // Verify config with non-empty priorities and non-empty allowedTiers
+    json = "{\"priorities\": [1, 2], \"allowedTiers\":[\"t1\",\"t2\"]}";
+    config = objectMapper
+        .readValue(json, CustomTierSelectorStrategyConfig.class);
+    assertEquals(Arrays.asList(1, 2), config.getPriorities());
+    assertEquals(Arrays.asList("t1", "t2"), config.getAllowedTiers());
+  }
 
   @Test
   public void testPickFromTier()
