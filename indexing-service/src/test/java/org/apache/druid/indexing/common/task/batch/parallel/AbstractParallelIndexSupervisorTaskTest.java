@@ -444,7 +444,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               if (task.isReady(toolbox.getTaskActionClient())) {
                 return task.run(toolbox);
               } else {
-                getTaskStorage().setStatus(TaskStatus.failure(task.getId()));
+                getTaskStorage().setStatus(TaskStatus.failure(task.getId(), "Dummy task status failure for testing"));
                 throw new ISE("task[%s] is not ready", task.getId());
               }
             }
