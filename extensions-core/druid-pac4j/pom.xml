@@ -38,7 +38,7 @@
 
     <!-- Following must be updated along with any updates to pac4j version -->
     <nimbus.jose.jwt.version>7.9</nimbus.jose.jwt.version>
-    <oauth2.oidc.sdk.version>6.5</oauth2.oidc.sdk.version>
+    <oauth2.oidc.sdk.version>9.11</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
