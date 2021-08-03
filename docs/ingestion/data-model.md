@@ -13,7 +13,7 @@ Druid schemas must always include a primary timestamp. Druid uses the primary ti
 for time-based [data management operations](./data-management.md) such as dropping time chunks, overwriting time chunks, and time-based retention rules.
 
 Druid parses the primary timestamp based on the [`timestampSpec`](./ingestion-spec.md#timestampspec) configuration at ingestion time. You can control other important operations that are based on the primary timestamp
-[`granularitySpec`](./ingestion-spec.md#granularityspec). Regardless of the source input field for the primary timestamp, Druid always be stores the timestamp in the `__time` column in your Druid datasource.
+[`granularitySpec`](./ingestion-spec.md#granularityspec). Regardless of the source input field for the primary timestamp, Druid always stores the timestamp in the `__time` column in your Druid datasource.
 
 If you have more than one timestamp column, you can store the others as
 [secondary timestamps](./schema-design.md#secondary-timestamps).
