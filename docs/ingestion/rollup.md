@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-    ---
+---
 id: rollup
 title: "Data rollup"
 sidebar_label: Data rollup
@@ -8,21 +7,6 @@ description: Introduces rollup as a concept. Provides suggestions to maximize th
 Druid can roll up data at ingestion time to reduce the amount of raw data to  store on disk. Rollup is a form of summarization or pre-aggregation. Rolling up data can dramatically reduce the size of data to be stored and reduce row counts by potentially orders of magnitude. As a trade-off for the efficiency of rollup, you lose the ability to query individual events.
 
 At ingestion time, you control rollup with the `rollup` setting in the [`granularitySpec`](./ingestion-spec.md#granularityspec). Rollup is enabled by default. This means Druid combines into a single row any rows that have identical [dimension](./data-model.md#dimensions) values and [timestamp](./data-model.md#primary-timestamp) values after [`queryGranularity`-based truncation](./ingestion-spec.md#granularityspec).
-=======
----
-id: rollup
-title: "Data rollup"
-sidebar_label: Data rollup
-description: Introduces rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup.
----
-Druid can roll up data ingestion time to reduce the amount of raw data to  store on disk. Rollup is a form of summarization or pre-aggregation. Rolling up data your can dramatically reduce the size of data to be store and reducing row counts by potentially orders of magnitude. The trade off for the efficiency of rollup means you lose the ability to query individual events.
-
-<<<<<<< HEAD
-At ingestion time, you control rollup with the `rollup` setting in the [`granularitySpec`](./ingestion-spec.md#granularityspec). Rollup is enabled by default. This means Druid combines into a single row any rows that have identical [dimensions](./data-model.md#dimensions) values and [timestamp](./data-model.md#primary-timestamp) values after [`queryGranularity`-based truncation](./ingestion-spec.md#granularityspec)).
->>>>>>> f784a85aa2... break ingestion topic into smaller topics
-=======
-At ingestion time, you control rollup with the `rollup` setting in the [`granularitySpec`](./ingestion-spec.md#granularityspec). Rollup is enabled by default. This means Druid combines into a single row any rows that have identical [dimension](./data-model.md#dimensions) values and [timestamp](./data-model.md#primary-timestamp) values after [`queryGranularity`-based truncation](./ingestion-spec.md#granularityspec).
->>>>>>> 4f311b38db... Update docs/ingestion/rollup.md
 
 When you disable rollup, Druid loads each row as-is without doing any form of pre-aggregation. This mode is similar to databases that do not support a rollup feature. Set `rollup` to `false` if you want Druid to store each record as-is, without any rollup summarization.
 
@@ -43,11 +27,7 @@ Tips for maximizing rollup:
 - Use [sketches](schema-design.md#sketches) to avoid storing high cardinality dimensions, which decrease rollup ratios.
 - Adjust your `queryGranularity` at ingestion time to increase the chances that multiple rows in Druid having matching timestamps. For example, use five minute query granularity (`PT5M`) instead of one minute (`PT1M`).
 - You can optionally load the same data into more than one Druid datasource. For example:
-<<<<<<< HEAD
     - Create a "full" datasource that has rollup disabled, or enabled, but with a minimal rollup ratio.
-=======
-    - Create a "full" datasource that has rollup disabled, or enabled, but with a minimal rollup ratio
->>>>>>> f784a85aa2... break ingestion topic into smaller topics
     - Create a second "abbreviated" datasource with fewer dimensions and a higher rollup ratio.
      When queries only involve dimensions in the "abbreviated" set, use the second datasource to reduce query times. Often, this method only requires a small increase in storage footprint because abbreviated datasources tend to be substantially smaller.
 - If you use a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect rollup, try one of the following:
@@ -58,7 +38,6 @@ Tips for maximizing rollup:
 
 Depending on the ingestion method, Druid has the following rollup options:
 - Guaranteed _perfect rollup_: Druid perfectly aggregates input data at ingestion time.
-<<<<<<< HEAD
 - _Best-effort rollup_: Druid may not perfectly aggregate input data. Therefore, multiple segments might contain rows with the same timestamp and dimension values.
 
 In general, ingestion methods that offer best-effort rollup do this for one of the following reasons:
@@ -67,16 +46,6 @@ In general, ingestion methods that offer best-effort rollup do this for one of t
 In both of these cases, records that could theoretically be rolled up may end up in different segments. All types of streaming ingestion run in this mode.
 
 Ingestion methods that guarantee perfect rollup use an additional preprocessing step to determine intervals and partitioning before data ingestion. This preprocessing step scans the entire input dataset. While this step increases the time required for ingestion, it provides information necessary for perfect rollup.
-=======
-- _best-effort rollup_: Druid may not perfectly aggregate input data. Therefore, multiple segments might contain rows with the same timestamp and dimension values.
-
-In general, ingestion methods that offer best-effort rollup do this for one of the following reasons:
-- The ingestion method parallelizes ingestion without a shuffling step required for perfect rollup.
-- The ingestion method uses _incremental publishing_ which means it finalizes and publishes segments before all data for a time chunk has been received,
-In both of these cases, records that could theoretically be rolled up may end up in different segments. All types of streaming ingestion run in this mode.
-
-Ingestion methods that guarantee perfect rollup use an additional preprocessing step to determine intervals and partitioning before data ingestion. This preprocessing step scans the entire input dataset. While this step it increases the time required for ingestion, it provides information necessary for perfect rollup.
->>>>>>> f784a85aa2... break ingestion topic into smaller topics
 
 The following table shows how each method handles rollup:
 
