@@ -1777,6 +1777,9 @@ You can optionally only configure caching to be enabled on the Broker by setting
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
+> Note: Even if cache is enabled, for [groupBy v2](../querying/groupbyquery.md#strategies) queries, both of non-result level cache and result level cache do not work on Brokers.
+> See [Differences between v1 and v2](../querying/groupbyquery.md#differences-between-v1-and-v2) and [Query caching](../querying/caching.md) for more information.
+
 #### Segment Discovery
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
