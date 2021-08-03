@@ -79,7 +79,7 @@ Unfortunately, the Input Format doesn't support all data formats or ingestion me
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
-All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the `inputFormat` entry in your [`ioConfig`](index.md#ioconfig).
+All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the `inputFormat` entry in your [`ioConfig`](ingestion-spec.md#ioconfig).
 
 ### JSON
 
@@ -521,8 +521,8 @@ An example `flattenSpec` is:
 }
 ```
 > Conceptually, after input data records are read, the `flattenSpec` is applied first before
-> any other specs such as [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec),
-> [`dimensionsSpec`](./index.md#dimensionsspec), or [`metricsSpec`](./index.md#metricsspec). Keep this in mind when writing
+> any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec),
+> [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec). Keep this in mind when writing
 > your ingestion spec.
 
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
@@ -532,8 +532,8 @@ A `flattenSpec` can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec), [`dimensionsSpec`](./index.md#dimensionsspec), and [`metricsSpec`](./index.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
-| fields | Specifies the fields of interest and how they are accessed. [See below for details.](#field-flattening-specifications) | `[]` |
+| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
+| fields | Specifies the fields of interest and how they are accessed. [See Field flattening specifications for more detail.](#field-flattening-specifications) | `[]` |
 
 #### Field flattening specifications
 
@@ -542,7 +542,7 @@ Each entry in the `fields` list can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type | Options are as follows:<br><br><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
-| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec), [`dimensionsSpec`](./index.md#dimensionsspec), and [`metricsSpec`](./index.md#metricsspec).| none (required) |
+| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 
 #### Notes on flattening
@@ -1149,7 +1149,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | yes |
 | `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
 
 Sample spec:
 
