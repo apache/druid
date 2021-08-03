@@ -14,7 +14,7 @@ for time-based [data management operations](./data-management.md) such as droppi
 
 Druid parses the primary timestamp based on the [`timestampSpec`](./ingestion-spec.md#timestampspec) configuration at ingestion time. Regardless of the source field field for the primary timestamp, Druid always stores the timestamp in the `__time` column in your Druid datasource.
 
-You can control other important operations that are based on the primary timestamp
+You can control other important operations that are based on the primary timestamp in the
 [`granularitySpec`](./ingestion-spec.md#granularityspec). If you have more than one timestamp column, you can store the others as
 [secondary timestamps](./schema-design.md#secondary-timestamps).
 
