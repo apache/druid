@@ -34,6 +34,20 @@ druid.extensions.loadList=["druid-datasketches"]
 
 ### Aggregators
 
+|property|description|required?|
+|--------|-----------|---------|
+|`type`|This String should be [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator)|yes|
+|`name`|A String for the output (result) name of the calculation.|yes|
+|`fieldName`|A String for the name of the input field.|yes|
+|`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be a power of 2 from 4 to 21 inclusively.|no, defaults to `12`|
+|`tgtHllType`|The type of the target HLL sketch. Must be `HLL_4`, `HLL_6` or `HLL_8` |no, defaults to `HLL_4`|
+|`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
+
+
+> The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.
+
+#### HLLSketchBuild Aggregator
+
 ```
 {
   "type" : "HLLSketchBuild",
@@ -45,6 +59,25 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
+> It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/index.html#rollup) to create a [metric](../../ingestion/index.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations and improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
+>
+> ```
+> :
+> "metricsSpec": [
+>  {
+>    "type" : "HLLSketchBuild",
+>    "name" : "userid_hll",
+>    "fieldName" : "userid",
+>    "lgK" : 12,
+>    "tgtHllType" : "HLL_4"
+>  }
+> ]
+> :
+> ```
+>
+
+#### HLLSketchMerge Aggregator
+
 ```
 {
   "type" : "HLLSketchMerge",
@@ -55,15 +88,6 @@ druid.extensions.loadList=["druid-datasketches"]
   "round": <false | true>
  }
 ```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This String should be "HLLSketchBuild" or "HLLSketchMerge"|yes|
-|name|A String for the output (result) name of the calculation.|yes|
-|fieldName|A String for the name of the input field.|yes|
-|lgK|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be a power of 2 from 4 to 21 inclusively.|no, defaults to 12|
-|tgtHllType|The type of the target HLL sketch. Must be "HLL&lowbar;4", "HLL&lowbar;6" or "HLL&lowbar;8" |no, defaults to "HLL&lowbar;4"|
-|round|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to false|
 
 ### Post Aggregators
 

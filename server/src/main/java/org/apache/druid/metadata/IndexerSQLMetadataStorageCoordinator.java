@@ -226,6 +226,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return matchingSegments;
   }
 
+  @Override
+  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  {
+    int numSegmentsMarkedUnused = connector.retryTransaction(
+        (handle, status) -> {
+          return handle
+              .createStatement(
+                  StringUtils.format(
+                      "UPDATE %s SET used=false WHERE dataSource = :dataSource "
+                      + "AND start >= :start AND %2$send%2$s <= :end",
+                      dbTables.getSegmentsTable(),
+                      connector.getQuoteString()
+                  )
+              )
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute();
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+
+    log.info("Marked %,d segments unused for %s for interval %s.", numSegmentsMarkedUnused, dataSource, interval);
+    return numSegmentsMarkedUnused;
+  }
+
   private List<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,

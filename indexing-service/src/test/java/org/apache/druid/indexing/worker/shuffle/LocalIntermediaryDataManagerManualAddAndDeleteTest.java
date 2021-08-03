@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteSource;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -46,8 +47,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
-public class IntermediaryDataManagerManualAddAndDeleteTest
+public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 {
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
@@ -55,7 +57,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private IntermediaryDataManager intermediaryDataManager;
+  private LocalIntermediaryDataManager intermediaryDataManager;
   private File intermediarySegmentsLocation;
   private File siblingLocation;
 
@@ -79,7 +81,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
         false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
-    intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     intermediaryDataManager.start();
   }
 
@@ -117,13 +119,13 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
       intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId_" + i, segment, segmentFile);
     }
     for (int i = 0; i < 4; i++) {
-      final File file = intermediaryDataManager.findPartitionFile(
+      final Optional<ByteSource> file = intermediaryDataManager.findPartitionFile(
           supervisorTaskId,
           "subTaskId_" + i,
           interval,
           partitionId
       );
-      Assert.assertNotNull(file);
+      Assert.assertTrue(file.isPresent());
     }
   }
 
@@ -144,8 +146,8 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
 
     for (int partitionId = 0; partitionId < 2; partitionId++) {
       for (int subTaskId = 0; subTaskId < 2; subTaskId++) {
-        Assert.assertNull(
-            intermediaryDataManager.findPartitionFile(supervisorTaskId, "subTaskId_" + subTaskId, interval, partitionId)
+        Assert.assertFalse(
+            intermediaryDataManager.findPartitionFile(supervisorTaskId, "subTaskId_" + subTaskId, interval, partitionId).isPresent()
         );
       }
     }
@@ -216,13 +218,13 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
     Assert.assertTrue(
         new File(intermediarySegmentsLocation, supervisorTaskId + "/" + someFilePath).exists());
 
-    final File foundFile1 = intermediaryDataManager.findPartitionFile(
+    final Optional<ByteSource> foundFile1 = intermediaryDataManager.findPartitionFile(
         supervisorTaskId,
         someFile,
         interval,
         partitionId
     );
-    Assert.assertNull(foundFile1);
+    Assert.assertFalse(foundFile1.isPresent());
   }
 
   private File generateSegmentDir(String fileName) throws IOException

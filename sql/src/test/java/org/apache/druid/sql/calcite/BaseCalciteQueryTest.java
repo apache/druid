@@ -62,6 +62,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
@@ -107,6 +108,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
+ * and populates data using {@link CalciteTests#createMockWalker}.
+ */
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static String NULL_STRING;
@@ -244,6 +249,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static QueryRunnerFactoryConglomerate conglomerate;
   public static Closer resourceCloser;
+  public static int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -440,7 +446,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static void setUpClass()
   {
     resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser, () -> minTopNThreshold);
   }
 
   @AfterClass
@@ -953,6 +959,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
               .build(),
           };
+    }
+
+    public static Map<String, Object> withOverrides(Map<String, Object> originalContext, Map<String, Object> overrides)
+    {
+      Map<String, Object> contextWithOverrides = new HashMap<>(originalContext);
+      contextWithOverrides.putAll(overrides);
+      return contextWithOverrides;
     }
   }
 

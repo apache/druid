@@ -22,10 +22,9 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 
 import java.io.File;
@@ -34,25 +33,21 @@ import java.util.Collections;
 /**
  *
  */
-public class SegmentLoaderFactory
+public class SegmentCacheManagerFactory
 {
-  private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public SegmentLoaderFactory(
-      IndexIO indexIO,
+  public SegmentCacheManagerFactory(
       @Json ObjectMapper mapper
   )
   {
-    this.indexIO = indexIO;
     this.jsonMapper = mapper;
   }
 
-  public SegmentLoader manufacturate(File storageDir)
+  public SegmentCacheManager manufacturate(File storageDir)
   {
-    return new SegmentLoaderLocalCacheManager(
-        indexIO,
+    return new SegmentLocalCacheManager(
         new SegmentLoaderConfig().withLocations(
             Collections.singletonList(new StorageLocationConfig(storageDir, null, null))),
         jsonMapper

@@ -54,7 +54,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -665,7 +665,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
-        new SegmentLoaderFactory(null, new DefaultObjectMapper()),
+        new SegmentCacheManagerFactory(new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
@@ -929,7 +929,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     }
 
     final Task killUnusedSegmentsTask =
-        new KillUnusedSegmentsTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
+        new KillUnusedSegmentsTask(
+            null,
+            "test_kill_task",
+            Intervals.of("2011-04-01/P4D"),
+            null,
+            false
+        );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
     Assert.assertEquals(taskLocation, status.getLocation());

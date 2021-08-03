@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringS
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -122,6 +123,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public static final String TYPE = "index_parallel";
 
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
+
+  private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
@@ -250,7 +253,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Nullable
-  private <T extends Task, R extends SubTaskReport> ParallelIndexTaskRunner<T, R> createRunner(
+  @VisibleForTesting
+  <T extends Task, R extends SubTaskReport> ParallelIndexTaskRunner<T, R> createRunner(
       TaskToolbox toolbox,
       Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
   )
@@ -555,14 +559,23 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     final TaskState state = runNextPhase(runner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(runner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
+      final String errorMessage = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          runner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -608,7 +621,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     TaskState state;
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
@@ -637,7 +651,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       state = runNextPhase(cardinalityRunner);
       if (state.isFailure()) {
-        return TaskStatus.failure(getId());
+        String errMsg = StringUtils.format(
+            TASK_PHASE_FAILURE_MSG,
+            cardinalityRunner.getName()
+        );
+        return TaskStatus.failure(getId(), errMsg);
       }
 
       if (cardinalityRunner.getReports().isEmpty()) {
@@ -683,7 +701,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
-      return TaskStatus.failure(getId());
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // 2. Partial segment merge phase
@@ -701,15 +723,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     state = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          mergeRunner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -717,7 +748,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return taskStatus;
   }
 
-  private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
     ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
@@ -728,7 +760,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState distributionState = runNextPhase(distributionRunner);
     if (distributionState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialDimensionDistributionTask.TYPE + " failed");
+      String errMsg = StringUtils.format(TASK_PHASE_FAILURE_MSG, distributionRunner.getName());
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     Map<Interval, PartitionBoundaries> intervalToPartitions =
@@ -755,7 +788,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState indexingState = runNextPhase(indexingRunner);
     if (indexingState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialRangeSegmentGenerateTask.TYPE + " failed");
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // partition (interval, partitionId) -> partition locations
@@ -772,14 +809,23 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     TaskState mergeState = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(mergeState.isFailure(), "Unrecognized state after task is complete[%s]", mergeState);
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          mergeRunner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), mergeState);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -1046,8 +1092,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {
       return indexTask.run(toolbox);
     } else {
-      LOG.info("Task is asked to stop. Finish as failed");
-      return TaskStatus.failure(getId());
+      String msg = "Task was asked to stop. Finish as failed";
+      LOG.info(msg);
+      return TaskStatus.failure(getId(), msg);
     }
   }
 
