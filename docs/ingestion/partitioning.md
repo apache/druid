@@ -31,7 +31,7 @@ Partitioning and sorting work well together. If you do have a "natural" partitio
 ## How to configure partitioning
 
 Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of flexibility. If you are doing initial ingestion through a less-flexible method like
-Kafka), you can use [reindexing](data-management.md#reingesting-data) or [compaction](compaction.md) to repartition your data after initial ingestion. This is a powerful technique you can use to optimally partition any data older than a certain even while you continuously add new data from a stream.
+Kafka), you can use [reindexing](data-management.md#reingesting-data) or [compaction](compaction.md) to repartition your data after initial ingestion. This is a powerful technique you can use to optimally partition any data older than a certain time threshold while you continuously add new data from a stream.
 
 The following table shows how each ingestion method handles partitioning:
 
