@@ -45,7 +45,7 @@ In general, ingestion methods that offer best-effort rollup do this for one of t
 - The ingestion method uses _incremental publishing_ which means it finalizes and publishes segments before all data for a time chunk has been received,
 In both of these cases, records that could theoretically be rolled up may end up in different segments. All types of streaming ingestion run in this mode.
 
-Ingestion methods that guarantee perfect rollup use an additional preprocessing step to determine intervals and partitioning before data ingestion. This preprocessing step scans the entire input dataset. While this step it increases the time required for ingestion, it provides information necessary for perfect rollup.
+Ingestion methods that guarantee perfect rollup use an additional preprocessing step to determine intervals and partitioning before data ingestion. This preprocessing step scans the entire input dataset. While this step increases the time required for ingestion, it provides information necessary for perfect rollup.
 
 The following table shows how each method handles rollup:
 
