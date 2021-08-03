@@ -9,7 +9,7 @@ Optimal partitioning and sorting of segments within your Druid datasources can h
 
 One way to partition is to your load data into separate datasources. This is a perfectly viable approach that works very well when the number of datasources does not lead to excessive per-datasource overheads. 
 
-This topic describes how to set up partitions within a single datasource. It does not cover using multiple datasources. See [Multitenancy considerations](../querying/multitenancy.md) for more details on splitting data into separate datasources and potential operational considerations.
+This topic describes how to set up partitions within a single datasource. It does not cover how to use multiple datasources. See [Multitenancy considerations](../querying/multitenancy.md) for more details on splitting data into separate datasources and potential operational considerations.
 
 ## Time chunk partitioning
 
