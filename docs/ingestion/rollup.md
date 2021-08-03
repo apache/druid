@@ -2,7 +2,7 @@
 id: rollup
 title: "Data rollup"
 sidebar_label: Data rollup
-description: Introducdes rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup.
+description: Introduces rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup.
 ---
 Druid can roll up data ingestion time to reduce the amount of raw data to  store on disk. Rollup is a form of summarization or pre-aggregation. Rolling up data your can dramatically reduce the size of data to be store and reducing row counts by potentially orders of magnitude. The trade off for the efficiency of rollup means you lose the ability to query individual events.
 
