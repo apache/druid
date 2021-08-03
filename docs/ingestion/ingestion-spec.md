@@ -5,7 +5,7 @@ sidebar_label: Ingestion spec
 description: Reference for the configuration options in the ingestion spec.
 ---
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). For all types of ingestion, the _ingestion spec_ 
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
 
 Ingestion specs consists of three main components:
 
@@ -88,9 +88,11 @@ except for _Hadoop_ ingestion. See the [Legacy `dataSchema` spec](#legacy-datasc
 
 The `dataSchema` is a holder for the following components:
 
-- [datasource name](#datasource), [primary timestamp](#timestampspec),
-  [dimensions](#dimensionsspec), [metrics](#metricsspec), and 
-  [transforms and filters](#transformspec) (if needed).
+- [datasource name](#datasource)
+- [primary timestamp](#timestampspec)
+- [dimensions](#dimensionsspec)
+- [metrics](#metricsspec)
+- [transforms and filters](#transformspec) (if needed).
 
 An example `dataSchema` is:
 
