@@ -33,7 +33,7 @@ import java.util.Objects;
  * This class represents the intermediary data server where the partition of {@code interval} and {@code shardSpec}
  * is stored.
  */
-public class GenericPartitionLocation implements PartitionLocation<BuildingShardSpec>
+public class GenericPartitionLocation implements PartitionLocation
 {
   private final String host;
   private final int port;

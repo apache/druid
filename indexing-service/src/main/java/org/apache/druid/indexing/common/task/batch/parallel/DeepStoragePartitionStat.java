@@ -28,8 +28,9 @@ import org.joda.time.Interval;
 import java.util.Map;
 import java.util.Objects;
 
-public class DeepStoragePartitionStat implements PartitionStat<BucketNumberedShardSpec, BuildingShardSpec>
+public class DeepStoragePartitionStat implements PartitionStat
 {
+  public static final String TYPE = "deepstore";
   static final String PROP_SHARD_SPEC = "shardSpec";
   private final Map<String, Object> loadSpec;
   // Primary partition key
@@ -60,12 +61,6 @@ public class DeepStoragePartitionStat implements PartitionStat<BucketNumberedSha
   public Interval getInterval()
   {
     return interval;
-  }
-
-  @JsonProperty
-  public BucketNumberedShardSpec getShardSpec()
-  {
-    return shardSpec;
   }
 
   @JsonProperty(PROP_SHARD_SPEC)

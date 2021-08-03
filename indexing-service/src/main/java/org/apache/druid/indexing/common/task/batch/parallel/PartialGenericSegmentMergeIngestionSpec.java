@@ -23,13 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.indexing.DataSchema;
 
-class PartialGenericSegmentMergeIngestionSpec
-    extends PartialSegmentMergeIngestionSpec<PartialGenericSegmentMergeIOConfig>
+class PartialGenericSegmentMergeIngestionSpec extends PartialSegmentMergeIngestionSpec
 {
   @JsonCreator
   PartialGenericSegmentMergeIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") PartialGenericSegmentMergeIOConfig ioConfig,
+      @JsonProperty("ioConfig") PartialSegmentMergeIOConfig ioConfig,
       @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
   )
   {

@@ -26,8 +26,9 @@ import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
 import java.util.Map;
+import java.util.Objects;
 
-public class DeepStoragePartitionLocation implements PartitionLocation<BuildingShardSpec>
+public class DeepStoragePartitionLocation implements PartitionLocation
 {
   private final String subTaskId;
   private final Interval interval;
@@ -80,5 +81,38 @@ public class DeepStoragePartitionLocation implements PartitionLocation<BuildingS
   public Map<String, Object> getLoadSpec()
   {
     return loadSpec;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DeepStoragePartitionLocation that = (DeepStoragePartitionLocation) o;
+    return subTaskId.equals(that.subTaskId)
+           && interval.equals(that.interval)
+           && shardSpec.equals(that.shardSpec)
+           && loadSpec.equals(that.loadSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(subTaskId, interval, shardSpec, loadSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DeepStoragePartitionLocation{" +
+           "subTaskId='" + subTaskId + '\'' +
+           ", interval=" + interval +
+           ", shardSpec=" + shardSpec +
+           ", loadSpec=" + loadSpec +
+           '}';
   }
 }

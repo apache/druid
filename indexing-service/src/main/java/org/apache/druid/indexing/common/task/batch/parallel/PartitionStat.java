@@ -21,19 +21,21 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
 /**
  * Statistics about a partition created by {@link PartialSegmentGenerateTask}. Each partition is a
  * set of data of the same time chunk (primary partition key) and the same secondary partition key
- * ({@link T}). This class holds the statistics of a single partition created by a task.
+ * ({@link BucketNumberedShardSpec}). This class holds the statistics of a single partition created by a task.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionStat.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "generic", value = GenericPartitionStat.class),
-    @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionStat.class)
+    @JsonSubTypes.Type(name = GenericPartitionStat.TYPE, value = GenericPartitionStat.class),
+    @JsonSubTypes.Type(name = DeepStoragePartitionStat.TYPE, value = DeepStoragePartitionStat.class)
 })
-public interface PartitionStat<T, U>
+public interface PartitionStat
 {
   /**
    * @return Uniquely identifying index from 0..N-1 of the N partitions
@@ -43,7 +45,7 @@ public interface PartitionStat<T, U>
   /**
    * @return Definition of secondary partition. For example, for range partitioning, this should include the start/end.
    */
-  T getSecondaryPartition();
+  BucketNumberedShardSpec getSecondaryPartition();
 
   /**
    * @return interval for the partition
@@ -53,5 +55,5 @@ public interface PartitionStat<T, U>
   /**
    * Converts partition stat to PartitionLocation
    * */
-  PartitionLocation<U> toPartitionLocation(String subtaskId, U shardSpec);
+  PartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec shardSpec);
 }

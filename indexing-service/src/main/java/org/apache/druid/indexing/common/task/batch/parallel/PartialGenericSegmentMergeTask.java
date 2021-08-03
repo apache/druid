@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  * {@link ParallelIndexTaskRunner} for the phase to merge generic partitioned segments in multi-phase parallel indexing.
  */
-public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<BuildingShardSpec, GenericPartitionLocation>
+public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<BuildingShardSpec>
 {
   public static final String TYPE = "partial_index_generic_merge";
 
@@ -79,7 +79,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   }
 
   private static Table<Interval, Integer, BuildingShardSpec<?>> createIntervalAndIntegerToShardSpec(
-      List<GenericPartitionLocation> partitionLocations
+      List<PartitionLocation> partitionLocations
   )
   {
     final Table<Interval, Integer, BuildingShardSpec<?>> intervalAndIntegerToShardSpec = HashBasedTable.create();

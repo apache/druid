@@ -703,7 +703,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  static class LocalShuffleClient implements ShuffleClient
+  static class LocalShuffleClient implements ShuffleClient<GenericPartitionLocation>
   {
     private final IntermediaryDataManager intermediaryDataManager;
 
@@ -713,10 +713,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        GenericPartitionLocation location
     ) throws IOException
     {
       final java.util.Optional<ByteSource> zippedFile = intermediaryDataManager.findPartitionFile(

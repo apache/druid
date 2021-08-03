@@ -98,6 +98,6 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   @Override
   public void deletePartitions(String supervisorTaskId)
   {
-    throw new UnsupportedOperationException("Clean up will be taken care by a coordinator duty");
+    throw new UnsupportedOperationException("Not supported");
   }
 }

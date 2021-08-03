@@ -20,14 +20,49 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Collection;
 import java.util.Collections;
 
-public class PartialGenericSegmentMergeIOConfigTest
+@RunWith(Parameterized.class)
+public class PartialSegmentMergeIOConfigTest
 {
+  final PartitionLocation partitionLocation;
+
+  public PartialSegmentMergeIOConfigTest(PartitionLocation partitionLocation)
+  {
+    this.partitionLocation = partitionLocation;
+  }
+
+  @Parameterized.Parameters(name = "intermediateDataManager={0}")
+  public static Collection<Object[]> data()
+  {
+    return ImmutableList.of(new Object[]{
+        new GenericPartitionLocation(
+            ParallelIndexTestingFactory.HOST,
+            ParallelIndexTestingFactory.PORT,
+            ParallelIndexTestingFactory.USE_HTTPS,
+            ParallelIndexTestingFactory.SUBTASK_ID,
+            ParallelIndexTestingFactory.INTERVAL,
+            ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
+        )
+    }, new Object[]{
+        new DeepStoragePartitionLocation(
+            ParallelIndexTestingFactory.SUBTASK_ID,
+            ParallelIndexTestingFactory.INTERVAL,
+            ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC,
+            ImmutableMap.of("path", "/test/path")
+        )
+    });
+  }
+
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
       ParallelIndexTestingFactory.HOST,
@@ -38,12 +73,12 @@ public class PartialGenericSegmentMergeIOConfigTest
       ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
   );
 
-  private PartialGenericSegmentMergeIOConfig target;
+  private PartialSegmentMergeIOConfig target;
 
   @Before
   public void setup()
   {
-    target = new PartialGenericSegmentMergeIOConfig(Collections.singletonList(GENERIC_PARTITION_LOCATION));
+    target = new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));
   }
 
   @Test

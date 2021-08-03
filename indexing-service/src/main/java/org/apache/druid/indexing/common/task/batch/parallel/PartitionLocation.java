@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
 /**
@@ -29,13 +30,13 @@ import org.joda.time.Interval;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionLocation.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "generic", value = GenericPartitionLocation.class),
-    @JsonSubTypes.Type(name = "deepstore", value = DeepStoragePartitionLocation.class)
+    @JsonSubTypes.Type(name = GenericPartitionStat.TYPE, value = GenericPartitionLocation.class),
+    @JsonSubTypes.Type(name = DeepStoragePartitionStat.TYPE, value = DeepStoragePartitionLocation.class)
 })
-public interface PartitionLocation<T>
+public interface PartitionLocation
 {
   int getBucketId();
   Interval getInterval();
-  T getShardSpec();
+  BuildingShardSpec getShardSpec();
   String getSubTaskId();
 }

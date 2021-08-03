@@ -30,7 +30,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import java.io.File;
 import java.io.IOException;
 
-public class DeepStorageShuffleClient implements ShuffleClient
+public class DeepStorageShuffleClient implements ShuffleClient<DeepStoragePartitionLocation>
 {
   private static final Logger LOG = new Logger(DeepStorageShuffleClient.class);
   private final ObjectMapper objectMapper;
@@ -42,11 +42,10 @@ public class DeepStorageShuffleClient implements ShuffleClient
   }
 
   @Override
-  public <T, P extends PartitionLocation<T>> File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
+  public File fetchSegmentFile(File partitionDir, String supervisorTaskId, DeepStoragePartitionLocation location)
       throws IOException
   {
-    final DeepStoragePartitionLocation deepStoragePartitionLocation = (DeepStoragePartitionLocation) location;
-    final LoadSpec loadSpec = objectMapper.convertValue(deepStoragePartitionLocation.getLoadSpec(), LoadSpec.class);
+    final LoadSpec loadSpec = objectMapper.convertValue(location.getLoadSpec(), LoadSpec.class);
     final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
     FileUtils.forceMkdir(unzippedDir);
     try {

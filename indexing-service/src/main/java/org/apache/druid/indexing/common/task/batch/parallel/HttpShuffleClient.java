@@ -40,7 +40,7 @@ import java.util.concurrent.ExecutionException;
  * HTTP-based ShuffleClient.
  * This class is injected as a lazy singleton instance and thus must be stateless.
  */
-public class HttpShuffleClient implements ShuffleClient
+public class HttpShuffleClient implements ShuffleClient<GenericPartitionLocation>
 {
   private static final Logger LOG = new Logger(HttpShuffleClient.class);
 
@@ -58,18 +58,17 @@ public class HttpShuffleClient implements ShuffleClient
   }
 
   @Override
-  public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+  public File fetchSegmentFile(
       File partitionDir,
       String supervisorTaskId,
-      P location
+      GenericPartitionLocation location
   ) throws IOException
   {
     // Create a local buffer since this class is not thread-safe.
     // Note that this method can be called by different threads at the same time with ThreadingTaskRunner.
     final byte[] buffer = new byte[BUFFER_SIZE];
     final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
-    final GenericPartitionLocation partitionLocation = (GenericPartitionLocation) location;
-    final URI uri = partitionLocation.toIntermediaryDataServerURI(supervisorTaskId);
+    final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
     FileUtils.copyLarge(
         uri,
         u -> {

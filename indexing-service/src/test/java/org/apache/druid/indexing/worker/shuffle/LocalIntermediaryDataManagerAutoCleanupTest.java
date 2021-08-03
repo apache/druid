@@ -112,7 +112,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   }
 
   @After
-  public void teardown() throws InterruptedException
+  public void teardown()
   {
     intermediaryDataManager.stop();
   }

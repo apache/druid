@@ -35,8 +35,9 @@ import java.util.Objects;
  * partition key). The {@link ShardSpec} is later used by {@link PartialGenericSegmentMergeTask} to merge the partial
  * segments.
  */
-public class GenericPartitionStat implements PartitionStat<BucketNumberedShardSpec, BuildingShardSpec>
+public class GenericPartitionStat implements PartitionStat
 {
+  public static final String TYPE = "local";
   static final String PROP_SHARD_SPEC = "shardSpec";
 
   // Host and port of the task executor

@@ -36,7 +36,6 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -88,6 +87,7 @@ public class ShuffleDataSegmentPusherTest
   private ObjectMapper mapper;
 
   private final String intermediateDataStore;
+  private File localDeepStore;
 
   public ShuffleDataSegmentPusherTest(String intermediateDataStore)
   {
@@ -115,16 +115,17 @@ public class ShuffleDataSegmentPusherTest
     if (LOCAL.equals(intermediateDataStore)) {
       intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
-      final File localDeepStore = temporaryFolder.newFolder("localStorage");
+      localDeepStore = temporaryFolder.newFolder("localStorage");
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(
-          new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()
-          {
-            @Override
-            public File getStorageDirectory()
-            {
-              return localDeepStore;
-            }
-          }));
+          new LocalDataSegmentPusher(
+              new LocalDataSegmentPusherConfig()
+              {
+                @Override
+                public File getStorageDirectory()
+                {
+                  return localDeepStore;
+                }
+              }));
     }
     intermediaryDataManager.start();
     segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);
@@ -145,7 +146,7 @@ public class ShuffleDataSegmentPusherTest
   }
 
   @After
-  public void teardown() throws InterruptedException
+  public void teardown()
   {
     intermediaryDataManager.stop();
   }
@@ -169,7 +170,7 @@ public class ShuffleDataSegmentPusherTest
           segment.getShardSpec().getPartitionNum()
       );
       Assert.assertTrue(zippedSegment.isPresent());
-      final FileCopyResult result = CompressionUtils.unzip(
+      CompressionUtils.unzip(
           zippedSegment.get(),
           tempDir,
           org.apache.druid.java.util.common.FileUtils.IS_EXCEPTION,
@@ -177,8 +178,15 @@ public class ShuffleDataSegmentPusherTest
       );
     } else if (intermediaryDataManager instanceof DeepStorageIntermediaryDataManager) {
       final LoadSpec loadSpec = mapper.convertValue(pushed.getLoadSpec(), LoadSpec.class);
+      Assert.assertTrue(pushed.getLoadSpec()
+                              .get("path")
+                              .toString()
+                              .startsWith(localDeepStore.getAbsolutePath()
+                                          + "/"
+                                          + DeepStorageIntermediaryDataManager.SHUFFLE_DATA_DIR_PREFIX));
       loadSpec.loadSegment(tempDir);
     }
+
     final List<File> unzippedFiles = Arrays.asList(tempDir.listFiles());
     unzippedFiles.sort(Comparator.comparing(File::getName));
     final File dataFile = unzippedFiles.get(0);
