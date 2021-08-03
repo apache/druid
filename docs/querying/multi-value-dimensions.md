@@ -1,4 +1,4 @@
-  ---
+---
 id: multi-value-dimensions
 title: "Multi-value dimensions"
 ---
