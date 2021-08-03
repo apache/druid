@@ -7,6 +7,7 @@ sidebar_label: Ingestion spec
 description: Reference for the configuration options in the ingestion spec.
 ---
 
+<<<<<<< HEAD
 All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
 =======
 description: 
@@ -17,6 +18,9 @@ description: Reference for the configuration options in the ingestion spec.
 
 All ingestion methods use ingestion tasks to load data in to druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [tasks](tasks.md). For all types of ingestion, the _ingestion spec_ 
 >>>>>>> 1ebdcca00a... fix name for ingestion spec
+=======
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). For all types of ingestion, the _ingestion spec_ 
+>>>>>>> fa1c8856e2... Update docs/ingestion/ingestion-spec.md
 
 Ingestion specs consists of three main components:
 
@@ -586,6 +590,7 @@ The `indexSpec` object can include the following properties:
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 [ingestion method](./index.md#ingestion-methods) for details.
 =======
 [ingestion method](#ingestion-methods) for details.
@@ -593,3 +598,6 @@ Beyond these properties, each ingestion method has its own specific tuning prope
 =======
 [ingestion method](./index.md#ingestion-methods) for details.
 >>>>>>> f784a85aa2... break ingestion topic into smaller topics
+=======
+[ingestion method](./index.md#ingestion-methods) for details.
+>>>>>>> fa1c8856e2... Update docs/ingestion/ingestion-spec.md
