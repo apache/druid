@@ -39,7 +39,7 @@ For additional information about concepts and configurations that are unique to 
 
 ## Ingestion methods
 
-The table below lists Druid's most common data ingestion methods, along with comparisons to help you choose
+The tables below list Druid's most common data ingestion methods, along with comparisons to help you choose
 the best one for your situation. Each ingestion method supports its own set of source systems to pull from. For details
 about how each method works, as well as configuration properties specific to that method, check out its documentation
 page.
