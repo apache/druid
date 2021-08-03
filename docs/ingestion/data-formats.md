@@ -128,6 +128,8 @@ The CSV `inputFormat` has the following components:
 
 ### TSV (Delimited)
 
+The `inputFormat` to load data of a delimited format. An example is:
+
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -139,7 +141,7 @@ The CSV `inputFormat` has the following components:
 }
 ```
 
-The `inputFormat` to load data of a delimited format. An example is:
+The TSV `inputFormat` has the following components:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
