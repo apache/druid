@@ -26,7 +26,7 @@ dimension that you often use as a filter when possible. Such partitioning often 
 
 Partitioning and sorting work well together. If you do have a "natural" partitioning dimension, consider placing it first in the `dimensions` list of your `dimensionsSpec`. This way Druid sorts rows within each segment by that column. This sorting configuration frequently improves compression more than using partitioning alone.
 
-> Note that Druid always sorts rows within a segment by timestamp first, even before the first dimension listed in your `dimensionsSpec`. This sorting can preclude the efficacy of dimension sorting. To work around this limitation if necessary, set your `queryGranularity` equal to `segmentGranularity` in your [`granularitySpec`](./ingestion-spec.md#granularityspec). Druid will set all timestamps within the segment to the same value, and letting you identify a [secondary timestamp](schema-design.md#secondary-timestamps) as the "real" timestamp.
+> Note that Druid always sorts rows within a segment by timestamp first, even before the first dimension listed in your `dimensionsSpec`. This sorting can preclude the efficacy of dimension sorting. To work around this limitation if necessary, set your `queryGranularity` equal to `segmentGranularity` in your [`granularitySpec`](./ingestion-spec.md#granularityspec). Druid will set all timestamps within the segment to the same value, letting you identify a [secondary timestamp](schema-design.md#secondary-timestamps) as the "real" timestamp.
 
 ## How to configure partitioning
 
@@ -47,4 +47,3 @@ The following table shows how each ingestion method handles partitioning:
 See the following topics for more information:
 * [`partitionsSpec`](native-batch.md#partitionsspec) for more detail on partitioning with Native Batch ingestion.
 * [Reindexing](data-management.md#reingesting-data) and [Compaction](compaction.md) for information on how to repartition existing data in Druid.
-
