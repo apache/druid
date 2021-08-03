@@ -39,8 +39,8 @@ The following table shows how each ingestion method handles partitioning:
 |------|------------|
 |[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
 |[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Kafka topic partitioning defines how partitions the datasource. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Kinesis stream sharding defines how partitions the datasource.. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
+|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Kafka topic partitioning defines how Druid partitions the datasource. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
+|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Kinesis stream sharding defines how Druid partitions the datasource. You can also [reindex](data-management.md#reingesting-data) or [compact](compaction.md) to repartition after initial ingestion.|
 
 
 ## Learn more
