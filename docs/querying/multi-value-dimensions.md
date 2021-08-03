@@ -1,4 +1,4 @@
----
+  ---
 id: multi-value-dimensions
 title: "Multi-value dimensions"
 ---
@@ -30,6 +30,9 @@ array of values instead of a single value, such as the `tags` values in the foll
 Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
 array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
 characters). By default Druid ingests the values in alphabetical order, see [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for configuration.
+<<<<<<< HEAD
+>>>>>>> f784a85aa2... break ingestion topic into smaller topics
+=======
 >>>>>>> f784a85aa2... break ingestion topic into smaller topics
 
 ```

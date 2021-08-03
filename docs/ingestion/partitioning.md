@@ -4,7 +4,6 @@ title: Partitioning
 sidebar_label: Partitioning
 description: Describes time chunk and secondary partitioning in Druid. Provides guidance to choose a secondary partition dimension.
 ---
-
 You can use segment partitioning and sorting within your Druid datasources to reduce the size of your data and increase performance.
 
 One way to partition is to your load data into separate datasources. This is a perfectly viable approach that works very well when the number of datasources does not lead to excessive per-datasource overheads. 
@@ -47,3 +46,7 @@ The following table shows how each ingestion method handles partitioning:
 See the following topics for more information:
 * [`partitionsSpec`](native-batch.md#partitionsspec) for more detail on partitioning with Native Batch ingestion.
 * [Reindexing](data-management.md#reingesting-data) and [Compaction](compaction.md) for information on how to repartition existing data in Druid.
+<<<<<<< HEAD
+=======
+
+>>>>>>> f784a85aa2... break ingestion topic into smaller topics

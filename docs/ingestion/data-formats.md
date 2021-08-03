@@ -541,7 +541,6 @@ After Druid reads the input data records, it applies the flattenSpec before appl
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
 and `parquet`.
 
-
 #### Field flattening specifications
 
 Each entry in the `fields` list can have the following components:
