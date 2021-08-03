@@ -5,7 +5,7 @@ sidebar_label: Data model
 description: Introduces concepts of datasources, primary timestamp, dimensions, and metrics.
 ---
 
-Druid stores data in datasources, which are similar to tables in a traditional relational database management systems (RDBMS). Druid's data model shares  similarities with both relational and timeseries data models.
+Druid stores data in datasources, which are similar to tables in a traditional relational database management system (RDBMS). Druid's data model shares  similarities with both relational and timeseries data models.
 
 ## Primary timestamp
 
