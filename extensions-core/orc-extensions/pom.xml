@@ -31,7 +31,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <properties>
-        <orc.version>1.5.10</orc.version>
+        <orc.version>1.6.9</orc.version>
     </properties>
     <dependencies>
         <dependency>

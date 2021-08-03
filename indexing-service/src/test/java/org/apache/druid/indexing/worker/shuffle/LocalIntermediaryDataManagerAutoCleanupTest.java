@@ -51,12 +51,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class IntermediaryDataManagerAutoCleanupTest
+public class LocalIntermediaryDataManagerAutoCleanupTest
 {
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
 
-  private IntermediaryDataManager intermediaryDataManager;
+  private LocalIntermediaryDataManager intermediaryDataManager;
 
   @Before
   public void setup() throws IOException
@@ -107,7 +107,7 @@ public class IntermediaryDataManagerAutoCleanupTest
         return result;
       }
     };
-    intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     intermediaryDataManager.start();
   }
 
@@ -128,7 +128,7 @@ public class IntermediaryDataManagerAutoCleanupTest
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
     Thread.sleep(3000);
-    Assert.assertNull(intermediaryDataManager.findPartitionFile(supervisorTaskId, subTaskId, interval, 0));
+    Assert.assertFalse(intermediaryDataManager.findPartitionFile(supervisorTaskId, subTaskId, interval, 0).isPresent());
   }
 
   private File generateSegmentDir(String fileName) throws IOException

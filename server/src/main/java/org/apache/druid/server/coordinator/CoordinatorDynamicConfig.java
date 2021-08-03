@@ -55,6 +55,7 @@ public class CoordinatorDynamicConfig
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
   private final double percentOfSegmentsToConsiderPerMove;
+  private final boolean useBatchedSegmentSampler;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
@@ -115,6 +116,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+      @JsonProperty("useBatchedSegmentSampler") boolean useBatchedSegmentSampler,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -161,6 +163,7 @@ public class CoordinatorDynamicConfig
     );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
+    this.useBatchedSegmentSampler = useBatchedSegmentSampler;
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -273,6 +276,12 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
+  public boolean useBatchedSegmentSampler()
+  {
+    return useBatchedSegmentSampler;
+  }
+
+  @JsonProperty
   public int getReplicantLifetime()
   {
     return replicantLifetime;
@@ -377,6 +386,7 @@ public class CoordinatorDynamicConfig
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
            ", percentOfSegmentsToConsiderPerMove=" + percentOfSegmentsToConsiderPerMove +
+           ", useBatchedSegmentSampler=" + useBatchedSegmentSampler +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
@@ -419,6 +429,9 @@ public class CoordinatorDynamicConfig
       return false;
     }
     if (percentOfSegmentsToConsiderPerMove != that.percentOfSegmentsToConsiderPerMove) {
+      return false;
+    }
+    if (useBatchedSegmentSampler != that.useBatchedSegmentSampler) {
       return false;
     }
     if (replicantLifetime != that.replicantLifetime) {
@@ -469,6 +482,7 @@ public class CoordinatorDynamicConfig
         mergeSegmentsLimit,
         maxSegmentsToMove,
         percentOfSegmentsToConsiderPerMove,
+        useBatchedSegmentSampler,
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
@@ -501,6 +515,7 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
+    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = false;
     private static final boolean DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
@@ -513,6 +528,7 @@ public class CoordinatorDynamicConfig
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
     private Double percentOfSegmentsToConsiderPerMove;
+    private Boolean useBatchedSegmentSampler;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
@@ -539,6 +555,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+        @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -561,6 +578,7 @@ public class CoordinatorDynamicConfig
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
@@ -603,6 +621,12 @@ public class CoordinatorDynamicConfig
     public Builder withPercentOfSegmentsToConsiderPerMove(double percentOfSegmentsToConsiderPerMove)
     {
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+      return this;
+    }
+
+    public Builder withUseBatchedSegmentSampler(boolean useBatchedSegmentSampler)
+    {
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
       return this;
     }
 
@@ -689,6 +713,7 @@ public class CoordinatorDynamicConfig
           maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
           percentOfSegmentsToConsiderPerMove == null ? DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
                                                      : percentOfSegmentsToConsiderPerMove,
+          useBatchedSegmentSampler == null ? DEFAULT_USE_BATCHED_SEGMENT_SAMPLER : useBatchedSegmentSampler,
           replicantLifetime == null ? DEFAULT_REPLICANT_LIFETIME : replicantLifetime,
           replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
@@ -721,6 +746,7 @@ public class CoordinatorDynamicConfig
           mergeSegmentsLimit == null ? defaults.getMergeSegmentsLimit() : mergeSegmentsLimit,
           maxSegmentsToMove == null ? defaults.getMaxSegmentsToMove() : maxSegmentsToMove,
           percentOfSegmentsToConsiderPerMove == null ? defaults.getPercentOfSegmentsToConsiderPerMove() : percentOfSegmentsToConsiderPerMove,
+          useBatchedSegmentSampler == null ? defaults.useBatchedSegmentSampler() : useBatchedSegmentSampler,
           replicantLifetime == null ? defaults.getReplicantLifetime() : replicantLifetime,
           replicationThrottleLimit == null ? defaults.getReplicationThrottleLimit() : replicationThrottleLimit,
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,

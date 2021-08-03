@@ -83,7 +83,7 @@ public class TaskToolboxFactory
   private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final Provider<MonitorScheduler> monitorSchedulerProvider;
-  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -124,7 +124,7 @@ public class TaskToolboxFactory
       QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Provider<MonitorScheduler> monitorSchedulerProvider,
-      SegmentLoaderFactory segmentLoaderFactory,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
       @Json ObjectMapper jsonMapper,
       IndexIO indexIO,
       Cache cache,
@@ -162,7 +162,7 @@ public class TaskToolboxFactory
     this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.monitorSchedulerProvider = monitorSchedulerProvider;
-    this.segmentLoaderFactory = segmentLoaderFactory;
+    this.segmentCacheManagerFactory = segmentCacheManagerFactory;
     this.jsonMapper = jsonMapper;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
@@ -204,7 +204,7 @@ public class TaskToolboxFactory
         queryProcessingPool,
         joinableFactory,
         monitorSchedulerProvider,
-        segmentLoaderFactory.manufacturate(taskWorkDir),
+        segmentCacheManagerFactory.manufacturate(taskWorkDir),
         jsonMapper,
         taskWorkDir,
         indexIO,

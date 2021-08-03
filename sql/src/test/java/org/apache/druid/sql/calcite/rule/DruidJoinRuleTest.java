@@ -67,7 +67,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(joinType, 0),
                 rexBuilder.makeInputRef(joinType, 1)
             ),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -86,7 +87,8 @@ public class DruidJoinRuleTest
                 ),
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
             ),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -105,7 +107,8 @@ public class DruidJoinRuleTest
                     rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
                 )
             ),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -120,7 +123,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0),
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0)
             ),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -135,7 +139,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1),
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
             ),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -146,7 +151,8 @@ public class DruidJoinRuleTest
     Assert.assertTrue(
         DruidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(true),
-            leftType
+            leftType,
+            null
         )
     );
   }
@@ -157,7 +163,8 @@ public class DruidJoinRuleTest
     Assert.assertTrue(
         DruidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(false),
-            leftType
+            leftType,
+            null
         )
     );
   }
