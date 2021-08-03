@@ -19,7 +19,7 @@ You can control other important operations that are based on the primary timesta
 [`granularitySpec`](./ingestion-spec.md#granularityspec). If you have more than one timestamp column, you can store the others as
 =======
 Druid parses the primary timestamp based on the [`timestampSpec`](./ingestion-spec.md#timestampspec) configuration at ingestion time. You can control other important operations that are based on the primary timestamp
-[`granularitySpec`](./ingestion-spec.md#granularityspec). Regardless of the source input field for the primary timestamp, Druid always be stores the timestamp in the `__time` column in your Druid datasource.
+[`granularitySpec`](./ingestion-spec.md#granularityspec). Regardless of the source input field for the primary timestamp, Druid always stores the timestamp in the `__time` column in your Druid datasource.
 
 If you have more than one timestamp column, you can store the others as
 >>>>>>> f784a85aa2... break ingestion topic into smaller topics
@@ -53,4 +53,7 @@ has the following benefits:
 - Druid can compute some aggregators, especially approximate ones, more quickly at query time if they are partially computed at ingestion time, including data that has not been rolled up.
 
  At ingestion time, you configure Metrics in the [`metricsSpec`](./ingestion-spec.md#metricsspec).
+<<<<<<< HEAD
 >>>>>>> f784a85aa2... break ingestion topic into smaller topics
+=======
+>>>>>>> aa84049cdb... Update docs/ingestion/data-model.md
