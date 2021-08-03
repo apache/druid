@@ -20,7 +20,7 @@ If you have more than one timestamp column, you can store the others as
 
 ## Dimensions
 
-Dimensions are columns that Druid stores "as-is". You can use dimensions for any purpose. For example, you can group, filter, or apply aggregators to dimensions at query time in an ad-hoc manner.
+Dimensions are columns that Druid stores "as-is". You can use dimensions for any purpose. For example, you can group, filter, or apply aggregators to dimensions at query time in an ad hoc manner.
 
 If you disable [rollup](./rollup.md), then Druid treats the set of
 dimensions like a set of columns to ingest. The dimensions behave exactly as you would expect from any database that does not support a rollup feature.
