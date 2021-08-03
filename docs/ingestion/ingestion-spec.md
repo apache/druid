@@ -2,7 +2,7 @@
 id: ingestion-spec
 title: Ingestion spec reference
 sidebar_label: Ingestion spec
-description: 
+description: Reference for the configuration options in the ingestion spec.
 ---
 
 All ingestion methods use ingestion tasks to load data in to druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [tasks](tasks.md). For all types of ingestion, the _ingestion spec_ 
@@ -12,9 +12,9 @@ Ingestion specs consists of three main components:
 - [`dataSchema`](#dataschema), which configures the [datasource name](#datasource),
    [primary timestamp](#timestampspec), [dimensions](#dimensionsspec), [metrics](#metricsspec), and [transforms and filters](#transformspec) (if needed).
 - [`ioConfig`](#ioconfig), which tells Druid how to connect to the source system and how to parse data. For more information, see the
-   documentation for each [ingestion method](#ingestion-methods).
+   documentation for each [ingestion method](./index.md#ingestion-methods).
 - [`tuningConfig`](#tuningconfig), which controls various tuning parameters specific to each
-  [ingestion method](#ingestion-methods).
+  [ingestion method](./index.md#ingestion-methods).
 
 Example ingestion spec for task type `index_parallel` (native batch):
 
@@ -72,7 +72,7 @@ Example ingestion spec for task type `index_parallel` (native batch):
 }
 ```
 
-The specific options supported by these sections will depend on the [ingestion method](#ingestion-methods) you have chosen.
+The specific options supported by these sections will depend on the [ingestion method](./index.md#ingestion-methods) you have chosen.
 For more examples, refer to the documentation for each ingestion method.
 
 You can also load data visually, without the need to write an ingestion spec, using the "Load data" functionality
@@ -136,7 +136,7 @@ The `dataSource` is located in `dataSchema` → `dataSource` and is simply the n
 ### `timestampSpec`
 
 The `timestampSpec` is located in `dataSchema` → `timestampSpec` and is responsible for
-configuring the [primary timestamp](#primary-timestamp). An example `timestampSpec` is:
+configuring the [primary timestamp](./data-model.md#primary-timestamp). An example `timestampSpec` is:
 
 ```
 "timestampSpec": {
@@ -161,7 +161,7 @@ A `timestampSpec` can have the following components:
 ### `dimensionsSpec`
 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
-configuring [dimensions](#dimensions). An example `dimensionsSpec` is:
+configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec` is:
 
 ```
 "dimensionsSpec" : {
@@ -224,7 +224,7 @@ Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` 
 ### `metricsSpec`
 
 The `metricsSpec` is located in `dataSchema` → `metricsSpec` and is a list of [aggregators](../querying/aggregations.md)
-to apply at ingestion time. This is most useful when [rollup](#rollup) is enabled, since it's how you configure
+to apply at ingestion time. This is most useful when [rollup](./rollup.md) is enabled, since it's how you configure
 ingestion-time aggregation.
 
 An example `metricsSpec` is:
@@ -237,7 +237,7 @@ An example `metricsSpec` is:
 ]
 ```
 
-> Generally, when [rollup](#rollup) is disabled, you should have an empty `metricsSpec` (because without rollup,
+> Generally, when [rollup](./rollup.md) is disabled, you should have an empty `metricsSpec` (because without rollup,
 > Druid does not do any ingestion-time aggregation, so there is little reason to include an ingestion-time aggregator). However,
 > in some cases, it can still make sense to define metrics: for example, if you want to create a complex column as a way of
 > pre-computing part of an [approximate aggregation](../querying/aggregations.md#approximate-aggregations), this can only
@@ -251,9 +251,9 @@ the following operations:
 1. Partitioning a datasource into [time chunks](../design/architecture.md#datasources-and-segments) (via `segmentGranularity`).
 2. Truncating the timestamp, if desired (via `queryGranularity`).
 3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
-4. Specifying whether ingestion-time [rollup](#rollup) should be used or not (via `rollup`).
+4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
 
-Other than `rollup`, these operations are all based on the [primary timestamp](#primary-timestamp).
+Other than `rollup`, these operations are all based on the [primary timestamp](./data-model.md#primary-timestamp).
 
 An example `granularitySpec` is:
 
@@ -275,7 +275,7 @@ A `granularitySpec` can have the following components:
 | type | Either `uniform` or `arbitrary`. In most cases you want to use `uniform`.| `uniform` |
 | segmentGranularity | [Time chunking](../design/architecture.md#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
 | queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br><br>Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
-| rollup | Whether to use ingestion-time [rollup](#rollup) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
+| rollup | Whether to use ingestion-time [rollup](./rollup.md) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
 | intervals | A list of intervals describing what time chunks of segments should be created. If `type` is set to `uniform`, this list will be broken up and rounded-off based on the `segmentGranularity`. If `type` is set to `arbitrary`, this list will be used as-is.<br><br>If `null` or not provided, batch ingestion tasks will generally determine which time chunks to output based on what timestamps are found in the input data.<br><br>If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks will throw away any records with timestamps outside of the specified intervals.<br><br>Ignored for any form of streaming ingestion. | `null` |
 
 ### `transformSpec`
@@ -358,8 +358,8 @@ For details about `inputFormat` and supported `parser` types, see the ["Data for
 
 For details about major components of the `parseSpec`, refer to their subsections:
 
-- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](#primary-timestamp).
-- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](#dimensions).
+- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](./data-model.md#primary-timestamp).
+- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](./data-model.md#dimensions).
 - [`flattenSpec`](#flattenspec), responsible for flattening nested data formats.
 
 An example `parser` is:
@@ -400,7 +400,7 @@ See [Flatten spec](./data-formats.md#flattenspec) for more details.
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
 filesystem, or any other supported source system. The `inputFormat` property applies to all
-[ingestion method](#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
+[ingestion method](./index.md#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
 uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
 The rest of `ioConfig` is specific to each individual ingestion method.
 An example `ioConfig` to read JSON data is:
@@ -414,12 +414,12 @@ An example `ioConfig` to read JSON data is:
     ...
 }
 ```
-For more details, see the documentation provided by each [ingestion method](#ingestion-methods).
+For more details, see the documentation provided by each [ingestion method](./index.md#ingestion-methods).
 
 ## `tuningConfig`
 
 Tuning properties are specified in a `tuningConfig`, which goes at the top level of an ingestion spec. Some
-properties apply to all [ingestion methods](#ingestion-methods), but most are specific to each individual
+properties apply to all [ingestion methods](./index.md#ingestion-methods), but most are specific to each individual
 ingestion method. An example `tuningConfig` that sets all of the shared, common properties to their defaults
 is:
 
@@ -459,4 +459,4 @@ The `indexSpec` object can include the following properties:
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
-[ingestion method](#ingestion-methods) for details.
+[ingestion method](./index.md#ingestion-methods) for details.

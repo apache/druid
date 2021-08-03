@@ -29,10 +29,13 @@ Hadoop-based ingestion, which uses a Hadoop MapReduce job on YARN MiddleManager 
 
 After Druid creates segments have been generated and stores them in [deep storage](../dependencies/deep-storage.md), Historical processes load them to respond to queries. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
 
-This topic provides information about universal Druid ingestion concept and configurations that are common to all [ingestion methods](#ingestion-methods).
+This topic and the following topics describe ingestion concepts and information that apply to all [ingestion methods](#ingestion-methods):
+- [Druid data model](./data-model.md) introduces concepts of datasources, primary timestamp, dimensions, and metrics.
+- [Data rollup](./rollup.md) describes rollup as a concept and provides suggestions to maximize the benefits of rollup.
+- [Partitioning](./partitioning.md) describes time chunk and secondary partitioning in Druid.
+- [Ingestion spec reference](./ingestion-spec.md) provides a reference for the configuration options in the ingestion spec.
 
-For additional information about concepts and configurations
-that are unique to each ingestion method, see the topic for the ingestion method.
+For additional information about concepts and configurations that are unique to each ingestion method, see the topic for the ingestion method.
 
 ## Ingestion methods
 
@@ -76,5 +79,3 @@ This table compares the three available options:
 | **External dependencies** | None. | Hadoop cluster (Druid submits Map/Reduce jobs). | None. |
 | **Input locations** | Any [`inputSource`](./native-batch.md#input-sources). | Any Hadoop FileSystem or Druid datasource. | Any [`inputSource`](./native-batch.md#input-sources). |
 | **File formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. | Any [`inputFormat`](./data-formats.md#input-format). |
-| **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). |
-| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec) for details. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [Partitions Spec](./native-batch.md#partitionsspec-1) for details. |

@@ -181,7 +181,7 @@ If you change the granularity to `none`, you will get the same results as settin
 ```
 
 Having a query time `granularity` that is smaller than the `queryGranularity` parameter set at
-[ingestion time](../ingestion/index.md#granularityspec) is unreasonable because information about that
+[ingestion time](../ingestion/ingestion-spec.md#granularityspec) is unreasonable because information about that
 smaller granularity is not present in the indexed data. So, if the query time granularity is smaller than the ingestion
 time query granularity, Druid produces results that are equivalent to having set `granularity` to `queryGranularity`.
 
