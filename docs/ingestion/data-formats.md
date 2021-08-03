@@ -533,7 +533,7 @@ A `flattenSpec` can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
-| fields | Specifies the fields of interest and how they are accessed. [See Field flattening specifications for more detail.](#field-flattening-specifications) | `[]` |
+| fields | Specifies the fields of interest and how they are accessed. See [Field flattening specifications](#field-flattening-specifications) for more detail. | `[]` |
 
 #### Field flattening specifications
 
