@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
-import org.apache.druid.query.lookup.NamespaceLookupExtractorFactory;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.utils.ConnectionUriUtils;
 import org.joda.time.Period;

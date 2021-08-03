@@ -109,6 +109,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       this.pollPeriod = Period.ZERO;
     } else {
       this.pollPeriod = pollPeriod;
+    }
     this.fileRegex = fileRegex == null ? versionRegex : fileRegex;
     if (fileRegex != null && versionRegex != null) {
       throw new IAE("Cannot specify both versionRegex and fileRegex. versionRegex is deprecated");
