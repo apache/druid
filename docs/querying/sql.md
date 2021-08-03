@@ -376,6 +376,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 
 |Function|Notes|
 |--------|-----|
+|`PI`|Constant Pi.|
 |`ABS(expr)`|Absolute value.|
 |`CEIL(expr)`|Ceiling.|
 |`EXP(expr)`|e to the power of expr.|
