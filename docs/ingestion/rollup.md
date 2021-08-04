@@ -34,11 +34,11 @@ Tips for maximizing rollup:
     - Switch to a guaranteed perfect rollup option.
     - [Reindex](data-management.md#reingesting-data) or [compact](compaction.md) your data in the background after initial ingestion.
 
-## Perfect rollup vs Best-effort rollup
+## Perfect rollup vs best-effort rollup
 
 Depending on the ingestion method, Druid has the following rollup options:
 - Guaranteed _perfect rollup_: Druid perfectly aggregates input data at ingestion time.
-- _best-effort rollup_: Druid may not perfectly aggregate input data. Therefore, multiple segments might contain rows with the same timestamp and dimension values.
+- _Best-effort rollup_: Druid may not perfectly aggregate input data. Therefore, multiple segments might contain rows with the same timestamp and dimension values.
 
 In general, ingestion methods that offer best-effort rollup do this for one of the following reasons:
 - The ingestion method parallelizes ingestion without a shuffling step required for perfect rollup.
