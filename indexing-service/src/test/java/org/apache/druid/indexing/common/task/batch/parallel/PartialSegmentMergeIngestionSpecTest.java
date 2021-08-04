@@ -32,7 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 @RunWith(Parameterized.class)
-public class PartialGenericSegmentMergeIngestionSpecTest
+public class PartialSegmentMergeIngestionSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
@@ -64,7 +64,7 @@ public class PartialGenericSegmentMergeIngestionSpecTest
       ImmutableMap.of()
   );
 
-  private PartialGenericSegmentMergeIngestionSpec target;
+  private PartialSegmentMergeIngestionSpec target;
   private PartialSegmentMergeIOConfig ioConfig;
   private HashedPartitionsSpec partitionsSpec;
 
@@ -77,7 +77,7 @@ public class PartialGenericSegmentMergeIngestionSpecTest
         1,
         Collections.emptyList()
     );
-    target = new PartialGenericSegmentMergeIngestionSpec(
+    target = new PartialSegmentMergeIngestionSpec(
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
         ioConfig,
         new ParallelIndexTestingFactory.TuningConfigBuilder()

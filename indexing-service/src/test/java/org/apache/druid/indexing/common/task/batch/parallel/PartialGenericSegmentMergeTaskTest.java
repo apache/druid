@@ -71,7 +71,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
   private PartialGenericSegmentMergeTask target;
   private PartialSegmentMergeIOConfig ioConfig;
   private HashedPartitionsSpec partitionsSpec;
-  private PartialGenericSegmentMergeIngestionSpec ingestionSpec;
+  private PartialSegmentMergeIngestionSpec ingestionSpec;
 
   public PartialGenericSegmentMergeTaskTest()
   {
@@ -88,7 +88,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         1,
         Collections.emptyList()
     );
-    ingestionSpec = new PartialGenericSegmentMergeIngestionSpec(
+    ingestionSpec = new PartialSegmentMergeIngestionSpec(
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
         ioConfig,
         new ParallelIndexTestingFactory.TuningConfigBuilder()
@@ -133,7 +133,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
         ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
-        new PartialGenericSegmentMergeIngestionSpec(
+        new PartialSegmentMergeIngestionSpec(
             ParallelIndexTestingFactory.createDataSchema(null),
             ioConfig,
             new ParallelIndexTestingFactory.TuningConfigBuilder()
