@@ -27,7 +27,7 @@ Tips for maximizing rollup:
 - Use [sketches](schema-design.md#sketches) to avoid storing high cardinality dimensions, which decrease rollup ratios.
 - Adjust your `queryGranularity` at ingestion time to increase the chances that multiple rows in Druid having matching timestamps. For example, use five minute query granularity (`PT5M`) instead of one minute (`PT1M`).
 - You can optionally load the same data into more than one Druid datasource. For example:
-    - Create a "full" datasource that has rollup disabled, or enabled, but with a minimal rollup ratio
+    - Create a "full" datasource that has rollup disabled, or enabled, but with a minimal rollup ratio.
     - Create a second "abbreviated" datasource with fewer dimensions and a higher rollup ratio.
      When queries only involve dimensions in the "abbreviated" set, use the second datasource to reduce query times. Often, this method only requires a small increase in storage footprint because abbreviated datasources tend to be substantially smaller.
 - If you use a [best-effort rollup](#perfect-rollup-vs-best-effort-rollup) ingestion configuration that does not guarantee perfect rollup, try one of the following:
