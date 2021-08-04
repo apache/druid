@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -42,13 +43,18 @@ import org.apache.druid.java.util.http.client.response.InputStreamResponseHandle
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.query.PrioritizedQueryRunnerCallable;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.initialization.jetty.ServletFilterHolder;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.CustomCheckX509TrustManager;
+import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -56,7 +62,12 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.http.HttpServletResponse;
@@ -72,7 +83,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.X509Certificate;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -81,6 +94,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -505,6 +519,44 @@ public class JettyTest extends BaseJettyTest
     go.get();
     waitForJettyServerModuleActiveConnectionsZero(jsm);
     Assert.assertEquals(0, jsm.getActiveConnections());
+  }
+
+  @Test
+  public void testCustomCheckX509TrustManagerSetEndpointIdentificationAlgorithmToNullWithValidateServerHostnamesSetToFalse() throws Exception
+  {
+    SslContextFactory.Server server = injector.getInstance(SslContextFactory.Server.class);
+    server.setEndpointIdentificationAlgorithm("HTTPS");
+    server.start();
+    SSLEngine sslEngine = server.newSSLEngine();
+    X509ExtendedTrustManager mockX509ExtendedTrustManager = Mockito.mock(X509ExtendedTrustManager.class);
+    TLSCertificateChecker mockTLSCertificateChecker = Mockito.mock(TLSCertificateChecker.class);
+    X509Certificate mockX509Certificate = Mockito.mock(X509Certificate.class);
+    String authType = "testAuthType";
+    X509Certificate[] chain = new X509Certificate[]{mockX509Certificate};
+
+    // The EndpointIdentificationAlgorithm should not be null as we set it to HTTPS earlier
+    Assert.assertNotNull(sslEngine.getSSLParameters().getEndpointIdentificationAlgorithm());
+
+    CustomCheckX509TrustManager customCheckX509TrustManager = new CustomCheckX509TrustManager(
+        mockX509ExtendedTrustManager,
+        mockTLSCertificateChecker,
+        false
+    );
+
+    customCheckX509TrustManager.checkServerTrusted(chain, authType, sslEngine);
+
+    ArgumentCaptor<SSLEngine> captor = ArgumentCaptor.forClass(SSLEngine.class);
+    Mockito.verify(mockTLSCertificateChecker).checkServer(
+        ArgumentMatchers.eq(chain),
+        ArgumentMatchers.eq(authType),
+        captor.capture(),
+        ArgumentMatchers.eq(mockX509ExtendedTrustManager)
+    );
+    SSLEngine transformedSSLEngine = captor.getValue();
+    // The EndpointIdentificationAlgorithm should be null or empty Stringas the CustomCheckX509TrustManager
+    // has validateServerHostnames set to false
+    String endpointIdentificationAlgorithm = transformedSSLEngine.getSSLParameters().getEndpointIdentificationAlgorithm();
+    Assert.assertTrue(endpointIdentificationAlgorithm == null || endpointIdentificationAlgorithm.isEmpty());
   }
 
   private void waitForJettyServerModuleActiveConnectionsZero(JettyServerModule jsm) throws InterruptedException
