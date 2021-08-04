@@ -144,16 +144,16 @@ Types of column analyses are described below:
 
 ### cardinality
 
-* `cardinality` in the result will return the size of the bitmap index or dictionary encoding for string dimensions, or null for other dimension types.
- If `merge` was set, the result will be the max of this value across segments. Only relevant for dimension columns.
+* `cardinality` in the result will return the number of unique values present in a string column. It is null for other column types.
+ If `merge` is set, the result will be the max of this value across segments. Only relevant for string columns.
 
 ### minmax
 
-* Estimated min/max values for each column. Only relevant for dimension columns.
+* Estimated min/max values for each column. Only reported for string columns.
 
 ### size
 
-* `size` in the result will contain the estimated total segment byte size as if the data were stored in text format
+* `size` in the result will contain the estimated total segment byte size as if the data were stored in text format. This is _not_ the actual storage size of the column in Druid.
 
 ### interval
 
