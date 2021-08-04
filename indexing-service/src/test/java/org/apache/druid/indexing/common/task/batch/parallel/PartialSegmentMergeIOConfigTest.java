@@ -41,7 +41,7 @@ public class PartialSegmentMergeIOConfigTest
     this.partitionLocation = partitionLocation;
   }
 
-  @Parameterized.Parameters(name = "intermediateDataManager={0}")
+  @Parameterized.Parameters(name = "partitionLocation = {0}")
   public static Collection<Object[]> data()
   {
     return ImmutableList.of(new Object[]{
