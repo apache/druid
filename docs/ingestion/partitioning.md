@@ -5,7 +5,7 @@ sidebar_label: Partitioning
 description: Describes time chunk and secondary partitioning in Druid. Provides guidance to choose a secondary partition dimension.
 ---
 
-Optimal partitioning and sorting of segments within your Druid datasources can have substantial impact on footprint and performance.
+You can use segment partitioning and sorting within your Druid datasources to reduce the size of your data and increase performance.
 
 One way to partition is to your load data into separate datasources. This is a perfectly viable approach that works very well when the number of datasources does not lead to excessive per-datasource overheads. 
 
