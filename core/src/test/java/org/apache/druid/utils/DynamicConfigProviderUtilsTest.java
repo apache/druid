@@ -31,6 +31,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.Map;
+import java.util.Properties;
 
 @RunWith(Enclosed.class)
 public class DynamicConfigProviderUtilsTest
@@ -79,6 +80,43 @@ public class DynamicConfigProviderUtilsTest
       Assert.assertEquals(2, res.size());
       Assert.assertEquals("value1", res.get("prop1").toString());
       Assert.assertEquals("value2", res.get("prop2").toString());
+    }
+
+    @Test
+    public void testExtraConfigAndSetProperty()
+    {
+      Properties props = new Properties();
+      DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+          ImmutableMap.of("prop2", "value2")
+      );
+
+      Map<String, Object> properties = ImmutableMap.of(
+          "prop1", "value1",
+          "prop2", "value3",
+          DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
+      );
+      DynamicConfigProviderUtils.extraConfigAndSetProperty(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER, props);
+
+      Assert.assertEquals(2, props.size());
+      Assert.assertEquals("value1", props.get("prop1").toString());
+      Assert.assertEquals("value2", props.get("prop2").toString());
+    }
+
+    @Test
+    public void testExtraDynamicConfigAndSetProperty()
+    {
+      Properties props = new Properties();
+      DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+          ImmutableMap.of("prop1", "value1")
+      );
+
+      Map<String, Object> properties = ImmutableMap.of(
+          DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
+      );
+      DynamicConfigProviderUtils.extraDynamicConfigAndSetProperty(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER, props);
+
+      Assert.assertEquals(1, props.size());
+      Assert.assertEquals("value1", props.get("prop1").toString());
     }
   }
 }

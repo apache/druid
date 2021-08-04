@@ -25,6 +25,7 @@ import org.apache.druid.metadata.DynamicConfigProvider;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public class DynamicConfigProviderUtils
 {
@@ -62,7 +63,29 @@ public class DynamicConfigProviderUtils
     return newConfig;
   }
 
-  private static Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson, ObjectMapper mapper)
+  public static void extraConfigAndSetProperty(Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper, Properties properties)
+  {
+    if (config != null) {
+      for (Map.Entry<String, Object> entry : config.entrySet()) {
+        if (!dynamicConfigProviderKey.equals(entry.getKey())) {
+          properties.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+      }
+      extraDynamicConfigAndSetProperty(config, dynamicConfigProviderKey, mapper, properties);
+    }
+  }
+
+  public static void extraDynamicConfigAndSetProperty(Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper, Properties properties)
+  {
+    if (config != null) {
+      Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(dynamicConfigProviderKey), mapper);
+      for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
+        properties.setProperty(entry.getKey(), entry.getValue());
+      }
+    }
+  }
+
+  public static Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson, ObjectMapper mapper)
   {
     if (dynamicConfigProviderJson != null) {
       DynamicConfigProvider dynamicConfigProvider = mapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);

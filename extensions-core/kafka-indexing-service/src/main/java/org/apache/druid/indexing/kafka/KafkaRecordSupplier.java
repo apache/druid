@@ -31,8 +31,8 @@ import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -214,15 +214,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     }
 
     // Additional DynamicConfigProvider based extensible support for all consumer properties
-    Object dynamicConfigProviderJson = consumerProperties.get(KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
-    if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
-      Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
+    DynamicConfigProviderUtils.extraDynamicConfigAndSetProperty(consumerProperties, KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, configMapper, properties);
 
-      for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
-        properties.setProperty(e.getKey(), e.getValue());
-      }
-    }
   }
 
   private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)

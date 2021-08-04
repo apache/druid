@@ -32,6 +32,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.log.RequestLogEvent;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -70,8 +71,8 @@ public class KafkaEmitter implements Emitter
     this.jsonMapper = jsonMapper;
     this.producer = setKafkaProducer();
     // same with kafka producer's buffer.memory
-    long queueMemoryBound = Long.parseLong(this.config.getKafkaProducerConfig()
-                                                      .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
+    long queueMemoryBound = Long.parseLong(String.valueOf(this.config.getKafkaProducerConfig()
+        .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432")));
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
@@ -104,14 +105,7 @@ public class KafkaEmitter implements Emitter
       props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
       props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
-      props.putAll(config.getKafkaProducerConfig());
-      if (config.getKafkaProducerConfigProvider() != null) {
-        Map<String, String> dynamicConfig = config.getKafkaProducerConfigProvider().getConfig();
-        for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
-          props.setProperty(e.getKey(), e.getValue());
-        }
-      }
-
+      DynamicConfigProviderUtils.extraConfigAndSetProperty(config.getKafkaProducerConfig(), KafkaEmitterConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, jsonMapper, props);
       return new KafkaProducer<>(props);
     }
     finally {

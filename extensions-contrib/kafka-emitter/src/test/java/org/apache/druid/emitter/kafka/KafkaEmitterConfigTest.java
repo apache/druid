@@ -23,12 +23,14 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class KafkaEmitterConfigTest
 {
@@ -43,12 +45,14 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfig() throws IOException
   {
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+        ImmutableMap.of("testKey2", "testValue2")
+    );
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
         "alertTest", "requestTest",
-        "clusterNameTest", ImmutableMap.<String, String>builder()
-        .put("testKey", "testValue").build(), new MapStringDynamicConfigProvider(
-        ImmutableMap.of("testKey2", "testValue2")
-    )
+        "clusterNameTest", ImmutableMap.<String, Object>builder()
+        .put("testKey", "testValue").put("druid.dynamic.config.provider", mapper.convertValue(dynamicConfigProvider, Map.class)
+        ).build()
     );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
@@ -61,9 +65,8 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
         "alertTest", "requestTest",
-        "clusterNameTest", ImmutableMap.<String, String>builder()
-        .put("testKey", "testValue").build(), null
-    );
+        "clusterNameTest", ImmutableMap.<String, Object>builder()
+        .put("testKey", "testValue").build());
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
         .readValue(kafkaEmitterConfigString);
@@ -73,12 +76,14 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfigNullRequestTopic() throws IOException
   {
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+        ImmutableMap.of("testKey2", "testValue2")
+    );
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
         "alertTest", null,
-        "clusterNameTest", ImmutableMap.<String, String>builder()
-        .put("testKey", "testValue").build(), new MapStringDynamicConfigProvider(
-        ImmutableMap.of("testKey2", "testValue2"))
-    );
+        "clusterNameTest", ImmutableMap.<String, Object>builder()
+        .put("testKey", "testValue").put("druid.dynamic.config.provider", mapper.convertValue(dynamicConfigProvider, Map.class)
+        ).build());
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
         .readValue(kafkaEmitterConfigString);
@@ -90,9 +95,7 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
         "alertTest", null,
-        "clusterNameTest", null, new MapStringDynamicConfigProvider(
-        ImmutableMap.of("testKey2", "testValue2"))
-    );
+        "clusterNameTest", null);
     try {
       @SuppressWarnings("unused")
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, mapper);

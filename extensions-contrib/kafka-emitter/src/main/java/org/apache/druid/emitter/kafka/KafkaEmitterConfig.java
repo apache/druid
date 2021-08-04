@@ -23,29 +23,28 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class KafkaEmitterConfig
 {
-
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
   @JsonProperty("metric.topic")
   private final String metricTopic;
   @JsonProperty("alert.topic")
   private final String alertTopic;
-  @Nullable @JsonProperty("request.topic")
+  @Nullable
+  @JsonProperty("request.topic")
   private final String requestTopic;
   @JsonProperty
   private final String clusterName;
   @JsonProperty("producer.config")
-  private Map<String, String> kafkaProducerConfig;
-  @JsonProperty("producer.dynamic.config")
-  private DynamicConfigProvider kafkaProducerConfigProvider;
+  private Map<String, Object> kafkaProducerConfig;
 
   @JsonCreator
   public KafkaEmitterConfig(
@@ -54,8 +53,7 @@ public class KafkaEmitterConfig
       @JsonProperty("alert.topic") String alertTopic,
       @Nullable @JsonProperty("request.topic") String requestTopic,
       @JsonProperty("clusterName") String clusterName,
-      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
-      @JsonProperty("producer.dynamic.config") @Nullable DynamicConfigProvider kafkaProducerConfigProvider
+      @JsonProperty("producer.config") @Nullable Map<String, Object> kafkaProducerConfig
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
@@ -64,7 +62,6 @@ public class KafkaEmitterConfig
     this.requestTopic = requestTopic;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
-    this.kafkaProducerConfigProvider = kafkaProducerConfigProvider;
   }
 
   @JsonProperty
@@ -98,15 +95,9 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
-  public Map<String, String> getKafkaProducerConfig()
+  public Map<String, Object> getKafkaProducerConfig()
   {
     return kafkaProducerConfig;
-  }
-
-  @JsonProperty
-  public DynamicConfigProvider getKafkaProducerConfigProvider()
-  {
-    return kafkaProducerConfigProvider;
   }
 
   @Override
@@ -139,9 +130,6 @@ public class KafkaEmitterConfig
       return false;
     }
 
-    if (getKafkaProducerConfigProvider() != null ? !getKafkaProducerConfigProvider().getConfig().equals(that.getKafkaProducerConfigProvider().getConfig()) : that.getKafkaProducerConfigProvider() != null) {
-      return false;
-    }
     return getKafkaProducerConfig().equals(that.getKafkaProducerConfig());
   }
 
@@ -154,7 +142,6 @@ public class KafkaEmitterConfig
     result = 31 * result + (getRequestTopic() != null ? getRequestTopic().hashCode() : 0);
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
-    result = 31 * result + getKafkaProducerConfigProvider().hashCode();
     return result;
   }
 
@@ -162,12 +149,12 @@ public class KafkaEmitterConfig
   public String toString()
   {
     return "KafkaEmitterConfig{" +
-           "bootstrap.servers='" + bootstrapServers + '\'' +
-           ", metric.topic='" + metricTopic + '\'' +
-           ", alert.topic='" + alertTopic + '\'' +
-           ", request.topic='" + requestTopic + '\'' +
-           ", clusterName='" + clusterName + '\'' +
-           ", Producer.config=" + kafkaProducerConfig +
-           '}';
+        "bootstrap.servers='" + bootstrapServers + '\'' +
+        ", metric.topic='" + metricTopic + '\'' +
+        ", alert.topic='" + alertTopic + '\'' +
+        ", request.topic='" + requestTopic + '\'' +
+        ", clusterName='" + clusterName + '\'' +
+        ", Producer.config=" + kafkaProducerConfig +
+        '}';
   }
 }
