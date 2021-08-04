@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 import org.apache.druid.data.input.HandlingInputRowIterator.InputRowHandler;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,16 +86,9 @@ public class HandlingInputRowIteratorTest
 
   public static class PresentRowTest
   {
-    // Create variables for tracking behaviors of mock object
 
-    boolean unsuccessfulHandlerSuccessful;
-
-    // Create variables for tracking behaviors of mock object
-
-    boolean successfulHandlerSuccessful;
-
-    private static final InputRow INPUT_ROW1 = EasyMock.mock(InputRow.class);
-    private static final InputRow INPUT_ROW2 = EasyMock.mock(InputRow.class);
+    private static final InputRow INPUT_ROW1 = mock(InputRow.class);
+    private static final InputRow INPUT_ROW2 = mock(InputRow.class);
     private static final List<InputRow> INPUT_ROWS = Arrays.asList(INPUT_ROW1, INPUT_ROW2);
 
     private InputRowHandler successfulHandler;
@@ -107,22 +99,12 @@ public class HandlingInputRowIteratorTest
     {
       // Construct mock object
       successfulHandler = mock(HandlingInputRowIterator.InputRowHandler.class);
-      // Constructing variables that used for tracking behavior of the mocking
-      // object.
-      successfulHandlerSuccessful = true;
       // Method Stubs
-      when(successfulHandler.handle(any(InputRow.class))).thenAnswer((stubInvo) -> {
-        return successfulHandlerSuccessful;
-      });
+      when(successfulHandler.handle(any(InputRow.class))).thenReturn(true);
       // Construct mock object
       unsuccessfulHandler = mock(HandlingInputRowIterator.InputRowHandler.class);
-      // Constructing variables that used for tracking behavior of the mocking
-      // object.
-      unsuccessfulHandlerSuccessful = false;
       // Method Stubs
-      when(unsuccessfulHandler.handle(any(InputRow.class))).thenAnswer((stubInvo) -> {
-        return unsuccessfulHandlerSuccessful;
-      });
+      when(unsuccessfulHandler.handle(any(InputRow.class))).thenReturn(false);
     }
 
     @Test
@@ -130,7 +112,7 @@ public class HandlingInputRowIteratorTest
     {
       HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
       Assert.assertTrue(target.hasNext());
-      Mockito.verify(unsuccessfulHandler, Mockito.never()).handle(any(InputRow.class));
+      Mockito.verify(unsuccessfulHandler, Mockito.never()).handle(INPUT_ROW1);
     }
 
     @Test
@@ -138,7 +120,7 @@ public class HandlingInputRowIteratorTest
     {
       HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
       Assert.assertEquals(INPUT_ROW1, target.next());
-      Mockito.verify(unsuccessfulHandler, Mockito.atLeastOnce()).handle(any(InputRow.class));
+      Mockito.verify(unsuccessfulHandler, Mockito.times(2)).handle(INPUT_ROW1);
     }
 
     @Test
@@ -146,8 +128,8 @@ public class HandlingInputRowIteratorTest
     {
       HandlingInputRowIterator target = createInputRowIterator(successfulHandler, unsuccessfulHandler);
       Assert.assertNull(target.next());
-      Mockito.verify(successfulHandler, Mockito.atLeastOnce()).handle(any(InputRow.class));
-      Mockito.verify(unsuccessfulHandler, Mockito.never()).handle(any(InputRow.class));
+      Mockito.verify(successfulHandler, Mockito.times(1)).handle(INPUT_ROW1);
+      Mockito.verify(unsuccessfulHandler, Mockito.never()).handle(INPUT_ROW1);
     }
 
     @Test
@@ -155,8 +137,8 @@ public class HandlingInputRowIteratorTest
     {
       HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, successfulHandler);
       Assert.assertNull(target.next());
-      Mockito.verify(unsuccessfulHandler, Mockito.atLeastOnce()).handle(any(InputRow.class));
-      Mockito.verify(successfulHandler, Mockito.atLeastOnce()).handle(any(InputRow.class));
+      Mockito.verify(unsuccessfulHandler, Mockito.times(1)).handle(INPUT_ROW1);
+      Mockito.verify(successfulHandler, Mockito.times(1)).handle(INPUT_ROW1);
     }
 
     private static HandlingInputRowIterator createInputRowIterator(
