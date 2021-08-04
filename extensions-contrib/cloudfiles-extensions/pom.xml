@@ -35,7 +35,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jclouds.version>1.9.1</jclouds.version>
+        <jclouds.version>2.3.0</jclouds.version>
         <!-- The version of guice is forced to 3.0 since JClouds 1.9.1 does not
           work with guice 4.0-beta -->
         <guice.version>3.0</guice.version>
