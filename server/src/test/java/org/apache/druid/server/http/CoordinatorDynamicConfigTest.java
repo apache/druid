@@ -638,8 +638,7 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig
-            .Builder(
+        new CoordinatorDynamicConfig.Builder(
             null,
             null,
             null,
@@ -659,8 +658,7 @@ public class CoordinatorDynamicConfigTest
             null,
             null,
             null
-        )
-            .build(current)
+        ).build(current)
     );
   }
 
