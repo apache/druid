@@ -317,7 +317,7 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (QueryContexts.isLogQueryExceptionStackTrace(baseQuery)) {
+        if (QueryContexts.isEnableQueryDebugging(baseQuery)) {
           log.error(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().error(e, "Exception while processing queryId [%s]", baseQuery.getId());

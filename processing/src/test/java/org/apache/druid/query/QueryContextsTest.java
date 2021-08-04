@@ -179,7 +179,7 @@ public class QueryContextsTest
   }
 
   @Test
-  public void testDefaultLogQueryExceptionStackTrace()
+  public void testDefaultEnableQueryDebugging()
   {
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
@@ -187,18 +187,18 @@ public class QueryContextsTest
         false,
         ImmutableMap.of()
     );
-    Assert.assertFalse(QueryContexts.isLogQueryExceptionStackTrace(query));
+    Assert.assertFalse(QueryContexts.isEnableQueryDebugging(query));
   }
 
   @Test
-  public void testEnabledLogQueryExceptionStackTrace()
+  public void testEnableQueryDebuggingSetToTrue()
   {
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        ImmutableMap.of(QueryContexts.LOG_QUERY_EXCEPTION_STACK_TRACE_KEY, true)
+        ImmutableMap.of(QueryContexts.ENABLE_QUERY_DEBUGGING, true)
     );
-    Assert.assertTrue(QueryContexts.isLogQueryExceptionStackTrace(query));
+    Assert.assertTrue(QueryContexts.isEnableQueryDebugging(query));
   }
 }
