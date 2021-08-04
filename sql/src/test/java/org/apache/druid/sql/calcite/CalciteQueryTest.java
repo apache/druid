@@ -18818,4 +18818,44 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         Collections.emptyList()
     );
   }
+
+  @Test
+  public void testCommonVirtualExpressionWithDifferentValueType() throws Exception
+  {
+    testQuery(
+        "select\n"
+        + " dim1,\n"
+        + " sum(cast(0 as bigint)) as s1,\n"
+        + " sum(cast(0 as double)) as s2\n"
+        + "from druid.foo\n"
+        + "where dim1 = 'none'\n"
+        + "group by dim1\n"
+        + "limit 1",
+        ImmutableList.of(new TopNQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .filters(selector("dim1", "none", null))
+                             .granularity(Granularities.ALL)
+                             .virtualColumns(
+                                 expressionVirtualColumn(
+                                     "v0",
+                                     "'none'",
+                                     ValueType.STRING
+                                 )
+                             )
+                             .dimension(
+                                 new DefaultDimensionSpec("v0", "d0")
+                             )
+                             .aggregators(
+                                 aggregators(
+                                     new LongSumAggregatorFactory("a0", null, "0", ExprMacroTable.nil()),
+                                     new DoubleSumAggregatorFactory("a1", null, "0", ExprMacroTable.nil())
+                                 ))
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                             .threshold(1)
+                             .build()),
+        ImmutableList.of()
+    );
+  }
 }
