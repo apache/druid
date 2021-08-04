@@ -1123,20 +1123,23 @@ Segments table provides details on all Druid segments, whether they are publishe
 |version|STRING|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
 |partition_num|LONG|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
 |num_replicas|LONG|Number of replicas of this segment currently being served|
-|num_rows|LONG|Number of rows in current segment, this value could be null if unknown to Broker at query time|
-|is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`. See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
-|is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime). See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
-|is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment.|
-|is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always false for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
+|num_rows|LONG|Number of rows in this segment. This field is updated in the background and cached on the Broker. It may be null if the Broker has not gathered a row count for this segment yet. It may not match the result of `count(*)` queries on realtime data, because the cached value on the Broker may be out of date, and because different replicas of realtime segments may not be in sync with each other. Once a segment is published, its row count will settle and stop changing.|
+|is_active|LONG|Boolean represented as long type where 1 = true, 0 = false. True for segments that are either available and queryable, or _should be_ available and querayble. Equivalent to `(is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1`.|
+|is_published|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`. See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
+|is_available|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime). See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
+|is_realtime|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment.|
+|is_overshadowed|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always 0 for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
 |shard_spec|STRING|JSON-serialized form of the segment `ShardSpec`|
 |dimensions|STRING|JSON-serialized form of the segment dimensions|
 |metrics|STRING|JSON-serialized form of the segment metrics|
 |last_compaction_state|STRING|JSON-serialized form of the compaction task's config (compaction task which created this segment). May be null if segment was not created by compaction task.|
 
-For example to retrieve all segments for datasource "wikipedia", use the query:
+For example to retrieve all currently-active segments for datasource "wikipedia", use the query:
 
 ```sql
-SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
+SELECT * FROM sys.segments
+WHERE datasource = 'wikipedia'
+AND is_active = 1
 ```
 
 Another example to retrieve segments total_size, avg_size, avg_num_rows and num_segments per datasource:
@@ -1149,6 +1152,7 @@ SELECT
     CASE WHEN SUM(num_rows) = 0 THEN 0 ELSE SUM("num_rows") / (COUNT(*) FILTER(WHERE num_rows > 0)) END AS avg_num_rows,
     COUNT(*) AS num_segments
 FROM sys.segments
+WHERE is_active = 1
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1156,16 +1160,14 @@ ORDER BY 2 DESC
 If you want to retrieve segment that was compacted (ANY compaction):
 
 ```sql
-SELECT * FROM sys.segments WHERE last_compaction_state is not null
+SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state IS NOT NULL
 ```
 
-or if you want to retrieve segment that was compacted only by a particular compaction spec (such as that of the auto compaction):
+Or if you want to retrieve segment that was compacted only by a particular compaction spec (such as that of auto compaction):
 
 ```sql
-SELECT * FROM sys.segments WHERE last_compaction_state == 'SELECT * FROM sys.segments where last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring, compressRunOnSerialization=true}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
+SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring, compressRunOnSerialization=true}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
 ```
-
-*Caveat:* Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for e.g.. Kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not guaranteed that the same task gets picked every time. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/druid/issues/5915) about this inconsistency with stream ingestion tasks.
 
 #### SERVERS table
 
