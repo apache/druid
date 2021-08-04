@@ -12,7 +12,7 @@ Druid stores data in datasources, which are similar to tables in a traditional r
 Druid schemas must always include a primary timestamp. Druid uses the primary timestamp to [partition and sort](./partitioning.md) your data. Druid uses the primary timestamp to rapidly identify and retrieve data within the time range of queries. Druid also uses the primary timestamp column
 for time-based [data management operations](./data-management.md) such as dropping time chunks, overwriting time chunks, and time-based retention rules.
 
-Druid parses the primary timestamp based on the [`timestampSpec`](./ingestion-spec.md#timestampspec) configuration at ingestion time. Regardless of the source field field for the primary timestamp, Druid always stores the timestamp in the `__time` column in your Druid datasource.
+Druid parses the primary timestamp based on the [`timestampSpec`](./ingestion-spec.md#timestampspec) configuration at ingestion time. Regardless of the source field for the primary timestamp, Druid always stores the timestamp in the `__time` column in your Druid datasource.
 
 You can control other important operations that are based on the primary timestamp in the
 [`granularitySpec`](./ingestion-spec.md#granularityspec). If you have more than one timestamp column, you can store the others as
