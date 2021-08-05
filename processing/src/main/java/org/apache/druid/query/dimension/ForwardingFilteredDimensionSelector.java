@@ -49,7 +49,7 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
    * @param selector must return true from {@link DimensionSelector#nameLookupPossibleInAdvance()}
    * @param forwardMapping must have {@link Int2IntOpenHashMap#defaultReturnValue(int)} configured to -1.
    */
-  ForwardingFilteredDimensionSelector(
+  public ForwardingFilteredDimensionSelector(
       DimensionSelector selector,
       Int2IntOpenHashMap forwardMapping,
       int[] reverseMapping

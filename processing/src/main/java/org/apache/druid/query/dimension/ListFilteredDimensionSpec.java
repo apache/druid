@@ -78,13 +78,13 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     if (isWhitelist) {
-      return filterWhiteList(selector);
+      return filterWhiteList(values, selector);
     } else {
-      return filterBlackList(selector);
+      return filterBlackList(values, selector);
     }
   }
 
-  private DimensionSelector filterWhiteList(DimensionSelector selector)
+  public static DimensionSelector filterWhiteList(Set<String> values, DimensionSelector selector)
   {
     final int selectorCardinality = selector.getValueCardinality();
     if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
@@ -115,7 +115,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
   }
 
-  private DimensionSelector filterBlackList(DimensionSelector selector)
+  public static DimensionSelector filterBlackList(Set<String> values, DimensionSelector selector)
   {
     final int selectorCardinality = selector.getValueCardinality();
     if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
