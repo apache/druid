@@ -289,13 +289,15 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   @Override
   public void collectReport(SubTaskReportType report)
   {
-    taskMonitor.collectReport(report);
+    if (taskMonitor != null) {
+      taskMonitor.collectReport(report);
+    }
   }
 
   @Override
   public Map<String, SubTaskReportType> getReports()
   {
-    return taskMonitor.getReports();
+    return taskMonitor == null ? Collections.emptyMap() : taskMonitor.getReports();
   }
 
   @Override
