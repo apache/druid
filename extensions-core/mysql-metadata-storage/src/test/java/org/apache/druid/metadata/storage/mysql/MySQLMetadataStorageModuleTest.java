@@ -76,6 +76,39 @@ public class MySQLMetadataStorageModuleTest
   }
 
   @Test
+  public void testSslConfigWithDynamicConfigProvider()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.metadata.mysql.ssl";
+    final JsonConfigProvider<MySQLConnectorSslConfig> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        MySQLConnectorSslConfig.class
+    );
+    final Properties properties = new Properties();
+    properties.setProperty(propertyPrefix + ".useSSL", "true");
+    properties.setProperty(propertyPrefix + ".trustCertificateKeyStoreUrl", "url");
+    properties.setProperty(propertyPrefix + ".trustCertificateKeyStoreType", "type");
+    properties.setProperty(propertyPrefix + ".clientCertificateKeyStoreUrl", "url");
+    properties.setProperty(propertyPrefix + ".clientCertificateKeyStoreType", "type");
+    properties.setProperty(propertyPrefix + ".dynamicConfigProvider", "{\"type\":\"mapString\",\"config\":{\"trustCertificateKeyStorePassword\":\"secret\",\"clientCertificateKeyStorePassword\":\"secret\"}}");
+    properties.setProperty(propertyPrefix + ".enabledSSLCipherSuites", "[\"some\", \"ciphers\"]");
+    properties.setProperty(propertyPrefix + ".enabledTLSProtocols", "[\"some\", \"protocols\"]");
+    properties.setProperty(propertyPrefix + ".verifyServerCertificate", "true");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final MySQLConnectorSslConfig config = provider.get().get();
+    Assert.assertTrue(config.isUseSSL());
+    Assert.assertEquals("url", config.getTrustCertificateKeyStoreUrl());
+    Assert.assertEquals("type", config.getTrustCertificateKeyStoreType());
+    Assert.assertEquals("secret", config.getTrustCertificateKeyStorePassword());
+    Assert.assertEquals("url", config.getClientCertificateKeyStoreUrl());
+    Assert.assertEquals("type", config.getClientCertificateKeyStoreType());
+    Assert.assertEquals("secret", config.getClientCertificateKeyStorePassword());
+    Assert.assertEquals(ImmutableList.of("some", "ciphers"), config.getEnabledSSLCipherSuites());
+    Assert.assertEquals(ImmutableList.of("some", "protocols"), config.getEnabledTLSProtocols());
+    Assert.assertTrue(config.isVerifyServerCertificate());
+  }
+
+  @Test
   public void testDriverConfigDefault()
   {
     final Injector injector = createInjector();
