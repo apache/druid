@@ -61,7 +61,7 @@ To do this, add following configurations:
 |Property|Description|Required|
 |--------|---------------|-----------|
 |`druid.indexer.logs.type`| Global deep storage provider. Must be set to `oss` to make use of this extension. | yes |
-|`druid.indexer.logs.oss.bucket`|the bucket used to keep logs. It could be the same as `druid.storage.oss.bucket`| yes |
+|`druid.indexer.logs.oss.bucket`|The bucket used to keep logs. It could be the same as `druid.storage.oss.bucket`| yes |
 |`druid.indexer.logs.oss.prefix`|folder where log files will be published to. `druid/logs` is recommended. | no |
 
 
