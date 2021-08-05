@@ -177,4 +177,28 @@ public class QueryContextsTest
     exception.expect(ClassCastException.class);
     QueryContexts.getBrokerServiceName(query);
   }
+
+  @Test
+  public void testDefaultEnableQueryDebugging()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of()
+    );
+    Assert.assertFalse(QueryContexts.isDebug(query));
+  }
+
+  @Test
+  public void testEnableQueryDebuggingSetToTrue()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)
+    );
+    Assert.assertTrue(QueryContexts.isDebug(query));
+  }
 }
