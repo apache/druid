@@ -28,6 +28,10 @@ import org.joda.time.Interval;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * This class represents the intermediary deep storage location where the partition of {@code interval} and {@code shardSpec}
+ * is stored.
+ */
 public class DeepStoragePartitionLocation implements PartitionLocation
 {
   private final String subTaskId;

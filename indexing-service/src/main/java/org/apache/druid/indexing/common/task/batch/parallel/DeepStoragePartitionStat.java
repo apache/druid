@@ -28,6 +28,9 @@ import org.joda.time.Interval;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Similar to {@link GenericPartitionStat} but contains information about deep storage location where it is stored
+ */
 public class DeepStoragePartitionStat implements PartitionStat
 {
   public static final String TYPE = "deepstore";
