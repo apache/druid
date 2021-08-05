@@ -53,7 +53,7 @@ To use OSS as deep storage, add the following configurations:
 |--------|---------------|-----------|
 |`druid.storage.type`| Global deep storage provider. Must be set to `oss` to make use of this extension. |yes|
 |`druid.storage.oss.bucket`|Storage bucket name.| yes |
-|`druid.storage.oss.prefix`| folder where segments will be published to. `druid/segments` is recommended. | No |
+|`druid.storage.oss.prefix`| Folder where segments will be published to. `druid/segments` is recommended. | No |
 
 If OSS is used as deep storage for segment files, it's also recommended saving index logs in the OSS too. 
 To do this, add following configurations:
