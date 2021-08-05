@@ -371,7 +371,7 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 
 If you use this technique to partition your data, you can wind up with varying segment sizes if the values for `partitionDimension` from your original data are unequally distributed.
 
-> in order for segment pruning to be effective.
+> It is possible to concatenate multiple dimensions into a single new dimension to use for the  `partitionDimension`. To take advantage of the performance improvements of segment pruning in this case, filter on the newly concatenated dimension at query time.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
