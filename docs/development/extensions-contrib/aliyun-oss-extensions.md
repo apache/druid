@@ -98,7 +98,7 @@ Below shows the configurations of OSS's input source.
 
 ### Reading from a file 
 
-Say that the file `rollup-data.json`, which could be found under Druid's `quickstart/tutorial` directory, has been uploaded to a folder `druid` in your OSS bucket, which is the same bucket your Druid is configured , 
+Say that the file `rollup-data.json`, which can be found under Druid's `quickstart/tutorial` directory, has been uploaded to a folder `druid` in your OSS bucket, the bucket for which your Druid is configured. 
 `uri` property of OSS's input source could be used for the reading. 
 
 ```json
