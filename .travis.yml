@@ -453,7 +453,7 @@ jobs:
 
     - <<: *integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test with deep storage as intermediate store"
-      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
 
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
