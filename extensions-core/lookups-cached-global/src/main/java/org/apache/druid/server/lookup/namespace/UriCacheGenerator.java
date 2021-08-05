@@ -144,6 +144,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
           final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
           try {
             final long startNs = System.nanoTime();
+            log.info("Updating %s", entryId);
             final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                 extractionNamespace.getNamespaceParseSpec().getParser()
             ).populate(source, versionedCache.getCache());

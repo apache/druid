@@ -235,10 +235,10 @@ public final class CacheScheduler
             if (previousCacheState instanceof VersionedCache) {
               ((VersionedCache) previousCacheState).close();
             }
-            log.debug("%s: the cache was successfully updated", this);
+            log.info("%s: the cache was successfully updated", this);
           } else {
             newVersionedCache.close();
-            log.debug("%s was closed while the cache was being updated, discarding the update", this);
+            log.info("%s was closed while the cache was being updated, discarding the update", this);
           }
         } else {
           log.debug("%s: Version `%s` not updated, the cache is not updated", this, currentVersion);

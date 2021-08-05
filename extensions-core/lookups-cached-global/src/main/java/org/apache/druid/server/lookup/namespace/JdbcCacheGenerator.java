@@ -69,7 +69,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       }
       dbQueryStart = System.currentTimeMillis();
 
-      LOG.debug("Updating %s", entryId);
+      LOG.info("Updating %s", entryId);
       pairs = getLookupPairs(entryId, namespace);
     }
     catch (UnableToObtainConnectionException e) {
