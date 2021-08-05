@@ -39,7 +39,7 @@ After installation, add this `aliyun-oss-extensions` extension to `druid.extensi
 
 ## Configuration
 
-First add following OSS configurations to common.runtime.properties
+First add the following OSS configurations to common.runtime.properties
 
 |Property|Description|Required|
 |--------|---------------|-----------|
