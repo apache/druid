@@ -98,8 +98,8 @@ Below shows the configurations of OSS's input source.
 
 ### Reading from a file 
 
-Say that the file `rollup-data.json`, which can be found under Druid's `quickstart/tutorial` directory, has been uploaded to a folder `druid` in your OSS bucket, the bucket for which your Druid is configured. 
-`uri` property of OSS's input source could be used for the reading. 
+Say that the file `rollup-data.json`, which can be found under Druid's `quickstart/tutorial` directory, has been uploaded to a folder `druid` in your OSS bucket, the bucket for which your Druid is configured.
+In this case, the `uris` property of the OSS's input source can be used for reading, as shown:
 
 ```json
 {
@@ -152,7 +152,7 @@ Say that the file `rollup-data.json`, which can be found under Druid's `quicksta
 }
 ```
 
-By posting the above ingestion task spec to `http://{YOUR_ROUTER_IP:8888}/druid/indexer/v1/task`, an ingestion task will be created by the indexing service to ingest.
+By posting the above ingestion task spec to `http://{YOUR_ROUTER_IP}:8888/druid/indexer/v1/task`, an ingestion task will be created by the indexing service to ingest.
 
 ### Reading files in folders
 
@@ -165,7 +165,7 @@ If we want to read files in a same folder, we could use the `prefixes` property 
       "inputSource" : {
         "type" : "oss",
         "prefixes" : [
-          "oss://{YOUR_OSS_BUCKET}/2020", "oss://{YOUR_OSS_BUCKET}/2021"
+          "oss://{YOUR_BUCKET_NAME}/2020", "oss://{YOUR_BUCKET_NAME}/2021"
         ]
       },
       "inputFormat" : {
