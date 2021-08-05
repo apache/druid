@@ -69,6 +69,10 @@ getComposeArgs()
     then
       # default + schema registry container
       echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "shuffle-deep-store" ]
+    then
+      # default + schema registry container
+      echo "-f ${DOCKERDIR}/docker-compose.shuffle-deep-store.yml"
     else
       # default
       echo "-f ${DOCKERDIR}/docker-compose.yml"
