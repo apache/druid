@@ -65,7 +65,7 @@ public class QueryContexts
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   public static final String USE_CACHE_KEY = "useCache";
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
-  public static final String ENABLE_QUERY_DEBUGGING = "enableQueryDebugging";
+  public static final String ENABLE_DEBUG = "debug";
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
 
@@ -89,7 +89,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
-  public static final boolean DEFAULT_ENABLE_QUERY_DEBUGGING = false;
+  public static final boolean DEFAULT_ENABLE_DEBUG = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -324,9 +324,9 @@ public class QueryContexts
     return parseBoolean(query, SECONDARY_PARTITION_PRUNING_KEY, DEFAULT_SECONDARY_PARTITION_PRUNING);
   }
 
-  public static <T> boolean isEnableQueryDebugging(Query<T> query)
+  public static <T> boolean isDebug(Query<T> query)
   {
-    return parseBoolean(query, ENABLE_QUERY_DEBUGGING, DEFAULT_ENABLE_QUERY_DEBUGGING);
+    return parseBoolean(query, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

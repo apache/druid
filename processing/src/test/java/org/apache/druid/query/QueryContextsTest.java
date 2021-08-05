@@ -187,7 +187,7 @@ public class QueryContextsTest
         false,
         ImmutableMap.of()
     );
-    Assert.assertFalse(QueryContexts.isEnableQueryDebugging(query));
+    Assert.assertFalse(QueryContexts.isDebug(query));
   }
 
   @Test
@@ -197,8 +197,8 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        ImmutableMap.of(QueryContexts.ENABLE_QUERY_DEBUGGING, true)
+        ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)
     );
-    Assert.assertTrue(QueryContexts.isEnableQueryDebugging(query));
+    Assert.assertTrue(QueryContexts.isDebug(query));
   }
 }
