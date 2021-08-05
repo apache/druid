@@ -369,7 +369,7 @@ Druid currently supports only one partition function.
 
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
-> Be aware that, with this technique, segment sizes could be skewed if your chosen `partitionDimension` is also skewed in source data.
+If you use this technique to partition your data, you can wind up with varying segment sizes if the values for `partitionDimension` from your original data are unequally distributed.
 
 > While it is technically possible to concatenate multiple dimensions into a single new dimension
 > that you go on to specify in `partitionDimension`, remember that you _must_ then use this newly concatenated dimension at query time
