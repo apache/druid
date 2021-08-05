@@ -371,7 +371,6 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 
 If you use this technique to partition your data, you can wind up with varying segment sizes if the values for `partitionDimension` from your original data are unequally distributed.
 
-> that you go on to specify in `partitionDimension`, remember that you _must_ then use this newly concatenated dimension at query time
 > in order for segment pruning to be effective.
 
 |property|description|default|required?|
