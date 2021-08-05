@@ -27,7 +27,7 @@ This document describes how to use OSS as Druid deep storage.
 
 ## Installation
 
-Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../development/extensions.md#community-extensions) on middle manager and historical nodes.
+Use the [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install the `aliyun-oss-extensions` extension, as described [here](../../development/extensions.md#community-extensions) on middle manager and historical nodes.
 
 ```bash
 java -classpath "{YOUR_DRUID_DIR}/lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions.contrib:aliyun-oss-extensions:{YOUR_DRUID_VERSION}
