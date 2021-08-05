@@ -47,7 +47,7 @@ First add the following OSS configurations to common.runtime.properties
 |`druid.oss.secretKey`|The `AccessKey Secret` of the account to be used to access the OSS bucket| yes|
 |`druid.oss.endpoint`|The endpoint URL of your OSS storage. <br/>If your Druid cluster is also hosted in the same region on Alibaba Cloud as the region of your OSS bucket, it's recommended to use the internal network endpoint url, so that any inbound and outbound traffic to the OSS bucket is free of charge. | yes|
 
-to use OSS as deep storage, add following configurations:
+To use OSS as deep storage, add the following configurations:
 
 |Property|Description|Required|
 |--------|---------------|-----------|
