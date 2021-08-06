@@ -210,6 +210,14 @@ public class AvroFlattenerMakerTest
         flattener.getRootField(record, "someBytes")
     );
     Assert.assertEquals(
+        record.getSomeDecimalLogicalType().doubleValue(),
+        flattener.getRootField(record, "someDecimalLogicalType")
+    );
+    Assert.assertEquals(
+        1355097600000L,
+        flattener.getRootField(record, "someDateLogicalType")
+    );
+    Assert.assertEquals(
         // Casted to a string by transformValue
         record.getSomeEnum().toString(),
         flattener.getRootField(record, "someEnum")

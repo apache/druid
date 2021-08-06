@@ -80,7 +80,23 @@ public class AvroOCFReaderTest
                        + "  \"fields\" : [\n"
                        + "    {\"name\":\"timestamp\",\"type\":\"long\"},\n"
                        + "    {\"name\":\"eventType\",\"type\":\"string\"},\n"
-                       + "    {\"name\":\"someLong\",\"type\":\"long\"}\n"
+                       + "    {\"name\":\"someLong\",\"type\":\"long\"},\n" +
+                       "      {\n"
+                       + "        \"name\": \"someDecimalLogicalType\",\n"
+                       + "        \"type\": {\n"
+                       + "          \"type\": \"bytes\",\n"
+                       + "          \"logicalType\": \"decimal\",\n"
+                       + "          \"precision\": 6,\n"
+                       + "          \"scale\": 2\n"
+                       + "        }\n"
+                       + "      },\n"
+                       + "      {\n"
+                       + "        \"name\": \"someDateLogicalType\",\n"
+                       + "        \"type\": {\n"
+                       + "          \"type\": \"int\",\n"
+                       + "          \"logicalType\": \"date\"\n"
+                       + "        }\n"
+                       + "      }"
                        + "  ]\n"
                        + "}";
 
@@ -144,7 +160,7 @@ public class AvroOCFReaderTest
       Assert.assertFalse(iterator.hasNext());
       final Map<String, Object> rawColumns = row.getRawValues();
       Assert.assertNotNull(rawColumns);
-      Assert.assertEquals(20, rawColumns.size());
+      Assert.assertEquals(22, rawColumns.size());
       final List<InputRow> inputRows = row.getInputRows();
       Assert.assertNotNull(inputRows);
       final InputRow inputRow = Iterables.getOnlyElement(inputRows);
@@ -188,6 +204,8 @@ public class AvroOCFReaderTest
     Assert.assertEquals(DateTimes.of("2015-10-25T19:30:00.000Z"), row.getTimestamp());
     Assert.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventType")));
     Assert.assertEquals(679865987569912369L, row.getMetric("someLong"));
+    Assert.assertEquals(1355097600000L, row.getMetric("someDateLogicalType"));
+    Assert.assertEquals(1234.12, row.getMetric("someDecimalLogicalType"));
   }
 
   private InputEntityReader createReader(

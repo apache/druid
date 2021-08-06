@@ -57,7 +57,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -88,11 +90,13 @@ public class AvroStreamInputRowParserTest
       SOME_OTHER_ID,
       "someStringArray",
       "someIntArray",
+      "someDecimalLogicalType",
       "someFloat",
       EVENT_TYPE,
       "someFixed",
       "someBytes",
       "someUnion",
+      "someDateLogicalType",
       ID,
       "someEnum",
       "someLong",
@@ -153,6 +157,8 @@ public class AvroStreamInputRowParserTest
   private static final String SOME_UNION_VALUE = "string as union";
   private static final Integer SOME_UNION_MEMBER_VALUE = 1;
   private static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
+  private static final LocalDate SOME_DATE_VALUE = LocalDate.of(2012, 12, 10);
+  private static final BigDecimal SOME_DECIMAL_LOGICAL_TYPE = BigDecimal.valueOf(1234.12);
   private static final String SOME_RECORD_STRING_VALUE = "string in record";
   private static final List<MyNestedRecord> SOME_RECORD_ARRAY_VALUE = Collections.singletonList(MyNestedRecord.newBuilder()
                                                                                                               .setNestedString(
@@ -367,6 +373,14 @@ public class AvroStreamInputRowParserTest
         Arrays.toString(SOME_BYTES_VALUE.array()),
         Arrays.toString((byte[]) (inputRow.getRaw("someBytes")))
     );
+    Assert.assertEquals(
+        SOME_DECIMAL_LOGICAL_TYPE.doubleValue(),
+        inputRow.getRaw("someDecimalLogicalType")
+    );
+    Assert.assertEquals(
+        1355097600000L,
+        inputRow.getRaw("someDateLogicalType")
+    );
     Assert.assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
     Assert.assertEquals(
         Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)),
@@ -398,6 +412,8 @@ public class AvroStreamInputRowParserTest
                         .setSomeMultiMemberUnion(SOME_UNION_MEMBER_VALUE)
                         .setSomeFixed(SOME_FIXED_VALUE)
                         .setSomeBytes(SOME_BYTES_VALUE)
+                        .setSomeDateLogicalType(SOME_DATE_VALUE)
+                        .setSomeDecimalLogicalType(SOME_DECIMAL_LOGICAL_TYPE)
                         .setSomeNull(null)
                         .setSomeEnum(MyEnum.ENUM1)
                         .setSomeRecord(SOME_RECORD_VALUE)

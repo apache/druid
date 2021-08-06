@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 {
   private final JsonProvider avroJsonProvider;
   private final Configuration jsonPathConfiguration;
+  private final AvroLogicalTypeConverter avroLogicalTypeConverter;
 
   private static final EnumSet<Schema.Type> ROOT_TYPES = EnumSet.of(
       Schema.Type.STRING,
@@ -92,9 +94,13 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   /**
    * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
-   * @param binaryAsString boolean to encode the byte[] as a string.
+   * @param binaryAsString     boolean to encode the byte[] as a string.
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnionsByType)
+  public AvroFlattenerMaker(
+      final boolean fromPigAvroStorage,
+      final boolean binaryAsString,
+      final boolean extractUnionsByType
+  )
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
@@ -106,6 +112,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
                      .mappingProvider(new NotImplementedMappingProvider())
                      .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                      .build();
+    this.avroLogicalTypeConverter = new AvroLogicalTypeConverter();
   }
 
   @Override
@@ -122,7 +129,13 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Object getRootField(final GenericRecord record, final String key)
   {
-    return transformValue(record.get(key));
+    return transformValue(
+        record.get(key),
+        Optional.ofNullable(record.getSchema())
+                .map(schema -> schema.getField(key))
+                .map(Schema.Field::schema)
+                .orElse(null)
+    );
   }
 
   @Override
@@ -152,10 +165,17 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private Object transformValue(final Object field)
   {
+    return transformValue(field, null);
+  }
+
+  private Object transformValue(final Object field, Schema schema)
+  {
     if (fromPigAvroStorage && field instanceof GenericArray) {
       return Lists.transform((List) field, item -> String.valueOf(((GenericRecord) item).get(0)));
     }
-    if (field instanceof ByteBuffer) {
+    if (isLogicalType(schema)) {
+      return avroLogicalTypeConverter.convert(field, schema);
+    } else if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
       } else {
@@ -175,5 +195,13 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       }
     }
     return field;
+  }
+
+  private boolean isLogicalType(Schema schema)
+  {
+    return Optional.ofNullable(schema)
+                   .map(Schema::getLogicalType)
+                   .filter(avroLogicalTypeConverter::isRegistered)
+                   .isPresent();
   }
 }

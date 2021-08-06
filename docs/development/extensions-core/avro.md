@@ -65,4 +65,5 @@ This setting will decode these types as UTF-8 strings.
 `record` and `map` types representing nested data can be ingested using [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the parser.
 
 #### Logical types
-Druid doesn't currently support Avro logical types, they will be ignored and fields will be handled according to the underlying primitive type.
+* Decimal logical types are transformed to their double representation
+* Date logical types are transformed to an (long) epoch milliseconds at the start of that day 

@@ -120,6 +120,22 @@
         "type": "bytes"
       },
       {
+        "name": "someDecimalLogicalType",
+        "type": {
+          "type": "bytes",
+          "logicalType": "decimal",
+          "precision": 6,
+          "scale": 2
+        }
+      },
+      {
+        "name": "someDateLogicalType",
+        "type": {
+          "type": "int",
+          "logicalType": "date"
+        }
+      },
+      {
         "name": "someEnum",
         "type": {
           "type": "enum",
