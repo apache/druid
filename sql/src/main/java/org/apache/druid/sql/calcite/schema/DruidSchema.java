@@ -191,6 +191,11 @@ public class DruidSchema extends AbstractSchema
   @GuardedBy("lock")
   private boolean isServerViewInitialized = false;
 
+  /**
+   * Counts the total number of known segments. This variable is used only for the segments table in the system schema
+   * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
+   * and thus there is no concurrency control for this variable.
+   */
   private int totalSegments = 0;
 
   @Inject
@@ -638,8 +643,10 @@ public class DruidSchema extends AbstractSchema
     }
     final Optional<DruidServerMetadata> historicalServer = servers
         .stream()
-        .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL)
-                            || metadata.getType().equals(ServerType.BROKER))
+        // Ideally, this filter should have checked whether it's a broadcast segment loaded in brokers.
+        // However, we don't current track of the broadcast segments loaded in brokers, so this filter is still valid.
+        // See addSegment(), removeServerSegment(), and removeSegment()
+        .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL))
         .findAny();
 
     // if there is any historical server in the replicas, isRealtime flag should be unset
@@ -740,34 +747,6 @@ public class DruidSchema extends AbstractSchema
     );
 
     return retVal;
-  }
-
-  /**
-   * This method is not thread-safe and must be used only in unit tests.
-   */
-  @VisibleForTesting
-  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
-  {
-    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
-        .computeIfAbsent(
-            segmentId.getDataSource(),
-            k -> new ConcurrentSkipListMap<>(SEGMENT_ORDER)
-        );
-    if (dataSourceSegments.put(segmentId, availableSegmentMetadata) == null) {
-      totalSegments++;
-    }
-  }
-
-  /**
-   * This is a helper method for unit tests to emulate heavy work done with {@link #lock}.
-   * It must be used only in unit tests.
-   */
-  @VisibleForTesting
-  void doInLock(Runnable runnable)
-  {
-    synchronized (lock) {
-      runnable.run();
-    }
   }
 
   @VisibleForTesting
@@ -909,5 +888,33 @@ public class DruidSchema extends AbstractSchema
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
     return rowSignatureBuilder.build();
+  }
+
+  /**
+   * This method is not thread-safe and must be used only in unit tests.
+   */
+  @VisibleForTesting
+  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  {
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
+        .computeIfAbsent(
+            segmentId.getDataSource(),
+            k -> new ConcurrentSkipListMap<>(SEGMENT_ORDER)
+        );
+    if (dataSourceSegments.put(segmentId, availableSegmentMetadata) == null) {
+      totalSegments++;
+    }
+  }
+
+  /**
+   * This is a helper method for unit tests to emulate heavy work done with {@link #lock}.
+   * It must be used only in unit tests.
+   */
+  @VisibleForTesting
+  void doInLock(Runnable runnable)
+  {
+    synchronized (lock) {
+      runnable.run();
+    }
   }
 }
