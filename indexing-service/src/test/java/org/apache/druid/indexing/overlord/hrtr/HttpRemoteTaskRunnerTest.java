@@ -813,7 +813,7 @@ public class HttpRemoteTaskRunnerTest
 
     Task task1 = NoopTask.create("task-id-1", 0);
     Task task2 = NoopTask.create("task-id-2", 0);
-    String ADDITIONAL_WORKER_CATEGORY = "category2";
+    String additionalWorkerCategory = "category2";
 
     ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
@@ -930,7 +930,7 @@ public class HttpRemoteTaskRunnerTest
         NodeRole.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY,
-            new WorkerNodeService("ip2", 1, "0", ADDITIONAL_WORKER_CATEGORY)
+            new WorkerNodeService("ip2", 1, "0", additionalWorkerCategory)
         )
     );
 
@@ -954,11 +954,11 @@ public class HttpRemoteTaskRunnerTest
     druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode2));
 
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
 
     taskRunner.run(task2);
 
@@ -967,11 +967,11 @@ public class HttpRemoteTaskRunnerTest
     }
 
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(ADDITIONAL_WORKER_CATEGORY));
+    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
     Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
 
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
         new DruidNode("service", "host3", false, 8080, null, true, false),
@@ -1002,13 +1002,13 @@ public class HttpRemoteTaskRunnerTest
     druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode3));
 
     Assert.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(ADDITIONAL_WORKER_CATEGORY));
+    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
     Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
-    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(ADDITIONAL_WORKER_CATEGORY));
+    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
 
     Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
@@ -1020,13 +1020,13 @@ public class HttpRemoteTaskRunnerTest
     );
 
     Assert.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(ADDITIONAL_WORKER_CATEGORY));
+    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
     Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(ADDITIONAL_WORKER_CATEGORY).longValue());
+    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
     Assert.assertEquals(1, taskRunner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(ADDITIONAL_WORKER_CATEGORY));
+    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
   }
 
   /*
