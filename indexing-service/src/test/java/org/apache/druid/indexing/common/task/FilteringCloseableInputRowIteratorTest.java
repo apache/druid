@@ -263,9 +263,10 @@ public class FilteringCloseableInputRowIteratorTest
         parseExceptionHandler
     );
 
-    final List<InputRow> filteredRows = new ArrayList<>();
-    rowIterator.forEachRemaining(filteredRows::add);
-    Assert.fail("you never should've come here");
+    while (rowIterator.hasNext()) {
+      rowIterator.next();
+    }
+    Assert.fail("you never should have come here");
   }
 
   @Test
