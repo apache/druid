@@ -29,7 +29,6 @@ import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
@@ -51,6 +50,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import javax.inject.Provider;
 
 /**
  * Grouper based around a single underlying {@link BufferHashGrouper}. Not thread-safe.
@@ -251,13 +252,12 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
     iterators.add(grouper.iterator(sorted));
 
-    final Closer closer = Closer.create();
     for (final File file : files) {
-      final MappingIterator<Entry<KeyType>> fileIterator = read(file, keySerde.keyClazz());
+      final Provider<Iterator<Entry<KeyType>>> fileIterator = read(file, keySerde.keyClazz());
       iterators.add(
           CloseableIterators.withEmptyBaggage(
               Iterators.transform(
-                  fileIterator,
+                  new LazyCloseableIterator<Entry<KeyType>>(fileIterator),
                   new Function<Entry<KeyType>, Entry<KeyType>>()
                   {
                     @Override
@@ -277,7 +277,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
               )
           )
       );
-      closer.register(fileIterator);
     }
 
     final Iterator<Entry<KeyType>> baseIterator;
@@ -289,7 +288,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
                      CloseableIterators.concat(iterators);
     }
 
-    return CloseableIterators.wrap(baseIterator, closer);
+    return CloseableIterators.wrap(baseIterator, null);
   }
 
   private void spill() throws IOException
@@ -319,17 +318,17 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     }
   }
 
-  private MappingIterator<Entry<KeyType>> read(final File file, final Class<KeyType> keyClazz)
+  private Provider<Iterator<Entry<KeyType>>> read(final File file, final Class<KeyType> keyClazz)
   {
-    try {
-      return spillMapper.readValues(
-          spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(file))),
-          spillMapper.getTypeFactory().constructParametricType(Entry.class, keyClazz)
-      );
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+      return () -> {
+          try {
+            return spillMapper.readValues(
+                spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(file))),
+                spillMapper.getTypeFactory().constructParametricType(Entry.class, keyClazz));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        };
   }
 
   private void deleteFiles()
