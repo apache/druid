@@ -29,13 +29,9 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -44,20 +40,12 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
-import org.apache.druid.segment.join.Joinable;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
@@ -66,87 +54,33 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.easymock.EasyMock;
-import org.joda.time.Period;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class DruidSchemaTest extends CalciteTestBase
+public class DruidSchemaTest extends DruidSchemaTestCommon
 {
-  private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig()
-  {
-    @Override
-    public Period getMetadataRefreshPeriod()
-    {
-      return new Period("PT1S");
-    }
-  };
-
-  private static final List<InputRow> ROWS1 = ImmutableList.of(
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1")),
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2"))
-  );
-
-  private static final List<InputRow> ROWS2 = ImmutableList.of(
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim2", ImmutableList.of("a"))),
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim2", ImmutableList.of("abc"))),
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
-  );
-
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
-
+  private SpecificSegmentsQuerySegmentWalker walker = null;
   private TestServerInventoryView serverView;
   private List<ImmutableDruidServer> druidServers;
-  private CountDownLatch getDatasourcesLatch = new CountDownLatch(1);
-  private CountDownLatch buildTableLatch = new CountDownLatch(1);
-
-  @BeforeClass
-  public static void setUpClass()
-  {
-    resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private SpecificSegmentsQuerySegmentWalker walker = null;
   private DruidSchema schema = null;
   private DruidSchema schema2 = null;
-  private SegmentManager segmentManager;
-  private Set<String> segmentDataSourceNames;
-  private Set<String> joinableDataSourceNames;
+  private CountDownLatch buildTableLatch = new CountDownLatch(1);
+  private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
 
   @Before
   public void setUp() throws Exception
   {
-    segmentDataSourceNames = Sets.newConcurrentHashSet();
-    joinableDataSourceNames = Sets.newConcurrentHashSet();
-
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
@@ -175,17 +109,6 @@ public class DruidSchemaTest extends CalciteTestBase
                                               )
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
-
-    segmentManager = new SegmentManager(EasyMock.createMock(SegmentLoader.class))
-    {
-      @Override
-      public Set<String> getDataSourceNames()
-      {
-        getDatasourcesLatch.countDown();
-        return segmentDataSourceNames;
-      }
-    };
-
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -231,25 +154,6 @@ public class DruidSchemaTest extends CalciteTestBase
     serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
 
-    final JoinableFactory globalTableJoinable = new JoinableFactory()
-    {
-      @Override
-      public boolean isDirectlyJoinable(DataSource dataSource)
-      {
-        return dataSource instanceof GlobalTableDataSource &&
-               joinableDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
-      }
-
-      @Override
-      public Optional<Joinable> build(
-          DataSource dataSource,
-          JoinConditionAnalysis condition
-      )
-      {
-        return Optional.empty();
-      }
-    };
-
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
@@ -266,15 +170,22 @@ public class DruidSchemaTest extends CalciteTestBase
         buildTableLatch.countDown();
         return table;
       }
+
+      @Override
+      void markDataSourceAsNeedRebuild(String datasource)
+      {
+        super.markDataSourceAsNeedRebuild(datasource);
+        markDataSourceLatch.countDown();
+      }
     };
 
     schema2 = new DruidSchema(
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            serverView,
-            segmentManager,
-            new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
-            PLANNER_CONFIG_DEFAULT,
-            new NoopEscalator()
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
     )
     {
 
@@ -296,6 +207,13 @@ public class DruidSchemaTest extends CalciteTestBase
         } else {
           return super.refreshSegments(segments);
         }
+      }
+
+      @Override
+      void markDataSourceAsNeedRebuild(String datasource)
+      {
+        super.markDataSourceAsNeedRebuild(datasource);
+        markDataSourceLatch.countDown();
       }
     };
 
@@ -533,6 +451,422 @@ public class DruidSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testSegmentAddedCallbackAddNewHistoricalSegment() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    serverView.addSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(1, metadatas.size());
+    AvailableSegmentMetadata metadata = metadatas.get(0);
+    Assert.assertEquals(0, metadata.isRealtime());
+    Assert.assertEquals(0, metadata.getNumRows());
+    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+  }
+
+  @Test
+  public void testSegmentAddedCallbackAddExistingSegment() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(2);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    DataSegment segment = newSegment(datasource, 1);
+    serverView.addSegment(segment, ServerType.REALTIME);
+    serverView.addSegment(segment, ServerType.HISTORICAL);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(1, metadatas.size());
+    AvailableSegmentMetadata metadata = metadatas.get(0);
+    Assert.assertEquals(0, metadata.isRealtime()); // realtime flag is unset when there is any historical
+    Assert.assertEquals(0, metadata.getNumRows());
+    Assert.assertEquals(2, metadata.getNumReplicas());
+    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+    Assert.assertFalse(schema.getMutableSegments().contains(metadata.getSegment().getId()));
+  }
+
+  @Test
+  public void testSegmentAddedCallbackAddNewRealtimeSegment() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    serverView.addSegment(newSegment(datasource, 1), ServerType.REALTIME);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(1, metadatas.size());
+    AvailableSegmentMetadata metadata = metadatas.get(0);
+    Assert.assertEquals(1, metadata.isRealtime());
+    Assert.assertEquals(0, metadata.getNumRows());
+    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+    Assert.assertTrue(schema.getMutableSegments().contains(metadata.getSegment().getId()));
+  }
+
+  @Test
+  public void testSegmentAddedCallbackAddNewBroadcastSegment() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    serverView.addSegment(newSegment(datasource, 1), ServerType.BROKER);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(4, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
+    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+  }
+
+  @Test
+  public void testSegmentRemovedCallbackEmptyDataSourceAfterRemove() throws InterruptedException, IOException
+  {
+    String datasource = "segmentRemoveTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    CountDownLatch removeSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+
+      @Override
+      void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+        if (datasource.equals(segment.getDataSource())) {
+          removeSegmentLatch.countDown();
+        }
+      }
+    };
+
+    DataSegment segment = newSegment(datasource, 1);
+    serverView.addSegment(segment, ServerType.REALTIME);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    schema.refresh(Sets.newHashSet(segment.getId()), Sets.newHashSet(datasource));
+
+    serverView.removeSegment(segment, ServerType.REALTIME);
+    Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(4, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segment.getId()));
+    Assert.assertFalse(schema.getMutableSegments().contains(segment.getId()));
+    Assert.assertFalse(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assert.assertFalse(schema.getTableNames().contains(datasource));
+  }
+
+  @Test
+  public void testSegmentRemovedCallbackNonEmptyDataSourceAfterRemove() throws InterruptedException, IOException
+  {
+    String datasource = "segmentRemoveTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(2);
+    CountDownLatch removeSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+
+      @Override
+      void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+        if (datasource.equals(segment.getDataSource())) {
+          removeSegmentLatch.countDown();
+        }
+      }
+    };
+
+    List<DataSegment> segments = ImmutableList.of(
+        newSegment(datasource, 1),
+        newSegment(datasource, 2)
+    );
+    serverView.addSegment(segments.get(0), ServerType.REALTIME);
+    serverView.addSegment(segments.get(1), ServerType.HISTORICAL);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
+
+    serverView.removeSegment(segments.get(0), ServerType.REALTIME);
+    Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(1, metadatas.size());
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+    Assert.assertFalse(schema.getMutableSegments().contains(segments.get(0).getId()));
+    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assert.assertTrue(schema.getTableNames().contains(datasource));
+  }
+
+  @Test
+  public void testServerSegmentRemovedCallbackRemoveUnknownSegment() throws InterruptedException
+  {
+    String datasource = "serverSegmentRemoveTest";
+    CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.removeServerSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          removeServerSegmentLatch.countDown();
+        }
+      }
+    };
+
+    serverView.addSegment(newSegment(datasource, 1), ServerType.BROKER);
+
+    serverView.removeSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
+    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(4, schema.getTotalSegments());
+  }
+
+  @Test
+  public void testServerSegmentRemovedCallbackRemoveBrokerSegment() throws InterruptedException
+  {
+    String datasource = "serverSegmentRemoveTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+
+      @Override
+      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.removeServerSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          removeServerSegmentLatch.countDown();
+        }
+      }
+    };
+
+    DataSegment segment = newSegment(datasource, 1);
+    serverView.addSegment(segment, ServerType.HISTORICAL);
+    serverView.addSegment(segment, ServerType.BROKER);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    serverView.removeSegment(segment, ServerType.BROKER);
+    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+  }
+
+  @Test
+  public void testServerSegmentRemovedCallbackRemoveHistoricalSegment() throws InterruptedException
+  {
+    String datasource = "serverSegmentRemoveTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
+    DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator()
+    )
+    {
+      @Override
+      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+
+      @Override
+      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.removeServerSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          removeServerSegmentLatch.countDown();
+        }
+      }
+    };
+
+    DataSegment segment = newSegment(datasource, 1);
+    serverView.addSegment(segment, ServerType.HISTORICAL);
+    serverView.addSegment(segment, ServerType.BROKER);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    serverView.removeSegment(segment, ServerType.HISTORICAL);
+    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Assert.assertEquals(5, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(1, metadatas.size());
+    AvailableSegmentMetadata metadata = metadatas.get(0);
+    Assert.assertEquals(0, metadata.isRealtime());
+    Assert.assertEquals(0, metadata.getNumRows());
+    Assert.assertEquals(0, metadata.getNumReplicas()); // brokers are not counted as replicas yet
+  }
+
+  @Test
   public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
   {
     DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
@@ -542,8 +876,9 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertFalse(fooTable.isJoinable());
     Assert.assertFalse(fooTable.isBroadcast());
 
-    buildTableLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(buildTableLatch.await(1, TimeUnit.SECONDS));
 
+    buildTableLatch = new CountDownLatch(1);
     final DataSegment someNewBrokerSegment = new DataSegment(
         "foo",
         Intervals.of("2012/2013"),
@@ -560,14 +895,11 @@ public class DruidSchemaTest extends CalciteTestBase
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
-
+    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
     // wait for build twice
-    buildTableLatch = new CountDownLatch(2);
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-
+    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    getDatasourcesLatch = new CountDownLatch(1);
-    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
 
     fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
@@ -577,18 +909,18 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertTrue(fooTable.isBroadcast());
 
     // now remove it
+    markDataSourceLatch = new CountDownLatch(1);
+    buildTableLatch = new CountDownLatch(1);
+    getDatasourcesLatch = new CountDownLatch(1);
     joinableDataSourceNames.remove("foo");
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
+    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
     // wait for build
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-    buildTableLatch = new CountDownLatch(1);
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-
+    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    getDatasourcesLatch = new CountDownLatch(1);
-    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
 
     fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
@@ -609,8 +941,9 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertFalse(fooTable.isBroadcast());
 
     // wait for build twice
-    buildTableLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(buildTableLatch.await(1, TimeUnit.SECONDS));
 
+    buildTableLatch = new CountDownLatch(1);
     final DataSegment someNewBrokerSegment = new DataSegment(
         "foo",
         Intervals.of("2012/2013"),
@@ -627,12 +960,10 @@ public class DruidSchemaTest extends CalciteTestBase
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    buildTableLatch = new CountDownLatch(2);
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-
+    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
+    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    getDatasourcesLatch = new CountDownLatch(1);
-    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
 
     fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
@@ -643,19 +974,18 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertTrue(fooTable.isBroadcast());
     Assert.assertFalse(fooTable.isJoinable());
 
-
     // now remove it
+    markDataSourceLatch = new CountDownLatch(1);
+    buildTableLatch = new CountDownLatch(1);
+    getDatasourcesLatch = new CountDownLatch(1);
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
+    Assert.assertTrue(markDataSourceLatch.await(2, TimeUnit.SECONDS));
     // wait for build
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-    buildTableLatch = new CountDownLatch(1);
-    buildTableLatch.await(1, TimeUnit.SECONDS);
-
+    Assert.assertTrue(buildTableLatch.await(2, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    getDatasourcesLatch = new CountDownLatch(1);
-    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(getDatasourcesLatch.await(2, TimeUnit.SECONDS));
 
     fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
@@ -663,5 +993,22 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
     Assert.assertFalse(fooTable.isBroadcast());
     Assert.assertFalse(fooTable.isJoinable());
+  }
+
+  private static DataSegment newSegment(String datasource, int partitionId)
+  {
+    return new DataSegment(
+        datasource,
+        Intervals.of("2012/2013"),
+        "version1",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(partitionId, 0),
+        null,
+        1,
+        100L,
+        PruneSpecsHolder.DEFAULT
+    );
   }
 }
