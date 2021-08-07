@@ -177,7 +177,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
     final String fullReindexDatasourceName = "newDatasource123";
 
     String taskSpec = StringUtils.replace(
-        getResourceAsString(fullBaseDatasourceName),
+        getResourceAsString(REINDEX_TASK_WITH_DRUID_INPUT_SOURCE),
         "%%DATASOURCE%%",
         fullBaseDatasourceName
     );
@@ -197,7 +197,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         dummyPair
     );
   }
-  
+
   @Test
   public void testMERGEIndexData() throws Exception
   {
