@@ -302,7 +302,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(
+  protected void submitTaskAndWait(
       String taskSpec,
       String dataSourceName,
       boolean waitForNewVersion,

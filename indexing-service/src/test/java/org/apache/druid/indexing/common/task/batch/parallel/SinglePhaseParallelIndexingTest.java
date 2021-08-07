@@ -396,7 +396,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   }
 
   @Test
-  public void testRunParallelWithNoInputSplitToProcess() throws Exception
+  public void testRunParallelWithNoInputSplitToProcess()
   {
     // The input source filter on this task does not match any input
     // Hence, the this task will has no input split to process
