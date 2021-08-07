@@ -23,14 +23,19 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprMacroTable.ExprMacro;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public abstract class MacroTestBase extends InitializedNullHandlingTest
 {
@@ -68,30 +73,20 @@ public abstract class MacroTestBase extends InitializedNullHandlingTest
       final Expr.ObjectBinding bindings
   )
   {
-    // WrappedExprMacro allows us to confirm that our ExprMacro was actually called.
-    class WrappedExprMacro implements ExprMacroTable.ExprMacro
-    {
-      private final AtomicLong calls = new AtomicLong();
-
-      @Override
-      public String name()
-      {
-        return macro.name();
-      }
-
-      @Override
-      public Expr apply(List<Expr> args)
-      {
-        calls.incrementAndGet();
-        return macro.apply(args);
-      }
-    }
-
-    final WrappedExprMacro wrappedMacro = new WrappedExprMacro();
+    // Construct mock object
+    final ExprMacro wrappedMacro = mock(ExprMacro.class);
+    // Method Stubs
+    when(wrappedMacro.name()).thenAnswer((stubInvo) -> {
+      return macro.name();
+    });
+    when(wrappedMacro.apply(any(List.class))).thenAnswer((stubInvo) -> {
+      List<Expr> args = stubInvo.getArgument(0);
+      return macro.apply(args);
+    });
     final GuiceExprMacroTable macroTable = new GuiceExprMacroTable(ImmutableSet.of(wrappedMacro));
     final Expr expr = Parser.parse(expression, macroTable);
 
-    Assert.assertTrue("Calls made to macro.apply", wrappedMacro.calls.get() > 0);
+    verify(wrappedMacro, atLeastOnce()).apply(any(List.class));
 
     return expr.eval(bindings);
   }
