@@ -32,7 +32,8 @@ At ingestion time, you configure dimensions in the [`dimensionsSpec`](./ingestio
 Metrics are columns that Druid stores in an aggregated form. Metrics are most useful when you enable [rollup](rollup.md). If you specify a metric, you can apply an aggregation function to each row during ingestion. This
 has the following benefits:
 
-- With [rollup](rollup.md) enabled, Druid collapses multiple rows into one row even while retaining summary information. For example, the [rollup tutorial](../tutorials/tutorial-rollup.md) demonstrates using rollup to collapse netflow data to a single row per `(minute, srcIP, dstIP)` tuple, while retaining aggregate information about total packet and byte counts.
+Rollup is a form of aggregation that collapses dimensions while aggregating the values in the metrics, that is, it collapses rows but retains its summary information."
+- [Rollup](rollup.md) is a form of aggregation that combines multiple rows with the same timestamp value and dimension values. For example, the [rollup tutorial](../tutorials/tutorial-rollup.md) demonstrates using rollup to collapse netflow data to a single row per `(minute, srcIP, dstIP)` tuple, while retaining aggregate information about total packet and byte counts.
 - Druid can compute some aggregators, especially approximate ones, more quickly at query time if they are partially computed at ingestion time, including data that has not been rolled up.
 
  At ingestion time, you configure Metrics in the [`metricsSpec`](./ingestion-spec.md#metricsspec).
