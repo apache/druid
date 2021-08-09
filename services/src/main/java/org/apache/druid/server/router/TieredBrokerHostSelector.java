@@ -243,8 +243,12 @@ public class TieredBrokerHostSelector<T>
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
-    NodesHolder nodesHolder = servers.get(brokerServiceName);
+    return getServerPair(brokerServiceName);
+  }
 
+  private Pair<String, Server> getServerPair(String brokerServiceName)
+  {
+    NodesHolder nodesHolder = servers.get(brokerServiceName);
     if (nodesHolder == null) {
       log.error(
           "No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
@@ -255,6 +259,37 @@ public class TieredBrokerHostSelector<T>
     }
 
     return new Pair<>(brokerServiceName, nodesHolder.pick());
+  }
+
+  public Pair<String, Server> selectForSql()
+  {
+    synchronized (lock) {
+      if (!ruleManager.isStarted() || !started) {
+        return getDefaultLookup();
+      }
+    }
+
+    // Resolve brokerServiceName using Tier selector strategies
+    String brokerServiceName = null;
+    for (TieredBrokerSelectorStrategy strategy : strategies) {
+      final Optional<String> optionalName = strategy.getBrokerServiceName(tierConfig);
+      if (optionalName.isPresent()) {
+        brokerServiceName = optionalName.get();
+        break;
+      }
+    }
+
+    // Use defaut if not resolved by strategies
+    if (brokerServiceName == null) {
+      log.error(
+          "No brokerServiceName found for SQL Query [%s]. Using default selector for [%s].",
+          "SELECT stuff",
+          tierConfig.getDefaultBrokerServiceName()
+      );
+      brokerServiceName = tierConfig.getDefaultBrokerServiceName();
+    }
+
+    return getServerPair(brokerServiceName);
   }
 
   public Pair<String, Server> getDefaultLookup()

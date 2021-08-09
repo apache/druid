@@ -89,6 +89,7 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
@@ -262,7 +263,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(),
-        new AuthenticatorMapper(ImmutableMap.of())
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties()
     )
     {
       @Override
@@ -354,7 +356,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               new NoopServiceEmitter(),
               new NoopRequestLogger(),
               new DefaultGenericQueryMetricsFactory(),
-              new AuthenticatorMapper(ImmutableMap.of())
+              new AuthenticatorMapper(ImmutableMap.of()),
+              new Properties()
           )
           {
             @Override
@@ -477,32 +480,32 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final int maxNumRows = 1000;
 
     final List<? extends Service.Request> avaticaRequests = ImmutableList.of(
-            new Service.CatalogsRequest(connectionId),
-            new Service.SchemasRequest(connectionId, "druid", null),
-            new Service.TablesRequest(connectionId, "druid", "druid", null, null),
-            new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null),
-            new Service.PrepareAndExecuteRequest(
-                    connectionId,
-                    statementId,
-                    query,
-                    maxNumRows
-            ),
-            new Service.PrepareRequest(connectionId, query, maxNumRows),
-            new Service.ExecuteRequest(
-                    new Meta.StatementHandle(connectionId, statementId, null),
-                    ImmutableList.of(),
-                    maxNumRows
-            ),
-            new Service.CloseStatementRequest(connectionId, statementId),
-            new Service.CloseConnectionRequest(connectionId)
+        new Service.CatalogsRequest(connectionId),
+        new Service.SchemasRequest(connectionId, "druid", null),
+        new Service.TablesRequest(connectionId, "druid", "druid", null, null),
+        new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null),
+        new Service.PrepareAndExecuteRequest(
+            connectionId,
+            statementId,
+            query,
+            maxNumRows
+        ),
+        new Service.PrepareRequest(connectionId, query, maxNumRows),
+        new Service.ExecuteRequest(
+            new Meta.StatementHandle(connectionId, statementId, null),
+            ImmutableList.of(),
+            maxNumRows
+        ),
+        new Service.CloseStatementRequest(connectionId, statementId),
+        new Service.CloseConnectionRequest(connectionId)
     );
 
 
     for (Service.Request request : avaticaRequests) {
       Assert.assertEquals(
-              "failed",
-              connectionId,
-              AsyncQueryForwardingServlet.getAvaticaProtobufConnectionId(request)
+          "failed",
+          connectionId,
+          AsyncQueryForwardingServlet.getAvaticaProtobufConnectionId(request)
       );
     }
   }

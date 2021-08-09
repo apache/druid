@@ -37,4 +37,9 @@ import org.apache.druid.query.Query;
 public interface TieredBrokerSelectorStrategy
 {
   Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
+
+  default Optional<String> getBrokerServiceName(TieredBrokerConfig config)
+  {
+    return Optional.absent();
+  }
 }
