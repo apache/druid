@@ -38,7 +38,15 @@ public class LazyCloseableIterator<T> implements CloseableIterator<T>
       }
     }
     
-    return iterator.hasNext();
+    boolean hasNext = iterator.hasNext();
+    if (!hasNext) {
+      try {
+        close();
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+    return hasNext;
   }
 
   @Override
