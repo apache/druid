@@ -289,13 +289,17 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   @Override
   public void collectReport(SubTaskReportType report)
   {
+    // This method is only called when there is a subtask sending its report.
+    // Since TaskMonitor is responsible for spawning subtasks, the taskMonitor cannot be null if we have subtask sending report
+    // This null check is to ensure that the contract mentioned above is not broken
+    assert taskMonitor != null;
     taskMonitor.collectReport(report);
   }
 
   @Override
   public Map<String, SubTaskReportType> getReports()
   {
-    return taskMonitor.getReports();
+    return taskMonitor == null ? Collections.emptyMap() : taskMonitor.getReports();
   }
 
   @Override
