@@ -22,6 +22,7 @@ title: "Multi-value dimensions"
   ~ under the License.
   -->
 
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 Apache Druid supports "multi-value" string dimensions. Multi-value string dimensions result from input fields that contain an
@@ -31,6 +32,11 @@ Apache Druid supports "multi-value" string dimensions. These are generated when 
 array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
 characters). By default Druid ingests the values in alphabetical order, see [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for configuration.
 >>>>>>> f784a85aa2... break ingestion topic into smaller topics
+=======
+Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
+array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
+characters). By default Druid ingests the values in alphabetical order, see [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for configuration.
+>>>>>>> 0c9554214e17a0cd6d7b65c5e62db4097c1c6f69
 
 ```
 {"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]} 

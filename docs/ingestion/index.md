@@ -82,4 +82,8 @@ This table compares the three available options:
 | **Input locations** | Any [`inputSource`](./native-batch.md#input-sources). | Any Hadoop FileSystem or Druid datasource. | Any [`inputSource`](./native-batch.md#input-sources). |
 | **File formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. | Any [`inputFormat`](./data-formats.md#input-format). |
 | **[Rollup modes](rollup.md)** | Can be perfect or best effort rollup depending on the batch ingestion method and other settings. See [Perfect rollup vs Best-effort rollup](./rollup.md#perfect-rollup-vs-best-effort-rollup)  |
+<<<<<<< HEAD
 | **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec-1) for details. |
+=======
+| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec-1) for details. |
+>>>>>>> 0c9554214e17a0cd6d7b65c5e62db4097c1c6f69
