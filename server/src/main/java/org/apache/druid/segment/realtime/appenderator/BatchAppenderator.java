@@ -201,7 +201,7 @@ public class BatchAppenderator implements Appenderator
 
   private void initializeExecutors()
   {
-    log.info("There will be up to[%d] pending persists", maxPendingPersists);
+    log.debug("There will be up to[%d] pending persists", maxPendingPersists);
 
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
