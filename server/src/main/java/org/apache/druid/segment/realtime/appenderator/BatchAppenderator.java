@@ -119,7 +119,6 @@ public class BatchAppenderator implements Appenderator
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
   private final int maxPendingPersists;
-  private static final int DEFAULT_PENDING_PERSISTS = 2;
   private static final int PERSIST_WARN_DELAY = 1000;
   private volatile Throwable persistError;
 
@@ -169,11 +168,7 @@ public class BatchAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
-    if (tuningConfig.getMaxPendingPersists() < 1) {
-      maxPendingPersists = DEFAULT_PENDING_PERSISTS;
-    } else {
-      maxPendingPersists = tuningConfig.getMaxPendingPersists();
-    }
+    maxPendingPersists = tuningConfig.getMaxPendingPersists();
   }
 
   @Override
