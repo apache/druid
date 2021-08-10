@@ -66,7 +66,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   // minimum permitted agg size is 10 bytes so it is at least large enough to hold primitive numerics (long, double)
   // | expression type byte | is_null byte | primitive value (8 bytes) |
   private static final int MIN_SIZE_BYTES = 10;
-  private static final HumanReadableBytes DEFAULT_MAX_SIZE_BYTES = new HumanReadableBytes(1L << 10);
+  public static final HumanReadableBytes DEFAULT_MAX_SIZE_BYTES = new HumanReadableBytes(1L << 10);
 
   private final String name;
   @Nullable
