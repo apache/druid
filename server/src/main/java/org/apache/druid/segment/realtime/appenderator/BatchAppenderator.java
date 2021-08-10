@@ -83,8 +83,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -131,9 +129,9 @@ public class BatchAppenderator implements Appenderator
   private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
   // This variable updated in add(), persist(), and drop()
-  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
+  private int rowsCurrentlyInMemory = 0;
   private int totalRows = 0;
-  private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
+  private long bytesCurrentlyInMemory = 0;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
 
@@ -296,8 +294,8 @@ public class BatchAppenderator implements Appenderator
     }
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
-    rowsCurrentlyInMemory.addAndGet(numAddedRows);
-    bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
+    rowsCurrentlyInMemory += numAddedRows;
+    bytesCurrentlyInMemory += (bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
     totalRows += numAddedRows;
     sinksMetadata.computeIfAbsent(identifier, unused -> new SinkMetadata()).addRows(numAddedRows);
 
@@ -308,19 +306,19 @@ public class BatchAppenderator implements Appenderator
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
     }
-    if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+    if (rowsCurrentlyInMemory >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
-          rowsCurrentlyInMemory.get(),
+          rowsCurrentlyInMemory,
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
+    if (bytesCurrentlyInMemory >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
-          bytesCurrentlyInMemory.get(),
+          bytesCurrentlyInMemory,
           maxBytesTuningConfig
       ));
     }
@@ -337,13 +335,13 @@ public class BatchAppenderator implements Appenderator
           if (sinkEntry.swappable()) {
             // Code for batch no longer memory maps hydrants, but they still take memory...
             int memoryStillInUse = calculateMemoryUsedByHydrant();
-            bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
+            bytesCurrentlyInMemory += memoryStillInUse;
           }
         }
       }
 
       if (!skipBytesInMemoryOverheadCheck
-          && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+          && bytesCurrentlyInMemory - bytesToBePersisted > maxBytesTuningConfig) {
         // We are still over maxBytesTuningConfig even after persisting.
         // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
         final String alertMessage = StringUtils.format(
@@ -353,7 +351,7 @@ public class BatchAppenderator implements Appenderator
             sinks.size(),
             sinks.values().stream().mapToInt(Iterables::size).sum(),
             getTotalRowCount(),
-            bytesCurrentlyInMemory.get(),
+            bytesCurrentlyInMemory,
             bytesToBePersisted,
             maxBytesTuningConfig
         );
@@ -424,13 +422,13 @@ public class BatchAppenderator implements Appenderator
   @VisibleForTesting
   public int getRowsInMemory()
   {
-    return rowsCurrentlyInMemory.get();
+    return rowsCurrentlyInMemory;
   }
 
   @VisibleForTesting
   public long getBytesCurrentlyInMemory()
   {
-    return bytesCurrentlyInMemory.get();
+    return bytesCurrentlyInMemory;
   }
 
   @VisibleForTesting
@@ -460,8 +458,7 @@ public class BatchAppenderator implements Appenderator
           maxBytesTuningConfig,
           null
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
-
+      bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
     }
@@ -544,9 +541,9 @@ public class BatchAppenderator implements Appenderator
 
           // figure out hydrants (indices) to persist:
           final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
-          final AtomicInteger numPersistedRows = new AtomicInteger();
-          final AtomicLong bytesPersisted = new AtomicLong();
-          final AtomicInteger totalHydrantsCount = new AtomicInteger();
+          int numPersistedRows = 0;
+          long bytesPersisted = 0;
+          int totalHydrantsCount = 0;
           final long totalSinks = sinksToPersist.size();
           for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinksToPersist.entrySet()) {
             final SegmentIdWithShardSpec identifier = entry.getKey();
@@ -564,9 +561,9 @@ public class BatchAppenderator implements Appenderator
                             identifier, totalHydrantsForSink
               );
             }
-            totalHydrantsCount.addAndGet(1);
-            numPersistedRows.addAndGet(sink.getNumRowsInMemory());
-            bytesPersisted.addAndGet(sink.getBytesInMemory());
+            totalHydrantsCount++;
+            numPersistedRows += sink.getNumRowsInMemory();
+            bytesPersisted += sink.getBytesInMemory();
 
             if (!sink.swappable()) {
               throw new ISE("Sink is not swappable![%s]", identifier);
@@ -595,9 +592,9 @@ public class BatchAppenderator implements Appenderator
             log.info(
                 "Persisted stats: processed rows: [%d], persisted rows[%d], persisted sinks: [%d], persisted fireHydrants (across sinks): [%d]",
                 rowIngestionMeters.getProcessed(),
-                numPersistedRows.get(),
+                numPersistedRows,
                 totalSinks,
-                totalHydrantsCount.get()
+                totalHydrantsCount
             );
 
             // note that we do not need to reset sinks metadata since we did it at the start...
@@ -614,7 +611,7 @@ public class BatchAppenderator implements Appenderator
             persistStopwatch.stop();
             // make sure no push can start while persisting:
             log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
-                     numPersistedRows.get(), bytesPersisted.get(), persistMillis
+                     numPersistedRows, bytesPersisted, persistMillis
             );
             log.info("Persist is done.");
           }
@@ -1023,8 +1020,8 @@ public class BatchAppenderator implements Appenderator
 
   private void resetSinkMetadata()
   {
-    rowsCurrentlyInMemory.set(0);
-    bytesCurrentlyInMemory.set(0);
+    rowsCurrentlyInMemory = 0;
+    bytesCurrentlyInMemory = 0;
     metrics.setSinkCount(0);
   }
 
@@ -1041,13 +1038,13 @@ public class BatchAppenderator implements Appenderator
     if (sink.finishWriting()) {
       // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
-      rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
-      bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
+      rowsCurrentlyInMemory -= sink.getNumRowsInMemory();
+      bytesCurrentlyInMemory -= sink.getBytesInMemory();
+      bytesCurrentlyInMemory -= calculateSinkMemoryInUsed();
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
-          bytesCurrentlyInMemory.addAndGet(-calculateMemoryUsedByHydrant());
+          bytesCurrentlyInMemory -= calculateMemoryUsedByHydrant();
         }
       }
       // totalRows are not decremented when removing the sink from memory, sink was just persisted, and it
