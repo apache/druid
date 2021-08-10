@@ -370,11 +370,11 @@ Druid currently supports only one partition function.
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 > When using this technique to partition your data, segment sizes may be unequally distributed if the data
-> in your `partitionDimension` is also unequally distributed.  You should therefore review distribution of values
-> in your chosen dimension when opting to use single-dimension partitioning.
+> in your `partitionDimension` is also unequally distributed.  Therefore, avoid imbalance in data layout and
+> review the distribution of values in your source data when deciding on an appropriate partitioning strategy.
 
 > In order for segment pruning to be effective and translate into better query performance, you _must_ use
-> the `partitionDimension` at query time.  Thus, while it is possible to concatenate values from multiple
+> the `partitionDimension` at query time.  While it is possible to concatenate values from multiple
 > dimensions into a single new dimension that you then opt to specify in `partitionDimension`, remember that you
 > must use that new `partitionDimension` dimension in your
 > [native filter](https://druid.apache.org/docs/latest/querying/filters.html) /
