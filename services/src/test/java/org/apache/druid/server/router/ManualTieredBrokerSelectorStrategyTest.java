@@ -28,11 +28,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -197,6 +199,56 @@ public class ManualTieredBrokerSelectorStrategyTest
                 .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT))
                 .build()
         )
+    );
+  }
+
+  @Test
+  public void testGetBrokerServiceName_forSql()
+  {
+    final ManualTieredBrokerSelectorStrategy strategy =
+        new ManualTieredBrokerSelectorStrategy(null);
+
+    assertEquals(
+        Optional.absent(),
+        strategy.getBrokerServiceName(tieredBrokerConfig, createSqlQueryWithContext(null))
+    );
+    assertEquals(
+        Optional.absent(),
+        strategy.getBrokerServiceName(
+            tieredBrokerConfig,
+            createSqlQueryWithContext(
+                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.INVALID_BROKER)
+            )
+        )
+    );
+    assertEquals(
+        Optional.of(Names.BROKER_SVC_HOT),
+        strategy.getBrokerServiceName(
+            tieredBrokerConfig,
+            createSqlQueryWithContext(
+                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT)
+            )
+        )
+    );
+    assertEquals(
+        Optional.of(Names.BROKER_SVC_COLD),
+        strategy.getBrokerServiceName(
+            tieredBrokerConfig,
+            createSqlQueryWithContext(
+                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_COLD)
+            )
+        )
+    );
+  }
+
+  private SqlQuery createSqlQueryWithContext(Map<String, Object> queryContext)
+  {
+    return new SqlQuery(
+        "SELECT * FROM test",
+        null,
+        false,
+        queryContext,
+        null
     );
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 import org.apache.druid.query.Query;
+import org.apache.druid.sql.http.SqlQuery;
 
 /**
  */
@@ -38,7 +39,7 @@ public interface TieredBrokerSelectorStrategy
 {
   Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
 
-  default Optional<String> getBrokerServiceName(TieredBrokerConfig config)
+  default Optional<String> getBrokerServiceName(TieredBrokerConfig config, SqlQuery sqlQuery)
   {
     return Optional.absent();
   }

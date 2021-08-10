@@ -52,6 +52,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.http.SqlQuery;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -89,6 +90,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String SCHEME_ATTRIBUTE = "org.apache.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "org.apache.druid.proxy.query";
   private static final String AVATICA_QUERY_ATTRIBUTE = "org.apache.druid.proxy.avaticaQuery";
+  private static final String SQL_QUERY_ATTRIBUTE = "org.apache.druid.proxy.sqlQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "org.apache.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
@@ -225,33 +227,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
     } else if (isNativeQueryEndpoint && HttpMethod.DELETE.is(method)) {
       // query cancellation request
-      targetServer = hostFinder.pickDefaultServer();
-
-      for (final Server server : hostFinder.getAllServers()) {
-        // send query cancellation to all brokers this query may have gone to
-        // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
-        if (!server.getHost().equals(targetServer.getHost())) {
-          // issue async requests
-          Response.CompleteListener completeListener = result -> {
-            if (result.isFailed()) {
-              log.warn(
-                  result.getFailure(),
-                  "Failed to forward cancellation request to [%s]",
-                  server.getHost()
-              );
-            }
-          };
-
-          Request broadcastReq = broadcastClient
-              .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
-              .method(HttpMethod.DELETE)
-              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-
-          copyRequestHeaders(request, broadcastReq);
-          broadcastReq.send(completeListener);
-        }
-        interruptedQueryCount.incrementAndGet();
-      }
+      targetServer = cancelQuery(request);
     } else if (isNativeQueryEndpoint && HttpMethod.POST.is(method)) {
       // query request
       try {
@@ -267,23 +243,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
       }
       catch (IOException e) {
-        log.warn(e, "Exception parsing query");
-        final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
-        requestLogger.logNativeQuery(
-            RequestLogLine.forNative(
-                null,
-                DateTimes.nowUtc(),
-                request.getRemoteAddr(),
-                new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
-            )
-        );
-        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        response.setContentType(MediaType.APPLICATION_JSON);
-        objectMapper.writeValue(
-            response.getOutputStream(),
-            ImmutableMap.of("error", errorMessage)
-        );
-
+        handleQueryParseException(request, response, objectMapper, e, true);
         return;
       }
       catch (Exception e) {
@@ -291,13 +251,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
     } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.DELETE.is(method)) {
-      // Cancel SQL query
-      targetServer = cancelSqlQuery(request);
+      targetServer = cancelQuery(request);
     } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
-      // Submit a SQL query
       try {
-        targetServer = submitSqlQuery(request, response, objectMapper);
-      } catch (Exception e) {
+        targetServer = submitSqlQuery(request, objectMapper);
+      }
+      catch (IOException e) {
+        handleQueryParseException(request, response, objectMapper, e, false);
+        return;
+      }
+      catch (Exception e) {
         handleException(response, objectMapper, e);
         return;
       }
@@ -311,63 +274,91 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     doService(request, response);
   }
 
-  private Server cancelSqlQuery(HttpServletRequest request)
+  /**
+   * Issues async query cancellation requests to all Brokers (except the default
+   * targetServer). Query cancellation on the default targetServer is handled by
+   * the proxy servlet.
+   *
+   * @return The default targetServer to which the proxy servlet will send a
+   * cancellation request.
+   */
+  private Server cancelQuery(HttpServletRequest request)
   {
     final Server targetServer = hostFinder.pickDefaultServer();
 
+    // send query cancellation to all brokers this query may have gone to
+    // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
     for (final Server server : hostFinder.getAllServers()) {
-      // send query cancellation to all brokers this query may have gone to
-      // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
-      if (!server.getHost().equals(targetServer.getHost())) {
-        // issue async requests
-        Response.CompleteListener completeListener = result -> {
-          if (result.isFailed()) {
-            log.warn(
-                result.getFailure(),
-                "Failed to forward SQL cancellation request to [%s]",
-                server.getHost()
-            );
-          }
-        };
-
-        Request broadcastReq = broadcastClient
-            .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
-            .method(HttpMethod.DELETE)
-            .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-
-        copyRequestHeaders(request, broadcastReq);
-        broadcastReq.send(completeListener);
+      if (server.getHost().equals(targetServer.getHost())) {
+        continue;
       }
-      interruptedQueryCount.incrementAndGet();
+
+      // issue async requests
+      Response.CompleteListener completeListener = result -> {
+        if (result.isFailed()) {
+          log.warn(
+              result.getFailure(),
+              "Failed to forward cancellation request to [%s]",
+              server.getHost()
+          );
+        }
+      };
+
+      Request broadcastReq = broadcastClient
+          .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
+          .method(HttpMethod.DELETE)
+          .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+      copyRequestHeaders(request, broadcastReq);
+      broadcastReq.send(completeListener);
     }
 
+    interruptedQueryCount.incrementAndGet();
     return targetServer;
   }
 
   private Server submitSqlQuery(
       HttpServletRequest request,
-      HttpServletResponse response,
       ObjectMapper objectMapper
   ) throws IOException
   {
-    try {
-      Server targetServer;
-      Object inputSqlQuery = null;
-      // TODO: Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
-      if (inputSqlQuery != null) {
-        targetServer = hostFinder.findServerSql();
+    Server targetServer;
+    SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+    if (inputSqlQuery != null) {
+      targetServer = hostFinder.findServerSql(inputSqlQuery);
         /* if (inputQuery.getId() == null) {
           inputQuery = inputQuery.withId(UUID.randomUUID().toString());
         }*/
-      } else {
-        targetServer = hostFinder.pickDefaultServer();
-      }
-      // TODO: request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
-      return targetServer;
+    } else {
+      targetServer = hostFinder.pickDefaultServer();
     }
-    catch (IOException e) {
-      log.warn(e, "Exception parsing query");
-      final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
+    request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
+    return targetServer;
+  }
+
+  private void handleQueryParseException(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      ObjectMapper objectMapper,
+      IOException parseException,
+      boolean isNativeQuery
+  ) throws IOException
+  {
+    log.warn(parseException, "Exception parsing query");
+
+    // Log the error message
+    final String errorMessage = parseException.getMessage() == null
+                                ? "no error message" : parseException.getMessage();
+    if (isNativeQuery) {
+      requestLogger.logNativeQuery(
+          RequestLogLine.forNative(
+              null,
+              DateTimes.nowUtc(),
+              request.getRemoteAddr(),
+              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
+          )
+      );
+    } else {
       requestLogger.logSqlQuery(
           RequestLogLine.forSql(
               null,
@@ -377,15 +368,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
           )
       );
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-      response.setContentType(MediaType.APPLICATION_JSON);
-      objectMapper.writeValue(
-          response.getOutputStream(),
-          ImmutableMap.of("error", errorMessage)
-      );
-
-      return targetServer;
     }
+
+    // Write to the response
+    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    response.setContentType(MediaType.APPLICATION_JSON);
+    objectMapper.writeValue(
+        response.getOutputStream(),
+        ImmutableMap.of("error", errorMessage)
+    );
   }
 
   protected void doService(

@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.sql.http.SqlQuery;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -50,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class TieredBrokerHostSelector<T>
+public class TieredBrokerHostSelector
 {
   private static EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
 
@@ -181,7 +182,7 @@ public class TieredBrokerHostSelector<T>
     return tierConfig.getDefaultBrokerServiceName();
   }
 
-  public Pair<String, Server> select(final Query<T> query)
+  public <T> Pair<String, Server> select(final Query<T> query)
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
@@ -246,6 +247,11 @@ public class TieredBrokerHostSelector<T>
     return getServerPair(brokerServiceName);
   }
 
+  /**
+   * Finds a server for the given brokerServiceName and returns a pair containing
+   * the brokerServiceName and the found server. Uses the default broker service
+   * if no server is found for the given brokerServiceName.
+   */
   private Pair<String, Server> getServerPair(String brokerServiceName)
   {
     NodesHolder nodesHolder = servers.get(brokerServiceName);
@@ -261,7 +267,7 @@ public class TieredBrokerHostSelector<T>
     return new Pair<>(brokerServiceName, nodesHolder.pick());
   }
 
-  public Pair<String, Server> selectForSql()
+  public Pair<String, Server> selectForSql(SqlQuery sqlQuery)
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
@@ -272,7 +278,7 @@ public class TieredBrokerHostSelector<T>
     // Resolve brokerServiceName using Tier selector strategies
     String brokerServiceName = null;
     for (TieredBrokerSelectorStrategy strategy : strategies) {
-      final Optional<String> optionalName = strategy.getBrokerServiceName(tierConfig);
+      final Optional<String> optionalName = strategy.getBrokerServiceName(tierConfig, sqlQuery);
       if (optionalName.isPresent()) {
         brokerServiceName = optionalName.get();
         break;
