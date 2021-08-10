@@ -227,6 +227,18 @@ You will also need to manually update the top level html file, [unified-console.
 
 ## Building a release candidate
 
+### Update the release branch to have all commits needed
+
+The release branch should have all commits merged before you create a tag. A commit must be in the release branch if
+
+1) it is merged into the master branch before the release branch is created. In this case, the PR corresponding
+to the commit might not have the milestone tagged. The `tag-missing-milestones` script can be useful to find such PRs and
+tag them properly. See the above [Release notes](#release-notes) section for more details about the script.
+2) it is merged into the master branch after the release branch is created and tagged with the release version.
+In this case, the commit must be backported to the release branch. The `find-missing-backports` script can be used to
+find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
+must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
+
 ### Set version and make a tag
 
 Once the release branch is good for an RC, you can build a new tag with:

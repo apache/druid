@@ -59,14 +59,7 @@ public class TaskStatus
 
   /**
    * All failed task status must have a non-null error message.
-   * Use {@link #failure(String, String)} instead.
    */
-  @Deprecated
-  public static TaskStatus failure(String taskId)
-  {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null);
-  }
-
   public static TaskStatus failure(String taskId, String errorMsg)
   {
     return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, null);
