@@ -394,16 +394,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
+    final SqlQuery sqlQuery = (SqlQuery) clientRequest.getAttribute(SQL_QUERY_ATTRIBUTE);
     if (query != null) {
-      final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
-      try {
-        byte[] bytes = objectMapper.writeValueAsBytes(query);
-        proxyRequest.content(new BytesContentProvider(bytes));
-        proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      setProxyRequestContent(proxyRequest, clientRequest, query);
+    } else if (sqlQuery != null) {
+      setProxyRequestContent(proxyRequest, clientRequest, sqlQuery);
     }
 
     // Since we can't see the request object on the remote side, we can't check whether the remote side actually
@@ -433,6 +428,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyResponse,
         proxyRequest
     );
+  }
+
+  private void setProxyRequestContent(Request proxyRequest, HttpServletRequest clientRequest, Object content)
+  {
+    final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
+    try {
+      byte[] bytes = objectMapper.writeValueAsBytes(content);
+      proxyRequest.content(new BytesContentProvider(bytes));
+      proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
