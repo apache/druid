@@ -264,6 +264,18 @@
   </suppress>
   <suppress>
     <!--
+      ~ TODO: Fix when Apache Ranger 2.1 is released
+      - transitive dep from apache-ranger, upgrading to 2.1.0 adds other CVEs, staying at ranger 2.0.0 for now
+      -->
+    <notes><![CDATA[
+    file name: kafka-clients-2.0.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
+    <cve>CVE-2019-12399</cve>
+    <cve>CVE-2018-17196</cve>
+  </suppress>
+  <suppress>
+    <!--
       ~ TODO: Fix when Apache Ranger is released with updated log4j
       -->
     <notes><![CDATA[
@@ -344,13 +356,35 @@
   </suppress>
 
   <suppress>
-     <notes><![CDATA[
+    <!-- Transitive dependency from apache-ranger, latest ranger version 2.1.0 still uses solr 7.7.1-->
+    <notes><![CDATA[
      file name: solr-solrj-7.7.1.jar
      ]]></notes>
-     <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
-     <cve>CVE-2020-13957</cve>
-     <cve>CVE-2019-17558</cve>
-     <cve>CVE-2019-0193</cve>
-     <cve>CVE-2020-13941</cve>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
+    <cve>CVE-2020-13957</cve>
+    <cve>CVE-2019-17558</cve>
+    <cve>CVE-2019-0193</cve>
+    <cve>CVE-2020-13941</cve>
+    <cve>CVE-2021-29943</cve>
+    <cve>CVE-2021-27905</cve>
+    <cve>CVE-2021-29262</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: jdom2-2.0.6.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jdom/jdom2@2.0.6$</packageUrl>
+    <cve>CVE-2021-33813</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Upgrading to libthrift-0.14.2 adds many tomcat CVEs, suppress and stay at 0.13.0 for now-->
+    <notes><![CDATA[
+     file name: libthrift-0.13.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <cve>CVE-2020-13949</cve>
   </suppress>
 </suppressions>
