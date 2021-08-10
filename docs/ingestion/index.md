@@ -680,10 +680,45 @@ See [Flatten spec](./data-formats.md#flattenspec) for more details.
 ## `ioConfig`
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
-filesystem, or any other supported source system. The `inputFormat` property applies to all
-[ingestion method](#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
-uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
-The rest of `ioConfig` is specific to each individual ingestion method.
+filesystem, or any other supported source system.
+
+> The `inputFormat` property applies to all [ingestion methods](#ingestion-methods) except for Hadoop-based ingestion,
+> which uses the deprecated [`parser`](#parser-deprecated) technique inside the legacy `dataSchema` to determine how to
+> read and process source data rows.
+
+The `ioConfig` section contains configuration options that are specific to each individual ingestion method.  For more details, see the documentation provided by each [ingestion method](#ingestion-methods).
+
+| configuration | [index_parallel](https://druid.apache.org/docs/latest/ingestion/native-batch.html#ioconfig) | [kafka](https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html#kafkasupervisorioconfig) | [kinesis](https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html#kinesissupervisorioconfig) | [hadoop](https://druid.apache.org/docs/latest/ingestion/hadoop.html#ioconfig) | [compact](https://druid.apache.org/docs/latest/ingestion/data-management.html#compaction-ioconfig) |
+|---|---|---|---|---|---|
+| `inputFormat` | Y | Y | Y |  |  |
+| `type` | `index_parallel` |  |  | `hadoop` | `compact` |
+| `appendToExisting` | Y |  |  |  |  |
+| `replicas` |  | Y | Y |  |  |
+| `taskCount` |  | Y | Y |  |  |
+| `taskDuration` |  | Y | Y |  |  |
+| `startDelay` |  | Y | Y |  |  |
+| `period` |  | Y | Y |  |  |
+| `completionTimeout` |  | Y | Y |  |  |
+| `lateMessageRejectionPeriod` |  | Y | Y |  |  |
+| `earlyMessageRejectionPeriod` |  | Y | Y |  |  |
+| `topic` |  | Y |  |  |  |
+| `consumerProperties` |  | Y |  |  |  |
+| `pollTimeout` |  | Y |  |  |  |
+| `useEarliestOffset` |  | Y |  |  |  |
+| `lateMessageRejectionStartDateTime` |  | Y |  |  |  |
+| `stream` |  |  | Y |  |  |
+| `endpoint` |  |  | Y |  |  |
+| `useEarliestSequenceNumber` |  |  | Y |  |  |
+| `recordsPerFetch` |  |  | Y |  |  |
+| `fetchDelayMillis` |  |  | Y |  |  |
+| `awsAssumedRoleArn` |  |  | Y |  |  |
+| `awsExternalId` |  |  | Y |  |  |
+| `deaggregate` |  |  | Y |  |  |
+| `inputSpec` |  |  |  | Y | Y |
+| `segmentOutputPath` |  |  |  | Y |  |
+| `metadataUpdateSpec` |  |  |  | Y |  |
+
+
 An example `ioConfig` to read JSON data is:
 
 ```json
@@ -695,7 +730,6 @@ An example `ioConfig` to read JSON data is:
     ...
 }
 ```
-For more details, see the documentation provided by each [ingestion method](#ingestion-methods).
 
 ## `tuningConfig`
 
