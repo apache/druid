@@ -157,6 +157,7 @@ ParAccel
 ParseSpec
 ParseSpecs
 Protobuf
+pull-deps
 RDBMS
 RDDs
 RDS
@@ -631,12 +632,16 @@ thriftJar
 timeMax
 timeMin
  - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Alibaba
 Aliyun
-aliyun
-OSS
+aliyun-oss-extensions
 AccessKey
+accessKey
 aliyun-oss
+json
+OSS
 oss
+secretKey
 url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
