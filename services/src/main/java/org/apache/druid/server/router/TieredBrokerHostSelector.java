@@ -289,7 +289,7 @@ public class TieredBrokerHostSelector
     if (brokerServiceName == null) {
       log.error(
           "No brokerServiceName found for SQL Query [%s]. Using default selector for [%s].",
-          "SELECT stuff",
+          sqlQuery.getQuery(),
           tierConfig.getDefaultBrokerServiceName()
       );
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
