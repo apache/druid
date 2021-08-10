@@ -227,7 +227,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
     } else if (isNativeQueryEndpoint && HttpMethod.DELETE.is(method)) {
       // query cancellation request
-      targetServer = cancelQuery(request);
+      targetServer = hostFinder.pickDefaultServer();
+      broadcastQueryCancelRequest(request, targetServer);
     } else if (isNativeQueryEndpoint && HttpMethod.POST.is(method)) {
       // query request
       try {
@@ -251,10 +252,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
     } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.DELETE.is(method)) {
-      targetServer = cancelQuery(request);
+      targetServer = hostFinder.pickDefaultServer();
+      broadcastQueryCancelRequest(request, targetServer);
     } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
-        targetServer = submitSqlQuery(request, objectMapper);
+        targetServer = getTargetServerForSql(request, objectMapper);
       }
       catch (IOException e) {
         handleQueryParseException(request, response, objectMapper, e, false);
@@ -275,17 +277,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   /**
-   * Issues async query cancellation requests to all Brokers (except the default
-   * targetServer). Query cancellation on the default targetServer is handled by
-   * the proxy servlet.
-   *
-   * @return The default targetServer to which the proxy servlet will send a
-   * cancellation request.
+   * Issues async query cancellation requests to all Brokers (except the given
+   * targetServer). Query cancellation on the targetServer is handled by the
+   * proxy servlet.
    */
-  private Server cancelQuery(HttpServletRequest request)
+  private void broadcastQueryCancelRequest(HttpServletRequest request, Server targetServer)
   {
-    final Server targetServer = hostFinder.pickDefaultServer();
-
     // send query cancellation to all brokers this query may have gone to
     // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
     for (final Server server : hostFinder.getAllServers()) {
@@ -314,26 +311,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     interruptedQueryCount.incrementAndGet();
-    return targetServer;
   }
 
-  private Server submitSqlQuery(
+  private Server getTargetServerForSql(
       HttpServletRequest request,
       ObjectMapper objectMapper
   ) throws IOException
   {
-    Server targetServer;
     SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
-    if (inputSqlQuery != null) {
-      targetServer = hostFinder.findServerSql(inputSqlQuery);
-        /* if (inputQuery.getId() == null) {
-          inputQuery = inputQuery.withId(UUID.randomUUID().toString());
-        }*/
-    } else {
-      targetServer = hostFinder.pickDefaultServer();
-    }
     request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
-    return targetServer;
+
+    return inputSqlQuery != null
+           ? hostFinder.findServerSql(inputSqlQuery)
+           : hostFinder.pickDefaultServer();
   }
 
   private void handleQueryParseException(
