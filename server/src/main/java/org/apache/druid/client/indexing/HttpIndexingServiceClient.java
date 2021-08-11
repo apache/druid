@@ -70,7 +70,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
     runTask(taskId, taskQuery);
   }
 

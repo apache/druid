@@ -290,9 +290,9 @@ The three `partitionsSpec` types have different characteristics.
 
 | PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Secondary partition pruning at query time |
 |----------------|-----------------|---------------------|-----------------------|-------------------------------|
-| `dynamic` | Fastest  | Partitioning based on number of rows in segment. | Best-effort rollup | N/A |
-| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
-| `single_dim` | Slowest | Range partitioning based on the value of the partition dimension. Segment sizes may be skewed depending on the partition key distribution. This may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+| `dynamic` | Fastest  | [Dynamic partitioning](#dynamic-partitioning) based on the number of rows in a segment. | Best-effort rollup | N/A |
+| `hashed`  | Moderate | Multiple dimension [hash-based partitioning](#hash-based-partitioning) may reduce both your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
+| `single_dim` | Slowest | Single dimension [range partitioning](#single-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
 
 The recommended use case for each partitionsSpec is:
 - If your data has a uniformly distributed column which is frequently used in your queries,
@@ -366,7 +366,14 @@ Druid currently supports only one partition function.
 #### Single-dimension range partitioning
 
 > Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
+
+> Be aware that, with this technique, segment sizes could be skewed if your chosen `partitionDimension` is also skewed in source data.
+
+> While it is technically possible to concatenate multiple dimensions into a single new dimension
+> that you go on to specify in `partitionDimension`, remember that you _must_ then use this newly concatenated dimension at query time
+> in order for segment pruning to be effective.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|

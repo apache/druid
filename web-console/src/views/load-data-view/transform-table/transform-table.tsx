@@ -30,11 +30,11 @@ import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
   sampleData: HeaderAndRows,
-  selectedTransform: Transform | undefined,
+  selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
   const selectedTransformName = selectedTransform.name;
-  if (!sampleData.header.includes(selectedTransformName)) return;
+  if (selectedTransformName && !sampleData.header.includes(selectedTransformName)) return;
   return selectedTransformName;
 }
 

@@ -42,7 +42,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
     label,
     delays,
     onRefresh,
-    type,
+    type: _type,
     text,
     icon,
     defaultDelay,

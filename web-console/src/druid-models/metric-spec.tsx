@@ -21,38 +21,41 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { filterMap, oneOf } from '../utils';
+import { filterMap, typeIs } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
 import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface MetricSpec {
-  type: string;
-  name?: string;
-  fieldName?: string;
-  maxStringBytes?: number;
-  filterNullValues?: boolean;
-  fieldNames?: string[];
-  fnAggregate?: string;
-  fnCombine?: string;
-  fnReset?: string;
-  fields?: string[];
-  byRow?: boolean;
-  round?: boolean;
-  isInputHyperUnique?: boolean;
-  filter?: any;
-  aggregator?: MetricSpec;
+  readonly type: string;
+  readonly name?: string;
+  readonly fieldName?: string;
+  readonly maxStringBytes?: number;
+  readonly filterNullValues?: boolean;
+  readonly fieldNames?: string[];
+  readonly fnAggregate?: string;
+  readonly fnCombine?: string;
+  readonly fnReset?: string;
+  readonly fields?: string[];
+  readonly byRow?: boolean;
+  readonly round?: boolean;
+  readonly isInputHyperUnique?: boolean;
+  readonly filter?: any;
+  readonly aggregator?: MetricSpec;
 }
 
 export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'name',
     type: 'string',
+    required: true,
     info: <>The metric name as it will appear in Druid.</>,
+    placeholder: 'metric_name',
   },
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: [
       'count',
       {
@@ -87,41 +90,58 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'fieldName',
     type: 'string',
-    defined: m => m.type !== 'filtered',
+    defined: typeIs(
+      'longSum',
+      'doubleSum',
+      'floatSum',
+      'longMin',
+      'doubleMin',
+      'floatMin',
+      'longMax',
+      'doubleMax',
+      'floatMax',
+      'thetaSketch',
+      'HLLSketchBuild',
+      'HLLSketchMerge',
+      'quantilesDoublesSketch',
+      'momentSketch',
+      'fixedBucketsHistogram',
+      'hyperUnique',
+    ),
+    required: true,
+    placeholder: 'column_name',
     info: <>The column name for the aggregator to operate on.</>,
   },
   {
     name: 'maxStringBytes',
     type: 'number',
     defaultValue: 1024,
-    defined: m => {
-      return oneOf(m.type, 'stringFirst', 'stringLast');
-    },
+    defined: typeIs('stringFirst', 'stringLast'),
   },
   {
     name: 'filterNullValues',
     type: 'boolean',
     defaultValue: false,
-    defined: m => {
-      return oneOf(m.type, 'stringFirst', 'stringLast');
-    },
+    defined: typeIs('stringFirst', 'stringLast'),
   },
   // filtered
   {
     name: 'filter',
     type: 'json',
-    defined: m => m.type === 'filtered',
+    defined: typeIs('filtered'),
+    required: true,
   },
   {
     name: 'aggregator',
     type: 'json',
-    defined: m => m.type === 'filtered',
+    defined: typeIs('filtered'),
+    required: true,
   },
   // thetaSketch
   {
     name: 'size',
     type: 'number',
-    defined: m => m.type === 'thetaSketch',
+    defined: typeIs('thetaSketch'),
     defaultValue: 16384,
     info: (
       <>
@@ -145,7 +165,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'isInputThetaSketch',
     type: 'boolean',
-    defined: m => m.type === 'thetaSketch',
+    defined: typeIs('thetaSketch'),
     defaultValue: false,
     info: (
       <>
@@ -159,7 +179,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'lgK',
     type: 'number',
-    defined: m => oneOf(m.type, 'HLLSketchBuild', 'HLLSketchMerge'),
+    defined: typeIs('HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 12,
     info: (
       <>
@@ -174,7 +194,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'tgtHllType',
     type: 'string',
-    defined: m => oneOf(m.type, 'HLLSketchBuild', 'HLLSketchMerge'),
+    defined: typeIs('HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 'HLL_4',
     suggestions: ['HLL_4', 'HLL_6', 'HLL_8'],
     info: (
@@ -188,7 +208,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'k',
     type: 'number',
-    defined: m => m.type === 'quantilesDoublesSketch',
+    defined: typeIs('quantilesDoublesSketch'),
     defaultValue: 128,
     info: (
       <>
@@ -210,7 +230,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'k',
     type: 'number',
-    defined: m => m.type === 'momentSketch',
+    defined: typeIs('momentSketch'),
     required: true,
     info: (
       <>
@@ -222,7 +242,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'compress',
     type: 'boolean',
-    defined: m => m.type === 'momentSketch',
+    defined: typeIs('momentSketch'),
     defaultValue: true,
     info: (
       <>
@@ -236,21 +256,21 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'lowerLimit',
     type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
+    defined: typeIs('fixedBucketsHistogram'),
     required: true,
     info: <>Lower limit of the histogram.</>,
   },
   {
     name: 'upperLimit',
     type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
+    defined: typeIs('fixedBucketsHistogram'),
     required: true,
     info: <>Upper limit of the histogram.</>,
   },
   {
     name: 'numBuckets',
     type: 'number',
-    defined: m => m.type === 'fixedBucketsHistogram',
+    defined: typeIs('fixedBucketsHistogram'),
     defaultValue: 10,
     required: true,
     info: (
@@ -263,7 +283,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'outlierHandlingMode',
     type: 'string',
-    defined: m => m.type === 'fixedBucketsHistogram',
+    defined: typeIs('fixedBucketsHistogram'),
     required: true,
     suggestions: ['ignore', 'overflow', 'clip'],
     info: (
@@ -289,7 +309,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'isInputHyperUnique',
     type: 'boolean',
-    defined: m => m.type === 'hyperUnique',
+    defined: typeIs('hyperUnique'),
     defaultValue: false,
     info: (
       <>
