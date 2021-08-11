@@ -1215,7 +1215,7 @@ Use the `affinityConfig` field to pass affinity configuration to the _equalDistr
 |Property|Description|Default|
 |--------|-----------|-------|
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
-|`strong`|A boolean determining whether tasks for a datasource must be assigned to affinity-mapped MiddleManagers, causing tasks to remain queued until a slot is available.  If `false`, tasks for a datasource may be assigned to other MiddleManagers whenever affinity-mapped MiddleManagers are not available to run queued tasks.|false|
+|`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available.  When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
 
 ###### WorkerCategorySpec
 
