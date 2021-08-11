@@ -64,6 +64,8 @@ import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
@@ -83,6 +85,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -192,9 +196,22 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testSqlQueryProxy() throws Exception
+  {
+    final SqlQuery query = new SqlQuery("SELECT * FROM foo", ResultFormat.ARRAY, false, null, null);
+    final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
+    EasyMock.expect(hostFinder.findServerSql(query))
+            .andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.replay(hostFinder);
+
+    Properties properties = new Properties();
+    properties.setProperty("druid.router.sql.enable", "true");
+    verifyServletCallsForQuery(query, true, hostFinder, properties);
+  }
+
+  @Test
   public void testQueryProxy() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
@@ -206,6 +223,20 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.expect(hostFinder.pickServer(query)).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
     EasyMock.replay(hostFinder);
 
+    verifyServletCallsForQuery(query, false, hostFinder, new Properties());
+  }
+
+  /**
+   * Verifies that the Servlet calls the right methods the right number of times.
+   */
+  private void verifyServletCallsForQuery(
+      Object query,
+      boolean isSql,
+      QueryHostFinder hostFinder,
+      Properties properties
+  ) throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
     final ServletInputStream servletInputStream = new ServletInputStream()
@@ -243,10 +274,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
-    EasyMock.expect(requestMock.getRequestURI()).andReturn("/druid/v2/");
+    EasyMock.expect(requestMock.getRequestURI()).andReturn(isSql ? "/druid/v2/sql" : "/druid/v2/");
     EasyMock.expect(requestMock.getMethod()).andReturn("POST");
     EasyMock.expect(requestMock.getInputStream()).andReturn(servletInputStream);
-    requestMock.setAttribute("org.apache.druid.proxy.query", query);
+    requestMock.setAttribute(
+        isSql ? "org.apache.druid.proxy.sqlQuery" : "org.apache.druid.proxy.query",
+        query
+    );
     requestMock.setAttribute("org.apache.druid.proxy.to.host", "1.2.3.4:9999");
     requestMock.setAttribute("org.apache.druid.proxy.to.host.scheme", "http");
     EasyMock.expectLastCall();
@@ -264,7 +298,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
-        new Properties()
+        properties
     )
     {
       @Override
