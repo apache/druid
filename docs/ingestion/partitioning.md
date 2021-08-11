@@ -46,10 +46,4 @@ The following table shows how each ingestion method handles partitioning:
 See the following topics for more information:
 * [`partitionsSpec`](native-batch.md#partitionsspec) for more detail on partitioning with Native Batch ingestion.
 * [Reindexing](data-management.md#reingesting-data) and [Compaction](compaction.md) for information on how to repartition existing data in Druid.
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
->>>>>>> f784a85aa2... break ingestion topic into smaller topics
-=======
->>>>>>> 2fddb46c4e... Update docs/ingestion/partitioning.md

@@ -222,7 +222,7 @@ For example:
 
 To use the Avro Stream input format load the Druid Avro extension ([`druid-avro-extensions`](../development/extensions-core/avro.md)).
 
-For more informtion on how Druid handles Avro types, see [Avro Types](../development/extensions-core/avro.md#avro-types) section for
+For more information on how Druid handles Avro types, see [Avro Types](../development/extensions-core/avro.md#avro-types) section for
 
 Configure the Avro `inputFormat` to load Avro data as follows:
 
@@ -515,7 +515,7 @@ For example:
 
 ### FlattenSpec
 
-The `flattenSpec` bridges the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model. It is a object within the `inputFormat` object.
+The `flattenSpec` bridges the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model. It is an object within the `inputFormat` object.
 
 Configure your `flattenSpec` as follows:
 
@@ -541,16 +541,6 @@ After Druid reads the input data records, it applies the flattenSpec before appl
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
 and `parquet`.
 
-<<<<<<< HEAD
-=======
-A `flattenSpec` can have the following components:
-
-| Field | Description | Default |
-|-------|-------------|---------|
-| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
-| fields | Specifies the fields of interest and how they are accessed. See [Field flattening specifications](#field-flattening-specifications) for more detail. | `[]` |
-
->>>>>>> d320e6aa12... Update docs/ingestion/data-formats.md
 #### Field flattening specifications
 
 Each entry in the `fields` list can have the following components:

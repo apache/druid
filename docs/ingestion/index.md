@@ -27,7 +27,7 @@ Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data 
 For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the [Indexer](../design/indexer.md) processes load your source data. One exception is
 Hadoop-based ingestion, which uses a Hadoop MapReduce job on YARN MiddleManager or Indexer processes to start and monitor Hadoop jobs. 
 
-During ingestion Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the sgements into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
+During ingestion Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
 
 This topic introduces streaming and batch ingestion methods. The following topics describe ingestion concepts and information that apply to all [ingestion methods](#ingestion-methods):
 - [Druid data model](./data-model.md) introduces concepts of datasources, primary timestamp, dimensions, and metrics.
@@ -50,7 +50,7 @@ The most recommended, and most popular, method of streaming ingestion is the
 [Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. Alternatively, the Kinesis
 indexing service works with Amazon Kinesis Data Streams.
 
-Streaming ingestion uses an onging process called a supervisor that reads from the data stream to ingest data into Druid.
+Streaming ingestion uses an ongoing process called a supervisor that reads from the data stream to ingest data into Druid.
 
 This table compares the options:
 
