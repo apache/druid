@@ -264,17 +264,6 @@
   </suppress>
   <suppress>
     <!--
-      ~ TODO: Fix when Apache Ranger 2.1 is released
-      -->
-    <notes><![CDATA[
-    file name: kafka-clients-2.0.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
-    <cve>CVE-2019-12399</cve>
-    <cve>CVE-2018-17196</cve>
-  </suppress>
-  <suppress>
-    <!--
       ~ TODO: Fix when Apache Ranger is released with updated log4j
       -->
     <notes><![CDATA[
@@ -322,11 +311,11 @@
      <cve>CVE-2020-9492</cve>
   </suppress>
   <suppress>
-    <!-- We don't use scala compilation daemon. -->
+    <!-- The CVE is not applicable to kafka-clients. -->
     <notes><![CDATA[
-     file name: kafka-clients-2.7.0.jar
+     file name: kafka-clients-2.8.0.jar
      ]]></notes>
-    <cve>CVE-2017-15288</cve>
+    <cve>CVE-2021-26291</cve>
   </suppress>
   <suppress until="2021-05-30">
     <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->

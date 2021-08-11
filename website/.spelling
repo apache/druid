@@ -144,6 +144,7 @@ MiddleManager
 MiddleManagers
 Montréal
 Murmur3
+MVCC
 NFS
 OCF
 OLAP
@@ -156,6 +157,7 @@ ParAccel
 ParseSpec
 ParseSpecs
 Protobuf
+pull-deps
 RDBMS
 RDDs
 RDS
@@ -630,12 +632,16 @@ thriftJar
 timeMax
 timeMin
  - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Alibaba
 Aliyun
-aliyun
-OSS
+aliyun-oss-extensions
 AccessKey
+accessKey
 aliyun-oss
+json
+OSS
 oss
+secretKey
 url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
@@ -1541,6 +1547,7 @@ SCHEMA_OWNER
 SERVER_SEGMENTS
 SMALLINT
 SQL_PATH
+STRING_AGG
 SYSTEM_TABLE
 TABLE_CATALOG
 TABLE_NAME
