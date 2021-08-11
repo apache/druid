@@ -148,17 +148,20 @@ public class GenericPartitionStat implements PartitionStat
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    if (!super.equals(o)) {
-      return false;
-    }
     GenericPartitionStat that = (GenericPartitionStat) o;
-    return Objects.equals(shardSpec, that.shardSpec);
+    return taskExecutorPort == that.taskExecutorPort
+           && useHttps == that.useHttps
+           && taskExecutorHost.equals(that.taskExecutorHost)
+           && interval.equals(that.interval)
+           && Objects.equals(numRows, that.numRows)
+           && Objects.equals(sizeBytes, that.sizeBytes)
+           && shardSpec.equals(that.shardSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), shardSpec);
+    return Objects.hash(taskExecutorHost, taskExecutorPort, useHttps, interval, numRows, sizeBytes, shardSpec);
   }
 
   @Override

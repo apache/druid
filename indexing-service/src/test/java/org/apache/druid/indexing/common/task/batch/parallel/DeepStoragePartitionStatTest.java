@@ -20,28 +20,36 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.partition.HashBucketShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class GenericPartitionLocationTest
+import java.util.Collections;
+
+public class DeepStoragePartitionStatTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
-  private GenericPartitionLocation target;
+  private DeepStoragePartitionStat target;
 
   @Before
   public void setup()
   {
-    target = new GenericPartitionLocation(
-        ParallelIndexTestingFactory.HOST,
-        ParallelIndexTestingFactory.PORT,
-        ParallelIndexTestingFactory.USE_HTTPS,
-        ParallelIndexTestingFactory.SUBTASK_ID,
+    target = new DeepStoragePartitionStat(
         ParallelIndexTestingFactory.INTERVAL,
-        ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
+        new HashBucketShardSpec(
+            ParallelIndexTestingFactory.PARTITION_ID,
+            ParallelIndexTestingFactory.PARTITION_ID + 1,
+            Collections.singletonList("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            new ObjectMapper()
+        ),
+        ImmutableMap.of("path", "/dummy/index.zip")
     );
   }
 
@@ -52,16 +60,16 @@ public class GenericPartitionLocationTest
   }
 
   @Test
-  public void hasPartitionIdThatMatchesShardSpec()
+  public void hasPartitionIdThatMatchesSecondaryPartition()
   {
-    Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
+    Assert.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
   }
 
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(GenericPartitionLocation.class)
-                  .withNonnullFields("host", "port", "useHttps", "subTaskId", "interval", "shardSpec")
+    EqualsVerifier.forClass(DeepStoragePartitionStat.class)
+                  .withNonnullFields("interval", "shardSpec", "loadSpec")
                   .usingGetClass()
                   .verify();
   }

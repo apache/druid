@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,5 +54,14 @@ public class DeepStoragePartitionLocationTest
   public void hasPartitionIdThatMatchesShardSpec()
   {
     Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DeepStoragePartitionLocation.class)
+                  .withNonnullFields("subTaskId", "interval", "shardSpec", "loadSpec")
+                  .usingGetClass()
+                  .verify();
   }
 }

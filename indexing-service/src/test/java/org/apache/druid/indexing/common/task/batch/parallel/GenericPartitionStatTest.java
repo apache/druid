@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -65,5 +66,14 @@ public class GenericPartitionStatTest
   public void hasPartitionIdThatMatchesSecondaryPartition()
   {
     Assert.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(GenericPartitionStat.class)
+                  .withNonnullFields("taskExecutorHost", "taskExecutorPort", "useHttps", "interval", "shardSpec")
+                  .usingGetClass()
+                  .verify();
   }
 }
