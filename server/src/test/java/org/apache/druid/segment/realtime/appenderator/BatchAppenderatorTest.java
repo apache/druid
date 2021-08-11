@@ -79,7 +79,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           appenderator.getSegments().stream().sorted().collect(Collectors.toList())
       );
 
-
       // add #3, this hits max rows in memory:
       Assert.assertEquals(
           2,
@@ -87,7 +86,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
                       .getNumRowsInSegment()
       );
 
-      waitForPersists();
       // since we just added three rows and the max rows in memory is three, all the segments (sinks etc.)
       // above should be cleared now
       Assert.assertEquals(
@@ -101,7 +99,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
                       .getNumRowsInSegment()
       );
-
 
       // push all
       final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
@@ -230,7 +227,9 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      //expectedSizeInBytes =
+      // 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) =
+      // 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
@@ -305,7 +304,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar_" + i, 1), null);
       }
-      waitForPersists();
 
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
@@ -338,7 +336,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar_" + i, 1), null);
       }
-      waitForPersists();
 
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
@@ -352,6 +349,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           currentInMemoryIndexSize,
           ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
+      appenderator.persistAll(null).get();
       appenderator.close();
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory());
@@ -387,15 +385,16 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
-      waitForPersists();
+
       // Expected 0 since we persisted after the add
       Assert.assertEquals(
           0,
           ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
-      waitForPersists();
-      // Expected 0 since we persisted after the add
+
+      appenderator.push(Collections.singletonList(IDENTIFIERS.get(0)), null, false).get();
+
       Assert.assertEquals(
           0,
           ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory()
@@ -604,7 +603,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // no persist since last add was for a dup record
       appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bat", 1), null);
       // persist expected ^ (3) rows added
-      waitForPersists();
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "baz", 1), null);
@@ -613,7 +611,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bob", 1), null);
       // persist expected ^ (3) rows added
-      waitForPersists();
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
@@ -681,7 +678,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       addResult1 =
           appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bat", 1), null);
-      waitForPersists();
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       Assert.assertEquals(2, addResult1.getNumRowsInSegment());
       // persist expected ^ (3) rows added
@@ -699,7 +695,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       addResult1 =
           appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 1), null);
-      waitForPersists();
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       Assert.assertEquals(4, addResult1.getNumRowsInSegment());
       // persist expected ^ (3) rows added
@@ -726,20 +721,17 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null);
-    waitForPersists();
 
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "baz", 3), null);
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null);
-    waitForPersists();
 
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
     appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "bob", 5), null);
     Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
     appenderator.persistAll(null).get();
-    waitForPersists();
 
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
@@ -768,20 +760,17 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
     appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 2), null);
-    waitForPersists();
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
     Assert.assertEquals(2, appenderator.getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "baz", 3), null);
     appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "qux", 4), null);
-    waitForPersists();
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
     Assert.assertEquals(4, appenderator.getTotalRowCount());
 
     appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "bob", 5), null);
     Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
     appenderator.persistAll(null).get();
-    waitForPersists();
     Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
     Assert.assertEquals(5, appenderator.getTotalRowCount());
 
@@ -831,8 +820,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "bob", 1), null);
       Assert.assertEquals(4, appenderator.getTotalRowCount());
 
-      appenderator.persistAll(null);
-      waitForPersists();
+      appenderator.persistAll(null).get();
       Assert.assertEquals(4, appenderator.getTotalRowCount());
       appenderator.drop(IDENTIFIERS.get(2)).get();
       Assert.assertEquals(0, appenderator.getTotalRowCount());
@@ -937,11 +925,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
             met
         )
     );
-  }
-
-  private void waitForPersists() throws InterruptedException
-  {
-    Thread.sleep(500);
   }
 
 }
