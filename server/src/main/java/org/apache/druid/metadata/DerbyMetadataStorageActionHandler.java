@@ -83,6 +83,12 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     return query;
   }
 
+  @Override
+  protected String addLimitClause(String sql)
+  {
+    return sql += " FETCH FIRST :n ROWS ONLY";
+  }
+
   private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
   {
     String sql = StringUtils.format("active = FALSE AND created_date >= :start ");

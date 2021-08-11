@@ -78,6 +78,13 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
     }
     return query;
   }
+
+  @Override
+  protected String addLimitClause(String sql)
+  {
+    return new StringBuilder(sql).insert("SELECT ".length(), "TOP (:n) ").toString();
+  }
+
   private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
   {
     String sql = StringUtils.format("active = FALSE AND created_date >= :start ");

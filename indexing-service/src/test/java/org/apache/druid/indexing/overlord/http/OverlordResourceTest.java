@@ -199,7 +199,7 @@ public class OverlordResourceTest
   public void testSecuredGetWaitingTask()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -248,7 +248,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
 
-    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource.getWaitingTasks(req)
+    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource.getWaitingTasks(null, req)
                                                                                   .getEntity();
     Assert.assertEquals(1, responseObjects.size());
     Assert.assertEquals("id_2", responseObjects.get(0).getId());
@@ -320,7 +320,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -348,7 +348,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
 
-    List<TaskStatusPlus> responseObjects = (List) overlordResource.getRunningTasks(null, req)
+    List<TaskStatusPlus> responseObjects = (List) overlordResource.getRunningTasks(null, null, req)
                                                                   .getEntity();
 
     Assert.assertEquals(1, responseObjects.size());
@@ -386,7 +386,7 @@ public class OverlordResourceTest
         )
     );
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -447,7 +447,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, null, null, null, null, req)
+        .getTasks(null, null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(4, responseObjects.size());
   }
@@ -484,7 +484,7 @@ public class OverlordResourceTest
             )
       );
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow")).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow", null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -543,7 +543,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, "allow", null, null, null, req)
+        .getTasks(null, "allow", null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(7, responseObjects.size());
     Assert.assertEquals("id_5", responseObjects.get(0).getId());
@@ -555,7 +555,7 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -610,6 +610,7 @@ public class OverlordResourceTest
             null,
             null,
             null,
+            null,
             req
         ).getEntity();
     Assert.assertEquals(1, responseObjects.size());
@@ -620,7 +621,7 @@ public class OverlordResourceTest
   public void testGetTasksFilterRunningState()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow")).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow", null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -672,7 +673,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List) overlordResource
-        .getTasks("running", "allow", null, null, null, req)
+        .getTasks("running", "allow", null, null, null, null, req)
         .getEntity();
 
     Assert.assertEquals(2, responseObjects.size());
@@ -693,7 +694,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -737,7 +738,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("pending", null, null, null, null, req)
+        .getTasks("pending", null, null, null, null, null, req)
         .getEntity();
 
     Assert.assertEquals(1, responseObjects.size());
@@ -784,7 +785,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, null, null, null, req)
+        .getTasks("complete", null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_1", responseObjects.get(0).getId());
@@ -834,7 +835,7 @@ public class OverlordResourceTest
     );
     String interval = "2010-01-01_P1D";
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, interval, null, null, req)
+        .getTasks("complete", null, interval, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_2", responseObjects.get(0).getId());
@@ -879,7 +880,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, null, null, null, req)
+        .getTasks("complete", null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_1", responseObjects.get(0).getId());
@@ -900,7 +901,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     Object responseObject = overlordResource
-        .getTasks("blah", "ds_test", null, null, null, req)
+        .getTasks("blah", "ds_test", null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(
         "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
@@ -1166,7 +1167,7 @@ public class OverlordResourceTest
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(
         Optional.of(mockQueue)
     ).anyTimes();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("datasource")).andStubReturn(ImmutableList.of(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("datasource", null)).andStubReturn(ImmutableList.of(
         new TaskInfo(
             "id_1",
             DateTime.now(ISOChronology.getInstanceUTC()),
@@ -1209,7 +1210,8 @@ public class OverlordResourceTest
     final TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString())).andReturn(Collections.emptyList());
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString(), null))
+            .andReturn(Collections.emptyList());
     EasyMock.replay(
         taskRunner,
         taskMaster,

@@ -76,7 +76,7 @@ public class IndexerMetadataStorageAdapterTest
             NoopTask.create("id2", 0)
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource")).andReturn(taskInfos);
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource", null)).andReturn(taskInfos);
 
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock
@@ -112,7 +112,7 @@ public class IndexerMetadataStorageAdapterTest
         )
     );
 
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource")).andReturn(taskInfos);
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource", null)).andReturn(taskInfos);
 
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock

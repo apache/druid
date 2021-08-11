@@ -27,7 +27,6 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -62,7 +61,6 @@ public class DruidCalciteSchemaModule implements Module
     SqlBindings.addSchema(binder, NamedSystemSchema.class);
     SqlBindings.addSchema(binder, NamedLookupSchema.class);
     SqlBindings.addSchema(binder, NamedViewSchema.class);
-    JsonConfigProvider.bind(binder, "druid.sql.schema", SchemaConfig.class);
   }
 
   @Provides

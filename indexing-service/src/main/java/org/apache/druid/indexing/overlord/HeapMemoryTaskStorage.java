@@ -167,7 +167,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(
+      @Nullable String dataSource, @Nullable Integer maxActiveTasks
+  )
   {
     final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
     for (final TaskStuff taskStuff : tasks.values()) {

@@ -31,15 +31,26 @@ public class TaskStorageConfig
   @JsonProperty
   @NotNull
   public Duration recentlyFinishedThreshold = new Period("PT24H").toStandardDuration();
+  @JsonProperty
+  public int maxActiveTasks = Integer.MAX_VALUE;
 
   @JsonCreator
   public TaskStorageConfig(
-      @JsonProperty("recentlyFinishedThreshold") Period period
+      @JsonProperty("recentlyFinishedThreshold") Period period,
+      @JsonProperty("maxActiveTasks") Integer maxActiveTasks
   )
   {
     if (period != null) {
       this.recentlyFinishedThreshold = period.toStandardDuration();
     }
+    if (maxActiveTasks != null) {
+      this.maxActiveTasks = maxActiveTasks;
+    }
+  }
+
+  public int getMaxActiveTasks()
+  {
+    return maxActiveTasks;
   }
 
   public Duration getRecentlyFinishedThreshold()

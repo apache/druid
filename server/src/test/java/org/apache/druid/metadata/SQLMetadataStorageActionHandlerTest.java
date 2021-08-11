@@ -135,7 +135,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status1)),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getActiveTaskInfo(null, null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
@@ -144,7 +144,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status2)),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getActiveTaskInfo(null, null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
@@ -409,7 +409,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(entryId2),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getActiveTaskInfo(null, null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );
@@ -426,7 +426,7 @@ public class SQLMetadataStorageActionHandlerTest
     // active task not removed.
     Assert.assertEquals(
         ImmutableList.of(entryId2),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getActiveTaskInfo(null, null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );

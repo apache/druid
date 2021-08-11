@@ -153,7 +153,7 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
+  List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource, @Nullable Integer maxActiveTasks);
 
   /**
    * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage

@@ -90,6 +90,12 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
     return sql;
   }
 
+  @Override
+  protected String addLimitClause(String sql)
+  {
+    return sql + " LIMIT :n";
+  }
+
   @Deprecated
   @Override
   public String getSqlRemoveLogsOlderThan()

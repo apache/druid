@@ -289,20 +289,43 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(
+      @Nullable String dataSource, Integer maxStatuses
+  )
   {
     return getConnector().retryWithHandle(
         handle -> {
           final Query<Map<String, Object>> query = createActiveTaskInfoQuery(
               handle,
-              dataSource
+              dataSource,
+              maxStatuses
           );
           return query.map(taskInfoMapper).list();
         }
     );
   }
 
-  private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
+  protected abstract String addLimitClause(String sql);
+
+  private Query<Map<String, Object>> createActiveTaskInfoQuery(
+      Handle handle, @Nullable String dataSource, @Nullable Integer maxNumStatuses
+  )
+  {
+    String sql = createActiveTaskInfoRetrievalSql(dataSource);
+    if (maxNumStatuses != null) {
+      sql = addLimitClause(sql);
+    }
+    Query<Map<String, Object>> query = handle.createQuery(sql);
+    if (maxNumStatuses != null) {
+      query = query.bind("n", maxNumStatuses);
+    }
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
+    return query;
+  }
+
+  private String createActiveTaskInfoRetrievalSql(@Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -318,12 +341,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         + "ORDER BY created_date",
         entryTable
     );
-
-    Query<Map<String, Object>> query = handle.createQuery(sql);
-    if (dataSource != null) {
-      query = query.bind("ds", dataSource);
-    }
-    return query;
+    return sql;
   }
 
   private String getWhereClauseForActiveStatusesQuery(String dataSource)

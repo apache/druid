@@ -73,9 +73,11 @@ public class TaskStorageQueryAdapter
     return taskLockbox.getLockedIntervals(minTaskPriority);
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(
+      @Nullable String dataSource, Integer maxActiveTasks
+  )
   {
-    return storage.getActiveTaskInfo(dataSource);
+    return storage.getActiveTaskInfo(dataSource, maxActiveTasks);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getCompletedTaskInfoByCreatedTimeDuration(

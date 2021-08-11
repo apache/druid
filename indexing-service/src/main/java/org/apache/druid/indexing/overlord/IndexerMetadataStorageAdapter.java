@@ -48,7 +48,7 @@ public class IndexerMetadataStorageAdapter
   {
     // Check the given interval overlaps the interval(minCreatedDateOfActiveTasks, MAX)
     final Optional<DateTime> minCreatedDateOfActiveTasks = taskStorageQueryAdapter
-        .getActiveTaskInfo(dataSource)
+        .getActiveTaskInfo(dataSource, null)
         .stream()
         .map(TaskInfo::getCreatedTime)
         .min(Comparator.naturalOrder());

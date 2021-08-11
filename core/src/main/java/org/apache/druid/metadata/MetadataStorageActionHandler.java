@@ -101,7 +101,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
+  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource, Integer maxStatuses);
 
   /**
    * Add a lock to the given entry
