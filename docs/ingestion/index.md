@@ -688,7 +688,7 @@ filesystem, or any other supported source system.
 
 The `ioConfig` section contains configuration options that are specific to each individual ingestion method.  For more details, see the documentation provided by each [ingestion method](#ingestion-methods).
 
-| configuration | [index_parallel](https://druid.apache.org/docs/latest/ingestion/native-batch.html#ioconfig) | [kafka](https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html#kafkasupervisorioconfig) | [kinesis](https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html#kinesissupervisorioconfig) | [hadoop](https://druid.apache.org/docs/latest/ingestion/hadoop.html#ioconfig) | [compact](https://druid.apache.org/docs/latest/ingestion/data-management.html#compaction-ioconfig) |
+| configuration | [`index_parallel`](https://druid.apache.org/docs/latest/ingestion/native-batch.html#ioconfig) | [`kafka`](https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html#kafkasupervisorioconfig) | [`kinesis`](https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html#kinesissupervisorioconfig) | [`hadoop`](https://druid.apache.org/docs/latest/ingestion/hadoop.html#ioconfig) | [`compact`](https://druid.apache.org/docs/latest/ingestion/data-management.html#compaction-ioconfig) |
 |---|---|---|---|---|---|
 | `inputFormat` | Y | Y | Y |  |  |
 | `type` | `index_parallel` |  |  | `hadoop` | `compact` |
