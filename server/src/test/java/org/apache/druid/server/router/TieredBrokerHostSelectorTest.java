@@ -37,6 +37,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -135,7 +136,11 @@ public class TieredBrokerHostSelectorTest
           }
         },
         druidNodeDiscoveryProvider,
-        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy(0, 1))
+        Arrays.asList(
+            new ManualTieredBrokerSelectorStrategy(null),
+            new TimeBoundaryTieredBrokerSelectorStrategy(),
+            new PriorityTieredBrokerSelectorStrategy(0, 1)
+        )
     );
 
     brokerSelector.start();
@@ -291,6 +296,41 @@ public class TieredBrokerHostSelectorTest
     ).lhs;
 
     Assert.assertEquals("hotBroker", brokerName);
+  }
+
+  @Test
+  public void testSelectBasedOnQueryContext()
+  {
+    final Druids.TimeseriesQueryBuilder queryBuilder =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+              .intervals(
+                  new MultipleIntervalSegmentSpec(
+                      Collections.singletonList(Intervals.of("2009/2010"))
+                  )
+              );
+
+    Assert.assertEquals(
+        brokerSelector.getDefaultServiceName(),
+        brokerSelector.select(queryBuilder.build()).lhs
+    );
+    Assert.assertEquals(
+        "hotBroker",
+        brokerSelector.select(
+            queryBuilder
+                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker"))
+                .build()
+        ).lhs
+    );
+    Assert.assertEquals(
+        "coldBroker",
+        brokerSelector.select(
+            queryBuilder
+                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker"))
+                .build()
+        ).lhs
+    );
   }
 
   @Test

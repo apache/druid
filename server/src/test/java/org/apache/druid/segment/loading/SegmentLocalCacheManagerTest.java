@@ -38,6 +38,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class SegmentLocalCacheManagerTest
@@ -761,5 +762,152 @@ public class SegmentLocalCacheManagerTest
 
     Assert.assertFalse("Expect cache miss for corrupted segment file", manager.isSegmentCached(segmentToDownload));
     Assert.assertFalse(cachedSegmentDir.exists());
+  }
+
+  @Test
+  public void testReserveSegment()
+  {
+    final DataSegment dataSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withSize(100L);
+    final StorageLocation firstLocation = new StorageLocation(localSegmentCacheFolder, 200L, 0.0d);
+    final StorageLocation secondLocation = new StorageLocation(localSegmentCacheFolder, 150L, 0.0d);
+
+    manager = new SegmentLocalCacheManager(
+        Arrays.asList(secondLocation, firstLocation),
+        new SegmentLoaderConfig(),
+        new RoundRobinStorageLocationSelectorStrategy(Arrays.asList(firstLocation, secondLocation)),
+        jsonMapper
+    );
+    Assert.assertTrue(manager.reserve(dataSegment));
+    Assert.assertTrue(firstLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+    Assert.assertEquals(100L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(150L, secondLocation.availableSizeBytes());
+
+    // Reserving again should be no-op
+    Assert.assertTrue(manager.reserve(dataSegment));
+    Assert.assertTrue(firstLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+    Assert.assertEquals(100L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(150L, secondLocation.availableSizeBytes());
+
+    // Reserving a second segment should now go to a different location
+    final DataSegment otherSegment = dataSegmentWithInterval("2014-10-21T00:00:00Z/P1D").withSize(100L);
+    Assert.assertTrue(manager.reserve(otherSegment));
+    Assert.assertTrue(firstLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+    Assert.assertFalse(firstLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(otherSegment, false)));
+    Assert.assertTrue(secondLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(otherSegment, false)));
+    Assert.assertEquals(100L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(50L, secondLocation.availableSizeBytes());
+  }
+
+  @Test
+  public void testReserveNotEnoughSpace()
+  {
+    final DataSegment dataSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withSize(100L);
+    final StorageLocation firstLocation = new StorageLocation(localSegmentCacheFolder, 50L, 0.0d);
+    final StorageLocation secondLocation = new StorageLocation(localSegmentCacheFolder, 150L, 0.0d);
+
+    manager = new SegmentLocalCacheManager(
+        Arrays.asList(secondLocation, firstLocation),
+        new SegmentLoaderConfig(),
+        new RoundRobinStorageLocationSelectorStrategy(Arrays.asList(firstLocation, secondLocation)),
+        jsonMapper
+    );
+
+    // should go to second location if first one doesn't have enough space
+    Assert.assertTrue(manager.reserve(dataSegment));
+    Assert.assertTrue(secondLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+    Assert.assertEquals(50L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(50L, secondLocation.availableSizeBytes());
+
+    final DataSegment otherSegment = dataSegmentWithInterval("2014-10-21T00:00:00Z/P1D").withSize(100L);
+    Assert.assertFalse(manager.reserve(otherSegment));
+    Assert.assertEquals(50L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(50L, secondLocation.availableSizeBytes());
+  }
+
+  @Test
+  public void testSegmentDownloadWhenLocationReserved() throws Exception
+  {
+    final List<StorageLocationConfig> locationConfigs = new ArrayList<>();
+    final StorageLocationConfig locationConfig = createStorageLocationConfig("local_storage_folder", 10000000000L, true);
+    final StorageLocationConfig locationConfig2 = createStorageLocationConfig("local_storage_folder2", 1000000000L, true);
+    final StorageLocationConfig locationConfig3 = createStorageLocationConfig("local_storage_folder3", 1000000000L, true);
+    locationConfigs.add(locationConfig);
+    locationConfigs.add(locationConfig2);
+    locationConfigs.add(locationConfig3);
+
+    List<StorageLocation> locations = new ArrayList<>();
+    for (StorageLocationConfig locConfig : locationConfigs) {
+      locations.add(
+          new StorageLocation(
+              locConfig.getPath(),
+              locConfig.getMaxSize(),
+              locConfig.getFreeSpacePercent()
+          )
+      );
+    }
+
+    manager = new SegmentLocalCacheManager(
+        new SegmentLoaderConfig().withLocations(locationConfigs),
+        new RoundRobinStorageLocationSelectorStrategy(locations),
+        jsonMapper
+    );
+
+    StorageLocation location3 = manager.getLocations().get(2);
+    Assert.assertEquals(locationConfig3.getPath(), location3.getPath());
+    final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
+
+    // Segment should be downloaded in local_storage_folder3 even if that is the third location
+    final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
+        ImmutableMap.of(
+            "type",
+            "local",
+            "path",
+            segmentSrcFolder.getCanonicalPath()
+                + "/test_segment_loader"
+                + "/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z"
+                + "/0/index.zip"
+        )
+    );
+    String segmentDir = DataSegmentPusher.getDefaultStorageDir(segmentToDownload, false);
+    location3.reserve(segmentDir, segmentToDownload);
+    // manually create a local segment under segmentSrcFolder
+    createLocalSegmentFile(segmentSrcFolder, "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0");
+
+    Assert.assertFalse("Expect cache miss before downloading segment", manager.isSegmentCached(segmentToDownload));
+
+    File segmentFile = manager.getSegmentFiles(segmentToDownload);
+    Assert.assertTrue(segmentFile.getAbsolutePath().contains("/local_storage_folder3/"));
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentCached(segmentToDownload));
+
+    manager.cleanup(segmentToDownload);
+    Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentCached(segmentToDownload));
+    Assert.assertFalse(location3.isReserved(segmentDir));
+  }
+
+  @Test
+  public void testRelease()
+  {
+    final DataSegment dataSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withSize(100L);
+    final StorageLocation firstLocation = new StorageLocation(localSegmentCacheFolder, 50L, 0.0d);
+    final StorageLocation secondLocation = new StorageLocation(localSegmentCacheFolder, 150L, 0.0d);
+
+    manager = new SegmentLocalCacheManager(
+        Arrays.asList(secondLocation, firstLocation),
+        new SegmentLoaderConfig(),
+        new RoundRobinStorageLocationSelectorStrategy(Arrays.asList(firstLocation, secondLocation)),
+        jsonMapper
+    );
+
+    manager.reserve(dataSegment);
+    manager.release(dataSegment);
+    Assert.assertEquals(50L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(150L, secondLocation.availableSizeBytes());
+    Assert.assertFalse(firstLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+    Assert.assertFalse(secondLocation.isReserved(DataSegmentPusher.getDefaultStorageDir(dataSegment, false)));
+
+    // calling release again should have no effect
+    manager.release(dataSegment);
+    Assert.assertEquals(50L, firstLocation.availableSizeBytes());
+    Assert.assertEquals(150L, secondLocation.availableSizeBytes());
   }
 }

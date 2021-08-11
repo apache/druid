@@ -606,6 +606,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           {
             throw new UnsupportedOperationException("unused");
           }
+
+          @Override
+          public boolean reserve(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
         },
         DataSegment.builder()
                    .dataSource("ds")

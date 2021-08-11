@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 
 import java.io.File;
@@ -26,12 +27,13 @@ import java.io.IOException;
 
 /**
  * An interface for intermediate data shuffle during the parallel indexing.
- * The only available implementation for production code is {@link HttpShuffleClient} and
- * this interface is more for easier testing.
+ *
+ * Extension can implement this interface to fetch intermediary data at custom location such as various cloud storages.
  *
  * @see IntermediaryDataManager
  * @see PartialSegmentMergeTask
  */
+@ExtensionPoint
 public interface ShuffleClient
 {
   /**

@@ -30,7 +30,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
@@ -217,7 +216,7 @@ public class SegmentManager
    */
   public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment, lazy, loadFailed);
+    final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -252,9 +251,7 @@ public class SegmentManager
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(
-                    ReferenceCountingSegment.wrapSegment(adapter, segment.getShardSpec())
-                )
+                segment.getShardSpec().createChunk(adapter)
             );
             dataSourceState.addSegment(segment);
             resultSupplier.set(true);
@@ -268,21 +265,21 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  private ReferenceCountingSegment getSegmentReference(final DataSegment dataSegment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
-    final Segment adapter;
+    final ReferenceCountingSegment segment;
     try {
-      adapter = segmentLoader.getSegment(segment, lazy, loadFailed);
+      segment = segmentLoader.getSegment(dataSegment, lazy, loadFailed);
     }
     catch (SegmentLoadingException e) {
-      segmentLoader.cleanup(segment);
+      segmentLoader.cleanup(dataSegment);
       throw e;
     }
 
-    if (adapter == null) {
-      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
+    if (segment == null) {
+      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
     }
-    return adapter;
+    return segment;
   }
 
   public void dropSegment(final DataSegment segment)

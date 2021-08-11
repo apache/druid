@@ -21,20 +21,20 @@ import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { oneOf } from '../utils';
+import { oneOf, typeIs } from '../utils';
 
 import { FlattenSpec } from './flatten-spec';
 
 export interface InputFormat {
-  type: string;
-  findColumnsFromHeader?: boolean;
-  skipHeaderRows?: number;
-  columns?: string[];
-  listDelimiter?: string;
-  pattern?: string;
-  function?: string;
-  flattenSpec?: FlattenSpec;
-  keepNullColumns?: boolean;
+  readonly type: string;
+  readonly findColumnsFromHeader?: boolean;
+  readonly skipHeaderRows?: number;
+  readonly columns?: string[];
+  readonly listDelimiter?: string;
+  readonly pattern?: string;
+  readonly function?: string;
+  readonly flattenSpec?: FlattenSpec;
+  readonly keepNullColumns?: boolean;
 }
 
 export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
@@ -60,20 +60,20 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   {
     name: 'pattern',
     type: 'string',
+    defined: typeIs('regex'),
     required: true,
-    defined: (p: InputFormat) => p.type === 'regex',
   },
   {
     name: 'function',
     type: 'string',
+    defined: typeIs('javascript'),
     required: true,
-    defined: (p: InputFormat) => p.type === 'javascript',
   },
   {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
+    defined: typeIs('csv', 'tsv'),
     min: 0,
     info: (
       <>
@@ -84,8 +84,8 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   {
     name: 'findColumnsFromHeader',
     type: 'boolean',
+    defined: typeIs('csv', 'tsv'),
     required: true,
-    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv'),
     info: (
       <>
         If this is set, find the column names from the header row. Note that
@@ -100,7 +100,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'columns',
     type: 'string-array',
     required: true,
-    defined: (p: InputFormat) =>
+    defined: p =>
       (oneOf(p.type, 'csv', 'tsv') && p.findColumnsFromHeader === false) || p.type === 'regex',
     info: (
       <>
@@ -114,7 +114,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\t',
     suggestions: ['\t', '|', '#'],
-    defined: (p: InputFormat) => p.type === 'tsv',
+    defined: typeIs('tsv'),
     info: <>A custom delimiter for data values.</>,
   },
   {
@@ -122,14 +122,14 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\x01',
     suggestions: ['\x01', '\x00'],
-    defined: (p: InputFormat) => oneOf(p.type, 'csv', 'tsv', 'regex'),
+    defined: typeIs('csv', 'tsv', 'regex'),
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => oneOf(p.type, 'parquet', 'orc', 'avro_ocf', 'avro_stream'),
+    defined: typeIs('parquet', 'orc', 'avro_ocf', 'avro_stream'),
     info: (
       <>
         Specifies if the binary column which is not logically marked as a string should be treated
@@ -143,6 +143,10 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
   return AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS);
 }
 
-export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream');
-}
+export const inputFormatCanFlatten: (inputFormat: InputFormat) => boolean = typeIs(
+  'json',
+  'parquet',
+  'orc',
+  'avro_ocf',
+  'avro_stream',
+);

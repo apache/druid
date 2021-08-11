@@ -14,12 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo "Copying integration test resources."
+
 set -e
 
 # setup client keystore
 ./docker/tls/generate-client-certs-and-keystores.sh
 rm -rf docker/client_tls
 cp -r client_tls docker/client_tls
+
+# install druid jars
+rm -rf $SHARED_DIR/docker
+mkdir -p $SHARED_DIR
+cp -R docker $SHARED_DIR/docker
+mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
 
 # Make directories if they dont exist
 mkdir -p $SHARED_DIR/hadoop_xml
@@ -28,11 +36,6 @@ mkdir -p $SHARED_DIR/logs
 mkdir -p $SHARED_DIR/tasklogs
 mkdir -p $SHARED_DIR/docker/extensions
 mkdir -p $SHARED_DIR/docker/credentials
-
-# install druid jars
-rm -rf $SHARED_DIR/docker
-cp -R docker $SHARED_DIR/docker
-mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
 
 # install logging config
 cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
