@@ -52,7 +52,7 @@ For logical operators, a number is true if and only if it is positive (0 or nega
 
 [Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values, as follows:  
 * When treated as a scalar type, the expression is automatically transformed so that the scalar operation is applied across all values of the multi-valued type, mimicking Druid's native behavior. 
-* Values that result in arrays are coerced back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid will group by the individual values, not the 'array', resulting in behavior similar to the UNNEST operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array, preserving the complete row. Using `string_to_array` in an expression post-aggregator transforms the stringified dimension back into the true native array type.
+* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to the `UNNEST` operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
 
 
 The following built-in functions are available.
