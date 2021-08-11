@@ -142,7 +142,7 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 
 To enable routing of SQL queries, set `druid.router.sql.enable` to `true` (`false` by default). The broker service for a
 given SQL query is resolved using only the provided Router strategies. If not resolved using any of the strategies, the
-Router uses the `defaultBrokerServiceName`. This behaviour is slightly different from native queries where the Router
+Router uses the `defaultBrokerServiceName`. This behavior is slightly different from native queries where the Router
 first tries to resolve the broker service using strategies, then load rules and finally using the `defaultBrokerServiceName`
 if still not resolved.
 
