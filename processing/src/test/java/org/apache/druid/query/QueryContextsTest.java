@@ -177,6 +177,7 @@ public class QueryContextsTest
         ImmutableMap.of()
     );
     Assert.assertFalse(QueryContexts.isDebug(query));
+    Assert.assertFalse(QueryContexts.isDebug(query.getContext()));
   }
 
   @Test
@@ -189,5 +190,6 @@ public class QueryContextsTest
         ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)
     );
     Assert.assertTrue(QueryContexts.isDebug(query));
+    Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
   }
 }

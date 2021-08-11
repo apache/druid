@@ -329,6 +329,11 @@ public class QueryContexts
     return parseBoolean(query, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
   }
 
+  public static boolean isDebug(Map<String, Object> queryContext)
+  {
+    return parseBoolean(queryContext, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
+  }
+
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     Object obj = query.getContextValue(MAX_SCATTER_GATHER_BYTES_KEY);

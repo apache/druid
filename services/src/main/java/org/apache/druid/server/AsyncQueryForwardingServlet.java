@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 import org.apache.calcite.avatica.remote.ProtobufTranslation;
 import org.apache.calcite.avatica.remote.ProtobufTranslationImpl;
 import org.apache.calcite.avatica.remote.Service;
@@ -93,13 +94,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String SQL_QUERY_ATTRIBUTE = "org.apache.druid.proxy.sqlQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "org.apache.druid.proxy.objectMapper";
 
+  private static final String PROPERTY_SQL_ENABLE = "druid.router.sql.enable";
+  private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
+
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
-
-  private final boolean routeSqlQueries;
 
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
@@ -128,6 +130,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AuthenticatorMapper authenticatorMapper;
   private final ProtobufTranslation protobufTranslation;
+
+  private final boolean routeSqlQueries;
 
   private HttpClient broadcastClient;
 
@@ -158,7 +162,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.authenticatorMapper = authenticatorMapper;
     this.protobufTranslation = new ProtobufTranslationImpl();
     this.routeSqlQueries = Boolean.parseBoolean(
-        properties.getProperty("druid.router.sql.enable", "false")
+        properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
   }
 
@@ -251,12 +255,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         handleException(response, objectMapper, e);
         return;
       }
-    } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.DELETE.is(method)) {
-      targetServer = hostFinder.pickDefaultServer();
-      broadcastQueryCancelRequest(request, targetServer);
     } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
-        targetServer = getTargetServerForSql(request, objectMapper);
+        SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+        request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
+        targetServer = hostFinder.findServerSql(inputSqlQuery);
       }
       catch (IOException e) {
         handleQueryParseException(request, response, objectMapper, e, false);
@@ -311,19 +314,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     interruptedQueryCount.incrementAndGet();
-  }
-
-  private Server getTargetServerForSql(
-      HttpServletRequest request,
-      ObjectMapper objectMapper
-  ) throws IOException
-  {
-    SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
-    request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
-
-    return inputSqlQuery != null
-           ? hostFinder.findServerSql(inputSqlQuery)
-           : hostFinder.pickDefaultServer();
   }
 
   private void handleQueryParseException(
