@@ -77,6 +77,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -121,10 +122,18 @@ public class BatchAppenderator implements Appenderator
   private volatile Throwable persistError;
 
 
-  private final ConcurrentHashMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
+  /**
+   * The following map used to be accessed concurrently but not anymore since it is fully copied
+   * then initalized just before scheduling the persit callable in the {@link #persistAll(Committer)}
+   * method, so no longer need to use a syncronized map.
+   */
+  private final Map<SegmentIdWithShardSpec, Sink> sinks = new HashMap<>();
   /**
    * The following sinks metadata map and associated class are the way to retain metadata now that sinks
-   * are being completely removed from memory after each incremental persist.
+   * are being completely removed from memory after each incremental persist. This map needs to be concurrent
+   * since it is mutated in various methods potentially in different threads.
+   * For example mutated in {@link #add}  when adding rows
+   * and accessed/mutated in {@link #persistHydrant} during persists.
    */
   private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
