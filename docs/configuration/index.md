@@ -1210,7 +1210,7 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 
 ###### Affinity
 
-Affinity configs can be provided to the _equalDistribution_ and _fillCapacity_ strategies using the "affinityConfig" field. If not provided, the default is to not use affinity at all.
+Use the `affinityConfig` field to pass affinity configuration to the _equalDistribution_ and _fillCapacity_ strategies. If not provided, the default is to not use affinity at all.
 
 |Property|Description|Default|
 |--------|-----------|-------|
