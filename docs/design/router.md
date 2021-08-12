@@ -148,6 +148,9 @@ if still not resolved.
 
 Routing of native queries is always enabled.
 
+Setting `druid.router.sql.enable` does not affect Avatica JDBC requests. They are routed based on connection ID as
+explained in the next section.
+
 ### Avatica query balancing
 
 All Avatica JDBC requests with a given connection ID must be routed to the same Broker, since Druid Brokers do not share connection state with each other.
