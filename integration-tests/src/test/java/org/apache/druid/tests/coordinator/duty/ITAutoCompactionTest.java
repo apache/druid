@@ -112,7 +112,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          14312,
+          14370,
           0,
           0,
           2,
@@ -246,7 +246,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14312,
+          14370,
           14311,
           0,
           2,

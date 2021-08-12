@@ -390,7 +390,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) o;
     return k == that.k
            && maxStreamLength == that.maxStreamLength
-           && cacheTypeId == that.cacheTypeId
            && name.equals(that.name)
            && fieldName.equals(that.fieldName);
   }
@@ -398,7 +397,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, k, maxStreamLength, cacheTypeId);
+    return Objects.hash(name, fieldName, k, maxStreamLength); // no need to use cacheTypeId here
   }
 
   @Override
