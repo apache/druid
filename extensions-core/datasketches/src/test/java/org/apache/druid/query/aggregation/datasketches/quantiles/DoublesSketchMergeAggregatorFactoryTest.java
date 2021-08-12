@@ -36,6 +36,7 @@ public class DoublesSketchMergeAggregatorFactoryTest
   {
     EqualsVerifier.forClass(DoublesSketchMergeAggregatorFactory.class)
                   .withNonnullFields("name", "fieldName")
+                  .withIgnoredFields("cacheTypeId")
                   .usingGetClass()
                   .verify();
   }
