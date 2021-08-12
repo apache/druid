@@ -378,6 +378,11 @@
           <scope>test</scope>
         </dependency>
         <dependency>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
           <groupId>org.apache.druid</groupId>
           <artifactId>druid-server</artifactId>
           <version>${project.parent.version}</version>
