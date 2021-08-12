@@ -70,7 +70,6 @@ import org.apache.druid.timeline.SegmentId;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -79,6 +78,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -100,26 +100,82 @@ public class DruidSchema extends AbstractSchema
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerConfig config;
+  // Escalator, so we can attach an authentication result to queries we generate.
+  private final Escalator escalator;
   private final SegmentManager segmentManager;
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
-  private final ConcurrentMap<String, DruidTable> tables;
+  private final ExecutorService callbackExec;
+
+  /**
+   * Map of DataSource -> DruidTable.
+   * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
+   */
+  private final ConcurrentMap<String, DruidTable> tables = new ConcurrentHashMap<>();
+
+  /**
+   * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
+   * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
+   *
+   * This map is updated by these two threads.
+   *
+   * - {@link #callbackExec} can update it in {@link #addSegment}, {@link #removeServerSegment},
+   *   and {@link #removeSegment}.
+   * - {@link #cacheExec} can update it in {@link #refreshSegmentsForDataSource}.
+   *
+   * While it is being updated, this map is read by these two types of thread.
+   *
+   * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
+   *   See {@link #buildDruidTable}.
+   * - Query threads can create a snapshot of the entire map for processing queries on the system table.
+   *   See {@link #getSegmentMetadataSnapshot()}.
+   *
+   * As the access pattern of this map is read-intensive, we should minimize the contention between writers and readers.
+   * Since there are two threads that can update this map at the same time, those writers should lock the inner map
+   * first and then lock the entry before it updates segment metadata. This can be done using
+   * {@link ConcurrentMap#compute} as below. Note that, if you need to update the variables guarded by {@link #lock}
+   * inside of compute(), you should get the lock before calling compute() to keep the function executed in compute()
+   * not expensive.
+   *
+   * <pre>
+   *   segmentMedataInfo.compute(
+   *     datasourceParam,
+   *     (datasource, segmentsMap) -> {
+   *       if (segmentsMap == null) return null;
+   *       else {
+   *         segmentsMap.compute(
+   *           segmentIdParam,
+   *           (segmentId, segmentMetadata) -> {
+   *             // update segmentMetadata
+   *           }
+   *         );
+   *         return segmentsMap;
+   *       }
+   *     }
+   *   );
+   * </pre>
+   *
+   * Readers can simply delegate the locking to the concurrent map and iterate map entries.
+   */
+  private final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
+      = new ConcurrentHashMap<>();
 
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
 
-  // Protects access to segmentSignatures, mutableSegments, segmentsNeedingRefresh, lastRefresh, isServerViewInitialized, segmentMetadata
+  /**
+   * This lock coordinates the access from multiple threads to those variables guarded by this lock.
+   * Currently, there are 2 threads that can access these variables.
+   *
+   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
+   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DruidTable} if necessary
+   *   based on the information collected via timeline callbacks.
+   */
   private final Object lock = new Object();
-
-  // DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
-  // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
-  @GuardedBy("lock")
-  private final Map<String, TreeMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo = new HashMap<>();
-  private int totalSegments = 0;
 
   // All mutable segments.
   @GuardedBy("lock")
-  private final Set<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
+  private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
 
   // All dataSources that need tables regenerated.
   @GuardedBy("lock")
@@ -129,17 +185,18 @@ public class DruidSchema extends AbstractSchema
   @GuardedBy("lock")
   private final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
-  // Escalator, so we can attach an authentication result to queries we generate.
-  private final Escalator escalator;
-
   @GuardedBy("lock")
   private boolean refreshImmediately = false;
-  @GuardedBy("lock")
-  private long lastRefresh = 0L;
-  @GuardedBy("lock")
-  private long lastFailure = 0L;
+
   @GuardedBy("lock")
   private boolean isServerViewInitialized = false;
+
+  /**
+   * Counts the total number of known segments. This variable is used only for the segments table in the system schema
+   * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
+   * and thus there is no concurrency control for this variable.
+   */
+  private int totalSegments = 0;
 
   @Inject
   public DruidSchema(
@@ -157,11 +214,11 @@ public class DruidSchema extends AbstractSchema
     this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
-    this.tables = new ConcurrentHashMap<>();
+    this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
 
     serverView.registerTimelineCallback(
-        Execs.directExecutor(),
+        callbackExec,
         new TimelineServerView.TimelineCallback()
         {
           @Override
@@ -207,6 +264,9 @@ public class DruidSchema extends AbstractSchema
   {
     cacheExec.submit(
         () -> {
+          long lastRefresh = 0L;
+          long lastFailure = 0L;
+
           try {
             while (!Thread.currentThread().isInterrupted()) {
               final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
@@ -259,32 +319,7 @@ public class DruidSchema extends AbstractSchema
                   refreshImmediately = false;
                 }
 
-                // Refresh the segments.
-                final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
-
-                synchronized (lock) {
-                  // Add missing segments back to the refresh list.
-                  segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
-
-                  // Compute the list of dataSources to rebuild tables for.
-                  dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
-                  refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
-                  dataSourcesNeedingRebuild.clear();
-
-                  lock.notifyAll();
-                }
-
-                // Rebuild the dataSources.
-                for (String dataSource : dataSourcesToRebuild) {
-                  final DruidTable druidTable = buildDruidTable(dataSource);
-                  final DruidTable oldTable = tables.put(dataSource, druidTable);
-                  final String description = druidTable.getDataSource().isGlobal() ? "global dataSource" : "dataSource";
-                  if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-                    log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.getRowSignature());
-                  } else {
-                    log.debug("%s [%s] signature is unchanged.", description, dataSource);
-                  }
-                }
+                refresh(segmentsToRefresh, dataSourcesToRebuild);
 
                 initialized.countDown();
               }
@@ -300,7 +335,6 @@ public class DruidSchema extends AbstractSchema
                   segmentsNeedingRefresh.addAll(segmentsToRefresh);
                   dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
                   lastFailure = System.currentTimeMillis();
-                  lock.notifyAll();
                 }
               }
             }
@@ -328,10 +362,40 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
+  @VisibleForTesting
+  void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
+  {
+    // Refresh the segments.
+    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
+
+    synchronized (lock) {
+      // Add missing segments back to the refresh list.
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+
+      // Compute the list of dataSources to rebuild tables for.
+      dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
+      refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
+      dataSourcesNeedingRebuild.clear();
+    }
+
+    // Rebuild the dataSources.
+    for (String dataSource : dataSourcesToRebuild) {
+      final DruidTable druidTable = buildDruidTable(dataSource);
+      final DruidTable oldTable = tables.put(dataSource, druidTable);
+      final String description = druidTable.getDataSource().isGlobal() ? "global dataSource" : "dataSource";
+      if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
+        log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.getRowSignature());
+      } else {
+        log.debug("%s [%s] signature is unchanged.", description, dataSource);
+      }
+    }
+  }
+
   @LifecycleStop
   public void stop()
   {
     cacheExec.shutdownNow();
+    callbackExec.shutdownNow();
   }
 
   public void awaitInitialization() throws InterruptedException
@@ -348,54 +412,66 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
       // broker served segments in the timeline, to ensure that removeSegment the event is triggered accurately
       if (server.getType().equals(ServerType.BROKER)) {
         // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
         // historical, however mark the datasource for refresh because it needs to be globalized
-        dataSourcesNeedingRebuild.add(segment.getDataSource());
+        markDataSourceAsNeedRebuild(segment.getDataSource());
       } else {
-        final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
-        AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
-        if (segmentMetadata == null) {
-          // segmentReplicatable is used to determine if segments are served by historical or realtime servers
-          long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
-          segmentMetadata = AvailableSegmentMetadata.builder(
-              segment,
-              isRealtime,
-              ImmutableSet.of(server),
-              null,
-              DEFAULT_NUM_ROWS
-          ).build();
-          // Unknown segment.
-          setAvailableSegmentMetadata(segment.getId(), segmentMetadata);
-          segmentsNeedingRefresh.add(segment.getId());
-          if (!server.isSegmentReplicationTarget()) {
-            log.debug("Added new mutable segment[%s].", segment.getId());
-            mutableSegments.add(segment.getId());
-          } else {
-            log.debug("Added new immutable segment[%s].", segment.getId());
-          }
-        } else {
-          final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
-          final ImmutableSet<DruidServerMetadata> servers = new ImmutableSet.Builder<DruidServerMetadata>()
-              .addAll(segmentServers)
-              .add(server)
-              .build();
-          final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
-              .from(segmentMetadata)
-              .withReplicas(servers)
-              .withRealtime(recomputeIsRealtime(servers))
-              .build();
-          knownSegments.put(segment.getId(), metadataWithNumReplicas);
-          if (server.isSegmentReplicationTarget()) {
-            // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
-            // even if it's also available on non-replicatable (realtime) servers.
-            mutableSegments.remove(segment.getId());
-            log.debug("Segment[%s] has become immutable.", segment.getId());
-          }
-        }
+        segmentMetadataInfo.compute(
+            segment.getDataSource(),
+            (datasource, segmentsMap) -> {
+              if (segmentsMap == null) {
+                segmentsMap = new ConcurrentSkipListMap<>(SEGMENT_ORDER);
+              }
+              segmentsMap.compute(
+                  segment.getId(),
+                  (segmentId, segmentMetadata) -> {
+                    if (segmentMetadata == null) {
+                      // Unknown segment.
+                      totalSegments++;
+                      // segmentReplicatable is used to determine if segments are served by historical or realtime servers
+                      long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
+                      segmentMetadata = AvailableSegmentMetadata
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS)
+                          .build();
+                      markSegmentAsNeedRefresh(segment.getId());
+                      if (!server.isSegmentReplicationTarget()) {
+                        log.debug("Added new mutable segment[%s].", segment.getId());
+                        markSegmentAsMutable(segment.getId());
+                      } else {
+                        log.debug("Added new immutable segment[%s].", segment.getId());
+                      }
+                    } else {
+                      // We know this segment.
+                      final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+                      final ImmutableSet<DruidServerMetadata> servers = new ImmutableSet.Builder<DruidServerMetadata>()
+                          .addAll(segmentServers)
+                          .add(server)
+                          .build();
+                      segmentMetadata = AvailableSegmentMetadata
+                          .from(segmentMetadata)
+                          .withReplicas(servers)
+                          .withRealtime(recomputeIsRealtime(servers))
+                          .build();
+                      if (server.isSegmentReplicationTarget()) {
+                        // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
+                        // even if it's also available on non-replicatable (realtime) servers.
+                        unmarkSegmentAsMutable(segment.getId());
+                        log.debug("Segment[%s] has become immutable.", segment.getId());
+                      }
+                    }
+                    assert segmentMetadata != null;
+                    return segmentMetadata;
+                  }
+              );
+
+              return segmentsMap;
+            }
+        );
       }
       if (!tables.containsKey(segment.getDataSource())) {
         refreshImmediately = true;
@@ -408,25 +484,36 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void removeSegment(final DataSegment segment)
   {
+    // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment[%s] is gone.", segment.getId());
 
       segmentsNeedingRefresh.remove(segment.getId());
-      mutableSegments.remove(segment.getId());
+      unmarkSegmentAsMutable(segment.getId());
 
-      final Map<SegmentId, AvailableSegmentMetadata> dataSourceSegments =
-          segmentMetadataInfo.get(segment.getDataSource());
-      if (dataSourceSegments.remove(segment.getId()) != null) {
-        totalSegments--;
-      }
-
-      if (dataSourceSegments.isEmpty()) {
-        segmentMetadataInfo.remove(segment.getDataSource());
-        tables.remove(segment.getDataSource());
-        log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
-      } else {
-        dataSourcesNeedingRebuild.add(segment.getDataSource());
-      }
+      segmentMetadataInfo.compute(
+          segment.getDataSource(),
+          (dataSource, segmentsMap) -> {
+            if (segmentsMap == null) {
+              log.warn("Unknown segment[%s] was removed from the cluster. Ignoring this event.", segment.getId());
+              return null;
+            } else {
+              if (segmentsMap.remove(segment.getId()) == null) {
+                log.warn("Unknown segment[%s] was removed from the cluster. Ignoring this event.", segment.getId());
+              } else {
+                totalSegments--;
+              }
+              if (segmentsMap.isEmpty()) {
+                tables.remove(segment.getDataSource());
+                log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
+                return null;
+              } else {
+                markDataSourceAsNeedRebuild(segment.getDataSource());
+                return segmentsMap;
+              }
+            }
+          }
+      );
 
       lock.notifyAll();
     }
@@ -435,35 +522,92 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
-      final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
+      segmentMetadataInfo.compute(
+          segment.getDataSource(),
+          (datasource, knownSegments) -> {
+            if (knownSegments == null) {
+              log.warn(
+                  "Unknown segment[%s] is removed from server[%s]. Ignoring this event",
+                  segment.getId(),
+                  server.getHost()
+              );
+              return null;
+            }
 
-      // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
-      // broker served segments in the timeline, to ensure that removeSegment the event is triggered accurately
-      if (server.getType().equals(ServerType.BROKER)) {
-        // for brokers, if the segment drops from all historicals before the broker this could be null.
-        if (knownSegments != null && !knownSegments.isEmpty()) {
-          // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
-          // historical, however mark the datasource for refresh because it might no longer be broadcast or something
-          dataSourcesNeedingRebuild.add(segment.getDataSource());
-        }
-      } else {
-        final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
-        final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
-        final ImmutableSet<DruidServerMetadata> servers = FluentIterable
-            .from(segmentServers)
-            .filter(Predicates.not(Predicates.equalTo(server)))
-            .toSet();
+            if (server.getType().equals(ServerType.BROKER)) {
+              // for brokers, if the segment drops from all historicals before the broker this could be null.
+              if (!knownSegments.isEmpty()) {
+                // a segment on a broker means a broadcast datasource, skip metadata because we'll also see this segment on the
+                // historical, however mark the datasource for refresh because it might no longer be broadcast or something
+                markDataSourceAsNeedRebuild(segment.getDataSource());
+              }
+            } else {
+              knownSegments.compute(
+                  segment.getId(),
+                  (segmentId, segmentMetadata) -> {
+                    if (segmentMetadata == null) {
+                      log.warn(
+                          "Unknown segment[%s] is removed from server[%s]. Ignoring this event",
+                          segment.getId(),
+                          server.getHost()
+                      );
+                      return null;
+                    } else {
+                      final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+                      final ImmutableSet<DruidServerMetadata> servers = FluentIterable
+                          .from(segmentServers)
+                          .filter(Predicates.not(Predicates.equalTo(server)))
+                          .toSet();
+                      return AvailableSegmentMetadata
+                          .from(segmentMetadata)
+                          .withReplicas(servers)
+                          .withRealtime(recomputeIsRealtime(servers))
+                          .build();
+                    }
+                  }
+              );
+            }
+            if (knownSegments.isEmpty()) {
+              return null;
+            } else {
+              return knownSegments;
+            }
+          }
+      );
 
-        final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
-            .from(segmentMetadata)
-            .withReplicas(servers)
-            .withRealtime(recomputeIsRealtime(servers))
-            .build();
-        knownSegments.put(segment.getId(), metadataWithNumReplicas);
-      }
       lock.notifyAll();
+    }
+  }
+
+  private void markSegmentAsNeedRefresh(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      segmentsNeedingRefresh.add(segmentId);
+    }
+  }
+
+  private void markSegmentAsMutable(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      mutableSegments.add(segmentId);
+    }
+  }
+
+  private void unmarkSegmentAsMutable(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      mutableSegments.remove(segmentId);
+    }
+  }
+
+  @VisibleForTesting
+  void markDataSourceAsNeedRebuild(String datasource)
+  {
+    synchronized (lock) {
+      dataSourcesNeedingRebuild.add(datasource);
     }
   }
 
@@ -494,14 +638,19 @@ public class DruidSchema extends AbstractSchema
 
   private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)
   {
+    if (servers.isEmpty()) {
+      return 0;
+    }
     final Optional<DruidServerMetadata> historicalServer = servers
         .stream()
+        // Ideally, this filter should have checked whether it's a broadcast segment loaded in brokers.
+        // However, we don't current track of the broadcast segments loaded in brokers, so this filter is still valid.
+        // See addSegment(), removeServerSegment(), and removeSegment()
         .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL))
         .findAny();
 
     // if there is any historical server in the replicas, isRealtime flag should be unset
-    final long isRealtime = historicalServer.isPresent() ? 0 : 1;
-    return isRealtime;
+    return historicalServer.isPresent() ? 0 : 1;
   }
 
   /**
@@ -540,33 +689,46 @@ public class DruidSchema extends AbstractSchema
         if (segmentId == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          synchronized (lock) {
-            final RowSignature rowSignature = analysisToRowSignature(analysis);
-            log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
-            final Map<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo.get(dataSource);
-            if (dataSourceSegments == null) {
-              // Datasource may have been removed or become unavailable while this refresh was ongoing.
-              log.warn(
-                  "No segment map found with datasource[%s], skipping refresh of segment[%s]",
-                  dataSource,
-                  segmentId
-              );
-            } else {
-              final AvailableSegmentMetadata segmentMetadata = dataSourceSegments.get(segmentId);
-              if (segmentMetadata == null) {
-                log.warn("No segment[%s] found, skipping refresh", segmentId);
-              } else {
-                final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
-                    .from(segmentMetadata)
-                    .withRowSignature(rowSignature)
-                    .withNumRows(analysis.getNumRows())
-                    .build();
-                dataSourceSegments.put(segmentId, updatedSegmentMetadata);
-                setAvailableSegmentMetadata(segmentId, updatedSegmentMetadata);
-                retVal.add(segmentId);
+          final RowSignature rowSignature = analysisToRowSignature(analysis);
+          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          segmentMetadataInfo.compute(
+              dataSource,
+              (datasourceKey, dataSourceSegments) -> {
+                if (dataSourceSegments == null) {
+                  // Datasource may have been removed or become unavailable while this refresh was ongoing.
+                  log.warn(
+                      "No segment map found with datasource[%s], skipping refresh of segment[%s]",
+                      datasourceKey,
+                      segmentId
+                  );
+                  return null;
+                } else {
+                  dataSourceSegments.compute(
+                      segmentId,
+                      (segmentIdKey, segmentMetadata) -> {
+                        if (segmentMetadata == null) {
+                          log.warn("No segment[%s] found, skipping refresh", segmentId);
+                          return null;
+                        } else {
+                          final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
+                              .from(segmentMetadata)
+                              .withRowSignature(rowSignature)
+                              .withNumRows(analysis.getNumRows())
+                              .build();
+                          retVal.add(segmentId);
+                          return updatedSegmentMetadata;
+                        }
+                      }
+                  );
+
+                  if (dataSourceSegments.isEmpty()) {
+                    return null;
+                  } else {
+                    return dataSourceSegments;
+                  }
+                }
               }
-            }
-          }
+          );
         }
 
         yielder = yielder.next(null);
@@ -588,60 +750,88 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  DruidTable buildDruidTable(final String dataSource)
   {
-    synchronized (lock) {
-      TreeMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo.computeIfAbsent(
-          segmentId.getDataSource(),
-          x -> new TreeMap<>(SEGMENT_ORDER)
-      );
-      if (dataSourceSegments.put(segmentId, availableSegmentMetadata) == null) {
-        totalSegments++;
-      }
-    }
-  }
+    ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
+    final Map<String, ValueType> columnTypes = new TreeMap<>();
 
-  protected DruidTable buildDruidTable(final String dataSource)
-  {
-    synchronized (lock) {
-      final Map<SegmentId, AvailableSegmentMetadata> segmentMap = segmentMetadataInfo.get(dataSource);
-      final Map<String, ValueType> columnTypes = new TreeMap<>();
+    if (segmentsMap != null) {
+      for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
+        final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
+        if (rowSignature != null) {
+          for (String column : rowSignature.getColumnNames()) {
+            // Newer column types should override older ones.
+            final ValueType columnType =
+                rowSignature.getColumnType(column)
+                            .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
 
-      if (segmentMap != null) {
-        for (AvailableSegmentMetadata availableSegmentMetadata : segmentMap.values()) {
-          final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
-          if (rowSignature != null) {
-            for (String column : rowSignature.getColumnNames()) {
-              // Newer column types should override older ones.
-              final ValueType columnType =
-                  rowSignature.getColumnType(column)
-                              .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
-
-              columnTypes.putIfAbsent(column, columnType);
-            }
+            columnTypes.putIfAbsent(column, columnType);
           }
         }
       }
+    }
 
-      final RowSignature.Builder builder = RowSignature.builder();
-      columnTypes.forEach(builder::add);
+    final RowSignature.Builder builder = RowSignature.builder();
+    columnTypes.forEach(builder::add);
 
-      final TableDataSource tableDataSource;
+    final TableDataSource tableDataSource;
 
-      // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
-      // in the segment cache, which in this case belongs to the broker meaning only broadcast segments live here)
-      // to be joinable, it must be possibly joinable according to the factory. we only consider broadcast datasources
-      // at this time, and isGlobal is currently strongly coupled with joinable, so only make a global table datasource
-      // if also joinable
-      final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
-      final boolean isJoinable = joinableFactory.isDirectlyJoinable(maybeGlobal);
-      final boolean isBroadcast = segmentManager.getDataSourceNames().contains(dataSource);
-      if (isBroadcast && isJoinable) {
-        tableDataSource = maybeGlobal;
-      } else {
-        tableDataSource = new TableDataSource(dataSource);
-      }
-      return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
+    // in the segment cache, which in this case belongs to the broker meaning only broadcast segments live here)
+    // to be joinable, it must be possibly joinable according to the factory. we only consider broadcast datasources
+    // at this time, and isGlobal is currently strongly coupled with joinable, so only make a global table datasource
+    // if also joinable
+    final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
+    final boolean isJoinable = joinableFactory.isDirectlyJoinable(maybeGlobal);
+    final boolean isBroadcast = segmentManager.getDataSourceNames().contains(dataSource);
+    if (isBroadcast && isJoinable) {
+      tableDataSource = maybeGlobal;
+    } else {
+      tableDataSource = new TableDataSource(dataSource);
+    }
+    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+  }
+
+  @VisibleForTesting
+  Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  {
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
+    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
+      segmentMetadata.putAll(val);
+    }
+    return segmentMetadata;
+  }
+
+  /**
+   * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
+   * As a result, the returned value might be inexact.
+   */
+  int getTotalSegments()
+  {
+    return totalSegments;
+  }
+
+  @VisibleForTesting
+  TreeSet<SegmentId> getSegmentsNeedingRefresh()
+  {
+    synchronized (lock) {
+      return segmentsNeedingRefresh;
+    }
+  }
+
+  @VisibleForTesting
+  TreeSet<SegmentId> getMutableSegments()
+  {
+    synchronized (lock) {
+      return mutableSegments;
+    }
+  }
+
+  @VisibleForTesting
+  Set<String> getDataSourcesNeedingRebuild()
+  {
+    synchronized (lock) {
+      return dataSourcesNeedingRebuild;
     }
   }
 
@@ -700,20 +890,31 @@ public class DruidSchema extends AbstractSchema
     return rowSignatureBuilder.build();
   }
 
-  Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  /**
+   * This method is not thread-safe and must be used only in unit tests.
+   */
+  @VisibleForTesting
+  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
   {
-    synchronized (lock) {
-      final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(
-          segmentMetadataInfo.values().stream().mapToInt(v -> v.size()).sum());
-      for (TreeMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-        segmentMetadata.putAll(val);
-      }
-      return segmentMetadata;
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
+        .computeIfAbsent(
+            segmentId.getDataSource(),
+            k -> new ConcurrentSkipListMap<>(SEGMENT_ORDER)
+        );
+    if (dataSourceSegments.put(segmentId, availableSegmentMetadata) == null) {
+      totalSegments++;
     }
   }
 
-  int getTotalSegments()
+  /**
+   * This is a helper method for unit tests to emulate heavy work done with {@link #lock}.
+   * It must be used only in unit tests.
+   */
+  @VisibleForTesting
+  void doInLock(Runnable runnable)
   {
-    return totalSegments;
+    synchronized (lock) {
+      runnable.run();
+    }
   }
 }

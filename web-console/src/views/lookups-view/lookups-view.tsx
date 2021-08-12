@@ -69,7 +69,7 @@ export interface LookupEditInfo {
   name: string;
   tier: string;
   version: string;
-  spec: LookupSpec;
+  spec: Partial<LookupSpec>;
 }
 
 export interface LookupsViewProps {}

@@ -142,7 +142,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     synchronized (this) {
       if (stopped) {
-        return TaskStatus.failure(getId());
+        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
+        return TaskStatus.failure(getId(), errMsg);
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,

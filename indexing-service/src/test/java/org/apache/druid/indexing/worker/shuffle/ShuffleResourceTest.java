@@ -59,7 +59,7 @@ public class ShuffleResourceTest
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
 
-  private IntermediaryDataManager intermediaryDataManager;
+  private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;
   private ShuffleResource shuffleResource;
 
@@ -112,7 +112,7 @@ public class ShuffleResourceTest
         return result;
       }
     };
-    intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }

@@ -35,11 +35,14 @@ import './lookup-edit-dialog.scss';
 export interface LookupEditDialogProps {
   onClose: () => void;
   onSubmit: (updateLookupVersion: boolean) => void;
-  onChange: (field: 'name' | 'tier' | 'version' | 'spec', value: string | LookupSpec) => void;
+  onChange: (
+    field: 'name' | 'tier' | 'version' | 'spec',
+    value: string | Partial<LookupSpec>,
+  ) => void;
   lookupName: string;
   lookupTier: string;
   lookupVersion: string;
-  lookupSpec: LookupSpec;
+  lookupSpec: Partial<LookupSpec>;
   isEdit: boolean;
   allLookupTiers: string[];
 }

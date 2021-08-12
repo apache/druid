@@ -147,16 +147,6 @@ source_paths:
 
 ---
 
-name: AWS RDS SDK for Java
-license_category: binary
-module: extensions/druid-aws-rds-extensions
-license_name: Apache License version 2.0
-version: 1.11.884
-libraries:
-  - com.amazonaws: aws-java-sdk-rds
-
----
-
 name: Code adopted from org.apache.commons.dbcp2.BasicDataSource
 license_category: source
 module: server
@@ -188,12 +178,15 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.11.199
+version: 1.12.37
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
   - com.amazonaws: aws-java-sdk-kms
   - com.amazonaws: aws-java-sdk-s3
+  - com.amazonaws: aws-java-sdk-kinesis
+  - com.amazonaws: aws-java-sdk-sts
+  - com.amazonaws: aws-java-sdk-rds
   - com.amazonaws: jmespath-java
 notice: |
   AWS SDK for Java
@@ -350,7 +343,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.7.1
+version: 2.8.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -621,7 +614,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.18
+version: 1.21
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -3002,20 +2995,6 @@ notices:
 
 ---
 
-name: Apache Commons Compress
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.19
-libraries:
-  - org.apache.commons: commons-compress
-notices:
-  - commons-compress: |
-      Apache Commons Compress
-      Copyright 2002-2012 The Apache Software Foundation
-
----
-
 name: Apache Commons Math
 license_category: binary
 module: hadoop-client
@@ -3698,19 +3677,6 @@ license_name: Apache License version 2.0
 version: 1.1.2.6
 libraries:
   - org.xerial.snappy: snappy-java
-
----
-
-
-name: AWS SDK for Java
-license_category: binary
-module: extensions/druid-kinesis-indexing-service
-license_name: Apache License version 2.0
-version: 1.11.884
-libraries:
-  - com.amazonaws: aws-java-sdk-kinesis
-  - com.amazonaws: aws-java-sdk-sts
-  - com.amazonaws: jmespath-java
 
 ---
 
@@ -4465,7 +4431,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.5.10
+version: 1.6.9
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4473,13 +4439,13 @@ libraries:
 notices:
   - orc-mapreduce: |
       ORC MapReduce
-      Copyright 2013-2019 The Apache Software Foundation
+      Copyright 2013-2021 The Apache Software Foundation
   - orc-core: |
       ORC Core
-      Copyright 2013-2019 The Apache Software Foundation
+      Copyright 2013-2021 The Apache Software Foundation
   - orc-shims: |
       ORC Shims
-      Copyright 2013-2019 The Apache Software Foundation
+      Copyright 2013-2021 The Apache Software Foundation
 
 ---
 
@@ -4501,7 +4467,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: "0.10"
+version: "0.19"
 libraries:
   - io.airlift: aircompressor
 
@@ -4518,6 +4484,16 @@ notices:
   - hive-storage-api: |
       Hive Storage API
       Copyright 2018 The Apache Software Foundation
+
+---
+
+name: Jetbrains Annotations
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 17.0.0
+libraries:
+  - org.jetbrains: annotations
 
 ---
 
