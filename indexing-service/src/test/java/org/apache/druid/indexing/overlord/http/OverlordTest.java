@@ -158,7 +158,7 @@ public class OverlordTest
             .andReturn(null).anyTimes();
     EasyMock.replay(taskLockbox, taskActionClientFactory, req);
 
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null, null));
     runTaskCountDownLatches = new CountDownLatch[2];
     runTaskCountDownLatches[0] = new CountDownLatch(1);
     runTaskCountDownLatches[1] = new CountDownLatch(1);
@@ -271,7 +271,7 @@ public class OverlordTest
     // Wait for task runner to run task_1
     runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();
 
-    response = overlordResource.getRunningTasks(null, req);
+    response = overlordResource.getRunningTasks(null, null, req);
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
     final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response

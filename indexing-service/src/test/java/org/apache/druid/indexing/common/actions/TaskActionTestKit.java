@@ -74,7 +74,7 @@ public class TaskActionTestKit extends ExternalResource
   @Override
   public void before()
   {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H"), null));
     testDerbyConnector = new TestDerbyConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig)

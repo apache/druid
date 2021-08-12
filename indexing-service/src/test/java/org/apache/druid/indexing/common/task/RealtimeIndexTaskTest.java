@@ -587,7 +587,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   @Test(timeout = 60_000L)
   public void testRestoreAfterHandoffAttemptDuringShutdown() throws Exception
   {
-    final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null, null));
     final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
     final File directory = tempFolder.newFolder();
     final RealtimeIndexTask task1 = makeRealtimeTask(null);
@@ -875,7 +875,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   {
     return makeToolbox(
         task,
-        new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
+        new HeapMemoryTaskStorage(new TaskStorageConfig(null, null)),
         mdc,
         directory
     );

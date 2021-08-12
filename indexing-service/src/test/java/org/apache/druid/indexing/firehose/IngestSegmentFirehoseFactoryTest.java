@@ -136,7 +136,7 @@ public class IngestSegmentFirehoseFactoryTest
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
     TASK_STORAGE = new HeapMemoryTaskStorage(
-        new TaskStorageConfig(null)
+        new TaskStorageConfig(null, null)
         {
         }
     );

@@ -290,7 +290,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   @Override
   public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(
-      @Nullable String dataSource, Integer maxStatuses
+      @Nullable String dataSource,
+      Integer maxStatuses
   )
   {
     return getConnector().retryWithHandle(
@@ -308,7 +309,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   protected abstract String addLimitClause(String sql);
 
   private Query<Map<String, Object>> createActiveTaskInfoQuery(
-      Handle handle, @Nullable String dataSource, @Nullable Integer maxNumStatuses
+      Handle handle,
+      @Nullable String dataSource,
+      @Nullable Integer maxNumStatuses
   )
   {
     String sql = createActiveTaskInfoRetrievalSql(dataSource);

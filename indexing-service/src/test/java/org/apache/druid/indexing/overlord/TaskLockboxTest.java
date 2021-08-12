@@ -109,7 +109,7 @@ public class TaskLockboxTest
     final MetadataStorageTablesConfig tablesConfig = derby.metadataTablesConfigSupplier().get();
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
-        new TaskStorageConfig(null),
+        new TaskStorageConfig(null, null),
         new DerbyMetadataStorageActionHandlerFactory(
             derbyConnector,
             tablesConfig,
@@ -405,7 +405,7 @@ public class TaskLockboxTest
     ObjectMapper loadedMapper = new DefaultObjectMapper().registerModule(new TheModule());
     TaskStorage loadedTaskStorage = new MetadataTaskStorage(
         derbyConnector,
-        new TaskStorageConfig(null),
+        new TaskStorageConfig(null, null),
         new DerbyMetadataStorageActionHandlerFactory(
             derbyConnector,
             derby.metadataTablesConfigSupplier().get(),

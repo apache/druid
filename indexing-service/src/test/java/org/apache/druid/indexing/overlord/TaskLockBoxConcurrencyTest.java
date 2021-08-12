@@ -65,7 +65,7 @@ public class TaskLockBoxConcurrencyTest
     derbyConnector.createTaskTables();
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
-        new TaskStorageConfig(null),
+        new TaskStorageConfig(null, null),
         new DerbyMetadataStorageActionHandlerFactory(
             derbyConnector,
             derby.metadataTablesConfigSupplier().get(),

@@ -110,7 +110,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
     connector.createSegmentTable();
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null, null));
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

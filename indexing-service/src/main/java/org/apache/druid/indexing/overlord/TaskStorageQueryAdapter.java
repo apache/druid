@@ -74,7 +74,8 @@ public class TaskStorageQueryAdapter
   }
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(
-      @Nullable String dataSource, Integer maxActiveTasks
+      @Nullable String dataSource,
+      Integer maxActiveTasks
   )
   {
     return storage.getActiveTaskInfo(dataSource, maxActiveTasks);

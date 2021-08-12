@@ -445,7 +445,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     switch (taskStorageType) {
       case HEAP_TASK_STORAGE: {
         taskStorage = new HeapMemoryTaskStorage(
-            new TaskStorageConfig(null)
+            new TaskStorageConfig(null, null)
             {
             }
         );
@@ -463,7 +463,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         testDerbyConnector.createSegmentTable();
         taskStorage = new MetadataTaskStorage(
             testDerbyConnector,
-            new TaskStorageConfig(null),
+            new TaskStorageConfig(null, null),
             new DerbyMetadataStorageActionHandlerFactory(
                 testDerbyConnector,
                 derbyConnectorRule.metadataTablesConfigSupplier().get(),

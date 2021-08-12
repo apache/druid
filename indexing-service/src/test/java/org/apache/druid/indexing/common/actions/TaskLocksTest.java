@@ -60,7 +60,7 @@ public class TaskLocksTest
   public void setup()
   {
     lockbox = new TaskLockbox(
-        new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
+        new HeapMemoryTaskStorage(new TaskStorageConfig(null, null)),
         new TestIndexerMetadataStorageCoordinator()
     );
     task = NoopTask.create();

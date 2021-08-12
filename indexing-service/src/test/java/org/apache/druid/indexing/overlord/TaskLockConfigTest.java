@@ -47,7 +47,7 @@ public class TaskLockConfigTest
   @Before
   public void setup()
   {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null, null));
   }
 
   @Test

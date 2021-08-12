@@ -1456,7 +1456,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
   private void makeToolboxFactory(final File directory)
   {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null, null));
     publishedSegments = new CopyOnWriteArrayList<>();
 
     ObjectMapper mapper = new DefaultObjectMapper();

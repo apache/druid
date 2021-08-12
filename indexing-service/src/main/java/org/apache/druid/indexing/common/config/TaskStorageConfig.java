@@ -31,6 +31,7 @@ public class TaskStorageConfig
   @JsonProperty
   @NotNull
   public Duration recentlyFinishedThreshold = new Period("PT24H").toStandardDuration();
+  @NotNull
   @JsonProperty
   public int maxActiveTasks = Integer.MAX_VALUE;
 

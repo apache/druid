@@ -2795,7 +2795,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     derbyConnector.createAuditTable();
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
-        new TaskStorageConfig(null),
+        new TaskStorageConfig(null, null),
         new DerbyMetadataStorageActionHandlerFactory(
             derbyConnector,
             derby.metadataTablesConfigSupplier().get(),
