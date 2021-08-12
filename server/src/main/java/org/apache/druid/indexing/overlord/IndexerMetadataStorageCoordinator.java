@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -78,21 +77,6 @@ public interface IndexerMetadataStorageCoordinator
    * interval.
    */
   Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
-
-  /**
-   * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source from the metadata store.
-   *
-   * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
-   * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
-   * Segments#INCLUDING_OVERSHADOWED} was passed. It's the responsibility of the caller to filter out overshadowed ones
-   * if needed.
-   *
-   * @param dataSource The data source to query
-   *
-   * @return The DataSegments and the related created_date of segments
-   */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the

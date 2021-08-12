@@ -27,7 +27,6 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -46,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -60,13 +60,10 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.skife.jdbi.v2.Batch;
-import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
-import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -76,7 +73,6 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -90,6 +86,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
+ *
  */
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
@@ -169,82 +166,29 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
-  {
-    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
-    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
-    return connector.retryWithHandle(
-        handle -> {
-          Query<Map<String, Object>> query = handle
-              .createQuery(queryString)
-              .bind("dataSource", dataSource);
-          return query
-              .map((int index, ResultSet r, StatementContext ctx) ->
-                       new Pair<>(
-                           JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
-                           r.getString("created_date")
-                       )
-              )
-              .list();
-        }
-    );
-  }
-
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+    final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
-          // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
-          // Some databases can only use an index on one of the columns. An additional condition provides
-          // explicit knowledge that 'start' cannot be greater than 'end'.
-          return handle
-              .createQuery(
-                  StringUtils.format(
-                      "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
-                      + "and start <= :end and %2$send%2$s <= :end and used = false",
-                      dbTables.getSegmentsTable(),
-                      connector.getQuoteString()
-                  )
-              )
-              .setFetchSize(connector.getStreamingFetchSize())
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
-              .fold(
-                  new ArrayList<>(),
-                  (Folder3<List<DataSegment>, byte[]>) (accumulator, payload, foldController, statementContext) -> {
-                      accumulator.add(JacksonUtils.readValue(jsonMapper, payload, DataSegment.class));
-                      return accumulator;
-                  }
-              );
+          try (final CloseableIterator<DataSegment> iterator =
+                   SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval))) {
+            return ImmutableList.copyOf(iterator);
+          }
         }
     );
 
-    log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    log.info("Found %,d unused segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
     return matchingSegments;
   }
 
   @Override
   public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
   {
-    int numSegmentsMarkedUnused = connector.retryTransaction(
-        (handle, status) -> {
-          return handle
-              .createStatement(
-                  StringUtils.format(
-                      "UPDATE %s SET used=false WHERE dataSource = :dataSource "
-                      + "AND start >= :start AND %2$send%2$s <= :end",
-                      dbTables.getSegmentsTable(),
-                      connector.getQuoteString()
-                  )
-              )
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
-              .execute();
-        },
+    final Integer numSegmentsMarkedUnused = connector.retryTransaction(
+        (handle, status) ->
+            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                    .markSegmentsUnused(dataSource, interval),
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
@@ -292,14 +236,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
-  )
+  ) throws IOException
   {
-    Query<Map<String, Object>> sql = createUsedSegmentsSqlQueryForIntervals(handle, dataSource, intervals);
-
-    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
-      return VersionedIntervalTimeline.forSegments(
-          Iterators.transform(dbSegments, payload -> JacksonUtils.readValue(jsonMapper, payload, DataSegment.class))
-      );
+    try (final CloseableIterator<DataSegment> iterator =
+             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                     .retrieveUsedSegments(dataSource, intervals)) {
+      return VersionedIntervalTimeline.forSegments(iterator);
     }
   }
 
@@ -307,50 +249,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
-  )
+  ) throws IOException
   {
-    return createUsedSegmentsSqlQueryForIntervals(handle, dataSource, intervals)
-        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class))
-        .list();
-  }
-
-  /**
-   * Creates a query to the metadata store which selects payload from the segments table for all segments which are
-   * marked as used and whose interval intersects (not just abuts) with any of the intervals given to this method.
-   */
-  private Query<Map<String, Object>> createUsedSegmentsSqlQueryForIntervals(
-      Handle handle,
-      String dataSource,
-      List<Interval> intervals
-  )
-  {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ?");
-    if (!intervals.isEmpty()) {
-      sb.append(" AND (");
-      for (int i = 0; i < intervals.size(); i++) {
-        sb.append(
-            StringUtils.format("(start < ? AND %1$send%1$s > ?)", connector.getQuoteString())
-        );
-        if (i == intervals.size() - 1) {
-          sb.append(")");
-        } else {
-          sb.append(" OR ");
-        }
-      }
+    try (final CloseableIterator<DataSegment> iterator =
+             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                     .retrieveUsedSegments(dataSource, intervals)) {
+      final List<DataSegment> retVal = new ArrayList<>();
+      iterator.forEachRemaining(retVal::add);
+      return retVal;
     }
-
-    Query<Map<String, Object>> sql = handle
-        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
-        .bind(0, dataSource);
-
-    for (int i = 0; i < intervals.size(); i++) {
-      Interval interval = intervals.get(i);
-      sql = sql
-          .bind(2 * i + 1, interval.getEnd().toString())
-          .bind(2 * i + 2, interval.getStart().toString());
-    }
-    return sql;
   }
 
   @Override
@@ -907,13 +814,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         if (versionCompare != 0) {
                           return versionCompare;
                         } else {
-                          return Integer.compare(id1.getShardSpec().getPartitionNum(), id2.getShardSpec().getPartitionNum());
+                          return Integer.compare(
+                              id1.getShardSpec().getPartitionNum(),
+                              id2.getShardSpec().getPartitionNum()
+                          );
                         }
                       })
                       .orElse(null);
 
       // Find the major version of existing segments
-      @Nullable final String versionOfExistingChunks;
+      @Nullable
+      final String versionOfExistingChunks;
       if (!existingChunks.isEmpty()) {
         versionOfExistingChunks = existingChunks.get(0).getVersion();
       } else if (!pendings.isEmpty()) {
@@ -1033,7 +944,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
               dbTables.getSegmentsTable(),
               connector.getQuoteString()
           )
@@ -1080,14 +991,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     Set<String> existedSegments = new HashSet<>();
 
-    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
+    List<List<DataSegment>> segmentsLists = Lists.partition(
+        new ArrayList<>(segments),
+        MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
+    );
     for (List<DataSegment> segmentList : segmentsLists) {
       String segmentIds = segmentList.stream()
-          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
-          .collect(Collectors.joining(","));
-      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
-          .mapTo(String.class)
-          .list();
+                                     .map(segment -> "'"
+                                                     + StringEscapeUtils.escapeSql(segment.getId().toString())
+                                                     + "'")
+                                     .collect(Collectors.joining(","));
+      List<String> existIds = handle.createQuery(StringUtils.format(
+                                        "SELECT id FROM %s WHERE id in (%s)",
+                                        dbTables.getSegmentsTable(),
+                                        segmentIds
+                                    ))
+                                    .mapTo(String.class)
+                                    .list();
       existedSegments.addAll(existIds);
     }
     return existedSegments;
@@ -1097,7 +1017,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Read dataSource metadata. Returns null if there is no metadata.
    */
   @Override
-  public @Nullable DataSourceMetadata retrieveDataSourceMetadata(final String dataSource)
+  public @Nullable
+  DataSourceMetadata retrieveDataSourceMetadata(final String dataSource)
   {
     final byte[] bytes = connector.lookup(
         dbTables.getDataSourceTable(),
@@ -1116,7 +1037,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
    */
-  private @Nullable byte[] retrieveDataSourceMetadataWithHandleAsBytes(
+  private @Nullable
+  byte[] retrieveDataSourceMetadataWithHandleAsBytes(
       final Handle handle,
       final String dataSource
   )
@@ -1269,7 +1191,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
       final Handle handle,
-      final Set<DataSegment> segmentsToDrop,
+      final Collection<DataSegment> segmentsToDrop,
       final String dataSource
   )
   {
@@ -1288,18 +1210,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
       return DataStoreMetadataUpdateResult.FAILURE;
     }
-    final List<String> segmentIdList = segmentsToDrop.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList());
-    Batch batch = handle.createBatch();
-    segmentIdList.forEach(segmentId -> batch.add(
-        StringUtils.format(
-            "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s'",
-            dbTables.getSegmentsTable(),
-            dataSource,
-            segmentId
-        )
-    ));
-    final int[] segmentChanges = batch.execute();
-    int numChangedSegments = SqlSegmentsMetadataManager.computeNumChangedSegments(segmentIdList, segmentChanges);
+
+    final int numChangedSegments =
+        SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper).markSegments(
+            segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList()),
+            false
+        );
+
     if (numChangedSegments != segmentsToDrop.size()) {
       log.warn("Failed to drop segments metadata update as numChangedSegments[%s] segmentsToDropSize[%s]",
                numChangedSegments,

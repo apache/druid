@@ -100,4 +100,26 @@ public class DateTimesTest
     String invalid = "51729200AZ";
     DateTimes.of(invalid);
   }
+
+  public void testCanCompareAsString()
+  {
+    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.EPOCH));
+    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("0")));
+
+    // Sanity test: make sure year 0 prints with four 0s.
+    Assert.assertEquals("2000-01-01T00:00:00Z", DateTimes.of("0").toString());
+
+    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("9999")));
+    Assert.assertTrue(DateTimes.canCompareAsString(DateTimes.of("2000")));
+
+    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.MIN));
+    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.MAX));
+    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.of("-1")));
+    Assert.assertFalse(DateTimes.canCompareAsString(DateTimes.of("10000")));
+
+    // Can't compare as string with mixed time zones.
+    Assert.assertFalse(DateTimes.canCompareAsString(
+        DateTimes.of("2000").withZone(DateTimeZone.forID("America/Los_Angeles")))
+    );
+  }
 }

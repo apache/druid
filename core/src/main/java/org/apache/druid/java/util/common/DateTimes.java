@@ -24,6 +24,7 @@ import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Months;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
@@ -65,8 +66,9 @@ public final class DateTimes
   /**
    * @return The dateTimezone for the provided {@param tzId}. If {@param fallback} is true, the default timezone
    * will be returned if the tzId does not match a supported timezone.
+   *
    * @throws IllegalArgumentException if {@param fallback} is false and the provided tzId doesn't match a supported
-   * timezone.
+   *                                  timezone.
    */
   @SuppressForbidden(reason = "DateTimeZone#forID")
   public static DateTimeZone inferTzFromString(String tzId, boolean fallback) throws IllegalArgumentException
@@ -171,6 +173,21 @@ public final class DateTimes
     DateTime time2 = new DateTime(timestamp2, timeZone);
 
     return Months.monthsBetween(time1, time2).getMonths();
+  }
+
+  /**
+   * Returns true if the provided DateTime can be compared against other DateTimes using its string representation.
+   * Useful when generating SQL queries to the metadata store, or any other situation where time comparisons on
+   * string representations might be useful.
+   *
+   * Conditions: the datetime must be between years 0 and 9999 (inclusive) and must be in the ISO UTC chronology.
+   *
+   * See also {@link Intervals#canCompareEndpointsAsStrings(Interval)}.
+   */
+  public static boolean canCompareAsString(final DateTime dateTime)
+  {
+    return dateTime.getYear() >= 0 && dateTime.getYear() < 10000
+           && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
   }
 
   private DateTimes()
