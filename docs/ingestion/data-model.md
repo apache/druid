@@ -1,3 +1,4 @@
+---
 id: data-model
 title: "Druid data model"
 sidebar_label: Data model
