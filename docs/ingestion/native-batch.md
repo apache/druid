@@ -377,7 +377,7 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 > the `partitionDimension` at query time.  While it is possible to concatenate values from multiple
 > dimensions into a single new dimension that you then opt to specify in `partitionDimension`, remember that you
 > must use that new `partitionDimension` dimension in your
-> [native filter](https://druid.apache.org/docs/latest/querying/filters.html) /
+> [native filter](../querying/filters.md) /
 > [WHERE clause](https://druid.apache.org/docs/latest/querying/sql.html#where).
 
 |property|description|default|required?|
