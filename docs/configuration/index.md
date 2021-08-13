@@ -2052,6 +2052,7 @@ Supported query contexts:
 |`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|{"_default_tier": "<defaultBrokerServiceName>"}|
 |`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
 |`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
+|`druid.router.sql.enable`|Enable routing of SQL queries. Possible values are `true` and `false`. When set to `true`, the Router uses the provided strategies to determine the broker service for a given SQL query.|`false`|
 |`druid.router.strategies`|Please see [Router Strategies](../design/router.md#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
 |`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|rendezvousHash|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|

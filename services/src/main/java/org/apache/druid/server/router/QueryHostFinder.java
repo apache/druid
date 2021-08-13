@@ -25,9 +25,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.sql.http.SqlQuery;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -66,21 +66,20 @@ public class QueryHostFinder
 
   public Collection<Server> getAllServers()
   {
-    return ((Collection<List<Server>>) hostSelector.getAllBrokers().values()).stream()
-                                                                             .flatMap(Collection::stream)
-                                                                             .collect(Collectors.toList());
+    return hostSelector.getAllBrokers().values().stream()
+                       .flatMap(Collection::stream)
+                       .collect(Collectors.toList());
   }
 
   public Server findServerAvatica(String connectionId)
   {
     Server chosenServer = avaticaConnectionBalancer.pickServer(getAllServers(), connectionId);
-    if (chosenServer == null) {
-      log.makeAlert(
-          "Catastrophic failure! No servers found at all! Failing request!"
-      ).emit();
+    assertServerFound(
+        chosenServer,
+        "No server found for Avatica request with connectionId[%s]",
+        connectionId
+    );
 
-      throw new ISE("No server found for Avatica request with connectionId[%s]", connectionId);
-    }
     log.debug(
         "Balancer class [%s] sending request with connectionId[%s] to server: %s",
         avaticaConnectionBalancer.getClass(),
@@ -90,35 +89,24 @@ public class QueryHostFinder
     return chosenServer;
   }
 
+  public Server findServerSql(SqlQuery sqlQuery)
+  {
+    Server server = findServerInner(hostSelector.selectForSql(sqlQuery));
+    assertServerFound(server, "No server found for SQL Query [%s]", "SELECT IT");
+    return server;
+  }
+
   public <T> Server pickServer(Query<T> query)
   {
     Server server = findServer(query);
-
-    if (server == null) {
-      log.makeAlert(
-          "Catastrophic failure! No servers found at all! Failing request!"
-      ).emit();
-
-      throw new ISE("No server found for query[%s]", query);
-    }
-
-    log.debug("Selected [%s]", server.getHost());
-
+    assertServerFound(server, "No server found for query[%s]", query);
     return server;
   }
 
   public Server pickDefaultServer()
   {
     Server server = findDefaultServer();
-
-    if (server == null) {
-      log.makeAlert(
-          "Catastrophic failure! No servers found at all! Failing request!"
-      ).emit();
-
-      throw new ISE("No default server found!");
-    }
-
+    assertServerFound(server, "No default server found!");
     return server;
   }
 
@@ -154,5 +142,19 @@ public class QueryHostFinder
     }
 
     return server;
+  }
+
+  private void assertServerFound(Server server, String messageFormat, Object... args)
+  {
+    if (server != null) {
+      log.debug("Selected [%s]", server.getHost());
+      return;
+    }
+
+    log.makeAlert(
+        "Catastrophic failure! No servers found at all! Failing request!"
+    ).emit();
+
+    throw new ISE(messageFormat, args);
   }
 }

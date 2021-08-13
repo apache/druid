@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 import org.apache.druid.query.Query;
+import org.apache.druid.sql.http.SqlQuery;
 
 /**
  */
@@ -36,5 +37,27 @@ import org.apache.druid.query.Query;
 
 public interface TieredBrokerSelectorStrategy
 {
+
+  /**
+   * Tries to determine the name of the Broker service to which the given native
+   * query should be routed.
+   *
+   * @param config Config containing tier to broker service map
+   * @param query  Native (JSON) query to be routed
+   * @return An empty Optional if the service name could not be determined.
+   */
   Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
+
+  /**
+   * Tries to determine the name of the Broker service to which the given SqlQuery
+   * should be routed. The default implementation returns an empty Optional.
+   *
+   * @param config   Config containing tier to broker service map
+   * @param sqlQuery SQL query to be routed
+   * @return An empty Optional if the service name could not be determined.
+   */
+  default Optional<String> getBrokerServiceName(TieredBrokerConfig config, SqlQuery sqlQuery)
+  {
+    return Optional.absent();
+  }
 }
