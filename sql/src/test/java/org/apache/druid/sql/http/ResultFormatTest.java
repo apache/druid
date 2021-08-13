@@ -21,42 +21,50 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.util.EnumSet;
-import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@RunWith(JUnitParamsRunner.class)
 public class ResultFormatTest
 {
-  @Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder()
-  {
-    return EnumSet.allOf(ResultFormat.class)
-                  .stream()
-                  .map(format -> new Object[]{format})
-                  .collect(Collectors.toList());
-  }
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private final ResultFormat target;
-
-  public ResultFormatTest(ResultFormat target)
-  {
-    this.target = target;
-  }
 
   @Test
-  public void testSerde() throws JsonProcessingException
+  @Parameters(source = ResultFormatTypeProvider.class)
+  public void testSerde(ResultFormat target) throws JsonProcessingException
   {
     final String json = jsonMapper.writeValueAsString(target);
     Assert.assertEquals(StringUtils.format("\"%s\"", target.toString()), json);
     Assert.assertEquals(target, jsonMapper.readValue(json, ResultFormat.class));
+  }
+
+  @Test
+  public void testDeserializeWithDifferentCase() throws JsonProcessingException
+  {
+    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"OBJECTLINES\"", ResultFormat.class));
+    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectLines\"", ResultFormat.class));
+    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectlines\"", ResultFormat.class));
+    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"oBjEcTlInEs\"", ResultFormat.class));
+  }
+
+  public static class ResultFormatTypeProvider
+  {
+    @UsedByJUnitParamsRunner
+    public static Object[] provideResultFormats()
+    {
+      return EnumSet.allOf(ResultFormat.class)
+                    .stream()
+                    .map(format -> new Object[]{format})
+                    .toArray(Object[]::new);
+    }
   }
 }
