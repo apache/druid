@@ -374,7 +374,7 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 > review the distribution of values in your source data before deciding on a partitioning strategy.
 
 > In order for segment pruning to be effective and translate into better query performance, you _must_ use
-> the `partitionDimension` at query time.  While it is possible to concatenate values from multiple
+> the `partitionDimension` at query time.  You can concatenate values from multiple
 > dimensions into a new dimension to use as the `partitionDimension`. In this case, you
 > must use that new `partitionDimension` dimension in your
 > [native filter](../querying/filters.md) /
