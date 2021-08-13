@@ -271,7 +271,7 @@ public class TieredBrokerHostSelector
   public Pair<String, Server> selectForSql(SqlQuery sqlQuery)
   {
     synchronized (lock) {
-      if (!ruleManager.isStarted() || !started) {
+      if (!started) {
         return getDefaultLookup();
       }
     }
