@@ -413,6 +413,10 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`BITWISE_SHIFT_LEFT(expr1, expr2)`|Returns the result of `expr1 << expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_SHIFT_RIGHT(expr1, expr2)`|Returns the result of `expr1 >> expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_XOR(expr1, expr2)`|Returns the result of `expr1 ^ expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
+|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of [0,3] (default: 2). |
+|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
+|`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of [0,3] (default: 2). |
+
 
 ### String functions
 
