@@ -94,12 +94,19 @@ The remaining examples of authenticator configuration use either `MyBasicMetadat
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
 
 ##### Credential iterations and API performance
-The credential iterations setting affects API performance, including query times. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords, but it adds latency.
 
-You can decrease the number of iterations to speed up API response times, but it potentially exposes your system to dictionary attacks. Therefore, only reduce the number of iterations if your environment fits one of the following conditions:
+As noted above, `credentialIterations` determines the number of iterations used to hash a password. A higher number increases security, but costs more in terms of CPU utilization. 
+
+This cost affects API performance, including query times. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords.
+
+You can decrease the number of iterations to speed up API response times, but it may expose your system to dictionary attacks. Therefore, only reduce the number of iterations if your environment fits one of the following conditions:
 - **All** passwords are long and random which make them as safe as a randomly-generated token.
 - You have secured network access to Druid so that no attacker can execute a dictionary attack against it.
+
+It is important to note that changing the `credentialIterations` value only affects the number of password hashing iterations of newly created users or users who have updated their password via the `/druid-ext/basic-security/authentication/db/basic/users/{userName}/credentials` endpoint after you change the setting. 
+
 #### Properties for LDAP user authentication
+
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
