@@ -375,7 +375,7 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 
 > In order for segment pruning to be effective and translate into better query performance, you _must_ use
 > the `partitionDimension` at query time.  While it is possible to concatenate values from multiple
-> dimensions into a single new dimension that you then opt to specify in `partitionDimension`, remember that you
+> dimensions into a new dimension to use as the `partitionDimension`. In this case, you
 > must use that new `partitionDimension` dimension in your
 > [native filter](../querying/filters.md) /
 > [WHERE clause](../querying/sql.md#where).
