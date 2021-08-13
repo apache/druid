@@ -32,14 +32,12 @@ When you disable rollup, Druid loads each row as-is without doing any form of pr
 
 ## Maximizing rollup ratio
 
-To measure the rollup ratio of a datasource, compare the number of rows in Druid with the number of ingested events. The higher this result, the more benefit you are gaining from rollup. For example you can run the following [Druid SQL](../querying/sql.md) query after ingestion:
+To measure the rollup ratio of a datasource compare the number of rows in Druid (`COUNT`) with the number of ingested events. For example, run a [Druid SQL](../querying/sql.md) query where "count" refers to a `count`-type metric generated at ingestion time as follows:
 
 ```sql
-SELECT SUM("cnt") / COUNT(*) * 1.0 FROM datasource
+SELECT SUM("cnt") / (COUNT(*) * 1.0) FROM datasource
 ```
-
-In this query, `cnt` refers to a "count" type metric from your ingestion spec. See
-[Counting the number of ingested events](schema-design.md#counting) on the "Schema design" page for more details about how counting works when rollup is enabled.
+The higher the result, the greater the benefit you gain from rollup. See [Counting the number of ingested events](schema-design.md#counting) for more details about how counting works with rollup is enabled.
 
 Tips for maximizing rollup:
 
