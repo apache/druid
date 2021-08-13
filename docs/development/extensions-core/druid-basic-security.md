@@ -103,7 +103,7 @@ You can decrease the number of iterations to speed up API response times, but it
 - **All** passwords are long and random which make them as safe as a randomly-generated token.
 - You have secured network access to Druid so that no attacker can execute a dictionary attack against it.
 
-It is important to note that changing the `credentialIterations` value only affects the number of password hashing iterations of newly created users or users who have updated their password via the `/druid-ext/basic-security/authentication/db/basic/users/{userName}/credentials` endpoint after you change the setting. 
+If Druid uses the default credentials validator (i.e., `credentialsValidator.type=metadata`), changing the `credentialIterations` value affects the number of hashing iterations only for users created after the change or for users who subsequently update their passwords via the `/druid-ext/basic-security/authentication/db/basic/users/{userName}/credentials` endpoint. If Druid uses the `ldap` validator, the change applies to any user at next log in (as well as to new users or users who update their passwords).
 
 #### Properties for LDAP user authentication
 
