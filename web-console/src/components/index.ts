@@ -25,6 +25,7 @@ export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
 export * from './external-link/external-link';
 export * from './form-json-selector/form-json-selector';
+export * from './formatted-input-group/formatted-input-group';
 export * from './header-bar/header-bar';
 export * from './highlight-text/highlight-text';
 export * from './json-collapse/json-collapse';

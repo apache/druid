@@ -35,21 +35,25 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
@@ -87,7 +91,7 @@ public class DruidJoinRule extends RelOptRule
     // 1) Can handle the join condition as a native join.
     // 2) Left has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
     // 3) Right has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
-    return canHandleCondition(join.getCondition(), join.getLeft().getRowType())
+    return canHandleCondition(join.getCondition(), join.getLeft().getRowType(), right)
            && left.getPartialDruidQuery() != null
            && right.getPartialDruidQuery() != null;
   }
@@ -108,7 +112,7 @@ public class DruidJoinRule extends RelOptRule
 
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
-    ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
+    ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType(), right).get();
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
@@ -195,21 +199,22 @@ public class DruidJoinRule extends RelOptRule
    * Returns whether {@link #analyzeCondition} would return something.
    */
   @VisibleForTesting
-  static boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType)
+  static boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
   {
-    return analyzeCondition(condition, leftRowType).isPresent();
+    return analyzeCondition(condition, leftRowType, right).isPresent();
   }
 
   /**
    * If this condition is an AND of some combination of (1) literals; (2) equality conditions of the form
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  private static Optional<ConditionAnalysis> analyzeCondition(final RexNode condition, final RelDataType leftRowType)
+  private static Optional<ConditionAnalysis> analyzeCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
     final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();
     final List<RexLiteral> literalSubConditions = new ArrayList<>();
     final int numLeftFields = leftRowType.getFieldCount();
+    final Set<RexInputRef> rightColumns = new HashSet<>();
 
     for (RexNode subCondition : subConditions) {
       if (RexUtil.isLiteral(subCondition, true)) {
@@ -243,12 +248,29 @@ public class DruidJoinRule extends RelOptRule
 
       if (isLeftExpression(operands.get(0), numLeftFields) && isRightInputRef(operands.get(1), numLeftFields)) {
         equalitySubConditions.add(Pair.of(operands.get(0), (RexInputRef) operands.get(1)));
+        rightColumns.add((RexInputRef) operands.get(1));
       } else if (isRightInputRef(operands.get(0), numLeftFields)
                  && isLeftExpression(operands.get(1), numLeftFields)) {
         equalitySubConditions.add(Pair.of(operands.get(1), (RexInputRef) operands.get(0)));
+        rightColumns.add((RexInputRef) operands.get(0));
       } else {
         // Cannot handle this condition.
         return Optional.empty();
+      }
+    }
+
+    // if the the right side requires a subquery, then even lookup will transformed to a QueryDataSource
+    // thereby allowing join conditions on both k and v columns of the lookup
+    if (right != null && !DruidJoinQueryRel.computeRightRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(right))
+        && right instanceof DruidQueryRel) {
+      DruidQueryRel druidQueryRel = (DruidQueryRel) right;
+      if (druidQueryRel.getDruidTable().getDataSource() instanceof LookupDataSource) {
+        long distinctRightColumns = rightColumns.stream().map(RexSlot::getIndex).distinct().count();
+        if (distinctRightColumns > 1) {
+          // it means that the join's right side is lookup and the join condition contains both key and value columns of lookup.
+          // currently, the lookup datasource in the native engine doesn't support using value column in the join condition.
+          return Optional.empty();
+        }
       }
     }
 

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`services view action services view 1`] = `
+exports[`ServicesView renders data 1`] = `
 <div
   className="services-view app-view"
 >
@@ -207,7 +207,40 @@ exports[`services view action services view 1`] = `
         },
       ]
     }
-    data={Array []}
+    data={
+      Array [
+        Array [
+          Object {
+            "curr_size": 0,
+            "host": "localhost",
+            "is_leader": 0,
+            "max_size": 0,
+            "plaintext_port": 8082,
+            "rank": 5,
+            "service": "localhost:8082",
+            "service_type": "broker",
+            "tier": null,
+            "tls_port": -1,
+          },
+          Object {
+            "curr_size": 179744287,
+            "host": "localhost",
+            "is_leader": 0,
+            "max_size": 3000000000n,
+            "plaintext_port": 8083,
+            "rank": 4,
+            "segmentsToDrop": 0,
+            "segmentsToDropSize": 0,
+            "segmentsToLoad": 0,
+            "segmentsToLoadSize": 0,
+            "service": "localhost:8083",
+            "service_type": "historical",
+            "tier": "_default_tier",
+            "tls_port": -1,
+          },
+        ],
+      ]
+    }
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
@@ -252,7 +285,7 @@ exports[`services view action services view 1`] = `
     getTrProps={[Function]}
     groupedByPivotKey="_groupedByPivot"
     indexKey="_index"
-    loading={true}
+    loading={false}
     loadingText="Loading..."
     multiSort={true}
     nestingLevelKey="_nestingLevel"

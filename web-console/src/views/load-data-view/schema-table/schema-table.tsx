@@ -45,14 +45,8 @@ export interface SchemaTableProps {
   selectedDimensionSpecIndex: number;
   selectedMetricSpecIndex: number;
   onAutoDimensionSelect: (dimensionName: string) => void;
-  onDimensionSelect: (
-    selectedDimensionSpec: DimensionSpec | undefined,
-    selectedDimensionSpecIndex: number,
-  ) => void;
-  onMetricSelect: (
-    selectedMetricSpec: MetricSpec | undefined,
-    selectedMetricSpecIndex: number,
-  ) => void;
+  onDimensionSelect: (dimensionSpec: DimensionSpec, index: number) => void;
+  onMetricSelect: (metricSpec: MetricSpec, index: number) => void;
 }
 
 export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {

@@ -232,7 +232,7 @@ exports[`retention dialog matches snapshot 1`] = `
                               </span>
                             </div>
                             <div
-                              class="bp3-input-group suggestible-input"
+                              class="bp3-input-group formatted-input-group suggestible-input"
                             >
                               <input
                                 class="bp3-input"

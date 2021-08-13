@@ -9,3 +9,7 @@ updates:
       # pin ZooKeeper dependencies to 3.5.x
       - dependency-name: "org.apache.zookeeper"
         versions: "[3.6,)"
+      # pin Jetty dependencies to 9.4.x
+      - dependency-name: "org.eclipse.jetty"
+        versions: "[9.5,)"
+      - dependency-name: "org.apache.hadoop"

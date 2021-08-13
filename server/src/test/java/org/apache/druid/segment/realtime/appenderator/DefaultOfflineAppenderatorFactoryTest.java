@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -43,7 +42,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -170,13 +168,13 @@ public class DefaultOfflineAppenderatorFactoryTest
           "A",
           new LinearShardSpec(0)
       );
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(identifier, AppenderatorTest.ir("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(identifier, AppenderatorTest.ir("2000", "baz", 1), Suppliers.ofInstance(Committers.nil()));
-      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "bar", 1), null);
+      Assert.assertEquals(1, ((BatchAppenderator) appenderator).getRowsInMemory());
+      appenderator.add(identifier, StreamAppenderatorTest.ir("2000", "baz", 1), null);
+      Assert.assertEquals(2, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.close();
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
     }
     finally {
       appenderator.close();

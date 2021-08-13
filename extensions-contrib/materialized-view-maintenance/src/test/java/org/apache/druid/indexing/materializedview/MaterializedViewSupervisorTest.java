@@ -257,7 +257,7 @@ public class MaterializedViewSupervisorTest
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskStorage.getStatus("test_task1"))
-            .andReturn(Optional.of(TaskStatus.failure("test_task1")))
+            .andReturn(Optional.of(TaskStatus.failure("test_task1", "Dummy task status failure err message")))
             .anyTimes();
     EasyMock.expect(taskStorage.getStatus("test_task2"))
             .andReturn(Optional.of(TaskStatus.running("test_task2")))
