@@ -20,16 +20,34 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
 import java.util.Collections;
 
-public class PartialGenericSegmentMergeIngestionSpecTest
+@RunWith(Parameterized.class)
+public class PartialSegmentMergeIngestionSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
+
+  @Parameterized.Parameters(name = "partitionLocation = {0}")
+  public static Iterable<? extends Object> data()
+  {
+    return Arrays.asList(
+        GENERIC_PARTITION_LOCATION,
+        DEEP_STORE_PARTITION_LOCATION
+    );
+  }
+
+  @Parameterized.Parameter
+  public PartitionLocation partitionLocation;
+
   private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
       ParallelIndexTestingFactory.HOST,
       ParallelIndexTestingFactory.PORT,
@@ -38,24 +56,32 @@ public class PartialGenericSegmentMergeIngestionSpecTest
       ParallelIndexTestingFactory.INTERVAL,
       ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
   );
-  private static final PartialGenericSegmentMergeIOConfig IO_CONFIG =
-      new PartialGenericSegmentMergeIOConfig(Collections.singletonList(GENERIC_PARTITION_LOCATION));
-  private static final HashedPartitionsSpec PARTITIONS_SPEC = new HashedPartitionsSpec(
-      null,
-      1,
-      Collections.emptyList()
+
+  private static final DeepStoragePartitionLocation DEEP_STORE_PARTITION_LOCATION = new DeepStoragePartitionLocation(
+      ParallelIndexTestingFactory.SUBTASK_ID,
+      ParallelIndexTestingFactory.INTERVAL,
+      ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC,
+      ImmutableMap.of()
   );
 
-  private PartialGenericSegmentMergeIngestionSpec target;
+  private PartialSegmentMergeIngestionSpec target;
+  private PartialSegmentMergeIOConfig ioConfig;
+  private HashedPartitionsSpec partitionsSpec;
 
   @Before
   public void setup()
   {
-    target = new PartialGenericSegmentMergeIngestionSpec(
+    ioConfig = new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));
+    partitionsSpec = new HashedPartitionsSpec(
+        null,
+        1,
+        Collections.emptyList()
+    );
+    target = new PartialSegmentMergeIngestionSpec(
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
-        IO_CONFIG,
+        ioConfig,
         new ParallelIndexTestingFactory.TuningConfigBuilder()
-            .partitionsSpec(PARTITIONS_SPEC)
+            .partitionsSpec(partitionsSpec)
             .build()
     );
   }

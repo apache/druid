@@ -240,6 +240,7 @@ datasketches
 datasource
 datasources
 dbcp
+deepstore
 denormalization
 denormalize
 denormalized
@@ -427,6 +428,7 @@ unintuitive
 unioned
 unmergeable
 unmerged
+UNNEST
 unparseable
 unparsed
 unsetting

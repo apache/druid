@@ -20,28 +20,27 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class GenericPartitionLocationTest
+public class DeepStoragePartitionLocationTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
-  private GenericPartitionLocation target;
+  private DeepStoragePartitionLocation target;
 
   @Before
   public void setup()
   {
-    target = new GenericPartitionLocation(
-        ParallelIndexTestingFactory.HOST,
-        ParallelIndexTestingFactory.PORT,
-        ParallelIndexTestingFactory.USE_HTTPS,
+    target = new DeepStoragePartitionLocation(
         ParallelIndexTestingFactory.SUBTASK_ID,
         ParallelIndexTestingFactory.INTERVAL,
-        ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
+        ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC,
+        ImmutableMap.of("path", "/test/path")
     );
   }
 
@@ -60,8 +59,8 @@ public class GenericPartitionLocationTest
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(GenericPartitionLocation.class)
-                  .withNonnullFields("host", "port", "useHttps", "subTaskId", "interval", "shardSpec")
+    EqualsVerifier.forClass(DeepStoragePartitionLocation.class)
+                  .withNonnullFields("subTaskId", "interval", "shardSpec", "loadSpec")
                   .usingGetClass()
                   .verify();
   }
