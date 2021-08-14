@@ -59,10 +59,11 @@ public interface GroupByStrategy
    * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
    *                         called on the cached by-segment results. Can be used to distinguish if we are running on
    *                         a broker or data node.
+   * @param bySegment        segment level or result level cache
    *
    * @return true if this strategy is cacheable, otherwise false.
    */
-  boolean isCacheable(boolean willMergeRunners);
+  boolean isCacheable(boolean willMergeRunners, boolean bySegment);
 
   /**
    * Indicates if this query should undergo "mergeResults" or not. Checked by

@@ -86,7 +86,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public boolean isCacheable(boolean willMergeRunners)
+  public boolean isCacheable(boolean willMergeRunners, boolean bySegment)
   {
     return true;
   }

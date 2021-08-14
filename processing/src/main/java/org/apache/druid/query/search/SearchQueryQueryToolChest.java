@@ -139,7 +139,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                                                   : Collections.emptyList();
 
       @Override
-      public boolean isCacheable(SearchQuery query, boolean willMergeRunners)
+      public boolean isCacheable(SearchQuery query, boolean willMergeRunners, boolean bySegment)
       {
         return true;
       }

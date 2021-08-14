@@ -172,9 +172,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public boolean isCacheable(boolean willMergeRunners)
+  public boolean isCacheable(boolean willMergeRunners, boolean bySegment)
   {
-    return willMergeRunners;
+    //disable segment-level cache on borker,
+    //see PR https://github.com/apache/druid/issues/3820
+    return willMergeRunners || !bySegment;
   }
 
   @Override

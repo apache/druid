@@ -108,7 +108,7 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType, true)
            && QueryContexts.isUseCache(query)
            && cacheConfig.isUseCache();
   }
@@ -128,7 +128,7 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType, true)
            && QueryContexts.isPopulateCache(query)
            && cacheConfig.isPopulateCache();
   }
@@ -148,7 +148,7 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType, false)
            && QueryContexts.isUseResultLevelCache(query)
            && cacheConfig.isUseResultLevelCache();
   }
@@ -168,7 +168,7 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType, false)
            && QueryContexts.isPopulateResultLevelCache(query)
            && cacheConfig.isPopulateResultLevelCache();
   }
@@ -181,16 +181,18 @@ public class CacheUtil
    * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
    * @param cacheConfig   current active cache config
    * @param serverType    BROKER or DATA
+   * @param bySegment     segement level or result-level cache
    */
   static <T> boolean isQueryCacheable(
       final Query<T> query,
       @Nullable final CacheStrategy<T, Object, Query<T>> cacheStrategy,
       final CacheConfig cacheConfig,
-      final ServerType serverType
+      final ServerType serverType,
+      final boolean bySegment
   )
   {
     return cacheStrategy != null
-           && cacheStrategy.isCacheable(query, serverType.willMergeRunners())
+           && cacheStrategy.isCacheable(query, serverType.willMergeRunners(), bySegment)
            && cacheConfig.isQueryCacheable(query)
            && query.getDataSource().isCacheable(serverType == ServerType.BROKER);
   }

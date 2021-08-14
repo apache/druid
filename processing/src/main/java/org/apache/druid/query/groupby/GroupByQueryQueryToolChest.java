@@ -505,9 +505,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       private final List<DimensionSpec> dims = query.getDimensions();
 
       @Override
-      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean bySegment)
       {
-        return strategySelector.strategize(query).isCacheable(willMergeRunners);
+        return strategySelector.strategize(query).isCacheable(willMergeRunners, bySegment);
       }
 
       @Override
