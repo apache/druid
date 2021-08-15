@@ -41,12 +41,12 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
 {
-  private static final SettableSupplier<Boolean> FORCE_HASH_BASED_MERGE_SUPPLIER = new SettableSupplier<>();
+  private static final SettableSupplier<Boolean> FORCE_HASH_BASED_MERGE_SUPPLIER = new SettableSupplier<>(false);
 
-  private static final String availableSegmentsInterval = "2021-01-01/P1Y";
-  private static final String publishedSegmentsInterval = "2021-01-02/P1Y";
-  private static final String segmentGranularity = "DAY";
-  private static final int numSegmentsPerInterval = 100;
+  private static final String AVAILABLE_SEGMENTS_INTERVAL = "2021-01-01/P1Y";
+  private static final String PUBLISHED_SEGMENTS_INTERVAL = "2021-01-02/P1Y";
+  private static final String SEGMENT_GRANULARITY = "DAY";
+  private static final int NUM_SEGMENTS_PER_INTERVAL = 100;
 
   @BeforeClass
   public static void setup()
@@ -73,10 +73,10 @@ public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
     };
     setupBenchmark(
         plannerConfig,
-        segmentGranularity,
-        availableSegmentsInterval,
-        publishedSegmentsInterval,
-        numSegmentsPerInterval
+        SEGMENT_GRANULARITY,
+        AVAILABLE_SEGMENTS_INTERVAL,
+        PUBLISHED_SEGMENTS_INTERVAL,
+        NUM_SEGMENTS_PER_INTERVAL
     );
   }
 
