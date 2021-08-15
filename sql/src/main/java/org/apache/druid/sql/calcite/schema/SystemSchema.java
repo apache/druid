@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,7 +27,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
@@ -78,12 +79,14 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -91,11 +94,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -107,27 +111,10 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
-      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
-      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
-          segment.getDataSegment().getDataSource())
-      );
-
   private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR =
       segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSource())
       );
-
-  /**
-   * Booleans constants represented as long type,
-   * where 1 = true and 0 = false to make it easy to count number of segments
-   * which are published, available etc.
-   */
-  private static final long IS_PUBLISHED_FALSE = 0L;
-  private static final long IS_PUBLISHED_TRUE = 1L;
-  private static final long IS_AVAILABLE_TRUE = 1L;
-  private static final long IS_OVERSHADOWED_FALSE = 0L;
-  private static final long IS_OVERSHADOWED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -203,6 +190,7 @@ public class SystemSchema extends AbstractSchema
 
   @Inject
   public SystemSchema(
+      final PlannerConfig config,
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
@@ -216,7 +204,7 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SEGMENTS_TABLE, new SegmentsTable(config, druidSchema, metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
@@ -235,18 +223,21 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
+    private final PlannerConfig config;
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
     public SegmentsTable(
+        PlannerConfig config,
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
+      this.config = config;
       this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
@@ -268,132 +259,135 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      //get available segments from druidSchema
-      final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.getSegmentMetadataSnapshot();
-      final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
-          availableSegmentMetadata.entrySet().iterator();
-
-      // in memory map to store segment data from available segments
-      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
-      for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
-        PartialSegmentData partialSegmentData =
-            new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
-        partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
+      if (metadataView.isCacheEnabled() && !config.isForceHashBasedMergeForSegmentsTable()) {
+        return mergeSortedSegments(root);
+      } else {
+        return hashBasedMergeSegments(root);
       }
-
-      // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator.
-      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
-
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.getTotalSegments());
-
-      final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
-          .transform(val -> {
-            final DataSegment segment = val.getDataSegment();
-            segmentsAlreadySeen.add(segment.getId());
-            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
-            long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
-            if (partialSegmentData != null) {
-              numReplicas = partialSegmentData.getNumReplicas();
-              numRows = partialSegmentData.getNumRows();
-              isAvailable = partialSegmentData.isAvailable();
-              isRealtime = partialSegmentData.isRealtime();
-            }
-            try {
-              return new Object[]{
-                  segment.getId(),
-                  segment.getDataSource(),
-                  segment.getInterval().getStart().toString(),
-                  segment.getInterval().getEnd().toString(),
-                  segment.getSize(),
-                  segment.getVersion(),
-                  (long) segment.getShardSpec().getPartitionNum(),
-                  numReplicas,
-                  numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
-                  isAvailable,
-                  isRealtime,
-                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                  segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
-                  segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
-                  segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
-              };
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
-          });
-
-      final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> getAuthorizedAvailableSegments(
-              availableSegmentEntries,
-              root
-          ))
-          .transform(val -> {
-            if (segmentsAlreadySeen.contains(val.getKey())) {
-              return null;
-            }
-            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
-            final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
-            try {
-              return new Object[]{
-                  val.getKey(),
-                  val.getKey().getDataSource(),
-                  val.getKey().getInterval().getStart().toString(),
-                  val.getKey().getInterval().getEnd().toString(),
-                  val.getValue().getSegment().getSize(),
-                  val.getKey().getVersion(),
-                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
-                  numReplicas,
-                  val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE,
-                  // is_published is false for unpublished segments
-                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
-                  IS_AVAILABLE_TRUE,
-                  val.getValue().isRealtime(),
-                  IS_OVERSHADOWED_FALSE,
-                  // there is an assumption here that unpublished segments are never overshadowed
-                  val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
-                  val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
-                  val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
-                  null // unpublished segments from realtime tasks will not be compacted yet
-              };
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
-          });
-
-      final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
-          Iterables.concat(publishedSegments, availableSegments)
-      );
-
-      return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
-
     }
 
-    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
-        Iterator<SegmentWithOvershadowedStatus> it,
-        DataContext root
-    )
+    /**
+     * When {@link PlannerConfig#isMetadataSegmentCacheEnable()} is set, the published segments and available segments
+     * are sorted in the same order to facilitate merging them using the merge sorted algorithm.
+     */
+    private Enumerable<Object[]> mergeSortedSegments(DataContext root)
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
+      final PeekingIterator<SegmentsTableRow> sortedPublishedSegments = Iterators.peekingIterator(
+          FluentIterable
+              .from(() -> getAuthorizedSegments(
+                  metadataView.getSortedPublishedSegments().iterator(),
+                  root
+              ))
+              .iterator()
+      );
+      final PeekingIterator<SegmentsTableRow> sortedAvailableSegments = Iterators.peekingIterator(
+          FluentIterable
+              .from(() -> getAuthorizedAvailableSegments(
+                  druidSchema.getSortedAvailableSegmentMetadataIterator(),
+                  root
+              ))
+              .transform(entry -> SegmentsTableRow.from(entry.getValue()))
+              .iterator()
       );
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
-          .filterAuthorizedResources(
-              authenticationResult,
-              () -> it,
-              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
-              authorizerMapper
-          );
-      return authorizedSegments.iterator();
+      // We use a specialized iterator to merge sorted iterators for performance
+      // instead of Iterables.mergeSorted() and CombiningIterator.
+      final Iterator<SegmentsTableRow> combiningIterator = new Iterator<SegmentsTableRow>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return sortedAvailableSegments.hasNext() || sortedPublishedSegments.hasNext();
+        }
+
+        @Override
+        public SegmentsTableRow next()
+        {
+          if (sortedAvailableSegments.hasNext() && sortedPublishedSegments.hasNext()) {
+            SegmentsTableRow r1 = sortedAvailableSegments.peek();
+            SegmentsTableRow r2 = sortedPublishedSegments.peek();
+
+            int compare = MetadataSegmentView.SEGMENT_ORDER.compare(r1, r2);
+            if (compare > 0) {
+              return sortedPublishedSegments.next();
+            } else if (compare < 0) {
+              return sortedAvailableSegments.next();
+            } else {
+              return sortedPublishedSegments.next().merge(sortedAvailableSegments.next());
+            }
+          } else if (sortedAvailableSegments.hasNext()) {
+            return sortedAvailableSegments.next();
+          } else if (sortedPublishedSegments.hasNext()) {
+            return sortedPublishedSegments.next();
+          } else {
+            throw new NoSuchElementException();
+          }
+        }
+      };
+      return Linq4j.asEnumerable(transformRows(jsonMapper, () -> combiningIterator));
+    }
+
+    /**
+     * This method uses a hash-based merge algorithm to merge the published segments and available segments.
+     */
+    private Enumerable<Object[]> hashBasedMergeSegments(DataContext root)
+    {
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.getTotalSegments());
+      // We create a snapshot of available segments in druidSchema. This is because the available segments
+      // are stored in a ConcurrentHashMap and the direct lookup on ConcurrentHashMap is much more expensive
+      // than the lookup on HashMap.
+      final Map<SegmentId, AvailableSegmentMetadata> availableSegments = Maps.newHashMapWithExpectedSize(
+          druidSchema.getTotalSegments()
+      );
+      final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> iterator = getAuthorizedAvailableSegments(
+          druidSchema.getAvailableSegmentMetadataIterator(),
+          root
+      );
+      while (iterator.hasNext()) {
+        Entry<SegmentId, AvailableSegmentMetadata> entry = iterator.next();
+        availableSegments.put(entry.getKey(), entry.getValue());
+      }
+
+      final FluentIterable<SegmentsTableRow> publishedSegments = FluentIterable
+          .from(() -> getAuthorizedSegments(metadataView.getPublishedSegmentsIterator(), root))
+          .transform(row -> {
+            final SegmentId segmentId = row.getSegmentId();
+            segmentsAlreadySeen.add(segmentId);
+            final AvailableSegmentMetadata metadata = availableSegments.get(segmentId);
+            if (metadata != null) {
+              return row.merge(metadata);
+            } else {
+              return row;
+            }
+          });
+
+      final FluentIterable<SegmentsTableRow> unpublishedAvailableSegments = FluentIterable
+          .from(availableSegments.entrySet())
+          .filter(entry -> !segmentsAlreadySeen.contains(entry.getKey()))
+          .transform(val -> SegmentsTableRow.from(val.getValue()));
+
+      return Linq4j.asEnumerable(
+          transformRows(jsonMapper, Iterables.concat(publishedSegments, unpublishedAvailableSegments))
+      );
+    }
+
+    private Iterable<Object[]> transformRows(ObjectMapper jsonMapper, Iterable<SegmentsTableRow> rows)
+    {
+      // Serializing objects to string is expensive, so we use caches to avoid serializing the same object
+      // over and over again.
+      Map<DateTime, String> timestampStringCache = new HashMap<>();
+      Map<List<String>, String> dimensionsStringCache = new HashMap<>();
+      Map<List<String>, String> metricsStringCache = new HashMap<>();
+      Map<CompactionState, String> compactionStateStringCache = new HashMap<>();
+      return FluentIterable
+          .from(rows)
+          .transform(row -> row.toObjectArray(
+              jsonMapper,
+              timestampStringCache,
+              dimensionsStringCache,
+              metricsStringCache,
+              compactionStateStringCache
+          ));
     }
 
     private Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(
@@ -401,67 +395,51 @@ public class SystemSchema extends AbstractSchema
         DataContext root
     )
     {
+      return filterAuthorized(
+          root,
+          availableSegmentEntries,
+          segment ->
+              Collections.singletonList(
+                  AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource())
+              )
+      );
+    }
+
+    private Iterator<SegmentsTableRow> getAuthorizedSegments(
+        Iterator<SegmentsTableRow> segmentRows,
+        DataContext root
+    )
+    {
+      return filterAuthorized(
+          root,
+          segmentRows,
+          segment ->
+              Collections.singletonList(
+                  AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentId().getDataSource())
+              )
+      );
+    }
+
+    private <T> Iterator<T> filterAuthorized(
+        DataContext root,
+        Iterator<T> iterator,
+        Function<T, Iterable<ResourceAction>> resourceActionGenerator
+    )
+    {
       final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
           root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
           "authenticationResult in dataContext"
       );
 
-      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment ->
-          Collections.singletonList(
-              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource())
-          );
-
-      final Iterable<Entry<SegmentId, AvailableSegmentMetadata>> authorizedSegments =
+      final Iterable<T> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
-              () -> availableSegmentEntries,
-              raGenerator,
+              () -> iterator,
+              resourceActionGenerator,
               authorizerMapper
           );
 
       return authorizedSegments.iterator();
-    }
-
-    private static class PartialSegmentData
-    {
-      private final long isAvailable;
-      private final long isRealtime;
-      private final long numReplicas;
-      private final long numRows;
-
-      public PartialSegmentData(
-          final long isAvailable,
-          final long isRealtime,
-          final long numReplicas,
-          final long numRows
-      )
-
-      {
-        this.isAvailable = isAvailable;
-        this.isRealtime = isRealtime;
-        this.numReplicas = numReplicas;
-        this.numRows = numRows;
-      }
-
-      public long isAvailable()
-      {
-        return isAvailable;
-      }
-
-      public long isRealtime()
-      {
-        return isRealtime;
-      }
-
-      public long getNumReplicas()
-      {
-        return numReplicas;
-      }
-
-      public long getNumRows()
-      {
-        return numRows;
-      }
     }
   }
 

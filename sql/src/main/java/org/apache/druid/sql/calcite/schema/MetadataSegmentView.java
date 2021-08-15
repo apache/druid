@@ -21,13 +21,14 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
-import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -43,15 +44,17 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
  * This class polls the Coordinator in background to keep the latest published segments.
- * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
+ * Provides {@link #getPublishedSegmentsIterator()} for others to get segments in metadata store.
  *
  * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
  * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
@@ -61,27 +64,39 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class MetadataSegmentView
 {
-
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
+
+  /**
+   * This order must match to the order of segments returned by
+   * {@link DruidSchema#getSortedAvailableSegmentMetadataIterator()}.
+   */
+  static final Comparator<SegmentsTableRow> SEGMENT_ORDER = Comparator
+      .comparing((SegmentsTableRow row) -> row.getSegmentId().getDataSource())
+      .thenComparing(
+          (r1, r2) -> r2.getSegmentId().getInterval().getStart().compareTo(r1.getSegmentId().getInterval().getStart())
+      )
+      .thenComparing(SegmentsTableRow::getSegmentId);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
-
-  private final boolean isCacheEnabled;
-  /**
-   * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
-   * sys.segments queries return the segments in sorted order based on segmentId.
-   *
-   * Volatile since this reference is reassigned in {@code poll()} and then read in {@code getPublishedSegments()}
-   * from other threads.
-   */
-  @MonotonicNonNull
-  private volatile ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
+
+  private final boolean isCacheEnabled;
+  /**
+   * A set to cache published segments when {@link #isCacheEnabled} is set.
+   * This set should be sorted using {@link #SEGMENT_ORDER} which is the same order used
+   * to sort available segments in {@link DruidSchema}, so that the query engine can use
+   * the merge sorted algorithm to merge those two sets of segments.
+   *
+   * Volatile since this reference is reassigned in {@link #poll()} and then read in
+   * {@link #getPublishedSegmentsIterator()} and {@link #getSortedPublishedSegments()} from other threads.
+   */
+  @MonotonicNonNull
+  private volatile ImmutableSortedSet<SegmentsTableRow> publishedSegments = null;
 
   @Inject
   public MetadataSegmentView(
@@ -131,16 +146,22 @@ public class MetadataSegmentView
     log.info("MetadataSegmentView Stopped.");
   }
 
+  @VisibleForTesting
+  void waitForFirstPollToComplete()
+  {
+    Uninterruptibles.awaitUninterruptibly(cachePopulated);
+  }
+
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
+    final Iterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+    final ImmutableSortedSet.Builder<SegmentsTableRow> builder = ImmutableSortedSet.orderedBy(SEGMENT_ORDER);
     while (metadataSegments.hasNext()) {
       final SegmentWithOvershadowedStatus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
@@ -148,28 +169,47 @@ public class MetadataSegmentView
           interned,
           segment.isOvershadowed()
       );
-      builder.add(segmentWithOvershadowedStatus);
+      builder.add(SegmentsTableRow.from(segmentWithOvershadowedStatus));
     }
     publishedSegments = builder.build();
     cachePopulated.countDown();
   }
 
-  Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
+  protected Iterator<SegmentsTableRow> getPublishedSegmentsIterator()
   {
     if (isCacheEnabled) {
-      Uninterruptibles.awaitUninterruptibly(cachePopulated);
-      return publishedSegments.iterator();
+      return getSortedPublishedSegments().iterator();
     } else {
-      return getMetadataSegments(
-          coordinatorDruidLeaderClient,
-          jsonMapper,
-          segmentWatcherConfig.getWatchedDataSources()
-      );
+      return FluentIterable
+          .from(() -> getMetadataSegments(
+              coordinatorDruidLeaderClient,
+              jsonMapper,
+              segmentWatcherConfig.getWatchedDataSources()
+          ))
+          .transform(SegmentsTableRow::from)
+          .iterator();
     }
   }
 
+  /**
+   * Returns the cached published segments as a SortedSet.
+   * This method must be called only when {@link #isCacheEnabled} is set.
+   */
+  protected SortedSet<SegmentsTableRow> getSortedPublishedSegments()
+  {
+    assert isCacheEnabled;
+    waitForFirstPollToComplete();
+    return publishedSegments;
+  }
+
+  protected boolean isCacheEnabled()
+  {
+    return isCacheEnabled;
+  }
+
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
+  @VisibleForTesting
+  protected Iterator<SegmentWithOvershadowedStatus> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       Set<String> watchedDataSources
@@ -221,5 +261,4 @@ public class MetadataSegmentView
       }
     }
   }
-
 }

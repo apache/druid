@@ -32,7 +32,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
-  public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
+  public static final String CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -66,6 +66,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean computeInnerJoinCostAsFilter = true;
+
+  @JsonProperty
+  private boolean forceHashBasedMergeForSegmentsTable = false;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -129,6 +132,11 @@ public class PlannerConfig
     return computeInnerJoinCostAsFilter;
   }
 
+  public boolean isForceHashBasedMergeForSegmentsTable()
+  {
+    return forceHashBasedMergeForSegmentsTable;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -159,9 +167,12 @@ public class PlannerConfig
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(context,
-                                                               CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
-                                                               computeInnerJoinCostAsFilter);
+    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
+        context,
+        CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
+    newConfig.forceHashBasedMergeForSegmentsTable = isForceHashBasedMergeForSegmentsTable();
     return newConfig;
   }
 
@@ -184,7 +195,7 @@ public class PlannerConfig
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -192,23 +203,25 @@ public class PlannerConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final PlannerConfig that = (PlannerConfig) o;
-    return maxTopNLimit == that.maxTopNLimit &&
-           useApproximateCountDistinct == that.useApproximateCountDistinct &&
-           useApproximateTopN == that.useApproximateTopN &&
-           requireTimeCondition == that.requireTimeCondition &&
-           awaitInitializationOnStart == that.awaitInitializationOnStart &&
-           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
-           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
-           serializeComplexValues == that.serializeComplexValues &&
-           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone);
+    PlannerConfig that = (PlannerConfig) o;
+    return maxTopNLimit == that.maxTopNLimit
+           && useApproximateCountDistinct == that.useApproximateCountDistinct
+           && useApproximateTopN == that.useApproximateTopN
+           && requireTimeCondition == that.requireTimeCondition
+           && awaitInitializationOnStart == that.awaitInitializationOnStart
+           && metadataSegmentCacheEnable == that.metadataSegmentCacheEnable
+           && metadataSegmentPollPeriod == that.metadataSegmentPollPeriod
+           && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
+           && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
+           && forceHashBasedMergeForSegmentsTable == that.forceHashBasedMergeForSegmentsTable
+           && serializeComplexValues == that.serializeComplexValues
+           && Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod)
+           && Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         metadataRefreshPeriod,
         maxTopNLimit,
@@ -219,6 +232,9 @@ public class PlannerConfig
         sqlTimeZone,
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
+        useGroupingSetForExactDistinct,
+        computeInnerJoinCostAsFilter,
+        forceHashBasedMergeForSegmentsTable,
         serializeComplexValues
     );
   }
@@ -233,9 +249,12 @@ public class PlannerConfig
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", sqlTimeZone=" + sqlTimeZone +
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
-           ", sqlTimeZone=" + sqlTimeZone +
+           ", useGroupingSetForExactDistinct=" + useGroupingSetForExactDistinct +
+           ", computeInnerJoinCostAsFilter=" + computeInnerJoinCostAsFilter +
+           ", forceHashBasedMerge=" + forceHashBasedMergeForSegmentsTable +
            ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }

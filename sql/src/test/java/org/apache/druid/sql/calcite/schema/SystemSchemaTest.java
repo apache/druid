@@ -120,6 +120,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -139,6 +141,10 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private static final List<InputRow> ROWS3 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "7.0", "dim3", ImmutableList.of("x"))),
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "8.0", "dim3", ImmutableList.of("xyz")))
+  );
+  private static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
+      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "8.0", "dim3", ImmutableList.of("xyz")))
   );
 
@@ -200,7 +206,13 @@ public class SystemSchemaTest extends CalciteTestBase
       @Override
       public Authorizer getAuthorizer(String name)
       {
-        return (authenticationResult, resource, action) -> new Access(true);
+        return (authenticationResult, resource, action) -> {
+          if (resource.getName().equals("forbidden_datasource")) {
+            return new Access(false);
+          } else {
+            return new Access(true);
+          }
+        };
       }
     };
 
@@ -243,11 +255,24 @@ public class SystemSchemaTest extends CalciteTestBase
                                               )
                                               .rows(ROWS3)
                                               .buildMMappedIndex();
+    final QueryableIndex forbiddenIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "3"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
+                .withRollup(false)
+                .build()
+        )
+        .rows(FORBIDDEN_ROWS)
+        .buildMMappedIndex();
 
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
-        .add(segment3, index3);
+        .add(segment3, index3)
+        .add(forbiddenSegment, forbiddenIndex);
 
     druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -263,6 +288,7 @@ public class SystemSchemaTest extends CalciteTestBase
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
     schema = new SystemSchema(
+        PLANNER_CONFIG_DEFAULT,
         druidSchema,
         metadataView,
         serverView,
@@ -364,6 +390,17 @@ public class SystemSchemaTest extends CalciteTestBase
   );
   private final DataSegment segment5 = new DataSegment(
       "test5",
+      Intervals.of("2015/2016"),
+      "version5",
+      null,
+      ImmutableList.of("dim1", "dim2"),
+      ImmutableList.of("met1", "met2"),
+      null,
+      1,
+      100L
+  );
+  private final DataSegment forbiddenSegment = new DataSegment(
+      "forbidden_datasource",
       Intervals.of("2015/2016"),
       "version5",
       null,
@@ -485,7 +522,11 @@ public class SystemSchemaTest extends CalciteTestBase
       1L,
       ImmutableMap.of(
           "dummy",
-          new ImmutableDruidDataSource("dummy", Collections.emptyMap(), Arrays.asList(segment1, segment2))
+          new ImmutableDruidDataSource(
+              "dummy",
+              Collections.emptyMap(),
+              Arrays.asList(segment1, segment2, forbiddenSegment)
+          )
       ),
       2
   );
@@ -538,19 +579,43 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSegmentsTable() throws Exception
+  public void testSegmentsTableWhenCacheDisabled() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
-        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false),
-        new SegmentWithOvershadowedStatus(segment1, true),
-        new SegmentWithOvershadowedStatus(segment2, false)
-    ));
+    final Set<SegmentsTableRow> publishedSegments = new HashSet<>(
+        Arrays.asList(
+            SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true)),
+            SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false)),
+            SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false)),
+            SegmentsTableRow.from(new SegmentWithOvershadowedStatus(segment1, true)),
+            SegmentsTableRow.from(new SegmentWithOvershadowedStatus(segment2, false))
+        )
+    );
 
-    EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.isCacheEnabled()).andReturn(false).once();
+    EasyMock.expect(metadataView.getPublishedSegmentsIterator()).andReturn(publishedSegments.iterator()).once();
 
+    testSegmentsTable(metadataView);
+  }
+
+  @Test
+  public void testSegmentsTableWhenCacheEnabled() throws Exception
+  {
+    final SortedSet<SegmentsTableRow> publishedSegments = new TreeSet<>(MetadataSegmentView.SEGMENT_ORDER);
+    publishedSegments.add(SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true)));
+    publishedSegments.add(SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false)));
+    publishedSegments.add(SegmentsTableRow.from(new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false)));
+    publishedSegments.add(SegmentsTableRow.from(new SegmentWithOvershadowedStatus(segment1, true)));
+    publishedSegments.add(SegmentsTableRow.from(new SegmentWithOvershadowedStatus(segment2, false)));
+
+    EasyMock.expect(metadataView.isCacheEnabled()).andReturn(true).once();
+    EasyMock.expect(metadataView.getSortedPublishedSegments()).andReturn(publishedSegments).anyTimes();
+
+    testSegmentsTable(metadataView);
+  }
+
+  private void testSegmentsTable(MetadataSegmentView metadataView) throws Exception
+  {
+    final SegmentsTable segmentsTable = new SegmentsTable(PLANNER_CONFIG_DEFAULT, druidSchema, metadataView, mapper, authMapper);
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = new DataContext()
     {

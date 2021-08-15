@@ -157,7 +157,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         descriptor.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(segment, descriptor.getShardSpec()))
     );
     segments.add(descriptor);
-    closeables.add(index);
+    closeables.add(segment);
     return this;
   }
 

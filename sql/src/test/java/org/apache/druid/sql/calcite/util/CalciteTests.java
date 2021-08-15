@@ -131,7 +131,6 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -1074,11 +1073,11 @@ public class CalciteTests
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
     FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
-            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
+            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, overlordNode))
         )
     );
 
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+    final DruidLeaderClient coordinatorLeaderClient = new DruidLeaderClient(
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
@@ -1105,9 +1104,10 @@ public class CalciteTests
     };
 
     return new SystemSchema(
+        plannerConfig,
         druidSchema,
         new MetadataSegmentView(
-            druidLeaderClient,
+            coordinatorLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
             plannerConfig
@@ -1115,7 +1115,7 @@ public class CalciteTests
         new TestServerInventoryView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,
-        druidLeaderClient,
+        coordinatorLeaderClient,
         overlordLeaderClient,
         provider,
         getJsonMapper()
@@ -1123,16 +1123,11 @@ public class CalciteTests
   }
 
   public static SchemaPlus createMockRootSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
+      final DruidSchema druidSchema,
+      final SystemSchema systemSchema,
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
-    SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
-
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
         new InformationSchema(
@@ -1146,6 +1141,20 @@ public class CalciteTests
     rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
     rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
     return rootSchema;
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+
+    return createMockRootSchema(druidSchema, systemSchema, authorizerMapper);
   }
 
   public static SchemaPlus createMockRootSchema(
@@ -1190,7 +1199,7 @@ public class CalciteTests
     return curThrowable;
   }
 
-  private static DruidSchema createMockSchema(
+  public static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig
@@ -1237,7 +1246,7 @@ public class CalciteTests
   /**
    * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
    */
-  private static class FakeHttpClient implements HttpClient
+  public static class FakeHttpClient implements HttpClient
   {
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
@@ -1262,7 +1271,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 
@@ -1288,7 +1297,7 @@ public class CalciteTests
     }
   }
 
-  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  public static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
   {
     private final Set<DiscoveryDruidNode> nodes;
 
@@ -1297,7 +1306,7 @@ public class CalciteTests
       this.nodes = new HashSet<>();
     }
 
-    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    public FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
     {
       this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
       nodes.forEach((k, v) -> {
@@ -1328,7 +1337,7 @@ public class CalciteTests
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
    */
-  private static class FakeServerInventoryView implements ServerInventoryView
+  public static class FakeServerInventoryView implements ServerInventoryView
   {
     @Nullable
     @Override

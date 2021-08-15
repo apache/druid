@@ -71,7 +71,9 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -88,7 +90,9 @@ import java.util.stream.StreamSupport;
 @ManageLifecycle
 public class DruidSchema extends AbstractSchema
 {
-  // Newest segments first, so they override older ones.
+  /**
+   * Newest segments first, so they override older ones.
+   */
   private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
       .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
       .reversed()
@@ -802,6 +806,27 @@ public class DruidSchema extends AbstractSchema
     return segmentMetadata;
   }
 
+  Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getAvailableSegmentMetadataIterator()
+  {
+    return segmentMetadataInfo.values().stream().flatMap(m -> m.entrySet().stream()).iterator();
+  }
+
+  /**
+   * Returns a sorted iterator of available segments. The returned iterator is first sorted by datasource name,
+   * and then by {@link #SEGMENT_ORDER}.
+   *
+   * Concurreny note: this method creates a current snapshot of datasources to sort them.
+   * The returned iterator might miss some datasource if that datasource is created
+   * while making the snapshot.
+   */
+  Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getSortedAvailableSegmentMetadataIterator()
+  {
+    final TreeMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> map = new TreeMap<>(
+        segmentMetadataInfo
+    );
+    return map.values().stream().flatMap(m -> m.entrySet().stream()).iterator();
+  }
+
   /**
    * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
    * As a result, the returned value might be inexact.
@@ -835,7 +860,12 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
-  private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  /**
+   * Runs a {@link SegmentMetadataQuery}.
+   * This method must be called only inside of this class, except for testing.
+   */
+  @VisibleForTesting
+  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final QueryLifecycleFactory queryLifecycleFactory,
       final Iterable<SegmentId> segments,
       final AuthenticationResult authenticationResult
