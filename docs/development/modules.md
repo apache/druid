@@ -324,6 +324,25 @@ public class MyTransformModule implements DruidModule {
 }
 ```
 
+### Adding your own custom pluggable Coordinator Duty
+
+The coordinator periodically runs jobs, so-called `CoordinatorDuty` which include loading new segments, segment balancing, etc. 
+Druid users can add custom pluggable coordinator duties, which are not part of Core Druid, without modifying any Core Druid classes.
+Users can do this by writing their own custom coordinator duty implemnting the interface `CoordinatorCustomDuty` and setting the `JsonTypeName`.
+Next, users will need to register their custom coordinator as subtypes in their Module's `DruidModule#getJacksonModules()`.
+Once these steps are done, user will be able to load their custom coordinator duty using the following properties:
+```
+druid.coordinator.dutyGroups=[<GROUP_NAME_1>, <GROUP_NAME_2>, ...]
+druid.coordinator.<GROUP_NAME_1>.duties=[<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>, <DUTY_NAME_MATCHING_JSON_TYPE_NAME_2>, ...]
+druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_1_KEY>=<SOME_CONFIG_1_VALUE>
+druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_2_KEY>=<SOME_CONFIG_2_VALUE>
+druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
+```
+In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped into CoordinatorDutyGroups.
+The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`. 
+All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
+Currently, there is a single thread running the duties sequentially for each group. 
+
 ### Bundle your extension with all the other Druid extensions
 
 When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.
