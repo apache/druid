@@ -20,8 +20,28 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.initialization.DruidModule;
 
+/**
+ * This {@link ExtensionPoint} allows for coordinator duty to be pluggable
+ * so that users can register their own duties without modifying Core Druid classes.
+ *
+ * Users can write their own custom coordinator duty implemnting this interface and setting the {@link JsonTypeName}.
+ * Next, users will need to register their custom coordinator as subtypes in their
+ * Module's {@link DruidModule#getJacksonModules()}. Once these steps are done, user will be able to load their
+ * custom coordinator duty using the following properties:
+ * druid.coordinator.dutyGroups=[<GROUP_NAME>]
+ * druid.coordinator.<GROUP_NAME>.duties=[<DUTY_NAME_MATCHING_JSON_TYPE_NAME>]
+ * druid.coordinator.<GROUP_NAME>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME>.<SOME_CONFIG_1>=100
+ * druid.coordinator.<GROUP_NAME>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME>.<SOME_CONFIG_2>=200
+ * druid.coordinator.<GROUP_NAME>.period="P1D"
+ *
+ * The duties can be grouped into multiple groups as per the elements in list druid.coordinator.dutyGroups.
+ * All duties in the same group will have the same run period configured by druid.coordinator.<GROUP_NAME>.period.
+ * There will be a single thread running the duties sequentially for each group.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @ExtensionPoint
 public interface CoordinatorCustomDuty extends CoordinatorDuty

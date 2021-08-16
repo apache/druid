@@ -24,7 +24,7 @@ import java.util.Set;
 
 public class CoordinatorCustomDutyGroups
 {
-  private Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups;
+  private final Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups;
 
   public CoordinatorCustomDutyGroups(
       Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups

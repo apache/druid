@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Duration;
 
 import java.util.List;
@@ -28,23 +26,18 @@ import java.util.Objects;
 
 public class CoordinatorCustomDutyGroup
 {
-  @JsonProperty
-  private String name;
+  private final String name;
 
-  @JsonProperty
-  private Duration period;
+  private final Duration period;
 
-  @JsonProperty
-  private List<CoordinatorCustomDuty> customDutyList;
+  private final List<CoordinatorCustomDuty> customDutyList;
 
-  @JsonCreator
   public CoordinatorCustomDutyGroup(
-      @JsonProperty("name") String name,
-      @JsonProperty("period") Duration period,
-      @JsonProperty("customDutyList") List<CoordinatorCustomDuty> customDutyList
+      String name,
+      Duration period,
+      List<CoordinatorCustomDuty> customDutyList
   )
   {
-    //TODO add check
     this.name = name;
     this.period = period;
     this.customDutyList = customDutyList;

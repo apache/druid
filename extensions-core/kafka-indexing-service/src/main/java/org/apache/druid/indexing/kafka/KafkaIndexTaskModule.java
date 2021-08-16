@@ -51,7 +51,6 @@ public class KafkaIndexTaskModule implements DruidModule
                 new NamedType(KafkaSupervisorSpec.class, "kafka"),
                 new NamedType(KafkaSamplerSpec.class, "kafka")
             )
-            .registerSubtypes(CoordinatorCustomDutyTest.class)
     );
   }
 
