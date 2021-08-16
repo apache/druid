@@ -27,7 +27,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
@@ -115,7 +114,6 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.router.TieredBrokerConfig;
-import org.apache.druid.server.security.AuthConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -375,17 +373,13 @@ public class CliCoordinator extends ServerRunnable
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
   {
-    private AuthConfig authConfig;
-    private Injector injector;
     private Properties props;
     private JsonConfigurator configurator;
     private ObjectMapper jsonMapper;
 
     @Inject
-    public void inject(Injector injector, Properties props, JsonConfigurator configurator, ObjectMapper jsonMapper)
+    public void inject(Properties props, JsonConfigurator configurator, ObjectMapper jsonMapper)
     {
-      this.authConfig = injector.getInstance(AuthConfig.class);
-      this.injector = injector;
       this.props = props;
       this.configurator = configurator;
       this.jsonMapper = jsonMapper;
