@@ -31,6 +31,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.initialization.DruidModule;
 
+import java.util.Collections;
 import java.util.List;
 
 public class KafkaIndexTaskModule implements DruidModule
@@ -51,6 +52,7 @@ public class KafkaIndexTaskModule implements DruidModule
                 new NamedType(KafkaSupervisorSpec.class, "kafka"),
                 new NamedType(KafkaSamplerSpec.class, "kafka")
             )
+            .registerSubtypes(CoordinatorCustomDutyTest.class)
     );
   }
 
