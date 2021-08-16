@@ -66,7 +66,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -810,7 +809,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
     DataSegment dataSegment = new DataSegment(
-      "dataSource1",
+        "dataSource1",
         Intervals.of("2010-01-01/P1D"),
         "v1",
         null,
