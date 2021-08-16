@@ -61,6 +61,10 @@ getComposeArgs()
       # default + additional historical modified for query error test
       # See CliHistoricalForQueryRetryTest.
       echo "-f ${DOCKERDIR}/docker-compose.query-error-test.yml"
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "custom-coordinator-duties" ]
+    then
+      # default + custom for Coordinator to enable custom coordinator duties
+      echo "-f ${DOCKERDIR}/docker-compose.custom-coordinator-duties.yml"
     elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
     then
       # the 'high availability' test cluster with multiple coordinators and overlords

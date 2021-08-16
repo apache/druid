@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -43,6 +44,9 @@ import org.apache.druid.initialization.DruidModule;
  * There will be a single thread running the duties sequentially for each group.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(name = "killSupervisors", value = KillSupervisorsCustomDuty.class),
+})
 @ExtensionPoint
 public interface CoordinatorCustomDuty extends CoordinatorDuty
 {

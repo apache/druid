@@ -397,6 +397,9 @@ public class CliCoordinator extends ServerRunnable
             "druid.coordinator.dutyGroups"), new TypeReference<List<String>>() {});
         for (String coordinatorCustomDutyGroupName : coordinatorCustomDutyGroupNames) {
           String dutyListProperty = StringUtils.format("druid.coordinator.%s.duties", coordinatorCustomDutyGroupName);
+          if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
+            throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
+          }
           List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
@@ -420,12 +423,16 @@ public class CliCoordinator extends ServerRunnable
             coordinatorCustomDutyProvider.inject(adjustedProps, configurator);
             Supplier<CoordinatorCustomDuty> coordinatorCustomDutySupplier = coordinatorCustomDutyProvider.get();
             if (coordinatorCustomDutySupplier == null) {
-              throw new ISE("Could not create CoordinatorCustomDuty with name: %s", dutyName);
+              throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
             }
             CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutySupplier.get();
             coordinatorCustomDuties.add(coordinatorCustomDuty);
           }
-          Duration groupPeriod = jsonMapper.readValue(props.getProperty(StringUtils.format("druid.coordinator.%s.period", coordinatorCustomDutyGroupName)), Duration.class);
+          String groupPeriodPropKey = StringUtils.format("druid.coordinator.%s.period", coordinatorCustomDutyGroupName);
+          if (Strings.isNullOrEmpty(props.getProperty(groupPeriodPropKey))) {
+            throw new IAE("Run period for coordinator custom duty group must be set for group %s", coordinatorCustomDutyGroupName);
+          }
+          Duration groupPeriod = jsonMapper.readValue(props.getProperty(groupPeriodPropKey), Duration.class);
           coordinatorCustomDutyGroups.add(new CoordinatorCustomDutyGroup(coordinatorCustomDutyGroupName, groupPeriod, coordinatorCustomDuties));
         }
         return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
