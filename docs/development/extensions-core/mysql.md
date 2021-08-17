@@ -39,7 +39,7 @@ installed separately. There are a few ways to obtain this library:
 
 This should fetch a JAR file named similar to 'mysql-connector-java-x.x.xx.jar'.
 
-Copy or symlink this file to `extensions/mysql-metadata-storage` under the distribution root directory.
+Copy or symlink this file inside the folder `extensions/mysql-metadata-storage` under the distribution root directory.
 
 ## Setting up MySQL
 

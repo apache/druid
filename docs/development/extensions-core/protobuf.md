@@ -99,7 +99,7 @@ This feature uses Confluent's Protobuf provider which is not included in the Dru
 - https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
 - https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
 
-Copy or symlink those files to `extensions/protobuf-extensions` under the distribution root directory.
+Copy or symlink those files inside the folder `extensions/protobuf-extensions` under the distribution root directory.
 
 ## Create Kafka Supervisor
 
