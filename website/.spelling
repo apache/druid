@@ -140,6 +140,7 @@ Long.MIN_VALUE
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
@@ -838,8 +839,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
