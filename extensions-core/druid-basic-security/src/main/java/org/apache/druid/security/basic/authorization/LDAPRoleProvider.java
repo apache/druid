@@ -171,7 +171,7 @@ public class LDAPRoleProvider implements RoleProvider
 
     Attribute memberOf = userResult.getAttributes().get(this.ldapGroupAttribute);
     if (memberOf == null) {
-      LOG.debug("No memberOf attributes");
+      LOG.debug("No " + this.ldapGroupAttribute + " attributes");
       return groups; // not part of any groups
     }
 
