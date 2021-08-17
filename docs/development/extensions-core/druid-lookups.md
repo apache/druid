@@ -31,7 +31,7 @@ The main goal of this cache is to speed up the access to a high latency lookup s
 Thus user can define various caching strategies or and implementation per lookup, even if the source is the same.
 This module can be used side to side with other lookup module like the global cached lookup module.
 
-To use this extension please make sure to  [include](../extensions.md#loading-extensions) `druid-lookups-cached-single` as an extension.
+To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.

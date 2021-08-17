@@ -23,7 +23,7 @@ title: "InfluxDB Emitter"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-influxdb-emitter` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-influxdb-emitter` in the extensions load list.
 
 ## Introduction
 
