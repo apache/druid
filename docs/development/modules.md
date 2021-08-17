@@ -328,7 +328,7 @@ public class MyTransformModule implements DruidModule {
 
 The coordinator periodically runs jobs, so-called `CoordinatorDuty` which include loading new segments, segment balancing, etc. 
 Druid users can add custom pluggable coordinator duties, which are not part of Core Druid, without modifying any Core Druid classes.
-Users can do this by writing their own custom coordinator duty implemnting the interface `CoordinatorCustomDuty` and setting the `JsonTypeName`.
+Users can do this by writing their own custom coordinator duty implementing the interface `CoordinatorCustomDuty` and setting the `JsonTypeName`.
 Next, users will need to register their custom coordinator as subtypes in their Module's `DruidModule#getJacksonModules()`.
 Once these steps are done, user will be able to load their custom coordinator duty using the following properties:
 ```
@@ -338,10 +338,13 @@ druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOM
 druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_2_KEY>=<SOME_CONFIG_2_VALUE>
 druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
 ```
-In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped into CoordinatorDutyGroups.
+In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped together.
 The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`. 
 All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
 Currently, there is a single thread running the duties sequentially for each group. 
+
+For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and `common-custom-coordinator-duties`
+integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/common-custom-coordinator-duties`
 
 ### Bundle your extension with all the other Druid extensions
 

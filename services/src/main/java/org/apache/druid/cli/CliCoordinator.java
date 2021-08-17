@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -118,6 +117,7 @@ import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -389,7 +389,7 @@ public class CliCoordinator extends ServerRunnable
     public CoordinatorCustomDutyGroups get()
     {
       try {
-        Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups = Sets.newHashSet();
+        Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups = new HashSet<>();
         if (Strings.isNullOrEmpty(props.getProperty("druid.coordinator.dutyGroups"))) {
           return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
         }
@@ -416,7 +416,7 @@ public class CliCoordinator extends ServerRunnable
             String typeProperty = StringUtils.format("%s.type", dutyPropertyBase);
             Properties adjustedProps = new Properties(props);
             if (adjustedProps.containsKey(typeProperty)) {
-              throw new IAE("Type property [%s] is reserved.", typeProperty);
+              throw new IAE("'type' property [%s] is reserved.", typeProperty);
             } else {
               adjustedProps.put(typeProperty, dutyName);
             }
