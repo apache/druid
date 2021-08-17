@@ -370,7 +370,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
-> See the MySQL extension documentation for instructions on how to obtain for [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
 > The connector JAR should reside in the classpath of Druid's main class loader.
 > To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
 

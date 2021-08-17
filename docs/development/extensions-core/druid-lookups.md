@@ -35,7 +35,7 @@ To use this Apache Druid extension, [include](../extensions.md#loading-extension
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
-> See the MySQL extension documentation for instructions on how to obtain for [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
 > Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
 
 ## Architecture
