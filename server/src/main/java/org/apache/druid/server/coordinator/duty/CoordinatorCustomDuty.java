@@ -42,6 +42,11 @@ import org.apache.druid.initialization.DruidModule;
  * The duties can be grouped into multiple groups as per the elements in list druid.coordinator.dutyGroups.
  * All duties in the same group will have the same run period configured by druid.coordinator.<GROUP_NAME>.period.
  * There will be a single thread running the duties sequentially for each group.
+ *
+ * Note that custom duty does not implement CoordinatorDuty directly as existing Core Druid Coordinator Duties
+ * don't have associated JSON type and should not be manually grouped/enabled/disabled by the users.
+ * (The only exception is the metadata cleanup duties which we may refactor to use the custom duty system in the future)
+ *
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({

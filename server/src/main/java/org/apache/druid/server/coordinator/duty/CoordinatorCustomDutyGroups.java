@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import java.util.Objects;
 import java.util.Set;
 
 public class CoordinatorCustomDutyGroups
@@ -44,24 +43,5 @@ public class CoordinatorCustomDutyGroups
     return "CoordinatorCustomDutyGroups{" +
            "coordinatorCustomDutyGroups=" + coordinatorCustomDutyGroups +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    CoordinatorCustomDutyGroups that = (CoordinatorCustomDutyGroups) o;
-    return Objects.equals(coordinatorCustomDutyGroups, that.coordinatorCustomDutyGroups);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(coordinatorCustomDutyGroups);
   }
 }

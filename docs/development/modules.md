@@ -334,9 +334,10 @@ Once these steps are done, user will be able to load their custom coordinator du
 ```
 druid.coordinator.dutyGroups=[<GROUP_NAME_1>, <GROUP_NAME_2>, ...]
 druid.coordinator.<GROUP_NAME_1>.duties=[<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>, <DUTY_NAME_MATCHING_JSON_TYPE_NAME_2>, ...]
+druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
+
 druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_1_KEY>=<SOME_CONFIG_1_VALUE>
 druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_2_KEY>=<SOME_CONFIG_2_VALUE>
-druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
 ```
 In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped together.
 The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`. 
@@ -344,7 +345,16 @@ All duties in the same group will have the same run period configured by `druid.
 Currently, there is a single thread running the duties sequentially for each group. 
 
 For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and `common-custom-coordinator-duties`
-integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/common-custom-coordinator-duties`
+integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/common-custom-coordinator-duties`.
+The relevant configs in `integration-tests/docker/environment-configs/common-custom-coordinator-duties` are as follows:
+(The configs create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
+The custom coordinator duty `killSupervisors` also has a config called `retainDuration` which is set to 0 minute)
+```
+druid.coordinator.dutyGroups=["cleanupMetadata"]
+druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
+druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
+druid.coordinator.cleanupMetadata.period=PT10S
+```
 
 ### Bundle your extension with all the other Druid extensions
 

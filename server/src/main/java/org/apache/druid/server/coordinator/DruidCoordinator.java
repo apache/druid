@@ -693,7 +693,7 @@ public class DruidCoordinator
                 customDutyGroup.getPeriod()
             )
         );
-        log.debug(
+        log.info(
             "Done making custom coordinator duties %s for group %s",
             customDutyGroup.getCustomDutyList().stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
             customDutyGroup.getName()

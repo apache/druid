@@ -426,6 +426,9 @@ public class CliCoordinator extends ServerRunnable
               throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
             }
             CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutySupplier.get();
+            if (coordinatorCustomDuty == null) {
+              throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
+            }
             coordinatorCustomDuties.add(coordinatorCustomDuty);
           }
           String groupPeriodPropKey = StringUtils.format("druid.coordinator.%s.period", coordinatorCustomDutyGroupName);
