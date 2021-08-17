@@ -83,11 +83,11 @@ public class BasicRoleBasedAuthorizerTest
 
     BasicAttributes userAttrs = new BasicAttributes(true);
     userAttrs.put(new BasicAttribute("sAMAccountName", "druiduser"));
-    userAttrs.put(new BasicAttribute("memberOf", "CN=user,OU=Druid,OU=Application,OU=Groupings,DC=corp,DC=apache,DC=org"));
+    userAttrs.put(new BasicAttribute(BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID, "CN=user,OU=Druid,OU=Application,OU=Groupings,DC=corp,DC=apache,DC=org"));
 
     BasicAttributes adminAttrs = new BasicAttributes(true);
     adminAttrs.put(new BasicAttribute("sAMAccountName", "druidadmin"));
-    adminAttrs.put(new BasicAttribute("memberOf", "CN=admin,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org"));
+    adminAttrs.put(new BasicAttribute(BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID, "CN=admin,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org"));
 
     userSearchResult = new SearchResult("CN=1234,OU=Employees,OU=People", null, userAttrs);
     adminSearchResult = new SearchResult("CN=9876,OU=Employees,OU=People", null, adminAttrs);
@@ -113,7 +113,7 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     null, null,
                     null,
-                    new LDAPRoleProvider(null, groupFilters)
+                    new LDAPRoleProvider(null, BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID, groupFilters)
                 )
             )
         ),
@@ -144,7 +144,7 @@ public class BasicRoleBasedAuthorizerTest
         null,
         null, null,
         null,
-        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater), groupFilters)
+        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater), BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID, groupFilters)
     );
   }
 

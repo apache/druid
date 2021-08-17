@@ -54,15 +54,18 @@ public class LDAPRoleProvider implements RoleProvider
   private static final Logger LOG = new Logger(LDAPRoleProvider.class);
 
   private final BasicAuthorizerCacheManager cacheManager;
+  private final String ldapGroupAttribute;
   private final String[] groupFilters;
 
   @JsonCreator
   public LDAPRoleProvider(
       @JacksonInject BasicAuthorizerCacheManager cacheManager,
+      @JsonProperty("ldapGroupAttribute") String ldapGroupAttribute,
       @JsonProperty("groupFilters") String[] groupFilters
   )
   {
     this.cacheManager = cacheManager;
+    this.ldapGroupAttribute = ldapGroupAttribute == null ? BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID : ldapGroupAttribute;
     this.groupFilters = groupFilters;
   }
 
@@ -166,7 +169,7 @@ public class LDAPRoleProvider implements RoleProvider
   {
     Set<LdapName> groups = new TreeSet<>();
 
-    Attribute memberOf = userResult.getAttributes().get("memberOf");
+    Attribute memberOf = userResult.getAttributes().get(this.ldapGroupAttribute);
     if (memberOf == null) {
       LOG.debug("No memberOf attributes");
       return groups; // not part of any groups

@@ -66,6 +66,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("bindPassword") PasswordProvider bindPassword,
       @JsonProperty("baseDn") String baseDn,
       @JsonProperty("userSearch") String userSearch,
+      @JsonProperty("ldapGroupAttribute") String ldapGroupAttribute,
       @JsonProperty("userAttribute") String userAttribute,
       @JsonProperty("credentialIterations") Integer credentialIterations,
       @JsonProperty("credentialVerifyDuration") Integer credentialVerifyDuration,
@@ -80,6 +81,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         baseDn,
         userSearch,
         userAttribute,
+        ldapGroupAttribute == null ? BasicAuthUtils.LDAP_GROUP_ATTRIBUTE_ID : ldapGroupAttribute,
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
         credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
@@ -188,7 +190,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     try {
       SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-      sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), "memberOf" });
+      sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), ldapConfig.getLdapGroupAttribute()});
       String encodedUsername = encodeForLDAP(username, true);
       NamingEnumeration<SearchResult> results = context.search(
           ldapConfig.getBaseDn(),

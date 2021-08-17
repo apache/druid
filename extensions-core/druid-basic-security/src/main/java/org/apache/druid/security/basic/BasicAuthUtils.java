@@ -55,6 +55,7 @@ public class BasicAuthUtils
   public static final String ADMIN_GROUP_MAPPING_NAME = "adminGroupMapping";
   public static final String INTERNAL_USER_NAME = "druid_system";
   public static final String SEARCH_RESULT_CONTEXT_KEY = "searchResult";
+  public static final String LDAP_GROUP_ATTRIBUTE_ID = "memberOf";
 
   // PBKDF2WithHmacSHA512 is chosen since it has built-in support in Java8.
   // Argon2 (https://github.com/p-h-c/phc-winner-argon2) is newer but the only presently
