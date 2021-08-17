@@ -44,6 +44,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -56,6 +57,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -334,6 +336,33 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
+  public void testSelectForSql()
+  {
+    Assert.assertEquals(
+        brokerSelector.getDefaultServiceName(),
+        brokerSelector.selectForSql(
+            createSqlQueryWithContext(null)
+        ).lhs
+    );
+    Assert.assertEquals(
+        "hotBroker",
+        brokerSelector.selectForSql(
+            createSqlQueryWithContext(
+                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker")
+            )
+        ).lhs
+    );
+    Assert.assertEquals(
+        "coldBroker",
+        brokerSelector.selectForSql(
+            createSqlQueryWithContext(
+                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker")
+            )
+        ).lhs
+    );
+  }
+
+  @Test
   public void testGetAllBrokers()
   {
     Assert.assertEquals(
@@ -353,6 +382,17 @@ public class TieredBrokerHostSelectorTest
               }
             }
         )
+    );
+  }
+
+  private SqlQuery createSqlQueryWithContext(Map<String, Object> queryContext)
+  {
+    return new SqlQuery(
+        "SELECT * FROM test",
+        null,
+        false,
+        queryContext,
+        null
     );
   }
 

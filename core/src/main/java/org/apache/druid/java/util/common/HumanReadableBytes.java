@@ -208,4 +208,112 @@ public class HumanReadableBytes
       throw new IAE("Invalid format or out of range of long: %s", rawNumber);
     }
   }
+
+  public enum UnitSystem
+  {
+    /**
+     * also known as IEC format
+     * eg: B, KiB, MiB, GiB ...
+     */
+    BINARY_BYTE,
+
+    /**
+     * also known as SI format
+     * eg: B, KB, MB ...
+     */
+    DECIMAL_BYTE,
+
+    /**
+     * simplified SI format without 'B' indicator
+     * eg: K, M, G ...
+     */
+    DECIMAL
+  }
+
+  /**
+   * Returns a human-readable string version of input value
+   *
+   * @param bytes      input value. Negative value is also allowed
+   * @param precision  [0,3]
+   * @param unitSystem which unit system is adopted to format the input value, see {@link UnitSystem}
+   */
+  public static String format(long bytes, long precision, UnitSystem unitSystem)
+  {
+    if (precision < 0 || precision > 3) {
+      throw new IAE("precision [%d] must be in the range of [0,3]", precision);
+    }
+
+    String pattern = "%." + precision + "f %s%s";
+    switch (unitSystem) {
+      case BINARY_BYTE:
+        return BinaryFormatter.format(bytes, pattern, "B");
+      case DECIMAL_BYTE:
+        return DecimalFormatter.format(bytes, pattern, "B");
+      case DECIMAL:
+        return DecimalFormatter.format(bytes, pattern, "").trim();
+      default:
+        throw new IAE("Unkonwn unit system[%s]", unitSystem);
+    }
+  }
+
+  static class BinaryFormatter
+  {
+    private static final String[] UNITS = {"", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei"};
+
+    static String format(long bytes, String pattern, String suffix)
+    {
+      if (bytes > -1024 && bytes < 1024) {
+        return bytes + " " + suffix;
+      }
+
+      if (bytes == Long.MIN_VALUE) {
+        /**
+         * special path for Long.MIN_VALUE
+         *
+         * Long.MIN_VALUE = 2^63 = (2^60=1EiB) * 2^3
+         */
+        return StringUtils.format(pattern, -8.0, UNITS[UNITS.length - 1], suffix);
+      }
+
+      /**
+       * A number and its binary bits are listed as fellows
+       * [0,    1KiB) = [0,    2^10)
+       * [1KiB, 1MiB) = [2^10, 2^20),
+       * [1MiB, 1GiB) = [2^20, 2^30),
+       * [1GiB, 1PiB) = [2^30, 2^40),
+       * ...
+       *
+       * So, expression (63 - Long.numberOfLeadingZeros(absValue))) helps us to get the right number of bits of the given input
+       *
+       * Internal implementaion of Long.numberOfLeadingZeros uses bit operations to do calculation so the cost is very cheap
+       */
+      int unitIndex = (63 - Long.numberOfLeadingZeros(Math.abs(bytes))) / 10;
+      return StringUtils.format(pattern, (double) bytes / (1L << (unitIndex * 10)), UNITS[unitIndex], suffix);
+    }
+  }
+
+  static class DecimalFormatter
+  {
+    private static final String[] UNITS = {"K", "M", "G", "T", "P", "E"};
+
+    static String format(long bytes, String pattern, String suffix)
+    {
+      /**
+       * handle number between (-1000, 1000) first to simply further processing
+       */
+      if (bytes > -1000 && bytes < 1000) {
+        return bytes + " " + suffix;
+      }
+
+      /**
+       * because max precision is 3, extra fraction can be ignored by use of integer division which might be a little more efficient
+       */
+      int unitIndex = 0;
+      while (bytes <= -1000_000 || bytes >= 1000_000) {
+        bytes /= 1000;
+        unitIndex++;
+      }
+      return StringUtils.format(pattern, bytes / 1000.0, UNITS[unitIndex], suffix);
+    }
+  }
 }

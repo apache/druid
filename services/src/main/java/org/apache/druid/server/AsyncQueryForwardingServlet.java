@@ -52,6 +52,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.http.SqlQuery;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -68,6 +69,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -88,7 +90,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String SCHEME_ATTRIBUTE = "org.apache.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "org.apache.druid.proxy.query";
   private static final String AVATICA_QUERY_ATTRIBUTE = "org.apache.druid.proxy.avaticaQuery";
+  private static final String SQL_QUERY_ATTRIBUTE = "org.apache.druid.proxy.sqlQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "org.apache.druid.proxy.objectMapper";
+
+  private static final String PROPERTY_SQL_ENABLE = "druid.router.sql.enable";
+  private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
 
@@ -124,6 +130,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final AuthenticatorMapper authenticatorMapper;
   private final ProtobufTranslation protobufTranslation;
 
+  private final boolean routeSqlQueries;
+
   private HttpClient broadcastClient;
 
   @Inject
@@ -137,7 +145,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory,
-      AuthenticatorMapper authenticatorMapper
+      AuthenticatorMapper authenticatorMapper,
+      Properties properties
   )
   {
     this.warehouse = warehouse;
@@ -151,6 +160,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.queryMetricsFactory = queryMetricsFactory;
     this.authenticatorMapper = authenticatorMapper;
     this.protobufTranslation = new ProtobufTranslationImpl();
+    this.routeSqlQueries = Boolean.parseBoolean(
+        properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
+    );
   }
 
   @Override
@@ -195,7 +207,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
     // them as a generic request.
-    final boolean isQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
+    final boolean isNativeQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
+    final boolean isSqlQueryEndpoint = requestURI.startsWith("/druid/v2/sql");
 
     final boolean isAvaticaJson = requestURI.startsWith("/druid/v2/sql/avatica");
     final boolean isAvaticaPb = requestURI.startsWith("/druid/v2/sql/avatica-protobuf");
@@ -215,36 +228,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       targetServer = hostFinder.findServerAvatica(connectionId);
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
-    } else if (isQueryEndpoint && HttpMethod.DELETE.is(method)) {
+    } else if (isNativeQueryEndpoint && HttpMethod.DELETE.is(method)) {
       // query cancellation request
       targetServer = hostFinder.pickDefaultServer();
-
-      for (final Server server : hostFinder.getAllServers()) {
-        // send query cancellation to all brokers this query may have gone to
-        // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
-        if (!server.getHost().equals(targetServer.getHost())) {
-          // issue async requests
-          Response.CompleteListener completeListener = result -> {
-            if (result.isFailed()) {
-              log.warn(
-                  result.getFailure(),
-                  "Failed to forward cancellation request to [%s]",
-                  server.getHost()
-              );
-            }
-          };
-
-          Request broadcastReq = broadcastClient
-              .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
-              .method(HttpMethod.DELETE)
-              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-
-          copyRequestHeaders(request, broadcastReq);
-          broadcastReq.send(completeListener);
-        }
-        interruptedQueryCount.incrementAndGet();
-      }
-    } else if (isQueryEndpoint && HttpMethod.POST.is(method)) {
+      broadcastQueryCancelRequest(request, targetServer);
+    } else if (isNativeQueryEndpoint && HttpMethod.POST.is(method)) {
       // query request
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
@@ -259,23 +247,21 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
       }
       catch (IOException e) {
-        log.warn(e, "Exception parsing query");
-        final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
-        requestLogger.logNativeQuery(
-            RequestLogLine.forNative(
-                null,
-                DateTimes.nowUtc(),
-                request.getRemoteAddr(),
-                new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
-            )
-        );
-        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        response.setContentType(MediaType.APPLICATION_JSON);
-        objectMapper.writeValue(
-            response.getOutputStream(),
-            ImmutableMap.of("error", errorMessage)
-        );
-
+        handleQueryParseException(request, response, objectMapper, e, true);
+        return;
+      }
+      catch (Exception e) {
+        handleException(response, objectMapper, e);
+        return;
+      }
+    } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
+      try {
+        SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+        request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
+        targetServer = hostFinder.findServerSql(inputSqlQuery);
+      }
+      catch (IOException e) {
+        handleQueryParseException(request, response, objectMapper, e, false);
         return;
       }
       catch (Exception e) {
@@ -290,6 +276,86 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
 
     doService(request, response);
+  }
+
+  /**
+   * Issues async query cancellation requests to all Brokers (except the given
+   * targetServer). Query cancellation on the targetServer is handled by the
+   * proxy servlet.
+   */
+  private void broadcastQueryCancelRequest(HttpServletRequest request, Server targetServer)
+  {
+    // send query cancellation to all brokers this query may have gone to
+    // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
+    for (final Server server : hostFinder.getAllServers()) {
+      if (server.getHost().equals(targetServer.getHost())) {
+        continue;
+      }
+
+      // issue async requests
+      Response.CompleteListener completeListener = result -> {
+        if (result.isFailed()) {
+          log.warn(
+              result.getFailure(),
+              "Failed to forward cancellation request to [%s]",
+              server.getHost()
+          );
+        }
+      };
+
+      Request broadcastReq = broadcastClient
+          .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
+          .method(HttpMethod.DELETE)
+          .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+      copyRequestHeaders(request, broadcastReq);
+      broadcastReq.send(completeListener);
+    }
+
+    interruptedQueryCount.incrementAndGet();
+  }
+
+  private void handleQueryParseException(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      ObjectMapper objectMapper,
+      IOException parseException,
+      boolean isNativeQuery
+  ) throws IOException
+  {
+    log.warn(parseException, "Exception parsing query");
+
+    // Log the error message
+    final String errorMessage = parseException.getMessage() == null
+                                ? "no error message" : parseException.getMessage();
+    if (isNativeQuery) {
+      requestLogger.logNativeQuery(
+          RequestLogLine.forNative(
+              null,
+              DateTimes.nowUtc(),
+              request.getRemoteAddr(),
+              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
+          )
+      );
+    } else {
+      requestLogger.logSqlQuery(
+          RequestLogLine.forSql(
+              null,
+              null,
+              DateTimes.nowUtc(),
+              request.getRemoteAddr(),
+              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
+          )
+      );
+    }
+
+    // Write to the response
+    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    response.setContentType(MediaType.APPLICATION_JSON);
+    objectMapper.writeValue(
+        response.getOutputStream(),
+        ImmutableMap.of("error", errorMessage)
+    );
   }
 
   protected void doService(
@@ -317,16 +383,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
+    final SqlQuery sqlQuery = (SqlQuery) clientRequest.getAttribute(SQL_QUERY_ATTRIBUTE);
     if (query != null) {
-      final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
-      try {
-        byte[] bytes = objectMapper.writeValueAsBytes(query);
-        proxyRequest.content(new BytesContentProvider(bytes));
-        proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      setProxyRequestContent(proxyRequest, clientRequest, query);
+    } else if (sqlQuery != null) {
+      setProxyRequestContent(proxyRequest, clientRequest, sqlQuery);
     }
 
     // Since we can't see the request object on the remote side, we can't check whether the remote side actually
@@ -356,6 +417,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyResponse,
         proxyRequest
     );
+  }
+
+  private void setProxyRequestContent(Request proxyRequest, HttpServletRequest clientRequest, Object content)
+  {
+    final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
+    try {
+      byte[] bytes = objectMapper.writeValueAsBytes(content);
+      proxyRequest.content(new BytesContentProvider(bytes));
+      proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
