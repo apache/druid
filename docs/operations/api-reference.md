@@ -167,6 +167,9 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 #### Metadata store information
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`sys.segments`](../querying/sql.md#segments-table) table.
+
 ##### GET
 
 * `/druid/coordinator/v1/metadata/segments`
@@ -867,6 +870,11 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 ##### GET
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
+
 * `/druid/v2/datasources`
 
 Returns a list of queryable datasources.
@@ -926,6 +934,11 @@ Returns segment information lists including server locations for the given query
 ### Router
 
 #### GET
+
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 
