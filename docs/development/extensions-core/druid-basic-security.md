@@ -121,6 +121,7 @@ If Druid uses the default credentials validator (i.e., `credentialsValidator.typ
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.baseDn`|The point from where the LDAP server will search for users.|null|Yes|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userSearch`|The filter/expression to use for the search. For example, (&(sAMAccountName=%s)(objectClass=user))|null|Yes|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userAttribute`|The attribute id identifying the attribute that will be returned as part of the search. For example, sAMAccountName. |null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.ldapGroupAttribute`|The attribute id identifying the attribute used for LDAP groups by LDAP server that will be returned as part of the search. For example, memberOf. |memberOf|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialVerifyDuration`|The duration in seconds for how long valid credentials are verifiable within the cache when not requested.|600|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialMaxDuration`|The max duration in seconds for valid credentials that can reside in cache regardless of how often they are requested.|3600|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialCacheSize`|The valid credentials cache size. The cache uses a LRU policy.|100|No|
@@ -181,6 +182,7 @@ The authorizer configuration examples in the rest of this document will use "MyB
 |`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminGroupMapping`|The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned. The name of this initial admin group mapping will be set to adminGroupMapping|null|No|
 |`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.type`|The type of role provider (ldap) to authorize requests credentials.|metadata|No
 |`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.groupFilters`|Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.|null|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.ldapGroupAttribute`|The attribute id identifying the attribute used for LDAP groups by LDAP server. It should be same as druid.auth.authenticator.<ldap-authenticator-name>.ldapGroupAttribute|memberOf|No|
 
 ## Usage
 
