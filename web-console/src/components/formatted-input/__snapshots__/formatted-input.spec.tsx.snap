@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`FormattedInput matches snapshot on undefined value 1`] = `
+<div
+  class="formatted-input"
+>
+  <div
+    class="bp3-input-group"
+  >
+    <input
+      class="bp3-input"
+      type="text"
+      value=""
+    />
+  </div>
+</div>
+`;
+
+exports[`FormattedInput matches snapshot with escaped value 1`] = `
+<div
+  class="formatted-input"
+>
+  <div
+    class="bp3-input-group"
+  >
+    <input
+      class="bp3-input"
+      type="text"
+      value="Here are some chars \\\\t\\\\r\\\\n lol"
+    />
+  </div>
+</div>
+`;
