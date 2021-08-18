@@ -55,7 +55,7 @@ public class KillSupervisorsCustomDuty implements CoordinatorCustomDuty
   {
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.retainDuration = retainDuration;
-    Preconditions.checkArgument(this.retainDuration != null && this.retainDuration.getMillis() > 0, "(Custom Duty) Coordinator supervisor kill retainDuration must be > 0");
+    Preconditions.checkArgument(this.retainDuration != null && this.retainDuration.getMillis() >= 0, "(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
     log.info(
         "Supervisor Kill Task scheduling enabled with retainDuration [%s]",
         this.retainDuration

@@ -55,7 +55,7 @@ public class KillSupervisorsCustomDutyTest
   public void testConstructorFailIfRetainDurationNull()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be > 0");
+    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
     killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager);
   }
 
@@ -63,8 +63,8 @@ public class KillSupervisorsCustomDutyTest
   public void testConstructorFailIfRetainDurationInvalid()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be > 0");
-    killSupervisors = new KillSupervisorsCustomDuty(new Duration("PT0S"), mockMetadataSupervisorManager);
+    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
+    killSupervisors = new KillSupervisorsCustomDuty(new Duration("PT-1s"), mockMetadataSupervisorManager);
   }
 
   @Test
