@@ -661,7 +661,7 @@ the set of ingested dimensions, if missing the discovered fields will make up th
 
 `timeAndDims` parse spec must specify which fields will be extracted as dimensions through the `dimensionSpec`.
 
-[All column types](https://orc.apache.org/docs/types.md) are supported, with the exception of `union` types. Columns of
+[All column types](https://orc.apache.org/docs/types.html) are supported, with the exception of `union` types. Columns of
  `list` type, if filled with primitives, may be used as a multi-value dimension, or specific elements can be extracted with
 `flattenSpec` expressions. Likewise, primitive fields may be extracted from `map` and `struct` types in the same manner.
 Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of
