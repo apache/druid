@@ -1,5 +1,5 @@
 ---
-id: prometheus
+id: prometheus-emitter
 title: "Prometheus Emitter"
 ---
 
