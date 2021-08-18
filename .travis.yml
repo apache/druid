@@ -32,7 +32,7 @@ cache:
 env:
   global:
     - DOCKER_IP=127.0.0.1  # for integration tests
-    - MVN="mvn -B"
+    - MVN="travis_wait 30 mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
       MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
     - MAVEN_SKIP_TESTS="-Pskip-tests"
