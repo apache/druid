@@ -29,7 +29,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 
 /**
  * CoordinatorDuty for automatic deletion of terminated supervisors from the supervisor table in metadata storage.
