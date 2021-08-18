@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 
 /**
@@ -44,18 +45,18 @@ public class KillSupervisorsCustomDuty implements CoordinatorCustomDuty
 {
   private static final Logger log = new Logger(KillSupervisorsCustomDuty.class);
 
-  private final Period retainDuration;
+  private final Duration retainDuration;
   private final MetadataSupervisorManager metadataSupervisorManager;
 
   @JsonCreator
   public KillSupervisorsCustomDuty(
-      @JsonProperty("retainDuration") Period retainDuration,
+      @JsonProperty("retainDuration") Duration retainDuration,
       @JacksonInject MetadataSupervisorManager metadataSupervisorManager
   )
   {
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.retainDuration = retainDuration;
-    Preconditions.checkArgument(this.retainDuration != null && this.retainDuration.getMillis() >= 0, "Coordinator supervisor kill retainDuration must be >= 0");
+    Preconditions.checkArgument(this.retainDuration != null && this.retainDuration.getMillis() > 0, "(Custom Duty) Coordinator supervisor kill retainDuration must be > 0");
     log.info(
         "Supervisor Kill Task scheduling enabled with retainDuration [%s]",
         this.retainDuration
