@@ -32,7 +32,7 @@ If you're unfamiliar with Druid architecture, review the following topics before
 
 For instructions to configure query caching see [Using query caching](./using-caching.md).
 
-Cache monitoring, incuding the hit rate and number of evictions, is available in [Druid metrics](../operations/metrics.html#cache).
+Cache monitoring, including the hit rate and number of evictions, is available in [Druid metrics](../operations/metrics.html#cache).
 
 > **Query caching is in addition to data-level caching on Historicals**
 >
@@ -56,7 +56,7 @@ Druid supports two types of query caching:
 
 > **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
 >
-> The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB _or_ ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+> The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
 
 ### Per-segment caching
 
