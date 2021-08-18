@@ -137,6 +137,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
               setJsonError(undefined);
             }}
             onError={setJsonError}
+            issueWithValue={spec => AutoForm.issueWithModel(spec, LOOKUP_FIELDS)}
           />
         )}
       </div>
