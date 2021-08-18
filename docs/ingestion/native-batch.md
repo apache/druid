@@ -204,7 +204,7 @@ A sample task is shown below:
 
 This field is required.
 
-See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
+See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.md#dataschema)
 
 If you specify `intervals` explicitly in your dataSchema's `granularitySpec`, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
@@ -238,10 +238,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](ingestion-spec.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `intervals` in `granularitySpec` must be set and `hashed` or `single_dim` must be used for `partitionsSpec`. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `intervals` in `granularitySpec` must be set and `hashed` or `single_dim` must be used for `partitionsSpec`. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -282,7 +282,7 @@ The segments split hint spec is used only for [`DruidInputSource`](#druid-input-
 ### `partitionsSpec`
 
 PartitionsSpec is used to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](rollup.md) you want.
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
 `single_dim` (based on ranges of a single dimension). For best-effort rollup, you should use `dynamic`.
 
@@ -291,13 +291,14 @@ The three `partitionsSpec` types have different characteristics.
 | PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Secondary partition pruning at query time |
 |----------------|-----------------|---------------------|-----------------------|-------------------------------|
 | `dynamic` | Fastest  | [Dynamic partitioning](#dynamic-partitioning) based on the number of rows in a segment. | Best-effort rollup | N/A |
-| `hashed`  | Moderate | Multiple dimension [hash-based partitioning](#hash-based-partitioning) may reduce both your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
-| `single_dim` | Slowest | Single dimension [range partitioning](#single-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+| `hashed`  | Moderate | Multiple dimension [hash-based partitioning](#hash-based-partitioning) may reduce both your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
+| `single_dim` | Slowest | Single dimension [range partitioning](#single-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+
 
 The recommended use case for each partitionsSpec is:
 - If your data has a uniformly distributed column which is frequently used in your queries,
 consider using `single_dim` partitionsSpec to maximize the performance of most of your queries.
-- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
+- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./rollup.md#maximizing-rollup-ratio)
 when you roll up with some dimensions, consider using `hashed` partitionsSpec.
 It could reduce the size of datasource and query latency by improving data locality.
 - If the above two scenarios are not the case or you don't need to roll up your datasource,
@@ -741,7 +742,7 @@ A sample task is shown below:
 
 This field is required.
 
-See the [`dataSchema`](../ingestion/index.md#dataschema) section of the ingestion docs for details.
+See the [`dataSchema`](./ingestion-spec.md#dataschema) section of the ingestion docs for details.
 
 If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
 pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
@@ -772,10 +773,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](ingestion-spec.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -786,7 +787,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 ### `partitionsSpec`
 
 PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](rollup.md) you want.
 For perfect rollup, you should use `hashed`.
 
 |property|description|default|required?|
@@ -815,7 +816,7 @@ For best-effort rollup, you should use `dynamic`.
 
 While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
 the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](../ingestion/index.md#rollup), respectively.
+[perfect rollup and best-effort rollup](rollup.md), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
 are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
@@ -1376,8 +1377,8 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 The Druid input source can be used for a variety of purposes, including:
 
 - Creating new datasources that are rolled-up copies of existing datasources.
-- Changing the [partitioning or sorting](index.md#partitioning) of a datasource to improve performance.
-- Updating or removing rows using a [`transformSpec`](index.md#transformspec).
+- Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
+- Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
 
 When using the Druid input source, the timestamp column shows up as a numeric field named `__time` set to the number
 of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to use this in the timestampSpec, if you
