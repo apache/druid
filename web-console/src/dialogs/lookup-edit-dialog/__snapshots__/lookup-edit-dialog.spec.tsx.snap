@@ -215,7 +215,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "info": "The list of columns in the csv file",
             "name": "extractionNamespace.namespaceParseSpec.columns",
             "placeholder": "key, value",
-            "required": true,
+            "required": [Function],
             "type": "string-array",
           },
           Object {
