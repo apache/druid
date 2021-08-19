@@ -53,6 +53,13 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     defined: typeIs('string'),
     defaultValue: true,
   },
+  {
+    name: 'multiValueHandling',
+    type: 'string',
+    defined: typeIs('string'),
+    defaultValue: 'SORTED_ARRAY',
+    suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
+  },
 ];
 
 export function getDimensionSpecName(dimensionSpec: string | DimensionSpec): string {
