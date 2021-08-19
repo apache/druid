@@ -32,6 +32,7 @@ export interface DimensionSpec {
   readonly type: string;
   readonly name: string;
   readonly createBitmapIndex?: boolean;
+  readonly multiValueHandling?: string;
 }
 
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [

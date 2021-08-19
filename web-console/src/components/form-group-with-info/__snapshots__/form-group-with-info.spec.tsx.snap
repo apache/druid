@@ -13,7 +13,7 @@ exports[`form group with info matches snapshot 1`] = `
       class="bp3-text-muted"
     >
       <span
-        class="bp3-popover2-target"
+        class="info-popover bp3-popover2-target"
       >
         <span
           class="bp3-icon bp3-icon-info-sign"
