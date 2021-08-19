@@ -24,7 +24,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
