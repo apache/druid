@@ -238,7 +238,9 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
         buf.putDouble(position + NVARIANCE_OFFSET, holder2.nvariance);
         return;
       }
-
+      if (holder2.count == 0) {
+        return;
+      }
       double sum = getSum(buf, position);
       double nvariance = buf.getDouble(position + NVARIANCE_OFFSET);
 
