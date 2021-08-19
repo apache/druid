@@ -94,6 +94,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
+|prometheus-emitter|This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/)|[link](../development/extensions-contrib/prometheus.md)|
 
 ## Promoting community extensions to core extensions
 
