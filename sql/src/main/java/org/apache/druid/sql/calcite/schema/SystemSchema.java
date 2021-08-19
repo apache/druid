@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,12 +82,14 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
+import org.joda.time.base.AbstractDateTime;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -190,7 +193,7 @@ public class SystemSchema extends AbstractSchema
 
   @Inject
   public SystemSchema(
-      final PlannerConfig config,
+      final SegmentsTableConfig segmentsTableConfig,
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
@@ -204,8 +207,14 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(config, druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
+        SEGMENTS_TABLE, new SegmentsTable(segmentsTableConfig, druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(
+            druidNodeDiscoveryProvider,
+            serverInventoryView,
+            authorizerMapper,
+            overlordDruidLeaderClient,
+            coordinatorDruidLeaderClient
+        ),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
@@ -223,14 +232,14 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
-    private final PlannerConfig config;
+    private final SegmentsTableConfig config;
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
-    public SegmentsTable(
-        PlannerConfig config,
+    SegmentsTable(
+        SegmentsTableConfig config,
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
@@ -259,7 +268,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      if (metadataView.isCacheEnabled() && !config.isForceHashBasedMergeForSegmentsTable()) {
+      if (metadataView.isCacheEnabled() && !config.isForceHashBasedMerge()) {
         return mergeSortedSegments(root);
       } else {
         return hashBasedMergeSegments(root);
@@ -371,14 +380,30 @@ public class SystemSchema extends AbstractSchema
       );
     }
 
-    private Iterable<Object[]> transformRows(ObjectMapper jsonMapper, Iterable<SegmentsTableRow> rows)
+    private Iterable<Object[]> transformRows(
+        ObjectMapper jsonMapper,
+        Iterable<SegmentsTableRow> rows
+    )
     {
       // Serializing objects to string is expensive, so we use caches to avoid serializing the same object
       // over and over again.
-      Map<DateTime, String> timestampStringCache = new HashMap<>();
-      Map<List<String>, String> dimensionsStringCache = new HashMap<>();
-      Map<List<String>, String> metricsStringCache = new HashMap<>();
-      Map<CompactionState, String> compactionStateStringCache = new HashMap<>();
+      ObjectStringCache<DateTime> timestampStringCache = new ObjectStringCache<>(
+          AbstractDateTime::toString,
+          config.getStringCacheSizeRows()
+      );
+      ObjectStringCache<List<String>> dimensionsStringCache = new ObjectStringCache<>(
+          dimensions -> SegmentsTableRow.toJsonString(jsonMapper, dimensions),
+          config.getStringCacheSizeRows()
+      );
+      ObjectStringCache<List<String>> metricsStringCache = new ObjectStringCache<>(
+          metrics -> SegmentsTableRow.toJsonString(jsonMapper, metrics),
+          config.getStringCacheSizeRows()
+      );
+      ObjectStringCache<CompactionState> compactionStateStringCache = new ObjectStringCache<>(
+          state -> SegmentsTableRow.toJsonString(jsonMapper, state),
+          config.getStringCacheSizeRows()
+      );
+
       return FluentIterable
           .from(rows)
           .transform(row -> row.toObjectArray(

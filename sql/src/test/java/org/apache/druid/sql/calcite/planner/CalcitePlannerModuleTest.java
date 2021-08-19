@@ -134,4 +134,11 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerConfig plannerConfig = injector.getInstance(PlannerConfig.class);
     Assert.assertNotNull(plannerConfig);
   }
+
+  @Test
+  public void testSegmentsTableConfigIsInjected()
+  {
+    SegmentsTableConfig config = injector.getInstance(SegmentsTableConfig.class);
+    Assert.assertNotNull(config);
+  }
 }

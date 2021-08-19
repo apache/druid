@@ -84,6 +84,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -126,6 +127,7 @@ import java.util.TreeSet;
 public class SystemSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  private static final SegmentsTableConfig SEGMENTS_TABLE_CONFIG_DEFAULT = new SegmentsTableConfig();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
@@ -288,7 +290,7 @@ public class SystemSchemaTest extends CalciteTestBase
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
     schema = new SystemSchema(
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENTS_TABLE_CONFIG_DEFAULT,
         druidSchema,
         metadataView,
         serverView,
@@ -615,7 +617,13 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private void testSegmentsTable(MetadataSegmentView metadataView) throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(PLANNER_CONFIG_DEFAULT, druidSchema, metadataView, mapper, authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(
+        SEGMENTS_TABLE_CONFIG_DEFAULT,
+        druidSchema,
+        metadataView,
+        mapper,
+        authMapper
+    );
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = new DataContext()
     {

@@ -26,11 +26,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.joda.time.DateTime;
-import org.joda.time.base.AbstractDateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A bridge class used when merging {@link SegmentWithOvershadowedStatus} in {@link MetadataSegmentView} and
@@ -150,20 +148,19 @@ public class SegmentsTableRow
    */
   public Object[] toObjectArray(
       ObjectMapper jsonMapper,
-      Map<DateTime, String> timestampStringCache,
-      Map<List<String>, String> dimensionsStringCache,
-      Map<List<String>, String> metricsStringCache,
-      Map<CompactionState, String> compactionStateStringCache
+      ObjectStringCache<DateTime> timestampStringCache,
+      ObjectStringCache<List<String>> dimensionsStringCache,
+      ObjectStringCache<List<String>> metricsStringCache,
+      ObjectStringCache<CompactionState> compactionStateStringCache
   )
   {
     return new Object[]{
         segment.getId(),
         segment.getDataSource(),
-        timestampStringCache.computeIfAbsent(segment.getInterval().getStart(), AbstractDateTime::toString),
-        timestampStringCache.computeIfAbsent(segment.getInterval().getEnd(), AbstractDateTime::toString),
+        timestampStringCache.add(segment.getInterval().getStart()),
+        timestampStringCache.add(segment.getInterval().getEnd()),
         segment.getSize(),
         segment.getVersion(),
-        // we don't cache shardSpec as each segment likely has a unique shardSpec
         (long) segment.getShardSpec().getPartitionNum(),
         numReplicas,
         numRows,
@@ -171,18 +168,19 @@ public class SegmentsTableRow
         isAvailable,
         isRealtime,
         isOvershadowed,
+        // we don't cache shardSpec as each segment likely has a unique shardSpec
         toJsonString(jsonMapper, segment.getShardSpec()),
-        dimensionsStringCache.computeIfAbsent(segment.getDimensions(), k -> toJsonString(jsonMapper, k)),
-        metricsStringCache.computeIfAbsent(segment.getMetrics(), k -> toJsonString(jsonMapper, k)),
-        compactionStateStringCache.computeIfAbsent(segment.getLastCompactionState(), k -> toJsonString(jsonMapper, k))
+        dimensionsStringCache.add(segment.getDimensions()),
+        metricsStringCache.add(segment.getMetrics()),
+        compactionStateStringCache.add(segment.getLastCompactionState())
     };
   }
 
   @Nullable
-  public static String toJsonString(ObjectMapper mapper, @Nullable Object o)
+  static String toJsonString(ObjectMapper jsonMapper, @Nullable Object o)
   {
     try {
-      return o == null ? null : mapper.writeValueAsString(o);
+      return o == null ? null : jsonMapper.writeValueAsString(o);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

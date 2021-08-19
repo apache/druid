@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.schema.SegmentsTableBenchamrkBase;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -84,7 +85,7 @@ public class SegmentsTableBenchmark extends SegmentsTableBenchamrkBase
   @Setup(Level.Trial)
   public void setup()
   {
-    final PlannerConfig plannerConfig = new PlannerConfig()
+    PlannerConfig plannerConfig = new PlannerConfig()
     {
       @Override
       public boolean isMetadataSegmentCacheEnable()
@@ -93,19 +94,22 @@ public class SegmentsTableBenchmark extends SegmentsTableBenchamrkBase
       }
 
       @Override
-      public boolean isForceHashBasedMergeForSegmentsTable()
-      {
-        return forceHashBasedMerge;
-      }
-
-      @Override
       public long getMetadataSegmentPollPeriod()
       {
         return 1000;
       }
     };
+    SegmentsTableConfig segmentsTableConfig = new SegmentsTableConfig()
+    {
+      @Override
+      public boolean isForceHashBasedMerge()
+      {
+        return forceHashBasedMerge;
+      }
+    };
     setupBenchmark(
         plannerConfig,
+        segmentsTableConfig,
         segmentGranularity,
         availableSegmentsInterval,
         publishedSegmentsInterval,

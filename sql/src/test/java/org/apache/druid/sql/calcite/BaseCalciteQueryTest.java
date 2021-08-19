@@ -80,6 +80,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -131,6 +132,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
+  public static final SegmentsTableConfig SEGMENTS_TABLE_CONFIG_DEFAULT = new SegmentsTableConfig();
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE = new PlannerConfig()
   {

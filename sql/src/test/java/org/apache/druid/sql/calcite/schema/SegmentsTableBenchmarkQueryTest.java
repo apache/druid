@@ -28,6 +28,7 @@ import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -60,19 +61,22 @@ public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
       }
 
       @Override
-      public boolean isForceHashBasedMergeForSegmentsTable()
-      {
-        return FORCE_HASH_BASED_MERGE_SUPPLIER.get();
-      }
-
-      @Override
       public long getMetadataSegmentPollPeriod()
       {
         return 1000;
       }
     };
+    SegmentsTableConfig segmentsTableConfig = new SegmentsTableConfig()
+    {
+      @Override
+      public boolean isForceHashBasedMerge()
+      {
+        return FORCE_HASH_BASED_MERGE_SUPPLIER.get();
+      }
+    };
     setupBenchmark(
         plannerConfig,
+        segmentsTableConfig,
         SEGMENT_GRANULARITY,
         AVAILABLE_SEGMENTS_INTERVAL,
         PUBLISHED_SEGMENTS_INTERVAL,

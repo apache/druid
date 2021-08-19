@@ -32,6 +32,7 @@ public class CalcitePlannerModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.sql.sys.segments", SegmentsTableConfig.class);
     binder.bind(PlannerFactory.class);
     binder.bind(DruidOperatorTable.class);
   }

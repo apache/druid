@@ -109,11 +109,13 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
@@ -1059,6 +1061,7 @@ public class CalciteTests
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
+      final SegmentsTableConfig segmentsTableConfig,
       final AuthorizerMapper authorizerMapper
   )
   {
@@ -1104,7 +1107,7 @@ public class CalciteTests
     };
 
     return new SystemSchema(
-        plannerConfig,
+        segmentsTableConfig,
         druidSchema,
         new MetadataSegmentView(
             coordinatorLeaderClient,
@@ -1150,9 +1153,26 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
+    return createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        BaseCalciteQueryTest.SEGMENTS_TABLE_CONFIG_DEFAULT,
+        authorizerMapper
+    );
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final SegmentsTableConfig segmentsTableConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, segmentsTableConfig, authorizerMapper);
 
     return createMockRootSchema(druidSchema, systemSchema, authorizerMapper);
   }
@@ -1165,9 +1185,28 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
+    return createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        BaseCalciteQueryTest.SEGMENTS_TABLE_CONFIG_DEFAULT,
+        viewManager,
+        authorizerMapper
+    );
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final SegmentsTableConfig segmentsTableConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, segmentsTableConfig, authorizerMapper);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
         new InformationSchema(

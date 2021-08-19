@@ -54,6 +54,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.CalciteTests.FakeDruidNodeDiscoveryProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests.FakeHttpClient;
@@ -130,6 +131,7 @@ public abstract class SegmentsTableBenchamrkBase
 
   protected static void setupBenchmark(
       PlannerConfig plannerConfig,
+      SegmentsTableConfig segmentsTableConfig,
       String segmentGranularity,
       String availableSegmentsInterval,
       String publishedSegmentsInterval,
@@ -184,7 +186,7 @@ public abstract class SegmentsTableBenchamrkBase
     );
     metadataSegmentView.start();
     final SystemSchema systemSchema = createMockSystemSchema(
-        plannerConfig,
+        segmentsTableConfig,
         druidSchema,
         metadataSegmentView,
         availableSegments,
@@ -257,7 +259,7 @@ public abstract class SegmentsTableBenchamrkBase
   }
 
   private static SystemSchema createMockSystemSchema(
-      final PlannerConfig plannerConfig,
+      final SegmentsTableConfig segmentsTableConfig,
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataSegmentView,
       final List<DataSegment> segments,
@@ -272,7 +274,7 @@ public abstract class SegmentsTableBenchamrkBase
         "/simple/leader"
     );
     return new SystemSchema(
-        plannerConfig,
+        segmentsTableConfig,
         druidSchema,
         metadataSegmentView,
         new TestServerInventoryView(segments),
