@@ -224,10 +224,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.columns',
     type: 'string-array',
     placeholder: 'key, value',
-    defined: l =>
-      oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv') &&
-      !deepGet(l, 'extractionNamespace.namespaceParseSpec.hasHeaderRow'),
-    required: true,
+    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    required: l => !deepGet(l, 'extractionNamespace.namespaceParseSpec.hasHeaderRow'),
     info: 'The list of columns in the csv file',
   },
   {
