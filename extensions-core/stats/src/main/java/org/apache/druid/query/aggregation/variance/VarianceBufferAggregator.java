@@ -231,14 +231,14 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     {
       VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) selector.getObject();
       Preconditions.checkState(holder2 != null);
+      if (holder2.count == 0) {
+        return;
+      }
       long count = getCount(buf, position);
       if (count == 0) {
         buf.putLong(position, holder2.count);
         buf.putDouble(position + SUM_OFFSET, holder2.sum);
         buf.putDouble(position + NVARIANCE_OFFSET, holder2.nvariance);
-        return;
-      }
-      if (holder2.count == 0) {
         return;
       }
       double sum = getSum(buf, position);
