@@ -51,7 +51,7 @@ druid.realtime.cache.useCache=true
 druid.realtime.cache.populateCache=true
 ```
 
-See [Peon caching](configuration/index.md#peon-caching) and [Indexer caching](configuration/index.md#indexer-caching) for a description of all available task executor service caching options.
+See [Peon caching](../configuration/index.md#peon-caching) and [Indexer caching](../configuration/index.md#indexer-caching) for a description of all available task executor service caching options.
 
 ## Enabling query caching on Brokers
 Brokers support both segment-level and whole-query result level caching.

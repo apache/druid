@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -3537,6 +3538,105 @@ public interface Function
           return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
       }
       throw new RE("Unable to slice to unknown type %s", expr.type());
+    }
+  }
+
+  abstract class SizeFormatFunc implements Function
+  {
+    protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval valueParam = args.get(0).eval(bindings);
+      if (NullHandling.sqlCompatible() && valueParam.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+
+      /**
+       * only LONG and DOUBLE are allowed
+       * For a DOUBLE, it will be cast to LONG before format
+       */
+      if (valueParam.value() != null && valueParam.type() != ExprType.LONG && valueParam.type() != ExprType.DOUBLE) {
+        throw new IAE("Function[%s] needs a number as its first argument", name());
+      }
+
+      /**
+       * By default, precision is 2
+       */
+      long precision = 2;
+      if (args.size() > 1) {
+        ExprEval precisionParam = args.get(1).eval(bindings);
+        if (precisionParam.type() != ExprType.LONG) {
+          throw new IAE("Function[%s] needs an integer as its second argument", name());
+        }
+        precision = precisionParam.asLong();
+        if (precision < 0 || precision > 3) {
+          throw new IAE("Given precision[%d] of Function[%s] must be in the range of [0,3]", precision, name());
+        }
+      }
+
+      return ExprEval.of(HumanReadableBytes.format(valueParam.asLong(), precision, this.getUnitSystem()));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 1 || args.size() > 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
+    {
+      return ExprType.STRING;
+    }
+  }
+
+  class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "human_readable_decimal_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL_BYTE;
+    }
+  }
+
+  class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "human_readable_binary_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.BINARY_BYTE;
+    }
+  }
+
+  class HumanReadableDecimalFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "human_readable_decimal_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL;
     }
   }
 }

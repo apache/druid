@@ -112,6 +112,7 @@ Queries with a priority set to less than minPriority are routed to the lowest pr
 #### manual
 
 This strategy reads the parameter `brokerService` from the query context and routes the query to that broker service. If no valid `brokerService` is specified in the query context, the field `defaultManualBrokerService` is used to determine target broker service given the value is valid and non-null. A value is considered valid if it is present in `druid.router.tierToBrokerMap`
+This strategy can route both Native and SQL queries (when enabled).
 
 *Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerService` is found in the query context.
 
@@ -137,6 +138,18 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
+### Routing of SQL queries
+
+To enable routing of SQL queries, set `druid.router.sql.enable` to `true` (`false` by default). The broker service for a
+given SQL query is resolved using only the provided Router strategies. If not resolved using any of the strategies, the
+Router uses the `defaultBrokerServiceName`. This behavior is slightly different from native queries where the Router
+first tries to resolve the broker service using strategies, then load rules and finally using the `defaultBrokerServiceName`
+if still not resolved.
+
+Routing of native queries is always enabled.
+
+Setting `druid.router.sql.enable` does not affect Avatica JDBC requests. They are routed based on connection ID as
+explained in the next section.
 
 ### Avatica query balancing
 

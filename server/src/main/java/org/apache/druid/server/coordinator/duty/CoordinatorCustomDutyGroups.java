@@ -17,22 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel;
+package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.indexing.DataSchema;
+import java.util.Set;
 
-class PartialGenericSegmentMergeIngestionSpec
-    extends PartialSegmentMergeIngestionSpec<PartialGenericSegmentMergeIOConfig>
+public class CoordinatorCustomDutyGroups
 {
-  @JsonCreator
-  PartialGenericSegmentMergeIngestionSpec(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") PartialGenericSegmentMergeIOConfig ioConfig,
-      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
+  private final Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups;
+
+  public CoordinatorCustomDutyGroups(
+      Set<CoordinatorCustomDutyGroup> coordinatorCustomDutyGroups
   )
   {
-    super(dataSchema, ioConfig, tuningConfig);
+    this.coordinatorCustomDutyGroups = coordinatorCustomDutyGroups;
+  }
+
+  public Set<CoordinatorCustomDutyGroup> getCoordinatorCustomDutyGroups()
+  {
+    return coordinatorCustomDutyGroups;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "CoordinatorCustomDutyGroups{" +
+           "coordinatorCustomDutyGroups=" + coordinatorCustomDutyGroups +
+           '}';
   }
 }

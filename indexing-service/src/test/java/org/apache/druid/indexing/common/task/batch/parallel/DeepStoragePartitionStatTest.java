@@ -20,35 +20,57 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.partition.HashBucketShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 
-public class PartialGenericSegmentMergeIOConfigTest
+public class DeepStoragePartitionStatTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
-  private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
-      ParallelIndexTestingFactory.HOST,
-      ParallelIndexTestingFactory.PORT,
-      ParallelIndexTestingFactory.USE_HTTPS,
-      ParallelIndexTestingFactory.SUBTASK_ID,
-      ParallelIndexTestingFactory.INTERVAL,
-      ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
-  );
 
-  private PartialGenericSegmentMergeIOConfig target;
+  private DeepStoragePartitionStat target;
 
   @Before
   public void setup()
   {
-    target = new PartialGenericSegmentMergeIOConfig(Collections.singletonList(GENERIC_PARTITION_LOCATION));
+    target = new DeepStoragePartitionStat(
+        ParallelIndexTestingFactory.INTERVAL,
+        new HashBucketShardSpec(
+            ParallelIndexTestingFactory.PARTITION_ID,
+            ParallelIndexTestingFactory.PARTITION_ID + 1,
+            Collections.singletonList("dim"),
+            HashPartitionFunction.MURMUR3_32_ABS,
+            new ObjectMapper()
+        ),
+        ImmutableMap.of("path", "/dummy/index.zip")
+    );
   }
 
   @Test
   public void serializesDeserializes()
   {
     TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+  }
+
+  @Test
+  public void hasPartitionIdThatMatchesSecondaryPartition()
+  {
+    Assert.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DeepStoragePartitionStat.class)
+                  .withNonnullFields("interval", "shardSpec", "loadSpec")
+                  .usingGetClass()
+                  .verify();
   }
 }

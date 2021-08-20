@@ -22,7 +22,7 @@ title: "Web console"
   ~ under the License.
   -->
 
-Druid include a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. Users can also run SQL and native Druid queries in the console.
+Druid includes a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. You can also run SQL and native Druid queries in the console.
 
 The Druid Console is hosted by the [Router](../design/router.md) process.
 
