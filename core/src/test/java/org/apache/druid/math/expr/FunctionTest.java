@@ -783,6 +783,36 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat(nonexistent, 10)", null);
   }
 
+  @Test
+  public void testSleep()
+  {
+    assertExpr("sleep(1)", null);
+    assertExpr("sleep(0.5)", null);
+    assertExpr("sleep(null)", null);
+    assertExpr("sleep(0)", null);
+    assertExpr("sleep(-1)", null);
+
+    assertTimeElapsed("sleep(1)", 1000);
+    assertTimeElapsed("sleep(0.5)", 500);
+    assertTimeElapsed("sleep(null)", 0);
+    assertTimeElapsed("sleep(0)", 0);
+    assertTimeElapsed("sleep(-1)", 0);
+  }
+
+  private void assertTimeElapsed(String expression, long expectedTimeElapsedMs)
+  {
+    final long detla = 50;
+    final long before = System.currentTimeMillis();
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    expr.eval(bindings).value();
+    final long after = System.currentTimeMillis();
+    final long elapsed = after - before;
+    Assert.assertTrue(
+        StringUtils.format("Expected [%s], but actual elapsed was [%s]", expectedTimeElapsedMs, elapsed),
+        elapsed >= expectedTimeElapsedMs
+        && elapsed < expectedTimeElapsedMs + detla
+    );
+  }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
@@ -792,7 +822,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
-
 
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
