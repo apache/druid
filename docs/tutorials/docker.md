@@ -58,7 +58,7 @@ The default values are fine for the Quickstart. Production systems will want to 
 
 Basic configuration:
 
-* `DRUID_MAXDIRECTMEMORYSIZE` -- set Java max direct memory size. Default is 6 GB.
+* `DRUID_MAXDIRECTMEMORYSIZE` -- set Java max direct memory size. Default is 6 GiB.
 * `DRUID_XMX` -- set Java `Xmx`, the maximum heap size. Default is 1 GB.
 
 Production configuration:
