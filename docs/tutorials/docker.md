@@ -46,7 +46,7 @@ It will also create a named volume `druid_shared` as deep storage to keep and sh
 
 ### Environment file
 
-The Druid `docker-compose.yml` example utilizes an [environment file](https://docs.docker.com/compose/environment-variables/#the-env_file-configuration-option) to specify the complete Druid configuration, including the environment variables listed below. This file is named `environment` by default, and must be in the same directory as the `docker-compose.yml` file. [Download](https://raw.githubusercontent.com/apache/druid/{{DRUIDVERSION}}/distribution/docker/environment) the example `environment` file to the directory created above. The options in this file work well for trying Druid and for using the tutorial.
+The Druid `docker-compose.yml` example uses an [environment file](https://docs.docker.com/compose/environment-variables/#the-env_file-configuration-option) to specify the complete Druid configuration, including the environment variables described in [Configuration](#configuration). This file is named `environment` by default, and must be in the same directory as the `docker-compose.yml` file. [Download](https://raw.githubusercontent.com/apache/druid/{{DRUIDVERSION}}/distribution/docker/environment) the example `environment` file to the directory created above. The options in this file work well for trying Druid and for using the tutorial.
 
 The single-file approach is inadequate for a production system. Instead we suggest using either `DRUID_COMMON_CONFIG` and `DRUID_CONFIG_${service}` or specially tailored, service-specific environment files.
 
