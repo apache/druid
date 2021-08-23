@@ -446,7 +446,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from expr.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from expr.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
-|<code>TRIM([BOTH &#124; LEADING &#124; TRAILING] [<chars> FROM] expr)</code>|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>)`.|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>)`.|
 |`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>)`.|
