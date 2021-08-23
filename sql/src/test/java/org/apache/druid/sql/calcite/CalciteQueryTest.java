@@ -18860,7 +18860,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSleep() throws Exception
+  public void testSleepFunction() throws Exception
   {
     testQuery(
         "SELECT sleep(m1) from foo where m1 < 2.0",

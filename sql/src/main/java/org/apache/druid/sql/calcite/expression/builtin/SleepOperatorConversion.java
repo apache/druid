@@ -33,6 +33,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 
+/**
+ * A SQL operator conversion for the {@link org.apache.druid.math.expr.Function.Sleep} expression.
+ * The expression is currently evaluated during the query planning when the given argument is a number literal.
+ */
 public class SleepOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
