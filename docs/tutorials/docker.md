@@ -63,7 +63,7 @@ Basic configuration:
 
 Production configuration:
 
-* `DRUID_CONFIG_COMMON` -- full path to a file for druid 'common' properties
+* `DRUID_CONFIG_COMMON` -- full path to a file for Druid common properties
 * `DRUID_CONFIG_${service}` -- full path to a file for druid 'service' properties
 * `JAVA_OPTS` -- set Java options
 
