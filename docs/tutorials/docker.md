@@ -86,7 +86,7 @@ is translated into the following option in the Java launch command for the Druid
 
 `-Ddruid.metadata.storage.type=postgresql`
 
-Note that Druid uses port 8888 for the console. This port is also used by Jupyter and other tools. To avoid conflicts, you can change the port in the [ports](https://github.com/apache/druid/blob/0.21.1/distribution/docker/docker-compose.yml#L125) section of the `docker-compose.yml` file. Example to expose the Console on port 9999 of the host:
+Note that Druid uses port 8888 for the console. This port is also used by Jupyter and other tools. To avoid conflicts, you can change the port in the [`ports`](https://github.com/apache/druid/blob/0.21.1/distribution/docker/docker-compose.yml#L125) section of the `docker-compose.yml` file. For example, to expose the console on port 9999 of the host:
 
 ```yaml
     container_name: router
