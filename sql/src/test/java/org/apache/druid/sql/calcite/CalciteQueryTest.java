@@ -18858,4 +18858,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
+
+  @Test
+  public void testSleep() throws Exception
+  {
+    testQuery(
+        "SELECT sleep(m1) from foo where m1 < 2.0",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(new TableDataSource("foo"))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "sleep(\"m1\")",
+                          ValueType.STRING,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .columns("v0")
+                  .filters(new BoundDimFilter("m1", null, "2.0", null, true, null, null, StringComparators.NUMERIC))
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? "" : null}
+        )
+    );
+  }
 }

@@ -97,6 +97,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SleepOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -168,6 +169,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new TimeParseOperatorConversion())
                    .add(new TimeShiftOperatorConversion())
                    .add(new TimestampToMillisOperatorConversion())
+                   .add(new SleepOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> STRING_OPERATOR_CONVERSIONS =
