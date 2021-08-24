@@ -76,12 +76,12 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 
     class IPv4AddressMatchExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      private final IPAddressString subnetInfo;
+      private final IPAddressString subnetString;
 
-      private IPv4AddressMatchExpr(Expr arg, IPAddressString subnetInfo)
+      private IPv4AddressMatchExpr(Expr arg, IPAddressString subnetString)
       {
         super(FN_NAME, arg);
-        this.subnetInfo = subnetInfo;
+        this.subnetString = subnetString;
       }
 
       @Nonnull
@@ -109,7 +109,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
         if (iPv4Address == null) {
           return false;
         }
-        return subnetInfo.contains(iPv4Address.toAddressString());
+        return subnetString.contains(iPv4Address.toAddressString());
       }
 
       private boolean isLongMatch(long longValue)
@@ -118,14 +118,14 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
           return false;
         }
         IPv4Address iPv4Address = IPv4AddressExprUtils.parse((int) longValue);
-        return subnetInfo.contains(iPv4Address.toAddressString());
+        return subnetString.contains(iPv4Address.toAddressString());
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new IPv4AddressMatchExpr(newArg, subnetInfo));
+        return shuttle.visit(new IPv4AddressMatchExpr(newArg, subnetString));
       }
 
       @Nullable

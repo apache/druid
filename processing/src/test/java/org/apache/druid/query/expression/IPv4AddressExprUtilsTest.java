@@ -177,7 +177,6 @@ public class IPv4AddressExprUtilsTest
 
     IPAddressNetwork.IPAddressGenerator generator = new IPAddressNetwork.IPAddressGenerator();
     IPv4Address iPv4Address = generator.from(bytes).toIPv4();
-
     Assert.assertEquals("192.168.0.1", IPv4AddressExprUtils.toString(iPv4Address));
   }
 
@@ -188,7 +187,6 @@ public class IPv4AddressExprUtilsTest
 
     IPAddressNetwork.IPAddressGenerator generator = new IPAddressNetwork.IPAddressGenerator();
     IPv4Address iPv4Address = generator.from(bytes).toIPv4();
-
     Assert.assertEquals(0xC0A80001L, IPv4AddressExprUtils.toLong(iPv4Address));
   }
 
