@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.expression;
 
+import inet.ipaddr.IPAddressNetwork;
+import inet.ipaddr.ipv4.IPv4Address;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
@@ -137,9 +137,9 @@ public class IPv4AddressExprUtilsTest
   {
     for (String string : VALID_IPV4_ADDRESSES) {
       String errMsg = getErrMsg(string);
-      Inet4Address address = IPv4AddressExprUtils.parse(string);
+      IPv4Address address = IPv4AddressExprUtils.parse(string);
       Assert.assertNotNull(errMsg, address);
-      Assert.assertEquals(errMsg, string, address.getHostAddress());
+      Assert.assertEquals(errMsg, string, address.toString());
     }
   }
 
@@ -166,24 +166,30 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testParseInt()
   {
-    Inet4Address address = IPv4AddressExprUtils.parse((int) 0xC0A80001L);
-    Assert.assertArrayEquals(new byte[]{(byte) 0xC0, (byte) 0xA8, 0x00, 0x01}, address.getAddress());
+    IPv4Address address = IPv4AddressExprUtils.parse((int) 0xC0A80001L);
+    Assert.assertArrayEquals(new byte[]{(byte) 0xC0, (byte) 0xA8, 0x00, 0x01}, address.getBytes());
   }
 
   @Test
   public void testToString() throws UnknownHostException
   {
     byte[] bytes = new byte[]{(byte) 192, (byte) 168, 0, 1};
-    InetAddress address = InetAddress.getByAddress(bytes);
-    Assert.assertEquals("192.168.0.1", IPv4AddressExprUtils.toString((Inet4Address) address));
+
+    IPAddressNetwork.IPAddressGenerator generator = new IPAddressNetwork.IPAddressGenerator();
+    IPv4Address iPv4Address = generator.from(bytes).toIPv4();
+
+    Assert.assertEquals("192.168.0.1", IPv4AddressExprUtils.toString(iPv4Address));
   }
 
   @Test
   public void testToLong() throws UnknownHostException
   {
     byte[] bytes = new byte[]{(byte) 0xC0, (byte) 0xA8, 0x00, 0x01};
-    InetAddress address = InetAddress.getByAddress(bytes);
-    Assert.assertEquals(0xC0A80001L, IPv4AddressExprUtils.toLong((Inet4Address) address));
+
+    IPAddressNetwork.IPAddressGenerator generator = new IPAddressNetwork.IPAddressGenerator();
+    IPv4Address iPv4Address = generator.from(bytes).toIPv4();
+
+    Assert.assertEquals(0xC0A80001L, IPv4AddressExprUtils.toLong(iPv4Address));
   }
 
   private String getErrMsg(String msg)

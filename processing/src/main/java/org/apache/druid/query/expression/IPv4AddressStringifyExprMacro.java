@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -124,7 +125,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       return ExprEval.of(null);
     }
 
-    Inet4Address address = IPv4AddressExprUtils.parse((int) longValue);
+    IPv4Address address = IPv4AddressExprUtils.parse((int) longValue);
     return ExprEval.of(IPv4AddressExprUtils.toString(address));
   }
 }

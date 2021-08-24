@@ -19,19 +19,15 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.net.InetAddresses;
+import inet.ipaddr.IPAddressString;
+import inet.ipaddr.IPAddressStringParameters;
+import inet.ipaddr.ipv4.IPv4Address;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.util.regex.Pattern;
 
 class IPv4AddressExprUtils
 {
-  private static final Pattern IPV4_PATTERN = Pattern.compile(
-      "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-  );
-
   /**
    * @return True if argument cannot be represented by an unsigned integer (4 bytes), else false
    */
@@ -41,44 +37,40 @@ class IPv4AddressExprUtils
   }
 
   /**
-   * @return True if argument is a valid IPv4 address dotted-decimal string
+   * @return True if argument is a valid IPv4 address dotted-decimal string. Single segments, Inet addresses and subnets are not allowed.
    */
   static boolean isValidAddress(@Nullable String string)
   {
-    return string != null && IPV4_PATTERN.matcher(string).matches();
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).
+        allowPrefix(false).allowEmpty(false).
+        toParams();
+    return string != null && new IPAddressString(string, strParams).isIPv4();
   }
 
   @Nullable
-  static Inet4Address parse(@Nullable String string)
+  static IPv4Address parse(@Nullable String string)
   {
-    // Explicitly check for valid address to avoid overhead of InetAddresses#forString() potentially
-    // throwing IllegalArgumentException
     if (isValidAddress(string)) {
-      // Do not use java.lang.InetAddress#getByName() as it may do DNS lookups
-      InetAddress address = InetAddresses.forString(string);
-      if (address instanceof Inet4Address) {
-        return (Inet4Address) address;
-      }
+      return new IPAddressString(string).getAddress().toIPv4();
     }
     return null;
   }
 
-  static Inet4Address parse(int value)
+  static IPv4Address parse(int value)
   {
-    return InetAddresses.fromInteger(value);
+    return new IPv4Address(value);
   }
 
   /**
    * @return IPv4 address dotted-decimal notated string
    */
-  static String toString(Inet4Address address)
+  static String toString(IPv4Address address)
   {
-    return address.getHostAddress();
+    return address.toString();
   }
 
-  static long toLong(Inet4Address address)
+  static long toLong(IPv4Address address)
   {
-    int value = InetAddresses.coerceToInteger(address);
-    return Integer.toUnsignedLong(value);
+    return address.longValue();
   }
 }
