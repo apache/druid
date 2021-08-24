@@ -28,7 +28,6 @@ import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.net.Inet4Address;
 import java.util.List;
 
 /**

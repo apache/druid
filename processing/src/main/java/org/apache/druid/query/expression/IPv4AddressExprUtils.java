@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.IPAddressStringParameters;
 import inet.ipaddr.ipv4.IPv4Address;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 
@@ -41,9 +40,7 @@ class IPv4AddressExprUtils
    */
   static boolean isValidAddress(@Nullable String string)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).
-        allowPrefix(false).allowEmpty(false).
-        toParams();
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowPrefix(false).allowEmpty(false).toParams();
     return string != null && new IPAddressString(string, strParams).isIPv4();
   }
 
