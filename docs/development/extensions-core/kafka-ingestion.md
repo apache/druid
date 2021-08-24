@@ -45,7 +45,7 @@ If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` 
 
 ## Submitting a Supervisor Spec
 
-To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. You can use the followoing endpoint:
+To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. You can use the following endpoint:
 
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
 
@@ -126,7 +126,7 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|Supervisor type. For Kafka streaming, set to `kafka`.|yes|
-|`spec`| Container ojbect for the supervisor configuration. | yes |
+|`spec`| Container object for the supervisor configuration. | yes |
 |`dataSchema`|Schema for the Kafka indexing task to use during ingestion.|yes|
 |`ioConfig`|A `KafkaSupervisorIOConfig` object to define the Kafka connection and I/O-related settings for the supervisor and indexing task. See [KafkaSupervisorIOConfig](#kafkasupervisorioconfig).|yes|
 |`tuningConfig`|A KafkaSupervisorTuningConfig object to define performance-related settings for the supervisor and indexing tasks. See [KafkaSupervisorTuningConfig](#kafkasupervisortuningconfig).|no|
@@ -137,7 +137,7 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. Must be a specific topic. Topic patterns are not supported.|yes|
 |`inputFormat`|Object|`inputFormat` to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
-|`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer propertes](#more-on-consumerproperties).|yes|
+|`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
 |`replicas`|Integer|The number of replica sets. "1" means a single set of tasks without replication. Druid always assigns replica tasks to different workers to provide resiliency against process task failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. The maximum number of reading tasks equals `taskCount * replicas`. Therefore, the total number of tasks, *reading* + *publishing*, is greater than this count. See [Capacity Planning](#capacity-planning) for more details. When `taskCount > {numKafkaPartitions}`, number of reading tasks is less than the `taskCount` value.|no (default == 1)|
@@ -158,7 +158,7 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enableTaskAutoScaler` | Enable or disable autoscaling. `false` or blank disables the `autoScaler` even when `autoScalerConfig` is not null| no (default == false) |
-| `taskCountMax` | Maximum nunber of ingestion tasks. Set `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, Druid only scales reading tasks up to the `{numKafkaPartitions}`. In this case `taskCountMax` is ignored.  | yes |
+| `taskCountMax` | Maximum number of ingestion tasks. Set `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, Druid only scales reading tasks up to the `{numKafkaPartitions}`. In this case `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of ingestion tasks. When you enable autoscaler, Druid ignores the value of taskCount in `IOConfig` and starts with the `taskCountMin` number of tasks.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions. | no (default == 600000) |
 | `autoScalerStrategy` | The algorithm of `autoScaler`. Only supports `lagBased`. See [Lag Based AutoScaler Strategy Related Properties](#Lag Based AutoScaler Strategy Related Properties) for details.| no (default == `lagBased`) |
@@ -177,7 +177,7 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 | `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
 | `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
 
-The folllowing example demonstrates supervisor spec with `lagBased` autoScaler enabled:
+The following example demonstrates supervisor spec with `lagBased` autoScaler enabled:
 ```json
 {
     "type": "kafka",
@@ -487,7 +487,7 @@ In this way, configuration changes can be applied without requiring any pause in
 
 ### Deployment Notes on Kafka partitions and Druid segments
 
-Druid assigns each Kafka indexing task Kafka partitions. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following: `maxRowsPerSegment`, `maxTotalRows` or `intermediateHandoffPeriod` limit. At this point, the task creates a new partition for this segment granularity to conatin subsequent events.
+Druid assigns each Kafka indexing task Kafka partitions. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following: `maxRowsPerSegment`, `maxTotalRows` or `intermediateHandoffPeriod` limit. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
 
 The Kafka Indexing Task also does incremental hand-offs. Therefore segments become available as they are ready and you do not have to wait for all segments until the end of  the task duration.  When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new new set of segments will be created for further events. This allows the task to run for longer durations without accumulating old segments locally on Middle Manager processes.
 
