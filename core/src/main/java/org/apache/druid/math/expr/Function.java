@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -27,6 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.Expr.InputBindingInspector;
+import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
@@ -3637,6 +3640,58 @@ public interface Function
     protected HumanReadableBytes.UnitSystem getUnitSystem()
     {
       return HumanReadableBytes.UnitSystem.DECIMAL;
+    }
+  }
+
+  /**
+   * This function makes the current thread sleep for the given amount of seconds.
+   * Fractional-second delays can be specified.
+   *
+   * This function is applied per row. The actual query time can vary depending on how much parallelism is used
+   * for the query. As it does not provide consistent sleep time, this function should be used only for testing
+   * when you want to keep a certain query running during the test.
+   */
+  @VisibleForTesting
+  class Sleep implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "sleep";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, ObjectBinding bindings)
+    {
+      ExprEval eval = args.get(0).eval(bindings);
+      try {
+        if (!eval.isNumericNull()) {
+          double seconds = eval.asDouble();
+          if (seconds > 0) {
+            Thread.sleep((long) (seconds * 1000));
+          }
+        }
+        return ExprEval.of(null);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExprType.STRING;
     }
   }
 }
