@@ -116,8 +116,7 @@ public class DataSchema
 
     if (this.granularitySpec.isRollup()) {
       log.warn(
-          "Rollup is enabled for dataSource [%s] but no metricsSpec has been provided. "
-          + "Are you sure this is what you want?",
+          "Rollup is enabled for dataSource [%s]",
           dataSource
       );
     }
