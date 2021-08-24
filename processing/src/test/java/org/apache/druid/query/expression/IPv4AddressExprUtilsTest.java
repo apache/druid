@@ -95,34 +95,34 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testIsValidAddressNull()
   {
-    Assert.assertFalse(IPv4AddressExprUtils.isValidAddress(null));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(null));
   }
 
   @Test
   public void testIsValidAddressIPv4()
   {
     for (String address : VALID_IPV4_ADDRESSES) {
-      Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidAddress(address));
+      Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Address(address));
     }
   }
 
   @Test
   public void testIsValidAddressIPv6Mapped()
   {
-    Assert.assertFalse(IPv4AddressExprUtils.isValidAddress(IPV6_MAPPED));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(IPV6_MAPPED));
   }
 
   @Test
   public void testIsValidAddressIPv6Compatible()
   {
-    Assert.assertFalse(IPv4AddressExprUtils.isValidAddress(IPV6_COMPATIBLE));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(IPV6_COMPATIBLE));
   }
 
   @Test
   public void testIsValidAddressNotIpAddress()
   {
     for (String address : INVALID_IPV4_ADDRESSES) {
-      Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidAddress(address));
+      Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Address(address));
     }
   }
 

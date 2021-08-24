@@ -151,6 +151,9 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
     Expr arg = args.get(ARG_SUBNET);
     ExprUtils.checkLiteralArgument(name(), arg, subnetArgName);
     String subnet = (String) arg.getLiteralValue();
+    if (!IPv4AddressExprUtils.isValidIPv4Subnet(subnet)) {
+      throw new IAE(ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid subnet format: " + subnet));
+    }
     return new IPAddressString(subnet);
   }
 }

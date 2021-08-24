@@ -107,7 +107,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
 
   private static ExprEval evalAsString(ExprEval eval)
   {
-    if (IPv4AddressExprUtils.isValidAddress(eval.asString())) {
+    if (IPv4AddressExprUtils.isValidIPv4Address(eval.asString())) {
       return eval;
     }
     return ExprEval.of(null);

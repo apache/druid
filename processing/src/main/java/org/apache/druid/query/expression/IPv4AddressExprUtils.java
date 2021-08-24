@@ -38,16 +38,26 @@ class IPv4AddressExprUtils
   /**
    * @return True if argument is a valid IPv4 address dotted-decimal string. Single segments, Inet addresses and subnets are not allowed.
    */
-  static boolean isValidAddress(@Nullable String string)
+  static boolean isValidIPv4Address(@Nullable String string)
   {
     IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowPrefix(false).allowEmpty(false).toParams();
     return string != null && new IPAddressString(string, strParams).isIPv4();
   }
 
+  /**
+   *
+   * @return True if argument is a valid IPv4 subnet address.
+   */
+  static boolean isValidIPv4Subnet(@Nullable String subnetString)
+  {
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowPrefixOnly(true).toParams();
+    return subnetString != null && new IPAddressString(subnetString, strParams).isIPv4();
+  }
+
   @Nullable
   static IPv4Address parse(@Nullable String string)
   {
-    if (isValidAddress(string)) {
+    if (isValidIPv4Address(string)) {
       return new IPAddressString(string).getAddress().toIPv4();
     }
     return null;
