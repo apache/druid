@@ -50,7 +50,7 @@ class IPv4AddressExprUtils
    */
   static boolean isValidIPv4Subnet(@Nullable String subnetString)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowPrefixOnly(true).toParams();
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowEmpty(false).allowPrefixOnly(true).toParams();
     return subnetString != null && new IPAddressString(subnetString, strParams).isIPv4();
   }
 

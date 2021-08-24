@@ -93,13 +93,38 @@ public class IPv4AddressExprUtilsTest
   }
 
   @Test
-  public void testIsValidAddressNull()
+  public void testIsValidIPv4AddressNull()
   {
     Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(null));
   }
 
   @Test
-  public void testIsValidAddressIPv4()
+  public void testIsValidSubnetNull()
+  {
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet(null));
+  }
+
+  @Test
+  public void testIsValidIPv4SubnetsValid()
+  {
+    Assert.assertTrue(IPv4AddressExprUtils.isValidIPv4Subnet("1.1.1.1/24"));
+    Assert.assertTrue(IPv4AddressExprUtils.isValidIPv4Subnet("192.3.0.0/24"));
+    Assert.assertTrue(IPv4AddressExprUtils.isValidIPv4Subnet("255.255.255.255/24"));
+    Assert.assertTrue(IPv4AddressExprUtils.isValidIPv4Subnet("0.0.0.0/24"));
+  }
+
+  @Test
+  public void testIsValidIPv4SubnetsInvalid()
+  {
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet("1.1.1/24"));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet("1/24"));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet("1"));
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet("1"));
+  }
+
+
+  @Test
+  public void testIsValidIPv4Address()
   {
     for (String address : VALID_IPV4_ADDRESSES) {
       Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Address(address));
@@ -107,19 +132,19 @@ public class IPv4AddressExprUtilsTest
   }
 
   @Test
-  public void testIsValidAddressIPv6Mapped()
+  public void testIsValidIPv4AddressIPv6Mapped()
   {
     Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(IPV6_MAPPED));
   }
 
   @Test
-  public void testIsValidAddressIPv6Compatible()
+  public void testIsValidIPv4AddressIPv6Compatible()
   {
     Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Address(IPV6_COMPATIBLE));
   }
 
   @Test
-  public void testIsValidAddressNotIpAddress()
+  public void testIsValidIPv4AddressNotIpAddress()
   {
     for (String address : INVALID_IPV4_ADDRESSES) {
       Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Address(address));
