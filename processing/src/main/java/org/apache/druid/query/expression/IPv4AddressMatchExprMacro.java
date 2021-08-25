@@ -146,7 +146,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
     ExprUtils.checkLiteralArgument(name(), arg, subnetArgName);
     String subnet = (String) arg.getLiteralValue();
     if (!IPv4AddressExprUtils.isValidIPv4Subnet(subnet)) {
-      throw new IAE(ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid subnet format: " + subnet));
+      throw new IAE(ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid format: " + subnet));
     }
     return new IPAddressString(subnet);
   }
