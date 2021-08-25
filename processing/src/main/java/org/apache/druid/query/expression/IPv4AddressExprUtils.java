@@ -27,6 +27,10 @@ import javax.annotation.Nullable;
 
 class IPv4AddressExprUtils
 {
+
+  private static final IPAddressStringParameters IPV4_ADDRESS_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).allowEmpty(false).toParams();
+  private static final IPAddressStringParameters IPV4_SUBNET_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowEmpty(false).allowIPv6(false).toParams();
+
   /**
    * @return True if argument cannot be represented by an unsigned integer (4 bytes), else false
    */
@@ -40,8 +44,7 @@ class IPv4AddressExprUtils
    */
   static boolean isValidIPv4Address(@Nullable String addressString)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).toParams();
-    return addressString != null && new IPAddressString(addressString, strParams).isIPv4();
+    return addressString != null && new IPAddressString(addressString, IPV4_ADDRESS_PARAMS).isIPv4();
   }
 
   /**
@@ -50,15 +53,15 @@ class IPv4AddressExprUtils
    */
   static boolean isValidIPv4Subnet(@Nullable String subnetString)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).toParams();
-    return subnetString != null && new IPAddressString(subnetString, strParams).isPrefixed();
+    return subnetString != null && new IPAddressString(subnetString, IPV4_SUBNET_PARAMS).isPrefixed();
   }
 
   @Nullable
   static IPv4Address parse(@Nullable String string)
   {
-    if (isValidIPv4Address(string)) {
-      return new IPAddressString(string).getAddress().toIPv4();
+    IPAddressString ipAddressString = new IPAddressString(string, IPV4_ADDRESS_PARAMS);
+    if (ipAddressString.isIPv4()) {
+      return ipAddressString.getAddress().toIPv4();
     }
     return null;
   }

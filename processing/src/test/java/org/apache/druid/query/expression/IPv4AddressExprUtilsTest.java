@@ -114,29 +114,6 @@ public class IPv4AddressExprUtilsTest
   }
 
   @Test
-  public void testIsValidSubnetNull()
-  {
-    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet(null));
-  }
-
-  @Test
-  public void testIsValidIPv4SubnetsValid()
-  {
-    for (String address : VALID_IPV4_SUBNETS) {
-      Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Subnet(address));
-    }
-  }
-
-  @Test
-  public void testIsValidIPv4SubnetsInvalid()
-  {
-    for (String address : INVALID_IPV4_SUBNETS) {
-      Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Subnet(address));
-    }
-  }
-
-
-  @Test
   public void testIsValidIPv4Address()
   {
     for (String address : VALID_IPV4_ADDRESSES) {
@@ -163,6 +140,29 @@ public class IPv4AddressExprUtilsTest
       Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Address(address));
     }
   }
+
+  @Test
+  public void testIsValidSubnetNull()
+  {
+    Assert.assertFalse(IPv4AddressExprUtils.isValidIPv4Subnet(null));
+  }
+
+  @Test
+  public void testIsValidIPv4SubnetValid()
+  {
+    for (String address : VALID_IPV4_SUBNETS) {
+      Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Subnet(address));
+    }
+  }
+
+  @Test
+  public void testIsValidIPv4SubnetInvalid()
+  {
+    for (String address : INVALID_IPV4_SUBNETS) {
+      Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidIPv4Subnet(address));
+    }
+  }
+
 
   @Test
   public void testParseNull()
