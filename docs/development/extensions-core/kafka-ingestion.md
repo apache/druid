@@ -35,7 +35,7 @@ This topic covers the ingestion spec for Kafka. For a general `ingestionSpec` re
 ## Kafka support
 The Kafka indexing service supports transactional topics introduced in Kafka 0.11.x by default. The consumer for Kafka indexing service is incompatible with older Kafka brokers. If you are using an older version, refer to the [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 
-Additionally, you can set `isolation.level` `read_uncommitted` in `consumerProperties` if either:
+Additionally, you can set `isolation.level` to `read_uncommitted` in `consumerProperties` if either:
 - You don't need Druid to consume transactional topics.
 - You need Druid to consume older versions of Kafka.
 
