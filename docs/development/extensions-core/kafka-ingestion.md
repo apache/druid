@@ -495,7 +495,7 @@ The Kafka Indexing Service may still produce some small segments. For example, c
 - Task duration is 4 hours
 - Segment granularity is set to an HOUR
 - The supervisor was started at 9:10
-After 4 hours at 13:10, Druid starts a new set of tasks. The events for the interval 13:00 - 14:00 may be split across existing tasks and the new set of tasks. If you encounter problems, you can schedule re-indexing tasks to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
+After 4 hours at 13:10, Druid starts a new set of tasks. The events for the interval 13:00 - 14:00 may be split across existing tasks and the new set of tasks which could result in small segments. To merge them together into new segments of an ideal size (in the range of ~500-700 MB per segment), you can schedule re-indexing tasks, optionally with a different segment granularity.
 
 For more detail, see [Segment size optimization](../../operations/segment-optimization.md).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
