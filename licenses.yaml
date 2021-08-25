@@ -600,9 +600,9 @@ name: IPAddress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.5.3
+version: 5.3.3
 libraries:
-  - inet.ipaddr: IPAddress
+  - com.github.seancfoley: ipaddress
 
 ---
 
