@@ -376,7 +376,9 @@ public class SqlBenchmark
       + "SELECT * FROM matrix",
 
       // 20: Timeseries, doubles sketches
-      "SELECT APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) FROM foo"
+      "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
+      + "FROM foo "
+      + "GROUP BY 1"
   );
 
   @Param({"5000000"})
