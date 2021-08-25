@@ -119,12 +119,10 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       return ExprEval.of(null);
     }
 
-    long longValue = eval.asLong();
-    if (IPv4AddressExprUtils.overflowsUnsignedInt(longValue)) {
+    IPv4Address address = IPv4AddressExprUtils.parse(eval.asLong());
+    if (address == null) {
       return ExprEval.of(null);
     }
-
-    IPv4Address address = IPv4AddressExprUtils.parse((int) longValue);
     return ExprEval.of(IPv4AddressExprUtils.toString(address));
   }
 }

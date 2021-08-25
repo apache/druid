@@ -57,7 +57,7 @@ public class IPv4AddressExprUtilsTest
       "1.a.3.4",  // second octet not number
       "1.2.c.4",  // third octet not number
       "1.2.3.d",  // fourth octet not number
-      "1.2.3.0/24"  // fourth octet not number
+      "1.2.3.0/24"  // prefixed cidr
   );
   private static final String IPV6_MAPPED = "::ffff:192.168.0.1";
   private static final String IPV6_COMPATIBLE = "::192.168.0.1";
@@ -202,9 +202,10 @@ public class IPv4AddressExprUtilsTest
   }
 
   @Test
-  public void testParseInt()
+  public void testParseLong()
   {
-    IPv4Address address = IPv4AddressExprUtils.parse((int) 0xC0A80001L);
+    IPv4Address address = IPv4AddressExprUtils.parse(0xC0A80001L);
+    Assert.assertNotNull(address);
     Assert.assertArrayEquals(new byte[]{(byte) 0xC0, (byte) 0xA8, 0x00, 0x01}, address.getBytes());
   }
 

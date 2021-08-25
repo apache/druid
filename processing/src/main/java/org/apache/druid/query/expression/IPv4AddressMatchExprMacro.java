@@ -114,10 +114,10 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 
       private boolean isLongMatch(long longValue)
       {
-        if (!IPv4AddressExprUtils.overflowsUnsignedInt(longValue)) {
+        IPv4Address iPv4Address = IPv4AddressExprUtils.parse(longValue);
+        if (iPv4Address == null) {
           return false;
         }
-        IPv4Address iPv4Address = IPv4AddressExprUtils.parse((int) longValue);
         return subnetString.contains(iPv4Address.toAddressString());
       }
 

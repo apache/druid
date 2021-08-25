@@ -38,10 +38,10 @@ class IPv4AddressExprUtils
   /**
    * @return True if argument is a valid IPv4 address dotted-decimal string. Single segments, Inet addresses and subnets are not allowed.
    */
-  static boolean isValidIPv4Address(@Nullable String string)
+  static boolean isValidIPv4Address(@Nullable String addressString)
   {
     IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).toParams();
-    return string != null && new IPAddressString(string, strParams).isIPv4();
+    return addressString != null && new IPAddressString(addressString, strParams).isIPv4();
   }
 
   /**
@@ -63,9 +63,13 @@ class IPv4AddressExprUtils
     return null;
   }
 
-  static IPv4Address parse(int value)
+  @Nullable
+  static IPv4Address parse(long value)
   {
-    return new IPv4Address(value);
+    if (!overflowsUnsignedInt(value)) {
+      return new IPv4Address((int) value);
+    }
+    return null;
   }
 
   /**
