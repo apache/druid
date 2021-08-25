@@ -40,7 +40,7 @@ class IPv4AddressExprUtils
    */
   static boolean isValidIPv4Address(@Nullable String string)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowPrefix(false).allowEmpty(false).toParams();
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).toParams();
     return string != null && new IPAddressString(string, strParams).isIPv4();
   }
 
@@ -50,8 +50,8 @@ class IPv4AddressExprUtils
    */
   static boolean isValidIPv4Subnet(@Nullable String subnetString)
   {
-    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowEmpty(false).allowPrefixOnly(true).toParams();
-    return subnetString != null && new IPAddressString(subnetString, strParams).isIPv4();
+    IPAddressStringParameters strParams = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).toParams();
+    return subnetString != null && new IPAddressString(subnetString, strParams).isPrefixed();
   }
 
   @Nullable
