@@ -48,7 +48,6 @@ class IPv4AddressExprUtils
   }
 
   /**
-   *
    * @return True if argument is a valid IPv4 subnet address.
    */
   static boolean isValidIPv4Subnet(@Nullable String subnetString)
@@ -56,6 +55,9 @@ class IPv4AddressExprUtils
     return subnetString != null && new IPAddressString(subnetString, IPV4_SUBNET_PARAMS).isPrefixed();
   }
 
+  /**
+   * @return IPv4 address if the supplied string is a valid dotted-decimal IPv4 Address string.
+   */
   @Nullable
   static IPv4Address parse(@Nullable String string)
   {
@@ -66,6 +68,9 @@ class IPv4AddressExprUtils
     return null;
   }
 
+  /**
+   * @return IPv4 address if the supplied integer is a valid IPv4 integer number.
+   */
   @Nullable
   static IPv4Address parse(long value)
   {
@@ -76,13 +81,17 @@ class IPv4AddressExprUtils
   }
 
   /**
-   * @return IPv4 address dotted-decimal notated string
+   * @return IPv4 address dotted-decimal canonical string.
    */
   static String toString(IPv4Address address)
   {
     return address.toString();
   }
 
+  /**
+   *
+   * @return IPv4 address as an integer.
+   */
   static long toLong(IPv4Address address)
   {
     return address.longValue();
