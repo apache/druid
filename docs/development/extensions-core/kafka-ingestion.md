@@ -37,9 +37,7 @@ The Kafka indexing service supports transactional topics introduced in Kafka 0.1
 
 Additionally, you can set `isolation.level` to `read_uncommitted` in `consumerProperties` if either:
 - You don't need Druid to consume transactional topics.
-- You need Druid to consume older versions of Kafka.
-
-Make sure offsets are sequential, since there is no offset gap check in Druid anymore.
+- You need Druid to consume older versions of Kafka. Make sure offsets are sequential, since there is no offset gap check in Druid anymore.
 
 If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group id.
 
