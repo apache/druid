@@ -72,8 +72,8 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
         "dimensionExclusions": [
           "timestamp",
           "value"
-       ]
-     },
+         ]
+       },
       "metricsSpec": [
         {
           "name": "count",
