@@ -29,7 +29,7 @@ When you enable the Kinesis indexing service, you can configure *supervisors* on
   - ensure that scalability and replication requirements are maintained.
 
 
-To use the Kinesis indexing service load the `druid-kinesis-indexing-service` core Apache Druid extension (see
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` core Apache Druid extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
 > Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
