@@ -23,7 +23,7 @@ sidebar_label: "Amazon Kinesis"
   ~ under the License.
   -->
 
-When you enable the Kinesis indexing service, you can configure *supervisors* on the Overlord to manage manage the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own partition and offset mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to:
+When you enable the Kinesis indexing service, you can configure *supervisors* on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to:
   - coordinate handoffs
   - manage failures
   - ensure that scalability and replication requirements are maintained.
