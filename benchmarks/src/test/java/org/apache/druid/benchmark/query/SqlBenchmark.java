@@ -375,7 +375,7 @@ public class SqlBenchmark
       + ")\n"
       + "SELECT * FROM matrix",
 
-      // 20: Timeseries, doubles sketches
+      // 20: GroupBy, doubles sketches
       "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
       + "FROM foo "
       + "GROUP BY 1"
