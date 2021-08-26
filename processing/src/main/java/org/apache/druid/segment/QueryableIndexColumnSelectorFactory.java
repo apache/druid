@@ -25,8 +25,8 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -117,9 +117,9 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
-    ValueType type = columnHolder.getCapabilities().getType();
+    ColumnType type = columnHolder.getCapabilities().getType();
     if (type.isNumeric()) {
-      return ValueTypes.makeNumericWrappingDimensionSelector(type, makeColumnValueSelector(dimension), extractionFn);
+      return ValueTypes.makeNumericWrappingDimensionSelector(type.getType(), makeColumnValueSelector(dimension), extractionFn);
     }
 
     final DictionaryEncodedColumn column = getCachedColumn(dimension, DictionaryEncodedColumn.class);

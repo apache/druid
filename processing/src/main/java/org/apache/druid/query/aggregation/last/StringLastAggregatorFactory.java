@@ -38,6 +38,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -51,6 +52,8 @@ import java.util.Objects;
 @JsonTypeName("stringLast")
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "serializablePairLongString", null);
+
   private static final Aggregator NIL_AGGREGATOR = new StringLastAggregator(
       NilColumnValueSelector.instance(),
       NilColumnValueSelector.instance(),
@@ -214,25 +217,19 @@ public class StringLastAggregatorFactory extends AggregatorFactory
         .build();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return "serializablePairLongString";
-  }
-
   /**
    * actual type is {@link SerializablePairLongString}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override

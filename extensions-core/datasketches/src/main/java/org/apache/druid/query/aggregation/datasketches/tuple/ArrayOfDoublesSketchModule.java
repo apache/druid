@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import java.util.Collections;
@@ -43,6 +45,9 @@ public class ArrayOfDoublesSketchModule implements DruidModule
 
   public static final String ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG = "arrayOfDoublesSketchMerge";
   public static final String ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG = "arrayOfDoublesSketchBuild";
+
+  public static final ColumnType BUILD_TYPE = new ColumnType(ValueType.COMPLEX, ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG, null);
+  public static final ColumnType MERGE_TYPE = new ColumnType(ValueType.COMPLEX, ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG, null);
 
   @Override
   public void configure(final Binder binder)

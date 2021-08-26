@@ -42,8 +42,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -112,31 +112,26 @@ public class ArraySqlAggregator implements SqlAggregator
 
     final String fieldName;
     final String initialvalue;
-    final ValueType elementType;
-    final ValueType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
-    if (druidType == null) {
+    final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
+    if (druidType == null || !druidType.isArray()) {
       initialvalue = "[]";
-      elementType = ValueType.STRING;
     } else {
-      switch (druidType) {
-        case LONG_ARRAY:
+      switch (druidType.getElementType().getType()) {
+        case LONG:
           initialvalue = "<LONG>[]";
-          elementType = ValueType.LONG;
           break;
-        case DOUBLE_ARRAY:
+        case DOUBLE:
           initialvalue = "<DOUBLE>[]";
-          elementType = ValueType.DOUBLE;
           break;
         default:
           initialvalue = "[]";
-          elementType = ValueType.STRING;
           break;
       }
     }
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
+      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, (ColumnType) druidType.getElementType());
       fieldName = vc.getOutputName();
     }
 

@@ -36,7 +36,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -112,7 +112,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
     if (null == capabilities) {
       throw new IAE("could not find the column type for column %s", fieldName);
     }
-    ValueType type = capabilities.getType();
+    ColumnType type = capabilities.getType();
     if (type.isNumeric()) {
       return new FixedBucketsHistogramVectorAggregator(
           columnSelectorFactory.makeValueSelector(fieldName),
@@ -279,28 +279,22 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return FixedBucketsHistogramAggregator.TYPE_NAME;
-  }
-
   /**
    * actual type is {@link FixedBucketsHistogram}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return FixedBucketsHistogramAggregator.TYPE;
   }
 
   /**
    * actual type is {@link FixedBucketsHistogram} if {@link #finalizeAsBase64Binary} is set
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return finalizeAsBase64Binary ? ValueType.COMPLEX : ValueType.STRING;
+    return finalizeAsBase64Binary ? FixedBucketsHistogramAggregator.TYPE : ColumnType.STRING;
   }
 
   @Override

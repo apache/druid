@@ -58,7 +58,7 @@ class SimpleColumnHolder implements ColumnHolder
     // are prone to such backward incompatible changes.
     if (columnSupplier == null) {
       Preconditions.checkArgument(
-          capabilities.getType() == ValueType.COMPLEX,
+          capabilities.getType().is(ValueType.COMPLEX),
           "Only complex column types can have nullable column suppliers"
       );
     }
@@ -108,7 +108,7 @@ class SimpleColumnHolder implements ColumnHolder
     if (columnSupplier == null) {
       return INVALID_COMPLEX_COLUMN_TYPE_VALUE_SELECTOR;
     }
-    return ValueTypes.makeNewSettableColumnValueSelector(getCapabilities().getType());
+    return ValueTypes.makeNewSettableColumnValueSelector(getCapabilities().getType().getType());
   }
 
   private static class InvalidComplexColumnTypeValueSelector extends SettableObjectColumnValueSelector

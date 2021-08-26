@@ -30,9 +30,9 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
@@ -355,8 +355,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   {
     final ColumnHolder columnHolder = input.getColumnHolder(metric);
 
-    final ValueType type = columnHolder.getCapabilities().getType();
-    switch (type) {
+    final ColumnType type = columnHolder.getCapabilities().getType();
+    switch (type.getType()) {
       case FLOAT:
         return "float";
       case LONG:

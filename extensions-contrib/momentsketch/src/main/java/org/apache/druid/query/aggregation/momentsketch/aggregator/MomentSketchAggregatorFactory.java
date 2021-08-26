@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -65,6 +66,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "momentSketch";
+  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, TYPE_NAME, null);
 
   @JsonCreator
   public MomentSketchAggregatorFactory(
@@ -108,7 +110,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || ValueType.isNumeric(cap.getType())) {
+    if (cap == null || cap.getType().isNumeric()) {
       return new MomentSketchBuildAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
       return new MomentSketchMergeAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
@@ -119,7 +121,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || ValueType.isNumeric(cap.getType())) {
+    if (cap == null || cap.getType().isNumeric()) {
       return new MomentSketchBuildBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
       return new MomentSketchMergeBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
@@ -239,25 +241,19 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return TYPE_NAME;
-  }
-
   /**
    * actual type is {@link MomentSketchWrapper}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override

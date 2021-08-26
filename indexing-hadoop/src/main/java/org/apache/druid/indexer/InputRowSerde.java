@@ -106,7 +106,7 @@ public class InputRowSerde
     Map<String, IndexSerdeTypeHelper> typeHelperMap = new HashMap<>();
     for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
       IndexSerdeTypeHelper typeHelper;
-      switch (dimensionSchema.getValueType()) {
+      switch (dimensionSchema.getColumnType().getType()) {
         case STRING:
           typeHelper = STRING_HELPER;
           break;
@@ -120,7 +120,7 @@ public class InputRowSerde
           typeHelper = DOUBLE_HELPER;
           break;
         default:
-          throw new IAE("Invalid type: [%s]", dimensionSchema.getValueType());
+          throw new IAE("Invalid type: [%s]", dimensionSchema.getColumnType());
       }
       typeHelperMap.put(dimensionSchema.getName(), typeHelper);
     }
@@ -340,7 +340,7 @@ public class InputRowSerde
             parseExceptionMessages.add(e.getMessage());
           }
 
-          final ValueType type = aggFactory.getType();
+          final ValueType type = aggFactory.getType().getType();
 
           if (agg.isNull()) {
             out.writeByte(NullHandling.IS_NULL_BYTE);
@@ -354,7 +354,7 @@ public class InputRowSerde
               out.writeDouble(agg.getDouble());
             } else if (ValueType.COMPLEX.equals(type)) {
               Object val = agg.get();
-              ComplexMetricSerde serde = getComplexMetricSerde(aggFactory.getComplexTypeName());
+              ComplexMetricSerde serde = getComplexMetricSerde(aggFactory.getType().getComplexTypeName());
               writeBytes(serde.toBytes(val), out);
             } else {
               throw new IAE("Unable to serialize type[%s]", type);
@@ -471,7 +471,7 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         final String metric = readString(in);
         final AggregatorFactory agg = getAggregator(metric, aggs, i);
-        final ValueType type = agg.getType();
+        final ValueType type = agg.getType().getType();
         final byte metricNullability = in.readByte();
 
         if (metricNullability == NullHandling.IS_NULL_BYTE) {
@@ -485,7 +485,7 @@ public class InputRowSerde
         } else if (ValueType.DOUBLE.equals(type)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(agg.getComplexTypeName());
+          ComplexMetricSerde serde = getComplexMetricSerde(agg.getType().getComplexTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }

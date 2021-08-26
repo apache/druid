@@ -28,7 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -68,9 +68,9 @@ public class TDigestSketchToQuantilePostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @JsonProperty

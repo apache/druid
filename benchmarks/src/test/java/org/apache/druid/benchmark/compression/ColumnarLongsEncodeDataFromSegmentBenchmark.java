@@ -26,6 +26,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.LongsColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -128,9 +129,9 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
         Iterables.addAll(columnNames, index.getColumnNames());
         final ColumnHolder column = index.getColumnHolder(columnName);
         final ColumnCapabilities capabilities = column.getCapabilities();
-        final ValueType columnType = capabilities.getType();
+        final ColumnType columnType = capabilities.getType();
         try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
-          if (columnType != ValueType.LONG) {
+          if (!columnType.is(ValueType.LONG)) {
             throw new RuntimeException("Invalid column type, expected 'Long'");
           }
           LongsColumn theColumn = (LongsColumn) column.getColumn();

@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -62,11 +63,11 @@ class BinLtExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -119,11 +120,11 @@ class BinLeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -176,11 +177,11 @@ class BinGtExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -232,11 +233,11 @@ class BinGeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -288,11 +289,11 @@ class BinEqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -344,11 +345,11 @@ class BinNeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }

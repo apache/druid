@@ -26,7 +26,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -43,7 +43,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
   // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
   @Nullable
-  private final ValueType type;
+  private final ColumnType type;
 
   @JsonCreator
   public FieldAccessPostAggregator(
@@ -54,7 +54,7 @@ public class FieldAccessPostAggregator implements PostAggregator
     this(name, fieldName, null);
   }
 
-  private FieldAccessPostAggregator(@Nullable String name, String fieldName, @Nullable ValueType type)
+  private FieldAccessPostAggregator(@Nullable String name, String fieldName, @Nullable ColumnType type)
   {
     Preconditions.checkNotNull(fieldName);
     this.name = name;
@@ -89,7 +89,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     return type;
   }
@@ -97,7 +97,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Override
   public FieldAccessPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    final ValueType type;
+    final ColumnType type;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       type = aggregators.get(fieldName).getType();

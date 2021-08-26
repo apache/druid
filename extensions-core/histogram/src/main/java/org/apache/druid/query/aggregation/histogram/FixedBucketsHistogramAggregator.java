@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.histogram;
 import com.google.common.primitives.Longs;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -29,6 +31,7 @@ import java.util.Comparator;
 public class FixedBucketsHistogramAggregator implements Aggregator
 {
   public static final String TYPE_NAME = "fixedBucketsHistogram";
+  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, TYPE_NAME, null);
 
   public static final Comparator COMPARATOR = new Comparator()
   {

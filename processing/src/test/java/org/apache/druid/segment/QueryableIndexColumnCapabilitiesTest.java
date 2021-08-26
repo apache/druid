@@ -42,7 +42,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -158,25 +158,25 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testNumericColumns()
   {
     // incremental index
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities(ColumnHolder.TIME_COLUMN_NAME), ValueType.LONG);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d3"), ValueType.DOUBLE);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d4"), ValueType.FLOAT);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d5"), ValueType.LONG);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m1"), ValueType.DOUBLE);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m2"), ValueType.FLOAT);
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m3"), ValueType.LONG);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities(ColumnHolder.TIME_COLUMN_NAME), ColumnType.LONG);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d3"), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d4"), ColumnType.FLOAT);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("d5"), ColumnType.LONG);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m1"), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m2"), ColumnType.FLOAT);
+    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m3"), ColumnType.LONG);
 
     // segment index
     assertNonStringColumnCapabilities(
         MMAP_INDEX.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getCapabilities(),
-        ValueType.LONG
+        ColumnType.LONG
     );
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d3").getCapabilities(), ValueType.DOUBLE);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d4").getCapabilities(), ValueType.FLOAT);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d5").getCapabilities(), ValueType.LONG);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m1").getCapabilities(), ValueType.DOUBLE);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m2").getCapabilities(), ValueType.FLOAT);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m3").getCapabilities(), ValueType.LONG);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d3").getCapabilities(), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d4").getCapabilities(), ColumnType.FLOAT);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("d5").getCapabilities(), ColumnType.LONG);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m1").getCapabilities(), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m2").getCapabilities(), ColumnType.FLOAT);
+    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m3").getCapabilities(), ColumnType.LONG);
   }
 
   @Test
@@ -186,43 +186,43 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     // time does not have nulls
     assertNonStringColumnCapabilities(
         INC_INDEX_WITH_NULLS.getCapabilities(ColumnHolder.TIME_COLUMN_NAME),
-        ValueType.LONG
+        ColumnType.LONG
     );
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d3"), ValueType.DOUBLE);
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d4"), ValueType.FLOAT);
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d5"), ValueType.LONG);
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m1"), ValueType.DOUBLE);
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m2"), ValueType.FLOAT);
-    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m3"), ValueType.LONG);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d3"), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d4"), ColumnType.FLOAT);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d5"), ColumnType.LONG);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m1"), ColumnType.DOUBLE);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m2"), ColumnType.FLOAT);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m3"), ColumnType.LONG);
 
     // segment index
     assertNonStringColumnCapabilities(
         MMAP_INDEX_WITH_NULLS.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getCapabilities(),
-        ValueType.LONG
+        ColumnType.LONG
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("d3").getCapabilities(),
-        ValueType.DOUBLE
+        ColumnType.DOUBLE
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("d4").getCapabilities(),
-        ValueType.FLOAT
+        ColumnType.FLOAT
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("d5").getCapabilities(),
-        ValueType.LONG
+        ColumnType.LONG
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("m1").getCapabilities(),
-        ValueType.DOUBLE
+        ColumnType.DOUBLE
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("m2").getCapabilities(),
-        ValueType.FLOAT
+        ColumnType.FLOAT
     );
     assertNonStringColumnCapabilitiesWithNulls(
         MMAP_INDEX_WITH_NULLS.getColumnHolder("m3").getCapabilities(),
-        ValueType.LONG
+        ColumnType.LONG
     );
   }
 
@@ -230,7 +230,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testStringColumn()
   {
     ColumnCapabilities caps = INC_INDEX.getCapabilities("d1");
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isMaybeTrue());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
@@ -250,7 +250,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -265,7 +265,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testStringColumnWithNulls()
   {
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d1");
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -284,7 +284,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d1").getCapabilities();
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -298,7 +298,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testMultiStringColumn()
   {
     ColumnCapabilities caps = INC_INDEX.getCapabilities("d2");
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -308,7 +308,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d2").getCapabilities();
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -323,7 +323,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testMultiStringColumnWithNulls()
   {
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d2");
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -333,7 +333,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d2").getCapabilities();
-    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertEquals(ColumnType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -355,7 +355,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
 
   private void assertComplexColumnCapabilites(ColumnCapabilities caps)
   {
-    Assert.assertEquals(ValueType.COMPLEX, caps.getType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -365,7 +365,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isTrue());
   }
 
-  private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ValueType valueType)
+  private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ColumnType valueType)
   {
     Assert.assertEquals(valueType, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
@@ -377,7 +377,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(caps.hasNulls().isTrue());
   }
 
-  private void assertNonStringColumnCapabilitiesWithNulls(ColumnCapabilities caps, ValueType valueType)
+  private void assertNonStringColumnCapabilitiesWithNulls(ColumnCapabilities caps, ColumnType valueType)
   {
     Assert.assertEquals(valueType, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());

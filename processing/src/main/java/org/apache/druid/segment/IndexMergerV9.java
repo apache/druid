@@ -802,7 +802,7 @@ public class IndexMergerV9 implements IndexMerger
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
             ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
-        metricsValueTypes.put(metric, capabilities.getType());
+        metricsValueTypes.put(metric, capabilities.getType().getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
       }
     }

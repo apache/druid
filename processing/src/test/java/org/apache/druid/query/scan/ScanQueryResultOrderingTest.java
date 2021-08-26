@@ -40,8 +40,8 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -95,7 +95,7 @@ public class ScanQueryResultOrderingTest
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .addTimeColumn()
-                                                                .add(ID_COLUMN, ValueType.LONG)
+                                                                .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(

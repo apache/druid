@@ -37,11 +37,11 @@ import java.util.Objects;
  */
 abstract class ConstantExpr<T> implements Expr
 {
-  final ExprType outputType;
+  final ExpressionType outputType;
   @Nullable
   final T value;
 
-  protected ConstantExpr(ExprType outputType, @Nullable T value)
+  protected ConstantExpr(ExpressionType outputType, @Nullable T value)
   {
     this.outputType = outputType;
     this.value = value;
@@ -49,7 +49,7 @@ abstract class ConstantExpr<T> implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     // null isn't really a type, so don't claim anything
     return value == null ? null : outputType;
@@ -102,7 +102,7 @@ class LongExpr extends ConstantExpr<Long>
 {
   LongExpr(Long value)
   {
-    super(ExprType.LONG, Preconditions.checkNotNull(value, "value"));
+    super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -147,7 +147,7 @@ class NullLongExpr extends ConstantExpr<Long>
 {
   NullLongExpr()
   {
-    super(ExprType.LONG, null);
+    super(ExpressionType.LONG, null);
   }
 
   @Override
@@ -185,7 +185,7 @@ class LongArrayExpr extends ConstantExpr<Long[]>
 {
   LongArrayExpr(@Nullable Long[] value)
   {
-    super(ExprType.LONG_ARRAY, value);
+    super(ExpressionType.LONG_ARRAY, value);
   }
 
   @Override
@@ -239,7 +239,7 @@ class DoubleExpr extends ConstantExpr<Double>
 {
   DoubleExpr(Double value)
   {
-    super(ExprType.DOUBLE, Preconditions.checkNotNull(value, "value"));
+    super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
   }
 
   @Override
@@ -284,7 +284,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
 {
   NullDoubleExpr()
   {
-    super(ExprType.DOUBLE, null);
+    super(ExpressionType.DOUBLE, null);
   }
 
   @Override
@@ -322,7 +322,7 @@ class DoubleArrayExpr extends ConstantExpr<Double[]>
 {
   DoubleArrayExpr(@Nullable Double[] value)
   {
-    super(ExprType.DOUBLE_ARRAY, value);
+    super(ExpressionType.DOUBLE_ARRAY, value);
   }
 
   @Override
@@ -376,7 +376,7 @@ class StringExpr extends ConstantExpr<String>
 {
   StringExpr(@Nullable String value)
   {
-    super(ExprType.STRING, NullHandling.emptyToNullIfNeeded(value));
+    super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
   }
 
   @Override
@@ -428,7 +428,7 @@ class StringArrayExpr extends ConstantExpr<String[]>
 {
   StringArrayExpr(@Nullable String[] value)
   {
-    super(ExprType.STRING_ARRAY, value);
+    super(ExpressionType.STRING_ARRAY, value);
   }
 
   @Override

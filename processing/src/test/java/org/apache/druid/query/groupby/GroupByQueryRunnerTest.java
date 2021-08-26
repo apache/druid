@@ -128,7 +128,7 @@ import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -1025,7 +1025,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "vc",
                 "quality + 'x'",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -1088,7 +1088,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "vc",
                 "cast(quality, 'STRING')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -3278,7 +3278,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "expr",
                 "index * 2 + indexMin / 10",
-                ValueType.FLOAT,
+                ColumnType.FLOAT,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -3488,7 +3488,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     ExpressionVirtualColumn expressionVirtualColumn = new ExpressionVirtualColumn(
         "expr",
         "index / 2 + indexMin",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
     List<AggregatorFactory> aggregatorSpecs2 = Arrays.asList(
@@ -4897,7 +4897,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     subquery = makeQueryBuilder(subquery)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("expr", "-index + 100", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "-index + 100", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
@@ -5965,7 +5965,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ValueType.FLOAT, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ColumnType.FLOAT, TestExprMacroTable.INSTANCE))
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new LongSumAggregatorFactory("count", "expr"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -6401,7 +6401,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("market", "market2"),
             new DefaultDimensionSpec("alias", "alias2")
@@ -6514,7 +6514,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality2"),
             new DefaultDimensionSpec("market", "market2"),
@@ -6870,7 +6870,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -6963,7 +6963,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
+            new DefaultDimensionSpec("qualityLong", "ql", ColumnType.LONG),
             new DefaultDimensionSpec("market", "market2")
         ))
         .setAggregatorSpecs(
@@ -8862,7 +8862,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("v0", "concat(quality,market)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
@@ -8938,7 +8938,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9018,7 +9018,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9117,7 +9117,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -9204,7 +9204,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT))
+        .setDimensions(new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9255,7 +9255,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT))
+        .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9305,7 +9305,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE))
+        .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ColumnType.DOUBLE))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9409,9 +9409,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("market", "alias"),
-            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT)
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setHavingSpec(
             new DimFilterHavingSpec(
@@ -9528,10 +9528,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG),
-            new DefaultDimensionSpec("ql_alias", "ql_alias_long", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qf_alias_float", ValueType.FLOAT),
-            new DefaultDimensionSpec("ql_alias", "ql_alias_float", ValueType.FLOAT)
+            new DefaultDimensionSpec("time_alias", "time_alias2", ColumnType.LONG),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_long", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qf_alias_float", ColumnType.FLOAT),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_float", ColumnType.FLOAT)
         ).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -9574,12 +9574,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     // rows with `technology` have `170000` in the qualityNumericString field
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityNumericString", "ql", ValueType.LONG),
+        new DefaultDimensionSpec("qualityNumericString", "ql", ColumnType.LONG),
         "170000"
     );
 
     ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityNumericString", "qf", ValueType.FLOAT),
+        new DefaultDimensionSpec("qualityNumericString", "qf", ColumnType.FLOAT),
         Sets.newHashSet("170000"),
         true
     );
@@ -9629,12 +9629,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     }
 
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
+        new DefaultDimensionSpec("qualityLong", "ql", ColumnType.LONG),
         "1700"
     );
 
     ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityFloat", "qf", ValueType.FLOAT),
+        new DefaultDimensionSpec("qualityFloat", "qf", ColumnType.FLOAT),
         Sets.newHashSet("17000.0"),
         true
     );
@@ -9701,8 +9701,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-            new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT)
         )
         .setDimFilter(
             new InDimFilter(
@@ -9718,8 +9718,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT)
+            new DefaultDimensionSpec("ql_alias", "quallong", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ColumnType.FLOAT)
         )
         .setDimFilter(
             new AndDimFilter(
@@ -9781,9 +9781,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new ExtractionDimensionSpec("qualityLong", "ql_alias", ValueType.LONG, extractionFn),
-            new ExtractionDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT, extractionFn),
-            new ExtractionDimensionSpec("qualityDouble", "qd_alias", ValueType.DOUBLE, extractionFn)
+            new ExtractionDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG, extractionFn),
+            new ExtractionDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT, extractionFn),
+            new ExtractionDimensionSpec("qualityDouble", "qd_alias", ColumnType.DOUBLE, extractionFn)
         )
         .setDimFilter(
             new InDimFilter(
@@ -9799,9 +9799,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT),
-            new DefaultDimensionSpec("qd_alias", "qualdouble", ValueType.DOUBLE)
+            new DefaultDimensionSpec("ql_alias", "quallong", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ColumnType.FLOAT),
+            new DefaultDimensionSpec("qd_alias", "qualdouble", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(
             new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
@@ -9863,8 +9863,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("market", "alias"),
-            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT)
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -9874,7 +9874,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("alias", "market"),
-            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG)
+            new DefaultDimensionSpec("time_alias", "time_alias2", ColumnType.LONG)
         )
         .setAggregatorSpecs(
             new LongMaxAggregatorFactory("time_alias_max", "time_alias"),
@@ -9957,7 +9957,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new ExtractionDimensionSpec(
             QueryRunnerTestHelper.QUALITY_DIMENSION,
             "alias",
-            ValueType.LONG,
+            ColumnType.LONG,
             strlenFn
         ))
         .setDimFilter(new SelectorDimFilter(QueryRunnerTestHelper.QUALITY_DIMENSION, "entertainment", null))
@@ -10080,7 +10080,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
             "qualityFloat",
             "qf_inner",
-            ValueType.FLOAT,
+            ColumnType.FLOAT,
             jsExtractionFn
         ))
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
@@ -10094,7 +10094,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
             "qf_inner",
             "qf_outer",
-            ValueType.FLOAT,
+            ColumnType.FLOAT,
             jsExtractionFn
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -10127,7 +10127,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExtractionDimensionSpec(
                 ColumnHolder.TIME_COLUMN_NAME,
                 "time_day",
-                ValueType.LONG,
+                ColumnType.LONG,
                 new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
             )
         )
@@ -10142,7 +10142,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
             "time_day",
             "time_week",
-            ValueType.LONG,
+            ColumnType.LONG,
             new TimeFormatExtractionFn(null, null, null, Granularities.WEEK, true)
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -10265,7 +10265,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(
-            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+            new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance())
         )
         .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
@@ -10869,7 +10869,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "v",
                 "case_searched(idx > 1000, 1, 0)",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -10948,7 +10948,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+            new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance())
         )
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
@@ -11014,7 +11014,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("longNumericNull", "nullable", ValueType.LONG)
+            new DefaultDimensionSpec("longNumericNull", "nullable", ColumnType.LONG)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11055,7 +11055,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11096,7 +11096,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11138,7 +11138,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("floatNumericNull", "nullable", ValueType.FLOAT)
+            new DefaultDimensionSpec("floatNumericNull", "nullable", ColumnType.FLOAT)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11182,7 +11182,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "v",
                 "qualityDouble * qualityLong",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
@@ -11193,7 +11193,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
         .setDimensions(
-            new DefaultDimensionSpec("v", "v", ValueType.LONG)
+            new DefaultDimensionSpec("v", "v", ColumnType.LONG)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("twosum", null, "1 + two", TestExprMacroTable.INSTANCE))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11452,7 +11452,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Unable to handle type[STRING_ARRAY] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+      expectedException.expectMessage("Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
     }
 
     GroupByQuery query = makeQueryBuilder()
@@ -11739,7 +11739,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Unable to handle type[STRING_ARRAY] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+      expectedException.expectMessage("Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
     }
 
     GroupByQuery query = makeQueryBuilder()

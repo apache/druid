@@ -38,6 +38,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -49,6 +50,7 @@ import java.util.Objects;
 
 public class BloomFilterAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME, null);
   private static final int DEFAULT_NUM_ENTRIES = 1500;
 
   private static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
@@ -178,25 +180,19 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(field.getDimension());
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME;
-  }
-
   /**
    * actual type is {@link ByteBuffer} containing {@link BloomKFilter}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
@@ -254,8 +250,8 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
 
     if (capabilities != null) {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      ColumnType type = capabilities.getType();
+      switch (type.getType()) {
         case STRING:
           return new StringBloomFilterAggregator(
               columnFactory.makeDimensionSelector(field),

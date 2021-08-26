@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -51,6 +53,7 @@ import java.util.Objects;
 @JsonTypeName("approxHistogram")
 public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "approximateHistogram", null);
   protected final String name;
   protected final String fieldName;
 
@@ -321,28 +324,22 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     return builder.build();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return "approximateHistogram";
-  }
-
   /**
    * actual type is {@link ApproximateHistogram}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   /**
    * actual type is {@link ApproximateHistogram} if {@link #finalizeAsBase64Binary} is set, else {@link Histogram}
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.COMPLEX;
+    return finalizeAsBase64Binary ? TYPE : HistogramAggregatorFactory.TYPE;
   }
 
   @Override

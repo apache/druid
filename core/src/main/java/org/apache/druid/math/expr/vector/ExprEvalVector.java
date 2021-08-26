@@ -20,7 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
@@ -63,7 +63,7 @@ public abstract class ExprEvalVector<T>
     return nulls;
   }
 
-  public abstract ExprType getType();
+  public abstract ExpressionType getType();
 
   public abstract long[] getLongVector();
 

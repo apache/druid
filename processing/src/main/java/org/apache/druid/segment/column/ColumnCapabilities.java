@@ -35,14 +35,7 @@ public interface ColumnCapabilities
   /**
    * Column type, good to know so caller can know what to expect and which optimal selector to use
    */
-  ValueType getType();
-
-  /**
-   *
-   * If ValueType is COMPLEX, then the typeName associated with it.
-   */
-  @Nullable
-  String getComplexTypeName();
+  ColumnType getType();
 
   /**
    * Is the column dictionary encoded? If so, a DimensionDictionarySelector may be used instead of using a value

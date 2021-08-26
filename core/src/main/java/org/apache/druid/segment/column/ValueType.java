@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
  * implementors sparingly until full engine support is in place. Aggregators should never specify array types as their
  * output type until the engines fully support these types.
  */
-public enum ValueType
+public enum ValueType implements TypeDescriptor
 {
   /**
    * 64-bit double precision floating point number primitive type. This type may be used as a grouping key, or as an
@@ -63,22 +63,6 @@ public enum ValueType
    */
   STRING,
   /**
-   * Array object of 64-bit double precision floating point numbers. This type is not currently supported as a grouping
-   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
-   * limited support as an input among complex type sketch aggregators.
-   */
-  DOUBLE_ARRAY,
-  /**
-   * Array object of 64-bit integer numbers. This type is not currently supported as a grouping key for aggregations,
-   * and may have limited support as an input among complex type sketch aggregators.
-   */
-  LONG_ARRAY,
-  /**
-   * Array object of String objects. This type is not currently supported as a grouping key for aggregations,
-   * and may have limited support as an input among complex type sketch aggregators.
-   */
-  STRING_ARRAY,
-  /**
    * Placeholder for arbitrary 'complex' types, which have a corresponding serializer/deserializer implementation. Note
    * that knowing a type is complex alone isn't enough information to work with it directly, and additional information
    * in the form of a type name that is registered in the complex type registry must be available to make this type
@@ -86,12 +70,20 @@ public enum ValueType
    * input to expression virtual columns, and might only be supported by the specific aggregators crafted to handle
    * this complex type.
    */
-  COMPLEX;
+  COMPLEX,
+
+  /**
+   * Placeholder for arbitrary arrays of other {@link ValueType}. This type is not currently supported as a grouping
+   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
+   * limited support as an input among complex type sketch aggregators.
+   */
+  ARRAY;
 
 
   /**
    * Type is a numeric type, not including numeric array types
    */
+  @Override
   public boolean isNumeric()
   {
     return isNumeric(this);
@@ -100,6 +92,7 @@ public enum ValueType
   /**
    * Type is an array type
    */
+  @Override
   public boolean isArray()
   {
     return isArray(this);
@@ -107,11 +100,12 @@ public enum ValueType
 
   /**
    * Type is a 'primitive' type, which includes the {@link #isNumeric} types and {@link #STRING}, but not
-   * {@link #COMPLEX} or array types.
+   * {@link #COMPLEX} or {@link #ARRAY} types.
    *
    * Primitive types support being used for grouping to compute aggregates in both group by and top-n query engines,
-   * while non-primitive types currently do not
+   * while non-primitive types currently do not.
    */
+  @Override
   public boolean isPrimitive()
   {
     return this.equals(ValueType.STRING) || isNumeric(this);
@@ -134,6 +128,6 @@ public enum ValueType
 
   public static boolean isArray(ValueType type)
   {
-    return type == ValueType.DOUBLE_ARRAY || type == ValueType.LONG_ARRAY || type == ValueType.STRING_ARRAY;
+    return type == ValueType.ARRAY;
   }
 }

@@ -44,7 +44,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.List;
@@ -74,8 +74,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         ColumnValueSelector selector
     )
     {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      ColumnType type = capabilities.getType();
+      switch (type.getType()) {
         case STRING:
           return new StringSearchColumnSelectorStrategy();
         case LONG:

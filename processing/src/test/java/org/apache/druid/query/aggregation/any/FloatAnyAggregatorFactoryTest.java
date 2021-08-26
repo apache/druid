@@ -23,7 +23,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -83,7 +83,7 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   public void factorizeVectorForNumericTypeShouldReturnFloatVectorAggregator()
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(ValueType.FLOAT).when(capabilities).getType();
+    Mockito.doReturn(ColumnType.FLOAT).when(capabilities).getType();
     VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
     Assert.assertEquals(FloatAnyVectorAggregator.class, aggregator.getClass());
@@ -93,7 +93,7 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   public void factorizeVectorForStringTypeShouldReturnFloatVectorAggregatorWithNilSelector()
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(ValueType.STRING).when(capabilities).getType();
+    Mockito.doReturn(ColumnType.STRING).when(capabilities).getType();
     VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
     Assert.assertEquals(NullHandling.defaultFloatValue(), aggregator.get(BUFFER, POSITION));

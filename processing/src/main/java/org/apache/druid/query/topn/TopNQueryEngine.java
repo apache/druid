@@ -188,11 +188,11 @@ public class TopNQueryEngine
       return false;
     }
 
-    if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
+    if (!query.getDimensionSpec().getOutputType().is(ValueType.STRING)) {
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (capabilities != null && capabilities.getType() == ValueType.STRING) {
+    if (capabilities != null && capabilities.getType().is(ValueType.STRING)) {
       // string columns must use the on heap algorithm unless they have the following capabilites
       return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
     } else {

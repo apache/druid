@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 public class CardinalityAggregatorColumnSelectorStrategyFactory
     implements ColumnSelectorStrategyFactory<CardinalityAggregatorColumnSelectorStrategy>
@@ -34,8 +34,8 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
       ColumnValueSelector selector
   )
   {
-    ValueType type = capabilities.getType();
-    switch (type) {
+    ColumnType type = capabilities.getType();
+    switch (type.getType()) {
       case STRING:
         return new StringCardinalityAggregatorColumnSelectorStrategy();
       case LONG:

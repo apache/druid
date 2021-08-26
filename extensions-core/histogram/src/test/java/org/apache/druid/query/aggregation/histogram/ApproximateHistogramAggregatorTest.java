@@ -23,13 +23,13 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -145,12 +145,12 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("approxHisto", ValueType.COMPLEX)
-                    .add("approxHistoBin", ValueType.COMPLEX)
-                    .add("approxHisto-access", ValueType.COMPLEX)
-                    .add("approxHisto-finalize", ValueType.COMPLEX)
-                    .add("approxHistoBin-access", ValueType.COMPLEX)
-                    .add("approxHistoBin-finalize", ValueType.COMPLEX)
+                    .add("approxHisto", null)
+                    .add("approxHistoBin", ApproximateHistogramAggregatorFactory.TYPE)
+                    .add("approxHisto-access", ApproximateHistogramAggregatorFactory.TYPE)
+                    .add("approxHisto-finalize", HistogramAggregatorFactory.TYPE)
+                    .add("approxHistoBin-access", ApproximateHistogramAggregatorFactory.TYPE)
+                    .add("approxHistoBin-finalize", ApproximateHistogramAggregatorFactory.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

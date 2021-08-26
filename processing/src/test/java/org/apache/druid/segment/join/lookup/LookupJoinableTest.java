@@ -25,7 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.Joinable;
 import org.junit.Assert;
 import org.junit.Before;
@@ -109,14 +109,14 @@ public class LookupJoinableTest extends NullHandlingTest
   public void getColumnCapabilitiesForKeyColumnShouldReturnStringCaps()
   {
     ColumnCapabilities capabilities = target.getColumnCapabilities(LookupColumnSelectorFactory.KEY_COLUMN);
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
   }
 
   @Test
   public void getColumnCapabilitiesForValueColumnShouldReturnStringCaps()
   {
     ColumnCapabilities capabilities = target.getColumnCapabilities(LookupColumnSelectorFactory.VALUE_COLUMN);
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
   }
 
   @Test

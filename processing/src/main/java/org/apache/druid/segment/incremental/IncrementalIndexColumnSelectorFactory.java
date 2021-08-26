@@ -87,7 +87,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       }
       if (capabilities.getType().isNumeric()) {
         return ValueTypes.makeNumericWrappingDimensionSelector(
-            capabilities.getType(),
+            capabilities.getType().getType(),
             makeColumnValueSelector(dimension),
             extractionFn
         );

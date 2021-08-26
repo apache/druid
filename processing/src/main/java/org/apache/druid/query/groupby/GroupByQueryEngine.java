@@ -325,7 +325,7 @@ public class GroupByQueryEngine
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
 
       for (final DimensionSpec dimSpec : dimensionSpecs) {
-        if (dimSpec.getOutputType() != ValueType.STRING) {
+        if (!dimSpec.getOutputType().is(ValueType.STRING)) {
           throw new UnsupportedOperationException(
               "GroupBy v1 only supports dimensions with an outputType of STRING."
           );

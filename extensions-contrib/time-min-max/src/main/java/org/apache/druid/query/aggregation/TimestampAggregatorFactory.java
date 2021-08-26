@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
@@ -37,6 +38,7 @@ import java.util.Objects;
 
 public abstract class TimestampAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType FINALIZED_TYPE = new ColumnType(ValueType.COMPLEX, "dateTime", null);
   final String name;
   @Nullable
   final String fieldName;
@@ -199,18 +201,18 @@ public abstract class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   /**
    * actual type is {@link DateTime}
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.COMPLEX;
+    return FINALIZED_TYPE;
   }
 
   @Override

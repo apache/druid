@@ -49,7 +49,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   )
   {
     Preconditions.checkArgument(
-        ValueType.STRING == capabilities.getType(),
+        capabilities.getType().is(ValueType.STRING),
         "groupBy dimension processors must be STRING typed"
     );
     return new SingleValueStringGroupByVectorColumnSelector(selector);
@@ -62,7 +62,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   )
   {
     Preconditions.checkArgument(
-        ValueType.STRING == capabilities.getType(),
+        capabilities.getType().is(ValueType.STRING),
         "groupBy dimension processors must be STRING typed"
     );
     throw new UnsupportedOperationException(
@@ -112,7 +112,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       final VectorObjectSelector selector
   )
   {
-    if (ValueType.STRING.equals(capabilities.getType())) {
+    if (capabilities.getType().is(ValueType.STRING)) {
       return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
     }
     return NilGroupByVectorColumnSelector.INSTANCE;
@@ -135,7 +135,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   public boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
   {
     Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
-    Preconditions.checkArgument(capabilities.getType() == ValueType.STRING, "Must only be called on a STRING column");
+    Preconditions.checkArgument(capabilities.getType().is(ValueType.STRING), "Must only be called on a STRING column");
     return capabilities.isDictionaryEncoded().isTrue();
   }
 }

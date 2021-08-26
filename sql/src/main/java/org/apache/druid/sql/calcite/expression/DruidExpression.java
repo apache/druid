@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import java.util.Arrays;
@@ -165,7 +165,7 @@ public class DruidExpression
 
   public ExpressionVirtualColumn toVirtualColumn(
       final String name,
-      final ValueType outputType,
+      final ColumnType outputType,
       final ExprMacroTable macroTable
   )
   {

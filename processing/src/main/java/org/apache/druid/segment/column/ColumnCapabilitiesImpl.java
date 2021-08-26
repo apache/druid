@@ -71,7 +71,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
-      capabilities.complexTypeName = other.getComplexTypeName();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
@@ -95,6 +94,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     if (capabilities == null) {
       return null;
     }
+
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
     copy.dictionaryEncoded = copy.dictionaryEncoded.coerceUnknownToBoolean(coerce.dictionaryEncoded());
     copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(coerce.dictionaryValuesSorted());
@@ -122,20 +122,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       return merged;
     }
 
-    if (merged.type == null) {
+    if (merged.type == null || (merged.type.is(ValueType.COMPLEX) && merged.type.complexTypeName == null)) {
       merged.type = other.getType();
     }
 
     if (!merged.type.equals(otherSnapshot.getType())) {
       throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
-    }
-
-    if (merged.type == ValueType.COMPLEX && merged.complexTypeName == null) {
-      merged.complexTypeName = other.getComplexTypeName();
-    }
-
-    if (merged.type == ValueType.COMPLEX && merged.complexTypeName != null && !merged.complexTypeName.equals(other.getComplexTypeName())) {
-      throw new ISE("Cannot merge columns of typeName[%s] and [%s]", merged.complexTypeName, other.getComplexTypeName());
     }
 
     merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
@@ -161,8 +153,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
+   * @param valueType
    */
-  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ValueType valueType)
+  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ColumnType valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
                                                                  .setHasMultipleValues(false)
@@ -182,7 +175,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    */
   public static ColumnCapabilitiesImpl createSimpleSingleValueStringColumnCapabilities()
   {
-    return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    return new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                        .setHasMultipleValues(false)
                                        .setHasBitmapIndexes(false)
                                        .setDictionaryEncoded(false)
@@ -195,8 +188,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   /**
    * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
    * and {@link #hasNulls} is not set
+   * @param valueType
    */
-  public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(ValueType valueType)
+  public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(ColumnType valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
                                                                  .setHasMultipleValues(true)
@@ -209,10 +203,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Nullable
-  private ValueType type = null;
-
-  @Nullable
-  private String complexTypeName = null;
+  private ColumnType type = null;
 
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
@@ -231,27 +222,14 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Override
   @JsonProperty
-  public ValueType getType()
+  public ColumnType getType()
   {
     return type;
   }
 
-  @Override
-  @JsonProperty
-  public String getComplexTypeName()
-  {
-    return complexTypeName;
-  }
-
-  public ColumnCapabilitiesImpl setType(ValueType type)
+  public ColumnCapabilitiesImpl setType(ColumnType type)
   {
     this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
-    return this;
-  }
-
-  public ColumnCapabilitiesImpl setComplexTypeName(String typeName)
-  {
-    this.complexTypeName = typeName;
     return this;
   }
 
@@ -353,11 +331,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @Override
   public boolean isFilterable()
   {
-    return type == ValueType.STRING ||
-           type == ValueType.LONG ||
-           type == ValueType.FLOAT ||
-           type == ValueType.DOUBLE ||
-           filterable;
+    return (type != null && (type.isPrimitive() || type.isArray())) || filterable;
   }
 
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)

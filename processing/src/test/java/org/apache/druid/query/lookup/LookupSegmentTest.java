@@ -33,7 +33,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -132,7 +132,7 @@ public class LookupSegmentTest
   {
     final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asStorageAdapter().getColumnCapabilities("k");
 
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
 
     // Note: the "k" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
@@ -149,7 +149,7 @@ public class LookupSegmentTest
     // Note: the "v" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
     Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }

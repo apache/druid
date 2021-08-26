@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
@@ -119,8 +120,8 @@ public class SegmentAnalyzer
       }
 
       final ColumnAnalysis analysis;
-      final ValueType type = capabilities.getType();
-      switch (type) {
+      final ColumnType type = capabilities.getType();
+      switch (type.getType()) {
         case LONG:
           analysis = analyzeNumericColumn(capabilities, length, Long.BYTES);
           break;
@@ -151,7 +152,7 @@ public class SegmentAnalyzer
     // Add time column too
     ColumnCapabilities timeCapabilities = adapterCapabilitesFn.apply(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
-      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     }
     columns.put(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -193,7 +194,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().name(),
+        capabilities.getType().toString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -249,7 +250,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().name(),
+        capabilities.getType().toString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -327,7 +328,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().name(),
+        capabilities.getType().toString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -344,6 +345,8 @@ public class SegmentAnalyzer
       final String typeName
   )
   {
+    // serialize using toString (which is also used for JSON so can easily round-trip complex type info back into ColumnType)
+    final String serdeTypeName = new ColumnType(ValueType.COMPLEX, typeName, null).toString();
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
@@ -357,7 +360,16 @@ public class SegmentAnalyzer
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
-          return new ColumnAnalysis(typeName, hasMultipleValues, hasNulls, 0, null, null, null, null);
+          return new ColumnAnalysis(
+              serdeTypeName,
+              hasMultipleValues,
+              hasNulls,
+              0,
+              null,
+              null,
+              null,
+              null
+          );
         }
 
         final int length = complexColumn.getLength();
@@ -367,7 +379,7 @@ public class SegmentAnalyzer
       }
 
       return new ColumnAnalysis(
-          typeName,
+          serdeTypeName,
           hasMultipleValues,
           hasNulls,
           size,
