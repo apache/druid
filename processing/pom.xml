@@ -96,10 +96,6 @@
             <artifactId>commons-math3</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-net</groupId>
-            <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.seancfoley</groupId>
             <artifactId>ipaddress</artifactId>
             <version>5.3.3</version>
