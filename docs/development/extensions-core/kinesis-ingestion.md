@@ -141,7 +141,7 @@ A sample supervisor spec is shown below:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
-|`autoScalerConfig`|Object|`autoScalerConfig` to specify how to auto scale the number of Kinesis ingest tasks. See [Tasks Autoscaler Properties](#Task Autoscaler Properties) for details.|no (default == null)|
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#Task Autoscaler Properties).|no (default == null)|
 
 ### Task Autoscaler Properties
 
