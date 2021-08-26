@@ -172,7 +172,7 @@ A sample supervisor spec is shown below:
 | `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
 | `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
 
-A sample supervisor spec with `lagBased` autoScaler enabled is shown below:
+The following example demonstrates a supervisor spec with `lagBased` autoScaler enabled:
 ```json
 {
   "type": "kinesis",
