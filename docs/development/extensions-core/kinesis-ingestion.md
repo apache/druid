@@ -157,7 +157,7 @@ A sample supervisor spec is shown below:
 
 ### Lag Based AutoScaler Strategy Related Properties
 
-> Unlike the Kafka Indexing Service, Kinesis reports lag metrics measured in time milliseconds rather than message count.
+The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count which is used by Kafka.
 
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
