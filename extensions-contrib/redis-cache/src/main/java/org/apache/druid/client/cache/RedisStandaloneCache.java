@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.Pair;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -55,7 +56,7 @@ public class RedisStandaloneCache extends AbstractRedisCache
   }
 
   @Override
-  protected Map<NamedKey, byte[]> mgetFromRedis(Iterable<NamedKey> keys)
+  protected Pair<Integer, Map<NamedKey, byte[]>> mgetFromRedis(Iterable<NamedKey> keys)
   {
     List<NamedKey> namedKeys = Lists.newArrayList(keys);
     List<byte[]> byteKeys = Lists.transform(namedKeys, NamedKey::toByteArray);
@@ -70,7 +71,8 @@ public class RedisStandaloneCache extends AbstractRedisCache
           results.put(namedKeys.get(i), byteValues.get(i));
         }
       }
-      return results;
+
+      return new Pair<>(namedKeys.size(), results);
     }
   }
 

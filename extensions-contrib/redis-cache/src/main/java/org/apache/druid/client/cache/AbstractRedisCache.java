@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.cache;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -27,7 +28,6 @@ import redis.clients.jedis.exceptions.JedisException;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 
 public abstract class AbstractRedisCache implements Cache
 {
@@ -92,11 +92,11 @@ public abstract class AbstractRedisCache implements Cache
   {
     totalRequestCount.incrementAndGet();
     try {
-      Map<NamedKey, byte[]> results = this.mgetFromRedis(keys);
+      Pair<Integer, Map<NamedKey, byte[]>> results = this.mgetFromRedis(keys);
 
-      hitCount.addAndGet(results.size());
-      missCount.addAndGet(Stream.of(keys).count() - results.size());
-      return results;
+      hitCount.addAndGet(results.rhs.size());
+      missCount.addAndGet(results.lhs - results.rhs.size());
+      return results.rhs;
     }
     catch (JedisException e) {
       if (e.getMessage().contains("Read timed out")) {
@@ -160,7 +160,11 @@ public abstract class AbstractRedisCache implements Cache
 
   protected abstract void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration);
 
-  protected abstract Map<NamedKey, byte[]> mgetFromRedis(Iterable<NamedKey> keys);
+  /**
+   * The lhs of the returned pair the count of input keys
+   * The rhs of the returned pair is a map holding the values of their corresponding keys
+   */
+  protected abstract Pair<Integer, Map<NamedKey, byte[]>> mgetFromRedis(Iterable<NamedKey> keys);
 
   protected abstract void cleanup();
 }

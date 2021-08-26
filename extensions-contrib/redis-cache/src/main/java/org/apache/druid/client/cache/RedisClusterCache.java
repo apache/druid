@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.cache;
 
+import org.apache.druid.java.util.common.Pair;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.util.JedisClusterCRC16;
 
@@ -70,11 +71,15 @@ public class RedisClusterCache extends AbstractRedisCache
    * In future, Jedis could be replaced by the Lettuce driver which supports mget operation on a redis cluster
    */
   @Override
-  protected Map<NamedKey, byte[]> mgetFromRedis(Iterable<NamedKey> keys)
+  protected Pair<Integer, Map<NamedKey, byte[]>> mgetFromRedis(Iterable<NamedKey> keys)
   {
+    int inputKeyCount = 0;
+
     // group keys based on their slot
     Map<Integer, List<CachableKey>> slot2Keys = new HashMap<>();
     for (NamedKey key : keys) {
+      inputKeyCount++;
+
       CachableKey cachableKey = new CachableKey(key);
       int keySlot = JedisClusterCRC16.getSlot(cachableKey.keyBytes);
       slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(cachableKey);
@@ -99,7 +104,7 @@ public class RedisClusterCache extends AbstractRedisCache
                }
              });
 
-    return results;
+    return new Pair<>(inputKeyCount, results);
   }
 
   @Override
