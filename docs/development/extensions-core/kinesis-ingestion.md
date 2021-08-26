@@ -169,7 +169,7 @@ A sample supervisor spec is shown below:
 | `triggerScaleInFractionThreshold` | If `triggerScaleInFractionThreshold` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | no (default == 0.9) |
 | `scaleActionStartDelayMillis` | Number of milliseconds to delay after the supervisor starts before the first scale logic check. | no (default == 300000) |
 | `scaleActionPeriodMillis` | The frequency of checking whether to do scale action in millis | no (default == 60000) |
-| `scaleInStep` | How many tasks to reduce at a time | no (default == 1) |
+| `scaleInStep` | Number of tasks to reduce at a time when scaling down | no (default == 1) |
 | `scaleOutStep` | How many tasks to add at a time | no (default == 2) |
 
 The following example demonstrates a supervisor spec with `lagBased` autoScaler enabled:
