@@ -116,7 +116,8 @@ public class DataSchema
 
     if (this.granularitySpec.isRollup() &&  && this.aggregators.length == 0) {
       log.warn(
-          "Rollup is enabled for dataSource [%s]",
+          "Rollup is enabled for dataSource [%s] but no metricsSpec has been provided. "
+          + "Are you sure this is what you want?",
           dataSource
       );
     }
