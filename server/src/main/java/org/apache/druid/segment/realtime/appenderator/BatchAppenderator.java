@@ -568,7 +568,7 @@ public class BatchAppenderator implements Appenderator
 
     log.info("Preparing to push...");
 
-    // get the dirs for the identfiers:
+    // Traverse identifiers, load their sink, and push it:
     int totalHydrantsMerged = 0;
     final List<DataSegment> dataSegments = new ArrayList<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {

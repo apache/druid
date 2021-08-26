@@ -32,7 +32,6 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
@@ -963,7 +962,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   {
     return new SegmentIdWithShardSpec(
         BatchAppenderatorTester.DATASOURCE,
-        new Interval(interval, ISOChronology.getInstance(DateTimeZone.forID("Asia/Seoul"))),
+        new Interval(interval, ISOChronology.getInstance(DateTimes.inferTzFromString("Asia/Seoul"))),
         version,
         new LinearShardSpec(partitionNum)
 
