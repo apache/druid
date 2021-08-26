@@ -146,7 +146,7 @@ Types of column analyses are described below:
 
 * `cardinality` is the number of unique values present in string columns. It is null for other column types.
 
-This value is computed by examining the size of string column dictionaries. There is one dictionary per column per
+Druid examines the size of string column dictionaries to compute the cardinality value. There is one dictionary per column per
 segment. If `merge` is off (false), this reports the cardinality of each column of each segment individually. If
 `merge` is on (true), this reports the highest cardinality encountered for a particular column across all relevant
 segments.
