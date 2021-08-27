@@ -371,7 +371,7 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 
 When you use this technique to partition your data, segment sizes may be unequally distributed if the data
 in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, 
-> review the distribution of values in your source data before deciding on a partitioning strategy.
+ review the distribution of values in your source data before deciding on a partitioning strategy.
 
 > In order for segment pruning to be effective and translate into better query performance, you _must_ use
 > the `partitionDimension` at query time.  You can concatenate values from multiple
