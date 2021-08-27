@@ -21,11 +21,14 @@ package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.core.DockerClientBuilder;
+import com.github.dockerjava.core.command.ExecStartResultCallback;
 import com.github.dockerjava.netty.NettyDockerCmdExecFactory;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -39,6 +42,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -154,12 +158,78 @@ public class DruidClusterAdminClient
     waitUntilInstanceReady(config.getRouterUrl());
   }
 
+  public Pair<String, String> runCommandInCoordinatorContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(COORDINATOR_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInCoordinatorTwoContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(COORDINATOR_TWO_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInHistoricalContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInOverlordContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInOverlordTwoContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(OVERLORD_TWO_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInBrokerContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(BROKER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInRouterContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(ROUTER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInMiddleManagerContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(MIDDLEMANAGER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  private Pair<String, String> runCommandInDockerContainer(String serviceName, String... cmd) throws Exception
+  {
+    DockerClient dockerClient = DockerClientBuilder.getInstance()
+                                                   .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
+                                                                                 .withConnectTimeout(10 * 1000))
+                                                   .build();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+    ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(findDockerContainer(dockerClient, serviceName))
+                                                              .withAttachStderr(true)
+                                                              .withAttachStdout(true)
+                                                              .withCmd(cmd)
+                                                              .exec();
+    dockerClient.execStartCmd(execCreateCmdResponse.getId())
+                .exec(new ExecStartResultCallback(stdout, stderr))
+                .awaitCompletion();
+
+    return new Pair<>(stdout.toString(), stderr.toString());
+  }
+
   private void restartDockerContainer(String serviceName)
   {
     DockerClient dockerClient = DockerClientBuilder.getInstance()
                                                    .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
                                                                                  .withConnectTimeout(10 * 1000))
                                                    .build();
+    dockerClient.restartContainerCmd(findDockerContainer(dockerClient, serviceName)).exec();
+  }
+
+  private String findDockerContainer(DockerClient dockerClient, String serviceName)
+  {
+
     List<Container> containers = dockerClient.listContainersCmd().exec();
     Optional<String> containerName = containers.stream()
                                                .filter(container -> Arrays.asList(container.getNames()).contains(serviceName))
@@ -170,7 +240,7 @@ public class DruidClusterAdminClient
       LOG.error("Cannot find docker container for " + serviceName);
       throw new ISE("Cannot find docker container for " + serviceName);
     }
-    dockerClient.restartContainerCmd(containerName.get()).exec();
+    return containerName.get();
   }
 
   private void waitUntilInstanceReady(final String host)
