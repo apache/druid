@@ -47,7 +47,7 @@ Available Metrics
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
-|`query/bytes`|The total number of bytes returned in the query response back to the requesting client by the broker.  (Other services report the total bytes for their portion of the query.)|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.| |
+|`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker.  Other services report the total bytes for their portion of the query. |Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`. Aggregation Queries: `numMetrics`, `numComplexMetrics`. GroupBy: `numDimensions`. TopN: `threshold`, `dimension`.| |
 |`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|id, status, server.|< 1s|
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
