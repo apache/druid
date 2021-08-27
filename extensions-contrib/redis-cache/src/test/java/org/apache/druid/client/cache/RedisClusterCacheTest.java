@@ -133,7 +133,7 @@ public class RedisClusterCacheTest
     Assert.assertEquals(0x02030405, Ints.fromByteArray(cache.get(key2)));
     Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
     Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
-    Assert.assertEquals(null, cache.get(notExist));
+    Assert.assertNull(cache.get(notExist));
 
     this.mgetCount.set(0);
 
