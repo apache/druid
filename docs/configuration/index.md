@@ -353,7 +353,7 @@ You can configure Druid processes to emit [metrics](../operations/metrics.md) re
 
 #### Metrics monitors
 
-The following monitors are available:
+Metric monitoring is an essential part of Druid operations.  The following monitors are available:
 
 |Name|Description|
 |----|-----------|
@@ -370,11 +370,11 @@ The following monitors are available:
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
 
-> Metric monitoring is an essential part of Druid operations.  For example, you might configure monitors on all processes for system and JVM information as follows:
->
->`druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`
+For example, you might configure monitors on all processes for system and JVM information within `common.runtime.properties` as follows:
 
-> You can overwrite the default list of monitors with the configurations of individual processes.
+`druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`
+
+You can override cluster-wide configuration by amending the `runtime.properties` of individual processes.
 
 #### Metrics emitters
 
@@ -394,7 +394,7 @@ There are several emitters available:
 |`druid.emitter.logging.loggerClass`|Choices: HttpPostEmitter, LoggingEmitter, NoopServiceEmitter, ServiceEmitter. The class used for logging.|LoggingEmitter|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
 
-##### Http Emitter Module
+##### HTTP Emitter Module
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -408,27 +408,27 @@ There are several emitters available:
 |`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
 
-##### Http Emitter Module TLS Overrides
+##### HTTP Emitter Module TLS Overrides
 
-When emitting events to a TLS-enabled receiver, the Http Emitter will by default use an SSLContext obtained via the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
+When emitting events to a TLS-enabled receiver, the HTTP Emitter will by default use an SSLContext obtained via the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
 SSLContext that would be used for internal communications between Druid processes.
 
-In some use cases it may be desirable to have the Http Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
+In some use cases it may be desirable to have the HTTP Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
 
-The following properties allow the Http Emitter to use its own truststore configuration when building its SSLContext.
+The following properties allow the HTTP Emitter to use its own truststore configuration when building its SSLContext.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.http.ssl.useDefaultJavaContext`|If set to true, the HttpEmitter will use `SSLContext.getDefault()`, the default Java SSLContext, and all other properties below are ignored.|false|
-|`druid.emitter.http.ssl.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored. If this is unspecified, the Http Emitter will use the same SSLContext as Druid's internal HTTP client, as described in the beginning of this section, and all other properties below are ignored.|null|
+|`druid.emitter.http.ssl.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored. If this is unspecified, the HTTP Emitter will use the same SSLContext as Druid's internal HTTP client, as described in the beginning of this section, and all other properties below are ignored.|null|
 |`druid.emitter.http.ssl.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|
 |`druid.emitter.http.ssl.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|
 |`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
 |`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
 
-##### Parametrized Http Emitter Module
+##### Parametrized HTTP Emitter Module
 
-`druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of Http Emitter Modules, see above.
+`druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of HTTP Emitter Modules, see above.
 Except `recipientBaseUrl`. E.g., `druid.emitter.parametrized.httpEmitting.flushMillis`,
 `druid.emitter.parametrized.httpEmitting.flushCount`, `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`, etc.
 
