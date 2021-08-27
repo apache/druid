@@ -375,7 +375,7 @@ in your `partitionDimension` is also unequally distributed.  Therefore, to avoid
 
 For segment pruning to be effective and translate into better query performance, you must use
 the `partitionDimension` at query time.  You can concatenate values from multiple
-> dimensions into a new dimension to use as the `partitionDimension`. In this case, you
+dimensions into a new dimension to use as the `partitionDimension`. In this case, you
 > must use that new `partitionDimension` dimension in your
 > [native filter](../querying/filters.md) /
 > [WHERE clause](../querying/sql.md#where).
