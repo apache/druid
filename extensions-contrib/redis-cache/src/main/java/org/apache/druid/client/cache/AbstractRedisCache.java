@@ -161,7 +161,7 @@ public abstract class AbstractRedisCache implements Cache
   protected abstract void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration);
 
   /**
-   * The lhs of the returned pair the count of input keys
+   * The lhs of the returned pair is the count of input keys
    * The rhs of the returned pair is a map holding the values of their corresponding keys
    */
   protected abstract Pair<Integer, Map<NamedKey, byte[]>> mgetFromRedis(Iterable<NamedKey> keys);
