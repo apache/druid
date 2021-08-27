@@ -45,6 +45,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -215,7 +216,7 @@ public class DruidClusterAdminClient
                 .exec(new ExecStartResultCallback(stdout, stderr))
                 .awaitCompletion();
 
-    return new Pair<>(stdout.toString(), stderr.toString());
+    return new Pair<>(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
   }
 
   private void restartDockerContainer(String serviceName)
