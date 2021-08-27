@@ -66,9 +66,9 @@ export interface LookupSpec {
 function issueWithUri(uri: string): string | undefined {
   if (!uri) return;
   const m = /^(\w+):/.exec(uri);
-  if (!m) return `URI is invalid, must start with 'file:', 'hdfs:', or 's3:'`;
-  if (!oneOf(m[1], 'file', 'hdfs', 's3')) {
-    return `Unsupported location '${m[1]}:'. Only 'file:', 'hdfs:', and 's3:' locations are supported`;
+  if (!m) return `URI is invalid, must start with 'file:', 'hdfs:', 's3:', or 'gs:`;
+  if (!oneOf(m[1], 'file', 'hdfs', 's3', 'gs')) {
+    return `Unsupported location '${m[1]}:'. Only 'file:', 'hdfs:', 's3:', and 'gs:' locations are supported`;
   }
   return;
 }
@@ -140,7 +140,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     info: (
       <p>
         A URI which specifies a directory (or other searchable resource) in which to search for
-        files specified as a <Code>file</Code>, <Code>hdfs</Code>, or <Code>s3</Code> path prefix.
+        files specified as a <Code>file</Code>, <Code>hdfs</Code>, <Code>s3</Code>, or{' '}
+        <Code>gs</Code> path prefix.
       </p>
     ),
   },
@@ -158,8 +159,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     info: (
       <>
         <p>
-          URI for the file of interest, specified as a <Code>file</Code>, <Code>hdfs</Code>, or{' '}
-          <Code>s3</Code> path
+          URI for the file of interest, specified as a <Code>file</Code>, <Code>hdfs</Code>,{' '}
+          <Code>s3</Code>, or <Code>gs</Code> path
         </p>
         <p>The URI prefix option is strictly better than URI and should be used instead</p>
       </>

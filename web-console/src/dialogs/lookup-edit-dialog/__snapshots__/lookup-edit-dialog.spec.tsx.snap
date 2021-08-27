@@ -108,9 +108,14 @@ exports[`LookupEditDialog matches snapshot 1`] = `
               <Unknown>
                 hdfs
               </Unknown>
-              , or 
+              , 
               <Unknown>
                 s3
+              </Unknown>
+              , or
+               
+              <Unknown>
+                gs
               </Unknown>
                path prefix.
             </p>,
@@ -133,10 +138,14 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 <Unknown>
                   hdfs
                 </Unknown>
-                , or
+                ,
                  
                 <Unknown>
                   s3
+                </Unknown>
+                , or 
+                <Unknown>
+                  gs
                 </Unknown>
                  path
               </p>
