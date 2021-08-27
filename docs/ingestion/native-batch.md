@@ -373,7 +373,7 @@ When you use this technique to partition your data, segment sizes may be unequal
 in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, 
  review the distribution of values in your source data before deciding on a partitioning strategy.
 
-> In order for segment pruning to be effective and translate into better query performance, you _must_ use
+For segment pruning to be effective and translate into better query performance, you must use
 > the `partitionDimension` at query time.  You can concatenate values from multiple
 > dimensions into a new dimension to use as the `partitionDimension`. In this case, you
 > must use that new `partitionDimension` dimension in your
