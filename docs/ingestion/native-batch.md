@@ -370,7 +370,7 @@ Druid currently supports only one partition function.
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 When you use this technique to partition your data, segment sizes may be unequally distributed if the data
-> in your `partitionDimension` is also unequally distributed.  Therefore, avoid imbalance in data layout and
+in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, 
 > review the distribution of values in your source data before deciding on a partitioning strategy.
 
 > In order for segment pruning to be effective and translate into better query performance, you _must_ use
