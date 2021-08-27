@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import redis.clients.jedis.exceptions.JedisException;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -105,7 +106,7 @@ public abstract class AbstractRedisCache implements Cache
         errorCount.incrementAndGet();
       }
       log.warn(e, "Exception pulling items from cache");
-      return null;
+      return Collections.emptyMap();
     }
   }
 
