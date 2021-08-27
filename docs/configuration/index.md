@@ -343,7 +343,7 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 
 ### Enabling Metrics
 
-Druid processes can be configured to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
+You can configure Druid processes to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
 
 |Property|Description|Default|
 |--------|-----------|-------|
