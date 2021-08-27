@@ -23,7 +23,7 @@ title: "Metrics"
   -->
 
 
-Druid can be [configured](../configuration/index.html#enabling-metrics) to emit metrics that are essential for monitoring query execution, ingestion, coordination, and so on.
+You can configure Druid to [emit metrics](../configuration/index.html#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
 
 All Druid metrics share a common set of fields:
 
