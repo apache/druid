@@ -75,7 +75,7 @@ public class RedisClusterCache extends AbstractRedisCache
   {
     int inputKeyCount = 0;
 
-    // group keys based on their slot
+    // group keys based on their slots
     Map<Integer, List<CachableKey>> slot2Keys = new HashMap<>();
     for (NamedKey key : keys) {
       inputKeyCount++;
