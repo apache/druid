@@ -180,6 +180,7 @@ public class DruidStatement implements Closeable
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
+        // TODO
         this.authenticationResult = authenticationResult;
         PrepareResult prepareResult = sqlLifecycle.prepare();
         this.maxRowCount = maxRowCount;
@@ -258,14 +259,6 @@ public class DruidStatement implements Closeable
     synchronized (lock) {
       ensure(State.PREPARED, State.RUNNING, State.DONE);
       return signature;
-    }
-  }
-
-  public RelDataType getRowType()
-  {
-    synchronized (lock) {
-      ensure(State.PREPARED, State.RUNNING, State.DONE);
-      return sqlLifecycle.rowType();
     }
   }
 

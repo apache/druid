@@ -40,6 +40,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
@@ -56,6 +57,7 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.planner.ValidationResult;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -64,6 +66,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -90,9 +93,11 @@ public class SqlLifecycle
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final QueryScheduler queryScheduler;
   private final long startMs;
   private final long startNs;
   private final Object lock = new Object();
+  private final Object plannerContextLock = new Object();
 
   @GuardedBy("lock")
   private State state = State.NEW;
@@ -105,7 +110,7 @@ public class SqlLifecycle
   @GuardedBy("lock")
   private List<TypedValue> parameters;
   // init during plan
-  @GuardedBy("lock")
+  @GuardedBy("plannerContextLock")
   private PlannerContext plannerContext;
   @GuardedBy("lock")
   private ValidationResult validationResult;
@@ -114,10 +119,13 @@ public class SqlLifecycle
   @GuardedBy("lock")
   private PlannerResult plannerResult;
 
+  private volatile boolean canceled = false;
+
   public SqlLifecycle(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
+      QueryScheduler queryScheduler,
       long startMs,
       long startNs
   )
@@ -125,6 +133,7 @@ public class SqlLifecycle
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.queryScheduler = queryScheduler;
     this.startMs = startMs;
     this.startNs = startNs;
     this.parameters = Collections.emptyList();
@@ -175,8 +184,10 @@ public class SqlLifecycle
   {
     synchronized (lock) {
       this.parameters = parameters;
-      if (this.plannerContext != null) {
-        this.plannerContext.setParameters(parameters);
+      synchronized (plannerContextLock) {
+        if (this.plannerContext != null) {
+          this.plannerContext.setParameters(parameters);
+        }
       }
     }
   }
@@ -193,16 +204,17 @@ public class SqlLifecycle
       if (state == State.AUTHORIZED) {
         return;
       }
-      transition(State.INITIALIZED, State.AUTHORIZING);
-      validate(authenticationResult);
-      Access access = doAuthorize(
-          AuthorizationUtils.authorizeAllResourceActions(
-              authenticationResult,
-              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
-              plannerFactory.getAuthorizerMapper()
-          )
-      );
-      checkAccess(access);
+      if (transition(State.INITIALIZED, State.AUTHORIZING)) {
+        validate(authenticationResult);
+        Access access = doAuthorize(
+            AuthorizationUtils.authorizeAllResourceActions(
+                authenticationResult,
+                Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+                plannerFactory.getAuthorizerMapper()
+            )
+        );
+        checkAccess(access);
+      }
     }
   }
 
@@ -216,17 +228,18 @@ public class SqlLifecycle
   public void validateAndAuthorize(HttpServletRequest req)
   {
     synchronized (lock) {
-      transition(State.INITIALIZED, State.AUTHORIZING);
-      AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
-      validate(authResult);
-      Access access = doAuthorize(
-          AuthorizationUtils.authorizeAllResourceActions(
-              req,
-              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
-              plannerFactory.getAuthorizerMapper()
-          )
-      );
-      checkAccess(access);
+      if (transition(State.INITIALIZED, State.AUTHORIZING)) {
+        AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
+        validate(authResult);
+        Access access = doAuthorize(
+            AuthorizationUtils.authorizeAllResourceActions(
+                req,
+                Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+                plannerFactory.getAuthorizerMapper()
+            )
+        );
+        checkAccess(access);
+      }
     }
   }
 
@@ -235,10 +248,12 @@ public class SqlLifecycle
   {
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       // set planner context for logs/metrics in case something explodes early
-      this.plannerContext = planner.getPlannerContext();
-      this.plannerContext.setAuthenticationResult(authenticationResult);
-      // set parameters on planner context, if parameters have already been set
-      this.plannerContext.setParameters(parameters);
+      synchronized (plannerContextLock) {
+        this.plannerContext = planner.getPlannerContext();
+        this.plannerContext.setAuthenticationResult(authenticationResult);
+        // set parameters on planner context, if parameters have already been set
+        this.plannerContext.setParameters(parameters);
+      }
       this.validationResult = planner.validate(sql);
       return validationResult;
     }
@@ -263,10 +278,11 @@ public class SqlLifecycle
     return authorizationResult;
   }
 
-  @GuardedBy("lock")
   private void checkAccess(Access access)
   {
-    plannerContext.setAuthorizationResult(access);
+    synchronized (plannerContextLock) {
+      plannerContext.setAuthorizationResult(access);
+    }
     if (!access.isAllowed()) {
       throw new ForbiddenException(access.toString());
     }
@@ -284,8 +300,12 @@ public class SqlLifecycle
       if (state != State.AUTHORIZED) {
         throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
       }
-      Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+      final DruidPlanner planner0;
+      synchronized (plannerContextLock) {
+        Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
+        planner0 = plannerFactory.createPlannerWithContext(plannerContext);
+      }
+      try (DruidPlanner planner = planner0) {
         this.prepareResult = planner.prepare(sql);
         return prepareResult;
       }
@@ -304,22 +324,44 @@ public class SqlLifecycle
    *
    * If successful, the lifecycle will first transition from {@link State#AUTHORIZED} to {@link State#PLANNED}.
    */
-  public PlannerContext plan() throws RelConversionException
+  public void plan() throws RelConversionException
   {
     synchronized (lock) {
-      transition(State.AUTHORIZED, State.PLANNED);
-      Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
-        this.plannerResult = planner.plan(sql);
+      if (transition(State.AUTHORIZED, State.PLANNED)) {
+        final DruidPlanner planner0;
+        synchronized (plannerContextLock) {
+          Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
+          planner0 = plannerFactory.createPlannerWithContext(plannerContext);
+        }
+        try (DruidPlanner planner = planner0) {
+          this.plannerResult = planner.plan(sql);
+        }
+        // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
+        catch (SqlParseException e) {
+          throw new SqlPlanningException(e);
+        }
+        catch (ValidationException e) {
+          throw new SqlPlanningException(e);
+        }
       }
-      // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-      catch (SqlParseException e) {
-        throw new SqlPlanningException(e);
-      }
-      catch (ValidationException e) {
-        throw new SqlPlanningException(e);
-      }
+    }
+  }
+
+  @VisibleForTesting
+  PlannerContext getPlannerContext()
+  {
+    synchronized (plannerContextLock) {
       return plannerContext;
+    }
+  }
+
+  public DateTimeZone getTimeZone()
+  {
+    synchronized (lock) {
+      assert state == State.PLANNED;
+    }
+    synchronized (plannerContextLock) {
+      return plannerContext.getTimeZone();
     }
   }
 
@@ -331,8 +373,11 @@ public class SqlLifecycle
   public Sequence<Object[]> execute()
   {
     synchronized (lock) {
-      transition(State.PLANNED, State.EXECUTING);
-      return plannerResult.run();
+      if (transition(State.PLANNED, State.EXECUTING)) {
+        return plannerResult.run();
+      } else {
+        return Sequences.empty();
+      }
     }
   }
 
@@ -377,6 +422,45 @@ public class SqlLifecycle
     }
   }
 
+  public boolean isCanceled()
+  {
+    return canceled;
+  }
+
+  public void authorizeAndCancel(HttpServletRequest req)
+  {
+    canceled = true;
+
+    final List<String> nativeQueryIds;
+    synchronized (plannerContextLock) {
+      if (plannerContext == null) {
+        // Query is canceled before validate();
+        return;
+      }
+      nativeQueryIds = plannerContext.getNativeQueryIds();
+    }
+
+    for (String nativeQueryId : nativeQueryIds) {
+      log.info("looking at native query for canceling [%s]", nativeQueryId);
+      Set<String> datasources = queryScheduler.getQueryDatasources(nativeQueryId);
+      if (datasources == null) {
+        log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", nativeQueryId);
+        datasources = Collections.emptySet();
+      }
+
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+          plannerFactory.getAuthorizerMapper()
+      );
+
+      if (authResult.isAllowed()) {
+        log.info("canceling native query [%s]", nativeQueryId);
+        queryScheduler.cancelQuery(nativeQueryId);
+      }
+    }
+  }
+
   public RelDataType rowType()
   {
     synchronized (lock) {
@@ -414,9 +498,11 @@ public class SqlLifecycle
 
       try {
         ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-        if (plannerContext != null) {
-          metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
-          metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+        synchronized (plannerContextLock) {
+          if (plannerContext != null) {
+            metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
+            metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+          }
         }
         if (validationResult != null) {
           metricBuilder.setDimension(
@@ -436,9 +522,11 @@ public class SqlLifecycle
         statsMap.put("sqlQuery/bytes", bytesWritten);
         statsMap.put("success", success);
         statsMap.put("context", queryContext);
-        if (plannerContext != null) {
-          statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
-          queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+        synchronized (plannerContextLock) {
+          if (plannerContext != null) {
+            statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
+            queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+          }
         }
         if (e != null) {
           statsMap.put("exception", e.toString());
@@ -474,7 +562,7 @@ public class SqlLifecycle
   }
 
   @VisibleForTesting
-  public Map<String, Object> getQueryContext()
+  Map<String, Object> getQueryContext()
   {
     synchronized (lock) {
       return queryContext;
@@ -482,13 +570,17 @@ public class SqlLifecycle
   }
 
   @GuardedBy("lock")
-  private void transition(final State from, final State to)
+  private boolean transition(final State from, final State to)
   {
+    if (canceled) {
+      return false;
+    }
     if (state != from) {
       throw new ISE("Cannot transition from[%s] to[%s] because current state[%s] is not [%s].", from, to, state, from);
     }
 
     state = to;
+    return true;
   }
 
   enum State

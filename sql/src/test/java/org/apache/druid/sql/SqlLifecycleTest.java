@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -65,7 +66,12 @@ public class SqlLifecycleTest
     this.plannerFactory = EasyMock.createMock(PlannerFactory.class);
     this.serviceEmitter = EasyMock.createMock(ServiceEmitter.class);
     this.requestLogger = EasyMock.createMock(RequestLogger.class);
-    this.sqlLifecycleFactory = new SqlLifecycleFactory(plannerFactory, serviceEmitter, requestLogger);
+    this.sqlLifecycleFactory = new SqlLifecycleFactory(
+        plannerFactory,
+        serviceEmitter,
+        requestLogger,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+    );
   }
 
   @Test
@@ -142,8 +148,8 @@ public class SqlLifecycleTest
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
-    PlannerContext context = lifecycle.plan();
-    Assert.assertEquals(mockPlannerContext, context);
+    lifecycle.plan();
+    Assert.assertEquals(mockPlannerContext, lifecycle.getPlannerContext());
     Assert.assertEquals(SqlLifecycle.State.PLANNED, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
@@ -244,8 +250,8 @@ public class SqlLifecycleTest
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
-    PlannerContext context = lifecycle.plan();
-    Assert.assertEquals(mockPlannerContext, context);
+    lifecycle.plan();
+    Assert.assertEquals(mockPlannerContext, lifecycle.getPlannerContext());
     Assert.assertEquals(SqlLifecycle.State.PLANNED, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);

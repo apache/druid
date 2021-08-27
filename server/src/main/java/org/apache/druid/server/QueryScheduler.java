@@ -32,6 +32,7 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -58,18 +59,34 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
+  private static final Logger LOG = new Logger(QueryScheduler.class);
+
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
   private final int totalCapacity;
   private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
+
   /**
-   * mapping of query id to set of futures associated with the query
+   * mapping of query id to set of futures associated with the query.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryDatasources} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
+
   /**
-   * mapping of query id to set of datasource names that are being queried, used for authorization
+   * mapping of query id to set of datasource names that are being queried, used for authorization.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryFutures} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, String> queryDatasources;
 
@@ -163,6 +180,7 @@ public class QueryScheduler implements QueryWatcher
     // to the collision
     queryDatasources.removeAll(id);
     Set<ListenableFuture<?>> futures = queryFutures.removeAll(id);
+    LOG.info("caceling futures [%s]", futures.size());
     boolean success = true;
     for (ListenableFuture<?> future : futures) {
       success = success && future.cancel(true);
