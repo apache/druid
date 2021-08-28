@@ -123,13 +123,13 @@ public class SqlResource
         return buildCanceledResponse(sqlQueryId);
       }
       lifecycle.plan();
-      final DateTimeZone timeZone = lifecycle.getTimeZone();
+      @Nullable final DateTimeZone timeZone = lifecycle.getTimeZone(); // can be null when the query is canceled
 
-      // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
-      // Also store list of all column names, for X-Druid-Sql-Columns header.
       if (lifecycle.isCanceled()) {
         return buildCanceledResponse(sqlQueryId);
       }
+      // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
+      // Also store list of all column names, for X-Druid-Sql-Columns header.
       final List<RelDataTypeField> fieldList = lifecycle.rowType().getFieldList();
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];

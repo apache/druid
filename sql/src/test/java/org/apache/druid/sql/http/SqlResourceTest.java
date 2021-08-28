@@ -121,7 +121,6 @@ public class SqlResourceTest extends CalciteTestBase
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
-  private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
 
   private boolean sleep = false;
 
@@ -252,8 +251,7 @@ public class SqlResourceTest extends CalciteTestBase
                 System.currentTimeMillis(),
                 System.nanoTime(),
                 validateAndAuthorizeLatchSupplier,
-                planLatchSupplier,
-                executeLatchSupplier
+                planLatchSupplier
             );
           }
         },
@@ -1014,84 +1012,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
   }
 
-  @Test
-  public void testCancelBetweenPlanAndExecute() throws Exception
-  {
-    final String sqlQueryId = "toCancel";
-    CountDownLatch planLatch = new CountDownLatch(1);
-    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
-    CountDownLatch executeLatch = new CountDownLatch(1);
-    executeLatchSupplier.set(new NonnullPair<>(executeLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
-            new SqlQuery(
-                "SELECT DISTINCT dim1 FROM foo",
-                null,
-                false,
-                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                null
-            ),
-            makeExpectedReq()
-        )
-    );
-    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
-    executeLatch.countDown();
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
-
-    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
-
-    response = future.get();
-    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELLED,
-        exception.getErrorCode()
-    );
-  }
-
-  @Test
-  public void testCancelAfterExecute() throws Exception
-  {
-    final String sqlQueryId = "toCancel";
-    CountDownLatch executeLatch = new CountDownLatch(1);
-    executeLatchSupplier.set(new NonnullPair<>(executeLatch, true));
-    Future<String> future = executorService.submit(
-        () -> {
-          Response response = resource.doPost(
-              new SqlQuery(
-                  "SELECT DISTINCT dim1 FROM foo",
-                  null,
-                  false,
-                  ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                  null
-              ),
-              makeExpectedReq()
-          );
-          Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
-          final StreamingOutput output = (StreamingOutput) response.getEntity();
-          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          output.write(baos);
-
-          System.err.println(baos);
-          return baos.toString();
-        }
-    );
-    Assert.assertTrue(executeLatch.await(1, TimeUnit.SECONDS));
-    Thread.sleep(100);
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
-
-    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
-
-    future.get();
-//    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
-//    Assert.assertEquals(
-//        QueryInterruptedException.QUERY_CANCELLED,
-//        exception.getErrorCode()
-//    );
-  }
-
   @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
   {
@@ -1218,7 +1138,6 @@ public class SqlResourceTest extends CalciteTestBase
   {
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier;
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier;
-    private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier;
 
     private TestSqlLifecycle(
         PlannerFactory plannerFactory,
@@ -1228,14 +1147,12 @@ public class SqlResourceTest extends CalciteTestBase
         long startMs,
         long startNs,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
-        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
-        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier
     )
     {
       super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
-      this.executeLatchSupplier = executeLatchSupplier;
     }
 
     @Override
@@ -1281,30 +1198,6 @@ public class SqlResourceTest extends CalciteTestBase
         }
       } else {
         super.plan();
-      }
-    }
-
-    @Override
-    public Sequence<Object[]> execute()
-    {
-      if (executeLatchSupplier.get() != null) {
-        if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = super.execute();
-          executeLatchSupplier.get().lhs.countDown();
-          return sequence;
-        } else {
-          try {
-            if (!executeLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
-              throw new RuntimeException("Latch timed out");
-            }
-          }
-          catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          return super.execute();
-        }
-      } else {
-        return super.execute();
       }
     }
   }
