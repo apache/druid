@@ -435,7 +435,7 @@ public class CliCoordinator extends ServerRunnable
           if (Strings.isNullOrEmpty(props.getProperty(groupPeriodPropKey))) {
             throw new IAE("Run period for coordinator custom duty group must be set for group %s", coordinatorCustomDutyGroupName);
           }
-          Duration groupPeriod = jsonMapper.readValue(props.getProperty(groupPeriodPropKey), Duration.class);
+          Duration groupPeriod = new Duration(props.getProperty(groupPeriodPropKey));
           coordinatorCustomDutyGroups.add(new CoordinatorCustomDutyGroup(coordinatorCustomDutyGroupName, groupPeriod, coordinatorCustomDuties));
         }
         return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);

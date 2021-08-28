@@ -74,7 +74,8 @@ druid_request_logging_type=slf4j
 druid_indexer_task_ignoreTimestampSpecForDruidInputSource=true
 
 #Testing kill supervisor custom coordinator duty
-druid.coordinator.dutyGroups=["cleanupMetadata"]
-druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
-druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
-druid.coordinator.cleanupMetadata.period=PT10S
+druid_coordinator_kill_supervisor_on=false
+druid_coordinator_dutyGroups=["cleanupMetadata"]
+druid_coordinator_cleanupMetadata_duties=["killSupervisors"]
+druid_coordinator_cleanupMetadata_duty_killSupervisors_retainDuration=PT0M
+druid_coordinator_cleanupMetadata_period=PT10S
