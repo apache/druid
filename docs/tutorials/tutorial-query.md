@@ -216,7 +216,7 @@ Retrieved 10 rows in 0.06s.
 ### Query SQL over HTTP
 
 
-You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql.md#http-post). The request body should be a JSON object with value for the key `query` containing text of the query:
+You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql.md#http-post). The request body should be a JSON object, with the value for the key `query` containing text of the query:
 
 ```json
 {
