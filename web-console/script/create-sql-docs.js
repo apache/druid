@@ -30,6 +30,10 @@ function unwrapMarkdownLinks(str) {
   return str.replace(/\[([^\]]+)\]\([^)]+\)/g, (_, s) => s);
 }
 
+function deleteBackticks(str) {
+  return str.replace(/`/g, "");
+}
+
 const readDoc = async () => {
   const data = await fs.readFile(readfile, 'utf-8');
   const lines = data.split('\n');
@@ -41,8 +45,8 @@ const readDoc = async () => {
     if (functionMatch) {
       functionDocs.push([
         functionMatch[1],
-        functionMatch[2],
-        unwrapMarkdownLinks(functionMatch[3]),
+        deleteBackticks(functionMatch[2]),
+        deleteBackticks(unwrapMarkdownLinks(functionMatch[3])),
         // functionMatch[4] would be the default column but we ignore it for now
       ]);
     }
