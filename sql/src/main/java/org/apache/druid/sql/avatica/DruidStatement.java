@@ -47,6 +47,7 @@ import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -218,7 +219,9 @@ public class DruidStatement implements Closeable
         sqlLifecycle.setParameters(parameters);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
         sqlLifecycle.plan();
-        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
+        Optional<Sequence<Object[]>> maybeSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
+        assert maybeSequence.isPresent();
+        final Sequence<Object[]> baseSequence = maybeSequence.get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =

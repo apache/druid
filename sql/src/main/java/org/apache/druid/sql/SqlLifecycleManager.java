@@ -26,9 +26,12 @@ import org.apache.druid.guice.LazySingleton;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
+// TODO: name test
 @LazySingleton
 public class SqlLifecycleManager
 {
@@ -45,6 +48,7 @@ public class SqlLifecycleManager
     }
   }
 
+  // javadoc
   public void remove(String sqlQueryId, SqlLifecycle lifecycle)
   {
     synchronized (lock) {
@@ -58,15 +62,43 @@ public class SqlLifecycleManager
     }
   }
 
-  public List<SqlLifecycle> removeAll(String sqlQueryId)
+  // javadoc
+  public List<SqlLifecycle> removeAll(String sqlQueryId, Predicate<SqlLifecycle> filter)
+  {
+    final List<SqlLifecycle> authorizedLifecycles = new ArrayList<>();
+    synchronized (lock) {
+      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
+      if (lifecycles == null) {
+        return authorizedLifecycles;
+      }
+      Iterator<SqlLifecycle> iterator = lifecycles.iterator();
+      while (iterator.hasNext()) {
+        SqlLifecycle lifecycle = iterator.next();
+        if (filter.test(lifecycle)) {
+          iterator.remove();
+          authorizedLifecycles.add(lifecycle);
+        }
+      }
+      if (lifecycles.isEmpty()) {
+        sqlLifecycles.remove(sqlQueryId);
+      }
+    }
+    return authorizedLifecycles;
+  }
+
+  public void removeAll(String sqlQueryId, List<SqlLifecycle> lifecyclesToRemove)
   {
     synchronized (lock) {
-      List<SqlLifecycle> lifecycles = sqlLifecycles.remove(sqlQueryId);
-      return lifecycles == null ? Collections.emptyList() : lifecycles;
+      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
+      if (lifecycles != null) {
+        lifecycles.removeAll(lifecyclesToRemove);
+        if (lifecycles.isEmpty()) {
+          sqlLifecycles.remove(sqlQueryId);
+        }
+      }
     }
   }
 
-  @VisibleForTesting
   public List<SqlLifecycle> getAll(String sqlQueryId)
   {
     synchronized (lock) {

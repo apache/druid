@@ -95,6 +95,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -118,9 +119,9 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager; // TODO: verify in other tests
-  private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
+  private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
 
   private boolean sleep = false;
 
@@ -218,17 +219,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME
     );
 
-    lifecycleManager = new SqlLifecycleManager()
-    {
-      @Override
-      public void add(String sqlQueryId, SqlLifecycle lifecycle)
-      {
-        super.add(sqlQueryId, lifecycle);
-        if (lifecycleAddLatch != null) {
-          lifecycleAddLatch.countDown();
-        }
-      }
-    };
+    lifecycleManager = new SqlLifecycleManager();
     final ServiceEmitter emitter = new NoopServiceEmitter();
     resource = new SqlResource(
         JSON_MAPPER,
@@ -251,7 +242,8 @@ public class SqlResourceTest extends CalciteTestBase
                 System.currentTimeMillis(),
                 System.nanoTime(),
                 validateAndAuthorizeLatchSupplier,
-                planLatchSupplier
+                planLatchSupplier,
+                executeLatchSupplier
             );
           }
         },
@@ -942,41 +934,6 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testCancelBeforeValidate() throws Exception
-  {
-    final String sqlQueryId = "toCancel";
-    lifecycleAddLatch = new CountDownLatch(1);
-    CountDownLatch validateAndAuthorizeLatch = new CountDownLatch(1);
-    validateAndAuthorizeLatchSupplier.set(new NonnullPair<>(validateAndAuthorizeLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
-            new SqlQuery(
-                "SELECT DISTINCT dim1 FROM foo",
-                null,
-                false,
-                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                null
-            ),
-            makeExpectedReq()
-        )
-    );
-    Assert.assertTrue(lifecycleAddLatch.await(1, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
-    validateAndAuthorizeLatch.countDown();
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
-
-    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
-
-    response = future.get();
-    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELLED,
-        exception.getErrorCode()
-    );
-  }
-
-  @Test
   public void testCancelBetweenValidateAndPlan() throws Exception
   {
     final String sqlQueryId = "toCancel";
@@ -1010,6 +967,73 @@ public class SqlResourceTest extends CalciteTestBase
         QueryInterruptedException.QUERY_CANCELLED,
         exception.getErrorCode()
     );
+  }
+
+  @Test
+  public void testCancelBetweenPlanAndExecute() throws Exception
+  {
+    final String sqlQueryId = "toCancel";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            new SqlQuery(
+                "SELECT DISTINCT dim1 FROM foo",
+                null,
+                false,
+                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
+                null
+            ),
+            makeExpectedReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    execLatch.countDown();
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    response = future.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(
+        QueryInterruptedException.QUERY_CANCELLED,
+        exception.getErrorCode()
+    );
+  }
+
+  @Test
+  public void testCancelInvalidQuery() throws Exception
+  {
+    final String sqlQueryId = "validQuery";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            new SqlQuery(
+                "SELECT DISTINCT dim1 FROM foo",
+                null,
+                false,
+                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
+                null
+            ),
+            makeExpectedReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery("invalidQuery", mockRequestForCancel());
+    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+
+    Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    execLatch.countDown();
+    response = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @SuppressWarnings("unchecked")
@@ -1138,6 +1162,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier;
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier;
+    private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier;
 
     private TestSqlLifecycle(
         PlannerFactory plannerFactory,
@@ -1147,12 +1172,14 @@ public class SqlResourceTest extends CalciteTestBase
         long startMs,
         long startNs,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
-        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier
     )
     {
       super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
+      this.executeLatchSupplier = executeLatchSupplier;
     }
 
     @Override
@@ -1199,6 +1226,31 @@ public class SqlResourceTest extends CalciteTestBase
       } else {
         super.plan();
       }
+    }
+
+    @Override
+    public Optional<Sequence<Object[]>> execute()
+    {
+      if (executeLatchSupplier.get() != null) {
+        if (executeLatchSupplier.get().rhs) {
+          Optional<Sequence<Object[]>> optionalSequence = super.execute();
+          executeLatchSupplier.get().lhs.countDown();
+          return optionalSequence;
+        } else {
+          try {
+            if (!executeLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
+              throw new RuntimeException("Latch timed out");
+            }
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          return super.execute();
+        }
+      } else {
+        return super.execute();
+      }
+
     }
   }
 }

@@ -22,36 +22,37 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -70,8 +71,10 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Path("/druid/v2/sql/")
 public class SqlResource
@@ -107,8 +110,6 @@ public class SqlResource
   {
     final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), sqlQuery.getContext());
-    // must add after lifecycle is initialized
-    sqlLifecycleManager.add(sqlQueryId, lifecycle);
     final String remoteAddr = req.getRemoteAddr();
     final String currThreadName = Thread.currentThread().getName();
 
@@ -117,23 +118,29 @@ public class SqlResource
 
       lifecycle.setParameters(sqlQuery.getParameterList());
       lifecycle.validateAndAuthorize(req);
+      // must add after lifecycle is authorized
+      sqlLifecycleManager.add(sqlQueryId, lifecycle);
 
-      // check if the query is canceled before making a plan since it could be expensive.
-      if (lifecycle.isCanceled()) {
-        return buildCanceledResponse(sqlQueryId);
-      }
       lifecycle.plan();
-      @Nullable final DateTimeZone timeZone = lifecycle.getTimeZone(); // can be null when the query is canceled
-
-      if (lifecycle.isCanceled()) {
+      final Optional<DateTimeZone> maybeTimeZone = lifecycle.getTimeZone(); // can be empty when the query is canceled
+      if (!maybeTimeZone.isPresent()) {
+        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
         return buildCanceledResponse(sqlQueryId);
       }
+      final DateTimeZone timeZone = maybeTimeZone.get();
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
       // Also store list of all column names, for X-Druid-Sql-Columns header.
-      final List<RelDataTypeField> fieldList = lifecycle.rowType().getFieldList();
-      final boolean[] timeColumns = new boolean[fieldList.size()];
-      final boolean[] dateColumns = new boolean[fieldList.size()];
-      final String[] columnNames = new String[fieldList.size()];
+      Optional<RelDataType> maybeRowType = lifecycle.rowType();
+      final boolean[] timeColumns, dateColumns;
+      final String[] columnNames;
+      if (!maybeRowType.isPresent()) {
+        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
+        return buildCanceledResponse(sqlQueryId);
+      }
+      final List<RelDataTypeField> fieldList = maybeRowType.get().getFieldList();
+      timeColumns = new boolean[fieldList.size()];
+      dateColumns = new boolean[fieldList.size()];
+      columnNames = new String[fieldList.size()];
 
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
@@ -142,11 +149,12 @@ public class SqlResource
         columnNames[i] = fieldList.get(i).getName();
       }
 
-      // check if the query is canceled before running it.
-      if (lifecycle.isCanceled()) {
+      final Optional<Sequence<Object[]>> maybeSequence = lifecycle.execute();
+      if (!maybeSequence.isPresent()) {
+        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
         return buildCanceledResponse(sqlQueryId);
       }
-      final Yielder<Object[]> yielder0 = Yielders.each(lifecycle.execute());
+      final Yielder<Object[]> yielder0 = Yielders.each(maybeSequence.get());
 
       try {
         return Response
@@ -297,16 +305,28 @@ public class SqlResource
   {
     log.info("Received cancel request for query [%s]", sqlQueryId);
 
-    sqlLifecycleManager.removeAll(sqlQueryId).forEach(lifecycle -> lifecycle.authorizeAndCancel(req));
-    if (req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) == null) {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Iterables.transform(Collections.emptyList(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
-          authorizerMapper
-      );
-      assert authResult.isAllowed();
+    // TODO: test with 2 lifecycles with the same id
+    List<SqlLifecycle> lifecycles = ImmutableList.copyOf(sqlLifecycleManager.getAll(sqlQueryId));
+    if (lifecycles.isEmpty()) {
+      return Response.status(Status.NOT_FOUND).build();
     }
+    Set<Resource> resources = lifecycles
+        .stream()
+        .flatMap(lifecycle -> lifecycle.getAuthorizedResources().stream())
+        .collect(Collectors.toSet());
+    Access access = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        Iterables.transform(resources, AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+        authorizerMapper
+    );
 
-    return Response.status(Response.Status.ACCEPTED).build();
+    if (access.isAllowed()) {
+      sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
+      lifecycles.forEach(SqlLifecycle::cancel);
+      return Response.status(Status.ACCEPTED).build();
+    } else {
+      // Return 404 for authorization failures as well
+      return Response.status(Status.NOT_FOUND).build();
+    }
   }
 }

@@ -66,6 +66,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -82,9 +83,6 @@ import java.util.stream.Collectors;
  * <li>Execution ({@link #execute()})</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)})</li>
  * </ol>
- *
- * <p>Unlike QueryLifecycle, this class is designed to be <b>thread safe</b> so that it can be used in multi-threaded
- * scenario (JDBC) without external synchronization.
  */
 public class SqlLifecycle
 {
@@ -111,6 +109,15 @@ public class SqlLifecycle
   private PrepareResult prepareResult;
   private PlannerResult plannerResult;
 
+  /**
+   * Flag indicating whether this lifecycle is canceled.
+   * Every operation becomes no-op once this flag is set.
+   *
+   * This is volatile as there is a happens-before relationship between {@link #cancel}
+   * and {@link #transition}.
+   *
+   * This is not a {@link State} to avoid excessive locking for state changes.
+   */
   private volatile boolean canceled = false;
 
   public SqlLifecycle(
@@ -331,11 +338,10 @@ public class SqlLifecycle
     }
   }
 
-  @Nullable
-  public DateTimeZone getTimeZone()
+  public Optional<DateTimeZone> getTimeZone()
   {
     synchronized (plannerContextLock) {
-      return plannerContext == null ? null : plannerContext.getTimeZone();
+      return Optional.ofNullable(plannerContext == null ? null : plannerContext.getTimeZone());
     }
   }
 
@@ -344,12 +350,12 @@ public class SqlLifecycle
    *
    * If successful, the lifecycle will first transition from {@link State#PLANNED} to {@link State#EXECUTING}.
    */
-  public Sequence<Object[]> execute()
+  public Optional<Sequence<Object[]>> execute()
   {
     if (transition(State.PLANNED, State.EXECUTING)) {
-      return plannerResult.run();
+      return Optional.of(plannerResult.run());
     } else {
-      return Sequences.empty();
+      return Optional.empty();
     }
   }
 
@@ -368,7 +374,9 @@ public class SqlLifecycle
       setParameters(SqlQuery.getParameterList(parameters));
       validateAndAuthorize(authenticationResult);
       plan();
-      result = execute();
+      Optional<Sequence<Object[]>> maybeSequence = execute();
+      assert maybeSequence.isPresent();
+      result = maybeSequence.get();
     }
     catch (Throwable e) {
       emitLogsAndMetrics(e, null, -1);
@@ -392,48 +400,38 @@ public class SqlLifecycle
     return validate(authenticationResult);
   }
 
-  public boolean isCanceled()
+  public Set<Resource> getAuthorizedResources()
   {
-    return canceled;
+    assert validationResult != null;
+    return validationResult.getResources();
   }
 
-  public void authorizeAndCancel(HttpServletRequest req)
+  /**
+   * Cancel all native queries associated to this lifecycle.
+   */
+  public void cancel()
   {
+    assert state.ordinal() >= State.AUTHORIZED.ordinal();
     canceled = true;
 
     final List<String> nativeQueryIds;
     synchronized (plannerContextLock) {
-      if (plannerContext == null) {
-        // Query is canceled before validate();
-        return;
-      }
       nativeQueryIds = plannerContext.getNativeQueryIds();
     }
 
     for (String nativeQueryId : nativeQueryIds) {
-      log.info("looking at native query for canceling [%s]", nativeQueryId);
-      Set<String> datasources = queryScheduler.getQueryDatasources(nativeQueryId);
-      if (datasources == null) {
-        log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", nativeQueryId);
-        datasources = Collections.emptySet();
-      }
-
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
-          plannerFactory.getAuthorizerMapper()
-      );
-
-      if (authResult.isAllowed()) {
-        log.info("canceling native query [%s]", nativeQueryId);
-        queryScheduler.cancelQuery(nativeQueryId);
-      }
+      log.info("canceling native query [%s]", nativeQueryId);
+      queryScheduler.cancelQuery(nativeQueryId);
     }
   }
 
-  public RelDataType rowType()
+  public Optional<RelDataType> rowType()
   {
-    return plannerResult != null ? plannerResult.rowType() : prepareResult.getRowType();
+    if (canceled) {
+      return Optional.empty();
+    } else {
+      return Optional.of(plannerResult != null ? plannerResult.rowType() : prepareResult.getRowType());
+    }
   }
 
   /**
