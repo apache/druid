@@ -377,8 +377,6 @@ For segment pruning to be effective and translate into better query performance,
 the `partitionDimension` at query time.  You can concatenate values from multiple
 dimensions into a new dimension to use as the `partitionDimension`. In this case, you
 must use that new dimension in your native filter `WHERE` clause.
-> [native filter](../querying/filters.md) /
-> [WHERE clause](../querying/sql.md#where).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
