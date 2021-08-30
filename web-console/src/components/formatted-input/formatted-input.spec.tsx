@@ -21,12 +21,12 @@ import React from 'react';
 
 import { JSON_STRING_FORMATTER } from '../../utils';
 
-import { FormattedInputGroup } from './formatted-input-group';
+import { FormattedInput } from './formatted-input';
 
-describe('FormattedInputGroup', () => {
+describe('FormattedInput', () => {
   it('matches snapshot on undefined value', () => {
     const suggestibleInput = (
-      <FormattedInputGroup onValueChange={() => {}} formatter={JSON_STRING_FORMATTER} />
+      <FormattedInput onValueChange={() => {}} formatter={JSON_STRING_FORMATTER} />
     );
 
     const { container } = render(suggestibleInput);
@@ -35,7 +35,7 @@ describe('FormattedInputGroup', () => {
 
   it('matches snapshot with escaped value', () => {
     const suggestibleInput = (
-      <FormattedInputGroup
+      <FormattedInput
         value={`Here are some chars \t\r\n lol`}
         onValueChange={() => {}}
         formatter={JSON_STRING_FORMATTER}

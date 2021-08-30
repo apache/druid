@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression.builtin;
+package org.apache.druid.query.sql;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -34,7 +34,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 
 /**
- * A SQL operator conversion for the {@link org.apache.druid.math.expr.Function.Sleep} expression.
+ * A SQL operator conversion for the {@link org.apache.druid.query.expressions.SleepExprMacro} expression.
  * The expression is currently evaluated during the query planning when the given argument is a number literal.
  */
 public class SleepOperatorConversion implements SqlOperatorConversion
