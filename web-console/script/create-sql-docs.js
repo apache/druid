@@ -23,7 +23,7 @@ const fs = require('fs-extra');
 const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 134;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 152;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function unwrapMarkdownLinks(str) {
@@ -41,7 +41,7 @@ const readDoc = async () => {
   const functionDocs = [];
   const dataTypeDocs = [];
   for (let line of lines) {
-    const functionMatch = line.match(/^\|`(\w+)\(([^|]*)\)`\|([^|]+)\|(?:([^|]+)\|)?$/);
+    const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
       functionDocs.push([
         functionMatch[1],
