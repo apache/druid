@@ -216,7 +216,13 @@ Retrieved 10 rows in 0.06s.
 ### Query SQL over HTTP
 
 
-You can submit queries directly to the Druid Broker over HTTP. 
+You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql.md#http-post). The request body should be a JSON object with value for the key `query` containing text of the query:
+
+```json
+{
+  "query": "SELECT ..."
+}
+```
 
 The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid Broker:
 
