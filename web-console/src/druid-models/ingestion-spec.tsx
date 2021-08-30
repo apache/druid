@@ -2106,12 +2106,24 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
     if (sampleDatum.split(',').length > 3) {
       return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
+    // Contains more than 3 semicolons assume semicolon separated
+    if (sampleDatum.split(';').length > 3) {
+      return inputFormatFromType('tsv', !/;\d+;/.test(sampleDatum), ';');
+    }
+    // Contains more than 3 pipes assume pipe separated
+    if (sampleDatum.split('|').length > 3) {
+      return inputFormatFromType('tsv', !/\|\d+\|/.test(sampleDatum), '|');
+    }
   }
 
   return inputFormatFromType('regex');
 }
 
-function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
+function inputFormatFromType(
+  type: string,
+  findColumnsFromHeader?: boolean,
+  delimiter?: string,
+): InputFormat {
   let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
@@ -2121,6 +2133,10 @@ function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): Inp
 
   if (typeof findColumnsFromHeader === 'boolean') {
     inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
+  }
+
+  if (delimiter) {
+    inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
   }
 
   return inputFormat;

@@ -23,87 +23,92 @@ sidebar_label: "Amazon Kinesis"
   ~ under the License.
   -->
 
+When you enable the Kinesis indexing service, you can configure *supervisors* on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to:
+  - coordinate handoffs
+  - manage failures
+  - ensure that scalability and replication requirements are maintained.
 
-Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service for Apache Druid enables the configuration of *supervisors* on the Overlord. These supervisors facilitate ingestion from Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
-Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion.
-The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
-and ensure that the scalability and replication requirements are maintained.
 
-The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid extension (see
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` core Apache Druid extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
 > Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
 ## Submitting a Supervisor Spec
 
-The Kinesis indexing service requires that the `druid-kinesis-indexing-service` extension be loaded on both the Overlord
-and the MiddleManagers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
-`http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`, for example:
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
+
+
+`http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
+
+For example:
 
 ```
 curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://localhost:8090/druid/indexer/v1/supervisor
 ```
 
-A sample supervisor spec is shown below:
+Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 
 ```json
 {
   "type": "kinesis",
-  "dataSchema": {
-    "dataSource": "metrics-kinesis",
-    "timestampSpec": {
-      "column": "timestamp",
-      "format": "auto"
-    },
-    "dimensionsSpec": {
-      "dimensions": [],
-      "dimensionExclusions": [
-        "timestamp",
-        "value"
-      ]
-    },
-    "metricsSpec": [
-      {
-        "name": "count",
-        "type": "count"
+  "spec": {
+    "dataSchema": {
+      "dataSource": "metrics-kinesis",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
       },
-      {
-        "name": "value_sum",
-        "fieldName": "value",
-        "type": "doubleSum"
+     "dimensionsSpec": {
+        "dimensions": [],
+        "dimensionExclusions": [
+         "timestamp",
+         "value"
+       ]
       },
-      {
-        "name": "value_min",
-        "fieldName": "value",
-        "type": "doubleMin"
+     "metricsSpec": [
+        {
+         "name": "count",
+          "type": "count"
+       },
+       {
+          "name": "value_sum",
+          "fieldName": "value",
+          "type": "doubleSum"
+        },
+       {
+         "name": "value_min",
+         "fieldName": "value",
+         "type": "doubleMin"
+       },
+        {
+          "name": "value_max",
+         "fieldName": "value",
+         "type": "doubleMax"
+       }
+     ],
+     "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "HOUR",
+        "queryGranularity": "NONE"
+     }
+   },
+    "ioConfig": {
+     "stream": "metrics",
+     "inputFormat": {
+       "type": "json"
       },
-      {
-        "name": "value_max",
-        "fieldName": "value",
-        "type": "doubleMax"
-      }
-    ],
-    "granularitySpec": {
-      "type": "uniform",
-      "segmentGranularity": "HOUR",
-      "queryGranularity": "NONE"
-    }
-  },
-  "ioConfig": {
-    "stream": "metrics",
-    "inputFormat": {
-      "type": "json"
-    },
-    "endpoint": "kinesis.us-east-1.amazonaws.com",
-    "taskCount": 1,
-    "replicas": 1,
-    "taskDuration": "PT1H",
-    "recordsPerFetch": 2000,
-    "fetchDelayMillis": 1000
-  },
-  "tuningConfig": {
-    "type": "kinesis",
-    "maxRowsPerSegment": 5000000
+      "endpoint": "kinesis.us-east-1.amazonaws.com",
+      "taskCount": 1,
+      "replicas": 1,
+      "taskDuration": "PT1H",
+     "recordsPerFetch": 2000,
+      "fetchDelayMillis": 1000
+   },
+   "tuningConfig": {
+     "type": "kinesis",
+     "maxRowsPerSegment": 5000000
+   }
   }
 }
 ```
@@ -114,6 +119,7 @@ A sample supervisor spec is shown below:
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kinesis`.|yes|
+|`spec`|Container object for the supervisor configuration.|yes|
 |`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema).|yes|
 |`ioConfig`|A KinesisSupervisorIOConfig object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task. See [KinesisSupervisorIOConfig](#kinesissupervisorioconfig) below.|yes|
 |`tuningConfig`|A KinesisSupervisorTuningConfig object for configuring performance-related settings for the supervisor and indexing tasks. See [KinesisSupervisorTuningConfig](#kinesissupervisortuningconfig) below.|no|
