@@ -746,6 +746,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseComplement('1')", null);
     assertExpr("bitwiseComplement(null)", null);
 
+    // data truncation
+    try {
+      assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null);
+      Assert.fail("Did not throw IllegalArgumentException");
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertEquals("Possible data truncation, param [461168601842738800000000000000.000000] is out of long value range", e.getMessage());
+    }
+
     // doubles are cast
     assertExpr("bitwiseOr(2.345, 1)", 3L);
     assertExpr("bitwiseOr(2, 1.3)", 3L);
@@ -781,37 +790,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat('hello', -1)", null);
     assertExpr("repeat(null, 10)", null);
     assertExpr("repeat(nonexistent, 10)", null);
-  }
-
-  @Test
-  public void testSleep()
-  {
-    assertExpr("sleep(1)", null);
-    assertExpr("sleep(0.5)", null);
-    assertExpr("sleep(null)", null);
-    assertExpr("sleep(0)", null);
-    assertExpr("sleep(-1)", null);
-
-    assertTimeElapsed("sleep(1)", 1000);
-    assertTimeElapsed("sleep(0.5)", 500);
-    assertTimeElapsed("sleep(null)", 0);
-    assertTimeElapsed("sleep(0)", 0);
-    assertTimeElapsed("sleep(-1)", 0);
-  }
-
-  private void assertTimeElapsed(String expression, long expectedTimeElapsedMs)
-  {
-    final long detla = 50;
-    final long before = System.currentTimeMillis();
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    expr.eval(bindings).value();
-    final long after = System.currentTimeMillis();
-    final long elapsed = after - before;
-    Assert.assertTrue(
-        StringUtils.format("Expected [%s], but actual elapsed was [%s]", expectedTimeElapsedMs, elapsed),
-        elapsed >= expectedTimeElapsedMs
-        && elapsed < expectedTimeElapsedMs + detla
-    );
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
