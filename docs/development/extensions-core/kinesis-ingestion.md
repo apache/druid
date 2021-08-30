@@ -146,6 +146,116 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#Task Autoscaler Properties).|no (default == null)|
+
+### Task Autoscaler Properties
+
+> Note that Task AutoScaler is currently designated as experimental.
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `enableTaskAutoScaler` | Enable or disable the auto scaler. When false or or absent Druid disables the `autoScaler` even when `autoScalerConfig` is not null| no (default == false) |
+| `taskCountMax` | Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, the maximum number of reading tasks is `{numKinesisShards}` and `taskCountMax` is ignored.  | yes |
+| `taskCountMin` | Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of taskCount in `IOConfig` and uses`taskCountMin` for the initial number of tasks to launch.| yes |
+| `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. See [Lag Based AutoScaler Strategy Related Properties](#Lag Based AutoScaler Strategy Related Properties) for details.| no (default == `lagBased`) |
+
+### Lag Based AutoScaler Strategy Related Properties
+
+The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count which is used by Kafka.
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `lagCollectionIntervalMillis` | Period of lag points collection.  | no (default == 30000) |
+| `lagCollectionRangeMillis` | The total time window of lag collection, Use with `lagCollectionIntervalMillis`，it means that in the recent `lagCollectionRangeMillis`, collect lag metric points every `lagCollectionIntervalMillis`. | no (default == 600000) |
+| `scaleOutThreshold` | The Threshold of scale out action | no (default == 6000000) |
+| `triggerScaleOutFractionThreshold` | If `triggerScaleOutFractionThreshold` percent of lag points are higher than `scaleOutThreshold`, then do scale out action. | no (default == 0.3) |
+| `scaleInThreshold` | The Threshold of scale in action | no (default == 1000000) |
+| `triggerScaleInFractionThreshold` | If `triggerScaleInFractionThreshold` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | no (default == 0.9) |
+| `scaleActionStartDelayMillis` | Number of milliseconds to delay after the supervisor starts before the first scale logic check. | no (default == 300000) |
+| `scaleActionPeriodMillis` | Frequency in milliseconds to check if a scale action is triggered | no (default == 60000) |
+| `scaleInStep` | Number of tasks to reduce at a time when scaling down | no (default == 1) |
+| `scaleOutStep` | Number of tasks to add at a time when scaling out | no (default == 2) |
+
+The following example demonstrates a supervisor spec with `lagBased` autoScaler enabled:
+```json
+{
+  "type": "kinesis",
+  "dataSchema": {
+    "dataSource": "metrics-kinesis",
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": [],
+      "dimensionExclusions": [
+        "timestamp",
+        "value"
+      ]
+    },
+    "metricsSpec": [
+      {
+        "name": "count",
+        "type": "count"
+      },
+      {
+        "name": "value_sum",
+        "fieldName": "value",
+        "type": "doubleSum"
+      },
+      {
+        "name": "value_min",
+        "fieldName": "value",
+        "type": "doubleMin"
+      },
+      {
+        "name": "value_max",
+        "fieldName": "value",
+        "type": "doubleMax"
+      }
+    ],
+    "granularitySpec": {
+      "type": "uniform",
+      "segmentGranularity": "HOUR",
+      "queryGranularity": "NONE"
+    }
+  },
+  "ioConfig": {
+    "stream": "metrics",
+    "autoScalerConfig": {
+      "enableTaskAutoScaler": true,
+      "taskCountMax": 6,
+      "taskCountMin": 2,
+      "minTriggerScaleActionFrequencyMillis": 600000,
+      "autoScalerStrategy": "lagBased",
+      "lagCollectionIntervalMillis": 30000,
+      "lagCollectionRangeMillis": 600000,
+      "scaleOutThreshold": 600000,
+      "triggerScaleOutFractionThreshold": 0.3,
+      "scaleInThreshold": 100000,
+      "triggerScaleInFractionThreshold": 0.9,
+      "scaleActionStartDelayMillis": 300000,
+      "scaleActionPeriodMillis": 60000,
+      "scaleInStep": 1,
+      "scaleOutStep": 2
+    },
+    "inputFormat": {
+      "type": "json"
+    },
+    "endpoint": "kinesis.us-east-1.amazonaws.com",
+    "taskCount": 1,
+    "replicas": 1,
+    "taskDuration": "PT1H",
+    "recordsPerFetch": 2000,
+    "fetchDelayMillis": 1000
+  },
+  "tuningConfig": {
+    "type": "kinesis",
+    "maxRowsPerSegment": 5000000
+  }
+}
+```
 
 #### Specifying data format
 
