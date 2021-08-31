@@ -303,7 +303,7 @@ public class SqlResource
       @Context final HttpServletRequest req
   )
   {
-    log.info("Received cancel request for query [%s]", sqlQueryId);
+    log.debug("Received cancel request for query [%s]", sqlQueryId);
 
     List<SqlLifecycle> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
     if (lifecycles.isEmpty()) {

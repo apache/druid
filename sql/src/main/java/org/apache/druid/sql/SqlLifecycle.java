@@ -404,7 +404,7 @@ public class SqlLifecycle
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
-      log.info("canceling native query [%s]", nativeQueryId);
+      log.debug("canceling native query [%s]", nativeQueryId);
       queryScheduler.cancelQuery(nativeQueryId);
     }
   }
