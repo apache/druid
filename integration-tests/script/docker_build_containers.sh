@@ -28,15 +28,15 @@ else
   case "${DRUID_INTEGRATION_TEST_JVM_RUNTIME}" in
   8)
     echo "Build druid-cluster with Java 8"
-    docker build -t druid/cluster --build-arg JDK_VERSION=8-slim --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=8-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   11)
     echo "Build druid-cluster with Java 11"
-    docker build -t druid/cluster --build-arg JDK_VERSION=11-slim --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=11-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   15)
     echo "Build druid-cluster with Java 15"
-    docker build -t druid/cluster --build-arg JDK_VERSION=15-slim --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg USE_MARIA --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=15-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg USE_MARIA --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   *)
     echo "Invalid JVM Runtime given. Stopping"

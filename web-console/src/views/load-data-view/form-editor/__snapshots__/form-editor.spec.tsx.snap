@@ -19,7 +19,7 @@ exports[`FormEditor matches snapshot 1`] = `
           class="bp3-text-muted"
         >
           <span
-            class="bp3-popover2-target"
+            class="info-popover bp3-popover2-target"
           >
             <span
               class="bp3-icon bp3-icon-info-sign"
@@ -47,14 +47,18 @@ exports[`FormEditor matches snapshot 1`] = `
         class="bp3-form-content"
       >
         <div
-          class="bp3-input-group bp3-intent-primary formatted-input-group suggestible-input"
+          class="formatted-input suggestible-input"
         >
-          <input
-            class="bp3-input"
-            placeholder=""
-            type="text"
-            value=""
-          />
+          <div
+            class="bp3-input-group bp3-intent-primary"
+          >
+            <input
+              class="bp3-input"
+              placeholder=""
+              type="text"
+              value=""
+            />
+          </div>
         </div>
       </div>
     </div>
