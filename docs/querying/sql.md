@@ -823,7 +823,7 @@ approximate, regardless of configuration.
 #### A known issue with approximate functions based on data sketches
 
 The `APPROX_QUANTILE_DS` and `DS_QUANTILES_SKETCH` functions can fail with an `IllegalStateException` if one of the sketches for
-during the query hits `maxStreamLength`, which is the max number of items that can be stored in each sketch.
+the query hits `maxStreamLength`: the maximum number of items to store in each sketch.
 See the [GitHub issue](https://github.com/apache/druid/issues/11544) for more details of the bug.
 A known workaround is raising the max stream length to something higher by setting `approxQuantileDsMaxStreamLength`
 in the query context. Since it is set to 1,000,000,000 by default, you don't need to override it in most cases.
