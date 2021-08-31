@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SqlLifecycleTest
 {
@@ -164,7 +165,8 @@ public class SqlLifecycleTest
 
     // test emit
     EasyMock.expect(mockPlannerContext.getSqlQueryId()).andReturn("id").once();
-    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(ImmutableList.of("id")).times(2);
+    CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>(ImmutableList.of("id"));
+    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(nativeQueryIds).times(2);
     EasyMock.expect(mockPlannerContext.getAuthenticationResult()).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).once();
 
     serviceEmitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
@@ -266,7 +268,8 @@ public class SqlLifecycleTest
 
     // test emit
     EasyMock.expect(mockPlannerContext.getSqlQueryId()).andReturn("id").once();
-    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(ImmutableList.of("id")).times(2);
+    CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>(ImmutableList.of("id"));
+    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(nativeQueryIds).times(2);
     EasyMock.expect(mockPlannerContext.getAuthenticationResult()).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).once();
 
     serviceEmitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));

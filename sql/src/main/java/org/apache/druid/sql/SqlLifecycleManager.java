@@ -19,19 +19,24 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.sql.SqlLifecycle.State;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
-// TODO: name test
+/**
+ * This class manages only _authorized_ {@link SqlLifecycle}s. The main use case of this class is
+ * tracking running queries so that the cancel API can identify the lifecycles to cancel.
+ *
+ * This class is thread-safe as there are 2 or more threads that can access lifecycles at the same time
+ * for query running or query canceling.
+ */
 @LazySingleton
 public class SqlLifecycleManager
 {
@@ -43,12 +48,16 @@ public class SqlLifecycleManager
   public void add(String sqlQueryId, SqlLifecycle lifecycle)
   {
     synchronized (lock) {
+      assert lifecycle.getState().ordinal() == State.AUTHORIZED.ordinal();
       sqlLifecycles.computeIfAbsent(sqlQueryId, k -> new ArrayList<>())
                    .add(lifecycle);
     }
   }
 
-  // javadoc
+  /**
+   * Removes the given lifecycle of the given query ID.
+   * This method uses {@link Object#equals} to find the lifecycle matched to the given parameter.
+   */
   public void remove(String sqlQueryId, SqlLifecycle lifecycle)
   {
     synchronized (lock) {
@@ -62,30 +71,10 @@ public class SqlLifecycleManager
     }
   }
 
-  // javadoc
-  public List<SqlLifecycle> removeAll(String sqlQueryId, Predicate<SqlLifecycle> filter)
-  {
-    final List<SqlLifecycle> authorizedLifecycles = new ArrayList<>();
-    synchronized (lock) {
-      List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
-      if (lifecycles == null) {
-        return authorizedLifecycles;
-      }
-      Iterator<SqlLifecycle> iterator = lifecycles.iterator();
-      while (iterator.hasNext()) {
-        SqlLifecycle lifecycle = iterator.next();
-        if (filter.test(lifecycle)) {
-          iterator.remove();
-          authorizedLifecycles.add(lifecycle);
-        }
-      }
-      if (lifecycles.isEmpty()) {
-        sqlLifecycles.remove(sqlQueryId);
-      }
-    }
-    return authorizedLifecycles;
-  }
-
+  /**
+   * Removes all lifecycles of the given query ID.
+   * This method uses {@link Object#equals} to find the lifecycles matched to the given parameter.
+   */
   public void removeAll(String sqlQueryId, List<SqlLifecycle> lifecyclesToRemove)
   {
     synchronized (lock) {
@@ -103,7 +92,7 @@ public class SqlLifecycleManager
   {
     synchronized (lock) {
       List<SqlLifecycle> lifecycles = sqlLifecycles.get(sqlQueryId);
-      return lifecycles == null ? Collections.emptyList() : lifecycles;
+      return lifecycles == null ? Collections.emptyList() : ImmutableList.copyOf(lifecycles);
     }
   }
 }

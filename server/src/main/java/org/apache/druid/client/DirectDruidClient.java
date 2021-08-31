@@ -540,7 +540,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private void cancelQuery(Query<T> query, String cancelUrl)
   {
-    log.info("i'm canceling the query [%s]", query.getId());
     Runnable cancelRunnable = () -> {
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(

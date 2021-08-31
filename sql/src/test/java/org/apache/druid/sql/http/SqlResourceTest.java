@@ -118,7 +118,7 @@ public class SqlResourceTest extends CalciteTestBase
   private SqlResource resource;
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
-  private SqlLifecycleManager lifecycleManager; // TODO: verify in other tests
+  private SqlLifecycleManager lifecycleManager;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
@@ -281,7 +281,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     try {
       resource.doPost(
-          new SqlQuery("select count(*) from forbiddenDatasource", null, false, null, null),
+          createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
           testRequest
       );
       Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
@@ -290,13 +290,14 @@ public class SqlResourceTest extends CalciteTestBase
       // expected
     }
     Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
   public void testCountStar() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo", null, false, null, null)
+        createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
     ).rhs;
 
     Assert.assertEquals(
@@ -306,6 +307,7 @@ public class SqlResourceTest extends CalciteTestBase
         rows
     );
     checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
 
@@ -313,7 +315,10 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCountStarExtendedCharacters() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'", null, false, null, null)
+        createSimpleQueryWithId(
+            "id",
+            "SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'"
+        )
     ).rhs;
 
     Assert.assertEquals(
@@ -323,6 +328,7 @@ public class SqlResourceTest extends CalciteTestBase
         rows
     );
     checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -774,13 +780,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCannotParse() throws Exception
   {
     final QueryException exception = doPost(
-        new SqlQuery(
-            "FROM druid.foo",
-            ResultFormat.OBJECT,
-            false,
-            null,
-            null
-        )
+        createSimpleQueryWithId("id", "FROM druid.foo")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -788,19 +788,14 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Encountered \"FROM\" at line 1, column 1."));
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
   public void testCannotValidate() throws Exception
   {
     final QueryException exception = doPost(
-        new SqlQuery(
-            "SELECT dim4 FROM druid.foo",
-            ResultFormat.OBJECT,
-            false,
-            null,
-            null
-        )
+        createSimpleQueryWithId("id", "SELECT dim4 FROM druid.foo")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -808,6 +803,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Column 'dim4' not found in any table"));
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -815,7 +811,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // SELECT + ORDER unsupported
     final QueryException exception = doPost(
-        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", ResultFormat.OBJECT, false, null, null)
+        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -826,6 +822,7 @@ public class SqlResourceTest extends CalciteTestBase
                  .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
     );
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -836,7 +833,7 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT DISTINCT dim1 FROM foo",
             ResultFormat.OBJECT,
             false,
-            ImmutableMap.of("maxMergingDictionarySize", 1),
+            ImmutableMap.of("maxMergingDictionarySize", 1, "sqlQueryId", "id"),
             null
         )
     ).lhs;
@@ -845,6 +842,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(exception.getErrorCode(), ResourceLimitExceededException.ERROR_CODE);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -853,7 +851,7 @@ public class SqlResourceTest extends CalciteTestBase
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
     EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
-    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
     EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
     EasyMock.replay(badQuery);
     final QueryException exception = doPost(badQuery).lhs;
@@ -861,6 +859,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -868,6 +867,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     sleep = true;
     final int numQueries = 3;
+    final String sqlQueryId = "tooManyRequestsTest";
 
     List<Future<Pair<QueryException, List<Map<String, Object>>>>> futures = new ArrayList<>(numQueries);
     for (int i = 0; i < numQueries; i++) {
@@ -878,7 +878,7 @@ public class SqlResourceTest extends CalciteTestBase
                   "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
                   null,
                   false,
-                  ImmutableMap.of("priority", -5),
+                  ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
                   null
               ),
               makeExpectedReq()
@@ -912,12 +912,14 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(2, success);
     Assert.assertEquals(1, limited);
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
 
   @Test
   public void testQueryTimeoutException() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1);
+    final String sqlQueryId = "timeoutTest";
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, "sqlQueryId", sqlQueryId);
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
@@ -930,6 +932,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(timeoutException);
     Assert.assertEquals(timeoutException.getErrorCode(), QueryTimeoutException.ERROR_CODE);
     Assert.assertEquals(timeoutException.getErrorClass(), QueryTimeoutException.class.getName());
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
   }
 
@@ -943,13 +946,7 @@ public class SqlResourceTest extends CalciteTestBase
     planLatchSupplier.set(new NonnullPair<>(planLatch, false));
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
-            new SqlQuery(
-                "SELECT DISTINCT dim1 FROM foo",
-                null,
-                false,
-                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                null
-            ),
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeExpectedReq()
         )
     );
@@ -979,13 +976,7 @@ public class SqlResourceTest extends CalciteTestBase
     executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
-            new SqlQuery(
-                "SELECT DISTINCT dim1 FROM foo",
-                null,
-                false,
-                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                null
-            ),
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeExpectedReq()
         )
     );
@@ -1015,13 +1006,7 @@ public class SqlResourceTest extends CalciteTestBase
     executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
-            new SqlQuery(
-                "SELECT DISTINCT dim1 FROM foo",
-                null,
-                false,
-                ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
-                null
-            ),
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeExpectedReq()
         )
     );
@@ -1054,6 +1039,10 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
+  private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
+  {
+    return new SqlQuery(sql, null, false, ImmutableMap.of("sqlQueryId", sqlQueryId), null);
+  }
 
   private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {

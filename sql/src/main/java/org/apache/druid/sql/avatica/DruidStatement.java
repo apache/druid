@@ -182,7 +182,6 @@ public class DruidStatement implements Closeable
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
-        // TODO
         this.authenticationResult = authenticationResult;
         PrepareResult prepareResult = sqlLifecycle.prepare();
         this.maxRowCount = maxRowCount;

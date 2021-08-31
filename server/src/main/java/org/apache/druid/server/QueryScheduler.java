@@ -32,7 +32,6 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -59,8 +58,6 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
-  private static final Logger LOG = new Logger(QueryScheduler.class);
-
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
   private final int totalCapacity;
@@ -180,7 +177,6 @@ public class QueryScheduler implements QueryWatcher
     // to the collision
     queryDatasources.removeAll(id);
     Set<ListenableFuture<?>> futures = queryFutures.removeAll(id);
-    LOG.info("caceling futures [%s]", futures.size());
     boolean success = true;
     for (ListenableFuture<?> future : futures) {
       success = success && future.cancel(true);

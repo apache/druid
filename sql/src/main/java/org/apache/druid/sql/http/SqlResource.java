@@ -305,8 +305,7 @@ public class SqlResource
   {
     log.info("Received cancel request for query [%s]", sqlQueryId);
 
-    // TODO: test with 2 lifecycles with the same id
-    List<SqlLifecycle> lifecycles = ImmutableList.copyOf(sqlLifecycleManager.getAll(sqlQueryId));
+    List<SqlLifecycle> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
     if (lifecycles.isEmpty()) {
       return Response.status(Status.NOT_FOUND).build();
     }

@@ -22,7 +22,6 @@ package org.apache.druid.sql;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -69,6 +68,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -83,6 +83,8 @@ import java.util.stream.Collectors;
  * <li>Execution ({@link #execute()})</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)})</li>
  * </ol>
+ *
+ * Every method in this class must be called by the same thread except for {@link #cancel()}.
  */
 public class SqlLifecycle
 {
@@ -94,7 +96,6 @@ public class SqlLifecycle
   private final QueryScheduler queryScheduler;
   private final long startMs;
   private final long startNs;
-  private final Object plannerContextLock = new Object();
 
   private State state = State.NEW;
 
@@ -103,7 +104,6 @@ public class SqlLifecycle
   private Map<String, Object> queryContext;
   private List<TypedValue> parameters;
   // init during plan
-  @GuardedBy("plannerContextLock")
   private PlannerContext plannerContext;
   private ValidationResult validationResult;
   private PrepareResult prepareResult;
@@ -178,10 +178,8 @@ public class SqlLifecycle
   public void setParameters(List<TypedValue> parameters)
   {
     this.parameters = parameters;
-    synchronized (plannerContextLock) {
-      if (this.plannerContext != null) {
-        this.plannerContext.setParameters(parameters);
-      }
+    if (this.plannerContext != null) {
+      this.plannerContext.setParameters(parameters);
     }
   }
 
@@ -236,12 +234,10 @@ public class SqlLifecycle
   {
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       // set planner context for logs/metrics in case something explodes early
-      synchronized (plannerContextLock) {
-        this.plannerContext = planner.getPlannerContext();
-        this.plannerContext.setAuthenticationResult(authenticationResult);
-        // set parameters on planner context, if parameters have already been set
-        this.plannerContext.setParameters(parameters);
-      }
+      this.plannerContext = planner.getPlannerContext();
+      this.plannerContext.setAuthenticationResult(authenticationResult);
+      // set parameters on planner context, if parameters have already been set
+      this.plannerContext.setParameters(parameters);
       this.validationResult = planner.validate(sql);
       return validationResult;
     }
@@ -267,9 +263,7 @@ public class SqlLifecycle
 
   private void checkAccess(Access access)
   {
-    synchronized (plannerContextLock) {
-      plannerContext.setAuthorizationResult(access);
-    }
+    plannerContext.setAuthorizationResult(access);
     if (!access.isAllowed()) {
       throw new ForbiddenException(access.toString());
     }
@@ -287,10 +281,8 @@ public class SqlLifecycle
       throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
     }
     final DruidPlanner planner0;
-    synchronized (plannerContextLock) {
-      Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-      planner0 = plannerFactory.createPlannerWithContext(plannerContext);
-    }
+    Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
+    planner0 = plannerFactory.createPlannerWithContext(plannerContext);
     try (DruidPlanner planner = planner0) {
       this.prepareResult = planner.prepare(sql);
       return prepareResult;
@@ -313,10 +305,8 @@ public class SqlLifecycle
   {
     if (transition(State.AUTHORIZED, State.PLANNED)) {
       final DruidPlanner planner0;
-      synchronized (plannerContextLock) {
-        Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-        planner0 = plannerFactory.createPlannerWithContext(plannerContext);
-      }
+      Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
+      planner0 = plannerFactory.createPlannerWithContext(plannerContext);
       try (DruidPlanner planner = planner0) {
         this.plannerResult = planner.plan(sql);
       }
@@ -333,16 +323,12 @@ public class SqlLifecycle
   @VisibleForTesting
   PlannerContext getPlannerContext()
   {
-    synchronized (plannerContextLock) {
-      return plannerContext;
-    }
+    return plannerContext;
   }
 
   public Optional<DateTimeZone> getTimeZone()
   {
-    synchronized (plannerContextLock) {
-      return Optional.ofNullable(plannerContext == null ? null : plannerContext.getTimeZone());
-    }
+    return Optional.ofNullable(plannerContext == null ? null : plannerContext.getTimeZone());
   }
 
   /**
@@ -408,16 +394,14 @@ public class SqlLifecycle
 
   /**
    * Cancel all native queries associated to this lifecycle.
+   *
+   * This method is thread-safe.
    */
   public void cancel()
   {
-    assert state.ordinal() >= State.AUTHORIZED.ordinal();
     canceled = true;
 
-    final List<String> nativeQueryIds;
-    synchronized (plannerContextLock) {
-      nativeQueryIds = plannerContext.getNativeQueryIds();
-    }
+    final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
       log.info("canceling native query [%s]", nativeQueryId);
@@ -463,11 +447,9 @@ public class SqlLifecycle
 
     try {
       ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-      synchronized (plannerContextLock) {
-        if (plannerContext != null) {
-          metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
-          metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
-        }
+      if (plannerContext != null) {
+        metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
+        metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
       if (validationResult != null) {
         metricBuilder.setDimension(
@@ -487,11 +469,9 @@ public class SqlLifecycle
       statsMap.put("sqlQuery/bytes", bytesWritten);
       statsMap.put("success", success);
       statsMap.put("context", queryContext);
-      synchronized (plannerContextLock) {
-        if (plannerContext != null) {
-          statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
-          queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
-        }
+      if (plannerContext != null) {
+        statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
+        queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
       if (e != null) {
         statsMap.put("exception", e.toString());
