@@ -828,7 +828,7 @@ See [GitHub issue 11544](https://github.com/apache/druid/issues/11544) for more 
 To workaround the issue, increase value of the maximum string length with the `approxQuantileDsMaxStreamLength` parameter
 in the query context. Since it is set to 1,000,000,000 by default, you don't need to override it in most cases.
 See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for how many bytes are required per stream length.
-Since this query context is added as a temporary solution to avoid the known issue, it can be removed in a future release when the bug is fixed.
+This query context  parameter is a temporary solution to avoid the known issue. It may be removed in a future release after the bug is fixed.
 
 ### Unsupported features
 
