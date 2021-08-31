@@ -299,7 +299,7 @@ public class GroupByQueryEngineV2
     }
 
     // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
-    if (columnCapabilities != null && columnCapabilities.getType().equals(ValueType.STRING) && cardinality > 0) {
+    if (columnCapabilities != null && columnCapabilities.getType().is(ValueType.STRING) && cardinality > 0) {
       final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
       final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
           cardinality,
