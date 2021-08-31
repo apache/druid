@@ -682,6 +682,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
