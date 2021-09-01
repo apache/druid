@@ -305,7 +305,7 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-  private static abstract class ListFilter implements SqlOperatorConversion
+  private abstract static class ListFilter implements SqlOperatorConversion
   {
     abstract boolean isAllowList();
 
