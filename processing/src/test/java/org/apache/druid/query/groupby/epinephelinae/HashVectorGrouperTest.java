@@ -160,7 +160,6 @@ public class HashVectorGrouperTest
     // two keys should not cause buffer to grow
     fillKeyspace(keySpace, maxVectorSize, 2);
     AggregateResult result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
     Assert.assertTrue(result.isOk());
     Assert.assertEquals(tableStart, grouper.getTableStart());
 
@@ -170,7 +169,6 @@ public class HashVectorGrouperTest
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
     Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
-
 
     // this time should be all the way
     fillKeyspace(keySpace, maxVectorSize, 6);
@@ -209,16 +207,13 @@ public class HashVectorGrouperTest
     // two keys should cause buffer to grow
     fillKeyspace(keySpace, maxVectorSize, 2);
     AggregateResult result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
-    // buffer should grow to maximum size
     Assert.assertTrue(result.isOk());
     Assert.assertEquals(tableStart, grouper.getTableStart());
 
     // 3rd key should cause buffer to grow
+    // buffer should grow to next size, but is not full
     fillKeyspace(keySpace, maxVectorSize, 3);
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
-    // buffer should grow to next size, but is not full
     Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
     tableStart = grouper.getTableStart();
@@ -228,7 +223,6 @@ public class HashVectorGrouperTest
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
     Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
-    tableStart = grouper.getTableStart();
 
     // this time should be all the way
     fillKeyspace(keySpace, maxVectorSize, 14);
@@ -267,16 +261,13 @@ public class HashVectorGrouperTest
     // two keys should cause buffer to grow
     fillKeyspace(keySpace, maxVectorSize, 2);
     AggregateResult result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
-    // buffer should grow to maximum size
     Assert.assertTrue(result.isOk());
     Assert.assertEquals(tableStart, grouper.getTableStart());
 
     // 3rd key should cause buffer to grow
+    // buffer should grow to next size, but is not full
     fillKeyspace(keySpace, maxVectorSize, 3);
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
-    // buffer should grow to next size, but is not full
     Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
     tableStart = grouper.getTableStart();
@@ -284,15 +275,15 @@ public class HashVectorGrouperTest
     // grow it again
     fillKeyspace(keySpace, maxVectorSize, 6);
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
-
+    Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
     tableStart = grouper.getTableStart();
 
+    // more
     fillKeyspace(keySpace, maxVectorSize, 14);
     result = grouper.aggregateVector(keySpace, 0, maxVectorSize);
     Assert.assertTrue(result.isOk());
     Assert.assertTrue(grouper.getTableStart() > tableStart);
-    tableStart = grouper.getTableStart();
 
     // this time should be all the way
     fillKeyspace(keySpace, maxVectorSize, 25);
