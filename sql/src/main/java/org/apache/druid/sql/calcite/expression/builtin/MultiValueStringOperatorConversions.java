@@ -305,26 +305,9 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-  public static class FilterOnly implements SqlOperatorConversion
+  private static abstract class ListFilter implements SqlOperatorConversion
   {
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
-        .operatorBuilder("MV_FILTER_ONLY")
-        .operandTypeChecker(
-            OperandTypes.sequence(
-                "(string,array)",
-                OperandTypes.family(SqlTypeFamily.STRING),
-                OperandTypes.family(SqlTypeFamily.ARRAY)
-            )
-        )
-        .functionCategory(SqlFunctionCategory.STRING)
-        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
-        .build();
-
-    @Override
-    public SqlOperator calciteOperator()
-    {
-      return SQL_FUNCTION;
-    }
+    abstract boolean isAllowList();
 
     @Nullable
     @Override
@@ -356,10 +339,17 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      final StringBuilder builder = new StringBuilder("filter((x) -> array_contains(").append(druidExpressions.get(1).getExpression())
-                                                                                      .append(", x), ")
-                                                                                      .append(druidExpressions.get(0).getExpression())
-                                                                                      .append(")");
+      final StringBuilder builder;
+      if (isAllowList()) {
+        builder = new StringBuilder("filter((x) -> array_contains(");
+      } else {
+        builder = new StringBuilder("filter((x) -> !array_contains(");
+      }
+
+      builder.append(druidExpressions.get(1).getExpression())
+             .append(", x), ")
+             .append(druidExpressions.get(0).getExpression())
+             .append(")");
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
         return DruidExpression.forVirtualColumn(
@@ -368,12 +358,70 @@ public class MultiValueStringOperatorConversions
                 name,
                 druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 ImmutableSet.copyOf(lit),
-                true
+                isAllowList()
             )
         );
       }
 
       return DruidExpression.fromExpression(builder.toString());
+    }
+  }
+
+  public static class FilterOnly extends ListFilter
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_ONLY")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(string,array)",
+                OperandTypes.family(SqlTypeFamily.STRING),
+                OperandTypes.family(SqlTypeFamily.ARRAY)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+
+    @Override
+    boolean isAllowList()
+    {
+      return true;
+    }
+  }
+
+  public static class FilterNone extends ListFilter
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_NONE")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(string,array)",
+                OperandTypes.family(SqlTypeFamily.STRING),
+                OperandTypes.family(SqlTypeFamily.ARRAY)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+
+    @Override
+    boolean isAllowList()
+    {
+      return false;
     }
   }
 

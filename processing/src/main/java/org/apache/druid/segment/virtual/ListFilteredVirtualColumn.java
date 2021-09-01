@@ -22,10 +22,11 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -51,20 +52,20 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   private final String name;
   private final DimensionSpec delegate;
   private final Set<String> values;
-  private final boolean isWhitelist;
+  private final boolean allowList;
 
   @JsonCreator
   public ListFilteredVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("delegate") DimensionSpec delegate,
       @JsonProperty("values") Set<String> values,
-      @JsonProperty("isWhitelist") @Nullable Boolean isWhitelist
+      @JsonProperty("isAllowList") @Nullable Boolean isAllowList
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
     this.delegate = delegate;
     this.values = values;
-    this.isWhitelist = isWhitelist == null ? true : isWhitelist.booleanValue();
+    this.allowList = isAllowList == null ? true : isAllowList.booleanValue();
   }
 
 
@@ -81,10 +82,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     return values;
   }
 
-  @JsonProperty("isWhitelist")
-  public boolean isWhitelist()
+  @JsonProperty("isAllowList")
+  public boolean isAllowList()
   {
-    return isWhitelist;
+    return allowList;
   }
 
   @JsonProperty
@@ -100,7 +101,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         .appendString(name)
         .appendCacheable(delegate)
         .appendStringsIgnoringOrder(values)
-        .appendBoolean(isWhitelist);
+        .appendBoolean(allowList);
     return builder.build();
   }
 
@@ -111,10 +112,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
-    if (isWhitelist) {
-      return ListFilteredDimensionSpec.filterWhiteList(values, factory.makeDimensionSelector(delegate));
+    if (allowList) {
+      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate));
     } else {
-      return ListFilteredDimensionSpec.filterBlackList(values, factory.makeDimensionSelector(delegate));
+      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate));
     }
   }
 
@@ -124,7 +125,52 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
-    throw new UOE("Cannot make a column value selector for [%s]", getClass().getName());
+    DimensionSelector dimensionSelector = makeDimensionSelector(DefaultDimensionSpec.of(columnName), factory);
+    return new ColumnValueSelector<Object>()
+    {
+      @Override
+      public double getDouble()
+      {
+        return dimensionSelector.getDouble();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return dimensionSelector.getFloat();
+      }
+
+      @Override
+      public long getLong()
+      {
+        return dimensionSelector.getLong();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        dimensionSelector.inspectRuntimeShape(inspector);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return dimensionSelector.isNull();
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return dimensionSelector.getObject();
+      }
+
+      @Override
+      public Class<?> classOfObject()
+      {
+        return dimensionSelector.classOfObject();
+      }
+    };
   }
 
   @Override
@@ -170,14 +216,14 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return false;
     }
     ListFilteredVirtualColumn that = (ListFilteredVirtualColumn) o;
-    return isWhitelist == that.isWhitelist && name.equals(that.name) && delegate.equals(that.delegate) && values.equals(
+    return allowList == that.allowList && name.equals(that.name) && delegate.equals(that.delegate) && values.equals(
         that.values);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, delegate, values, isWhitelist);
+    return Objects.hash(name, delegate, values, allowList);
   }
 
   @Override
@@ -187,7 +233,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            "name='" + name + '\'' +
            ", delegate=" + delegate +
            ", values=" + values +
-           ", isWhitelist=" + isWhitelist +
+           ", isAllowList=" + allowList +
            '}';
   }
 }

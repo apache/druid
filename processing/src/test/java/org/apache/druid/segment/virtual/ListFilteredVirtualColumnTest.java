@@ -34,7 +34,7 @@ public class ListFilteredVirtualColumnTest
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerdeWhitelist() throws JsonProcessingException
+  public void testSerdeAllowList() throws JsonProcessingException
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         "hello",
@@ -48,7 +48,7 @@ public class ListFilteredVirtualColumnTest
   }
 
   @Test
-  public void testSerdeBlacklist() throws JsonProcessingException
+  public void testSerdeDenyList() throws JsonProcessingException
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         "hello",
