@@ -26,7 +26,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -125,52 +124,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
-    DimensionSelector dimensionSelector = makeDimensionSelector(DefaultDimensionSpec.of(columnName), factory);
-    return new ColumnValueSelector<Object>()
-    {
-      @Override
-      public double getDouble()
-      {
-        return dimensionSelector.getDouble();
-      }
-
-      @Override
-      public float getFloat()
-      {
-        return dimensionSelector.getFloat();
-      }
-
-      @Override
-      public long getLong()
-      {
-        return dimensionSelector.getLong();
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        dimensionSelector.inspectRuntimeShape(inspector);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return dimensionSelector.isNull();
-      }
-
-      @Nullable
-      @Override
-      public Object getObject()
-      {
-        return dimensionSelector.getObject();
-      }
-
-      @Override
-      public Class<?> classOfObject()
-      {
-        return dimensionSelector.classOfObject();
-      }
-    };
+    return makeDimensionSelector(DefaultDimensionSpec.of(columnName), factory);
   }
 
   @Override
