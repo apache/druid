@@ -102,5 +102,6 @@
         "direction": "ASC"
       }
     ]
-  }
+  },
+  "context": {"forceHashAggregation": true}
 }
