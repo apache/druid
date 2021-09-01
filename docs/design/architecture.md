@@ -34,9 +34,9 @@ Druid has several process types, briefly described below:
 * [**Coordinator**](../design/coordinator.md) processes manage data availability on the cluster.
 * [**Overlord**](../design/overlord.md) processes control the assignment of data ingestion workloads.
 * [**Broker**](../design/broker.md) processes handle queries from external clients.
-* [**Router**](../design/router.md) processes are optional processes that can route requests to Brokers, Coordinators, and Overlords.
+* [**Router**](../design/router.md) processes are optional; they route requests to Brokers, Coordinators, and Overlords.
 * [**Historical**](../design/historical.md) processes store queryable data.
-* [**MiddleManager**](../design/middlemanager.md) processes are responsible for ingesting data.
+* [**MiddleManager**](../design/middlemanager.md) processes ingest data.
 
 Druid processes can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types: Master, Query, and Data.
 
@@ -52,30 +52,33 @@ In addition to its built-in process types, Druid also has three external depende
 leverage existing infrastructure, where present.
 
 ### Deep storage
-Shared file storage accessible by every Druid server. In a clustered deployment, this is typically going to
-be a distributed object store like S3 or HDFS, or a network mounted filesystem. In a single-server deployment,
-this is typically going to be local disk. Druid uses deep storage to store any data that has been ingested into the
-system.
+
+Druid uses deep storage to store any data that has been ingested into the system. Deep storage is shared file
+storage accessible by every Druid server. In a clustered deployment, this is typically a distributed object store like S3 or
+HDFS, or a network mounted filesystem. In a single-server deployment, this is typically local disk.
 
 Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
-Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read prefetched
-segments from their local disks before any queries are served. This means that Druid never needs to access deep storage
+Druid processes. Druid stores data in files called _segments_. Historical processes cache data segments on
+local disk and serve queries from that cache as well as from an in-memory cache.
+This means that Druid never needs to access deep storage
 during a query, helping it offer the best query latencies possible. It also means that you must have enough disk space
-both in deep storage and across your Historical processes for the data you plan to load.
+both in deep storage and across your Historical servers for the data you plan to load.
 
-Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid can bootstrap from deep storage even
+Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid bootstraps from deep storage even
 if every single data server is lost and re-provisioned.
 
 For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
 
 ### Metadata storage
+
 The metadata storage holds various shared system metadata such as segment usage information and task information. In a
-clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
-deployment, it is typically going to be a locally-stored Apache Derby database.
+clustered deployment, this is typically a traditional RDBMS like PostgreSQL or MySQL. In a single-server
+deployment, it is typically a locally-stored Apache Derby database.
 
 For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.
 
 ### ZooKeeper
+
 Used for internal service discovery, coordination, and leader election.
 
 For more details, please see the [ZooKeeper](../dependencies/zookeeper.md) page.
@@ -86,37 +89,35 @@ The following diagram shows how queries and data flow through this architecture,
 
 <img src="../assets/druid-architecture.png" width="800"/>
 
-
-
 ## Storage design
 
 ### Datasources and segments
 
-Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
-partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a "chunk" (for
+Druid data is stored in _datasources_, which are similar to tables in a traditional RDBMS. Each datasource is
+partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a _chunk_ (for
 example, a single day, if your datasource is partitioned by day). Within a chunk, data is partitioned into one or more
-["segments"](../design/segments.md). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
+[_segments_](../design/segments.md). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
 organized into time chunks, it's sometimes helpful to think of segments as living on a timeline like the following:
 
 <img src="../assets/druid-timeline.png" width="800" />
 
 A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each
-segment starts life off being created on a MiddleManager, and at that point, is mutable and uncommitted. The segment
-building process includes the following steps, designed to produce a data file that is compact and supports fast
-queries:
+segment is created by a MiddleManager as _mutable_ and _uncommitted_. Data is queryable as soon as it is added to
+an uncommitted segment. The segment
+building process accelerates later queries by producing a data file that is compact and indexed:
 
 - Conversion to columnar format
 - Indexing with bitmap indexes
-- Compression using various algorithms
+- Compression
     - Dictionary encoding with id storage minimization for String columns
     - Bitmap compression for bitmap indexes
     - Type-aware compression for all columns
 
-Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage),
+Periodically, segments are _committed_ and _published_ to [deep storage](#deep-storage),
 become immutable, and move from MiddleManagers to the Historical processes. An entry about the segment is also written
 to the [metadata store](#metadata-storage). This entry is a self-describing bit of metadata about the segment, including
-things like the schema of the segment, its size, and its location on deep storage. These entries are what the
-Coordinator uses to know what data *should* be available on the cluster.
+things like the schema of the segment, its size, and its location on deep storage. These entries tell the
+Coordinator what data is available on the cluster.
 
 For details on the segment file format, please see [segment files](segments.md).
 
@@ -125,10 +126,10 @@ For details on modeling your data in Druid, see [schema design](../ingestion/sch
 ### Indexing and handoff
 
 _Indexing_ is the mechanism by which new segments are created, and _handoff_ is the mechanism by which they are published
-and begin being served by Historical processes. The mechanism works like this on the indexing side:
+and begin being served by Historical processes. On the indexing side:
 
 1. An _indexing task_ starts running and building a new segment. It must determine the identifier of the segment before
-it starts building it. For a task that is appending (like a Kafka task, or an index task in append mode) this will be
+it starts building it. For a task that is appending (like a Kafka task, or an index task in append mode) this is
 done by calling an "allocate" API on the Overlord to potentially add a new partition to an existing set of segments. For
 a task that is overwriting (like a Hadoop task, or an index task _not_ in append mode) this is done by locking an
 interval and creating a new version number and new set of segments.
@@ -136,10 +137,10 @@ interval and creating a new version number and new set of segments.
 It's available, but unpublished.
 3. When the indexing task has finished reading data for the segment, it pushes it to deep storage and then publishes it
 by writing a record into the metadata store.
-4. If the indexing task is a realtime task, at this point it waits for a Historical process to load the segment. If the
+4. If the indexing task is a realtime task, then to ensure data is continuously available for queries, it waits for a Historical process to load the segment. If the
 indexing task is not a realtime task, it exits immediately.
 
-And like this on the Coordinator / Historical side:
+On the Coordinator / Historical side:
 
 1. The Coordinator polls the metadata store periodically (by default, every 1 minute) for newly published segments.
 2. When the Coordinator finds a segment that is published and used, but unavailable, it chooses a Historical process
@@ -176,8 +177,11 @@ clarity-cloud0_2018-05-21T16:00:00.000Z_2018-05-21T17:00:00.000Z_2018-05-21T15:5
 You may be wondering what the "version number" described in the previous section is for. Or, you might not be, in which
 case good for you and you can skip this section!
 
-It's there to support batch-mode overwriting. In Druid, if all you ever do is append data, then there will be just a
-single version for each time chunk. But when you overwrite data, what happens behind the scenes is that a new set of
+The version number provides a form of [_multi-version concurrency control_](
+https://en.wikipedia.org/wiki/Multiversion_concurrency_control) (MVCC) to
+support batch-mode overwriting. If all you ever do is append data, then there will be just a
+single version for each time chunk. But when you overwrite data, Druid will seamlessly switch from
+querying the old version to instead query the new, updated versions. Specifically, a new set of
 segments is created with the same datasource, same time interval, but a higher version number. This is a signal to the
 rest of the Druid system that the older version should be removed from the cluster, and the new version should replace
 it.
@@ -220,8 +224,8 @@ Druid has an architectural separation between ingestion and querying, as describ
 consistency properties, we must look at each function separately.
 
 On the **ingestion side**, Druid's primary [ingestion methods](../ingestion/index.md#ingestion-methods) are all
-pull-based and offer transactional guarantees. This means that you are guaranteed that ingestion using these will
-publish in an all-or-nothing manner:
+pull-based and offer transactional guarantees. This means that you are guaranteed that ingestion using these
+methods will publish in an all-or-nothing manner:
 
 - Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and
 [Kinesis](../development/extensions-core/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its
@@ -250,9 +254,10 @@ that you are ingesting into. In either of these two cases, running the same task
 are adding to existing data instead of overwriting it.
 
 On the **query side**, the Druid Broker is responsible for ensuring that a consistent set of segments is involved in a
-given query. It selects the appropriate set of segments to use when the query starts based on what is currently
+given query. It selects the appropriate set of segment versions to use when the query starts based on what is currently
 available. This is supported by _atomic replacement_, a feature that ensures that from a user's perspective, queries
-flip instantaneously from an older set of data to a newer set of data, with no consistency or performance impact.
+flip instantaneously from an older version of data to a newer set of data, with no consistency or performance impact.
+(See [segment versioning](#segment-versioning) above.)
 This is used for Hadoop-based batch ingestion, native batch ingestion when `appendToExisting` is false, and compaction.
 
 Note that atomic replacement happens for each time chunk individually. If a batch ingestion task or compaction
@@ -281,22 +286,24 @@ queries again.
 
 ## Query processing
 
-Queries first enter the [Broker](../design/broker.md), where the Broker will identify which segments have data that may pertain to that query.
+Queries are distributed across the Druid cluster, and managed by a Broker.
+Queries first enter the [Broker](../design/broker.md), which identifies the segments with data that may pertain to that query.
 The list of segments is always pruned by time, and may also be pruned by other attributes depending on how your
 datasource is partitioned. The Broker will then identify which [Historicals](../design/historical.md) and
-[MiddleManagers](../design/middlemanager.md) are serving those segments and send a rewritten subquery to each of those processes. The Historical/MiddleManager processes will take in the
-queries, process them and return results. The Broker receives results and merges them together to get the final answer,
-which it returns to the original caller.
+[MiddleManagers](../design/middlemanager.md) are serving those segments and distributes a rewritten subquery to each of those processes.
+The Historical/MiddleManager processes execute each subquery and return results to the Broker. The Broker merges the partial results
+to get the final answer, which it returns to the original caller.
 
-Broker pruning is an important way that Druid limits the amount of data that must be scanned for each query, but it is
-not the only way. For filters at a more granular level than what the Broker can use for pruning, indexing structures
-inside each segment allow Druid to figure out which (if any) rows match the filter set before looking at any row of
-data. Once Druid knows which rows match a particular query, it only accesses the specific columns it needs for that
-query. Within those columns, Druid can skip from row to row, avoiding reading data that doesn't match the query filter.
+Time and attribute pruning is an important way that Druid limits the amount of data that must be scanned for each query, but it is
+not the only way. For filters at a more granular level than what the Broker can use for pruning,
+[indexing structures](#datasources-and-segments)
+inside each segment allow Historicals to figure out which (if any) rows match the filter set before looking at any row of
+data. Once a Historical knows which rows match a particular query, it only accesses the specific rows and columns it needs for that
+query.
 
 So Druid uses three different techniques to maximize query performance:
 
-- Pruning which segments are accessed for each query.
+- Pruning the set of segments accessed for a query.
 - Within each segment, using indexes to identify which rows must be accessed.
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
 

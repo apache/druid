@@ -32,6 +32,10 @@
     "Ingestion": [
       "ingestion/index",
       "ingestion/data-formats",
+      "ingestion/data-model",
+      "ingestion/rollup",
+      "ingestion/partitioning",
+      "ingestion/ingestion-spec",
       "ingestion/schema-design",
       "ingestion/data-management",
       "ingestion/compaction",

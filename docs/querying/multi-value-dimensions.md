@@ -59,7 +59,7 @@ By default, Druid sorts values in multi-value dimensions. This behavior is contr
 * `SORTED_SET`: results in the removal of duplicate values
 * `ARRAY`: retains the original order of the values
 
-See [Dimension Objects](../ingestion/index.md#dimension-objects) for information on configuring multi-value handling.
+See [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for information on configuring multi-value handling.
 
 
 ## Querying multi-value dimensions

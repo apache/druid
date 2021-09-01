@@ -31,3 +31,16 @@ Users can create custom extension of the `DynamicConfigProvider` interface that 
 
 For more information, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
+## Environment variable dynamic config provider
+
+`EnvironmentVariableDynamicConfigProvider` can be used to avoid exposing credentials or other secret information in the configuration files using environment variables. An example to use this `configProvider` is:
+```json
+druid.some.config.dynamicConfigProvider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
+```
+The values are described below.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|dynamic config provider type|Yes: `environment`|
+|`variables`|Map|environment variables to get information from|Yes|
+

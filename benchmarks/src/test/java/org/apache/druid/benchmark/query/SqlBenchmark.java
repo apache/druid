@@ -29,13 +29,19 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -60,8 +66,10 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -365,7 +373,12 @@ public class SqlBenchmark
       + "    GROUP BY dimSequential\n"
       + "  )\n"
       + ")\n"
-      + "SELECT * FROM matrix"
+      + "SELECT * FROM matrix",
+
+      // 20: GroupBy, doubles sketches
+      "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
+      + "FROM foo "
+      + "GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -374,7 +387,7 @@ public class SqlBenchmark
   @Param({"false", "force"})
   private String vectorize;
 
-  @Param({"10", "15"})
+  @Param({"20"})
   private String query;
 
   @Nullable
@@ -413,13 +426,28 @@ public class SqlBenchmark
     plannerFactory = new PlannerFactory(
         rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        CalciteTests.createOperatorTable(),
+        createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME
     );
+  }
+
+  private static DruidOperatorTable createOperatorTable()
+  {
+    try {
+      final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
+      extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
+      final Set<SqlAggregator> aggregators = new HashSet<>();
+      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchApproxQuantileSqlAggregator.class));
+      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchObjectSqlAggregator.class));
+      return new DruidOperatorTable(aggregators, extractionOperators);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @TearDown(Level.Trial)

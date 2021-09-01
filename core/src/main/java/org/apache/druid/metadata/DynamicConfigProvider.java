@@ -32,6 +32,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MapStringDynamicConfigProvider.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "mapString", value = MapStringDynamicConfigProvider.class),
+    @JsonSubTypes.Type(name = "environment", value = EnvironmentVariableDynamicConfigProvider.class)
 })
 public interface DynamicConfigProvider<T>
 {
