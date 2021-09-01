@@ -31,11 +31,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This class manages only _authorized_ {@link SqlLifecycle}s. The main use case of this class is
+ * This class manages only _authorized_ {@link SqlLifecycle}s submitted via HTTP,
+ * such as {@link org.apache.druid.sql.http.SqlResource}. The main use case of this class is
  * tracking running queries so that the cancel API can identify the lifecycles to cancel.
  *
  * This class is thread-safe as there are 2 or more threads that can access lifecycles at the same time
  * for query running or query canceling.
+ *
+ * For managing and canceling native queries, see {@link org.apache.druid.server.QueryScheduler}.
+ * As its name indicates, it also performs resource scheduling for native queries based on query lanes
+ * {@link org.apache.druid.server.QueryLaningStrategy}.
+ *
+ * @see org.apache.druid.server.QueryScheduler#cancelQuery(String)
  */
 @LazySingleton
 public class SqlLifecycleManager
@@ -48,7 +55,7 @@ public class SqlLifecycleManager
   public void add(String sqlQueryId, SqlLifecycle lifecycle)
   {
     synchronized (lock) {
-      assert lifecycle.getState().ordinal() == State.AUTHORIZED.ordinal();
+      assert lifecycle.getState() == State.AUTHORIZED;
       sqlLifecycles.computeIfAbsent(sqlQueryId, k -> new ArrayList<>())
                    .add(lifecycle);
     }
@@ -72,8 +79,8 @@ public class SqlLifecycleManager
   }
 
   /**
-   * Removes all lifecycles of the given query ID.
-   * This method uses {@link Object#equals} to find the lifecycles matched to the given parameter.
+   * For the given sqlQueryId, this method removes all lifecycles that match to the given list of lifecycles.
+   * This method uses {@link Object#equals} for matching lifecycles.
    */
   public void removeAll(String sqlQueryId, List<SqlLifecycle> lifecyclesToRemove)
   {
@@ -88,6 +95,9 @@ public class SqlLifecycleManager
     }
   }
 
+  /**
+   * Returns a snapshot of the lifecycles for the given sqlQueryId.
+   */
   public List<SqlLifecycle> getAll(String sqlQueryId)
   {
     synchronized (lock) {

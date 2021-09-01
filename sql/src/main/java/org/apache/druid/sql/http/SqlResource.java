@@ -236,7 +236,7 @@ public class SqlResource
       return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
     }
     catch (ForbiddenException e) {
-      sqlLifecycleManager.remove(sqlQueryId, lifecycle);
+      endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
       throw e; // let ForbiddenExceptionMapper handle this
     }
     catch (Exception e) {
@@ -259,6 +259,14 @@ public class SqlResource
     finally {
       Thread.currentThread().setName(currThreadName);
     }
+  }
+
+  private void endLifecycleWithoutEmittingMetrics(
+      String sqlQueryId,
+      SqlLifecycle lifecycle
+  )
+  {
+    sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
   private void endLifecycle(
@@ -319,6 +327,7 @@ public class SqlResource
     );
 
     if (access.isAllowed()) {
+      // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(SqlLifecycle::cancel);
       return Response.status(Status.ACCEPTED).build();

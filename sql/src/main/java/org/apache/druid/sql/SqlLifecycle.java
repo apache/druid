@@ -280,10 +280,8 @@ public class SqlLifecycle
     if (state != State.AUTHORIZED) {
       throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
     }
-    final DruidPlanner planner0;
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-    planner0 = plannerFactory.createPlannerWithContext(plannerContext);
-    try (DruidPlanner planner = planner0) {
+    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
       this.prepareResult = planner.prepare(sql);
       return prepareResult;
     }
@@ -304,10 +302,8 @@ public class SqlLifecycle
   public void plan() throws RelConversionException
   {
     if (transition(State.AUTHORIZED, State.PLANNED)) {
-      final DruidPlanner planner0;
       Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-      planner0 = plannerFactory.createPlannerWithContext(plannerContext);
-      try (DruidPlanner planner = planner0) {
+      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
         this.plannerResult = planner.plan(sql);
       }
       // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.

@@ -51,8 +51,11 @@ public class ITSqlCancelTest
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
 
+  /**
+   * This query will run exactly for 15 seconds.
+   */
   private static final String QUERY
-      = "SELECT sleep(CASE WHEN added > 0 THEN 1 ELSE 0 END) FROM wikipedia_editstream LIMIT 15";
+      = "SELECT sleep(CASE WHEN added > 0 THEN 1 ELSE 0 END) FROM wikipedia_editstream WHERE added > 0 LIMIT 15";
 
   private static final int NUM_QUERIES = 3;
 

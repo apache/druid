@@ -119,6 +119,8 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
+
+  private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
@@ -219,7 +221,17 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME
     );
 
-    lifecycleManager = new SqlLifecycleManager();
+    lifecycleManager = new SqlLifecycleManager()
+    {
+      @Override
+      public void add(String sqlQueryId, SqlLifecycle lifecycle)
+      {
+        super.add(sqlQueryId, lifecycle);
+        if (lifecycleAddLatch != null) {
+          lifecycleAddLatch.countDown();
+        }
+      }
+    };
     final ServiceEmitter emitter = new NoopServiceEmitter();
     resource = new SqlResource(
         JSON_MAPPER,
@@ -940,6 +952,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCancelBetweenValidateAndPlan() throws Exception
   {
     final String sqlQueryId = "toCancel";
+    lifecycleAddLatch = new CountDownLatch(1);
     CountDownLatch validateAndAuthorizeLatch = new CountDownLatch(1);
     validateAndAuthorizeLatchSupplier.set(new NonnullPair<>(validateAndAuthorizeLatch, true));
     CountDownLatch planLatch = new CountDownLatch(1);
@@ -951,6 +964,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertTrue(lifecycleAddLatch.await(1, TimeUnit.SECONDS));
     Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
     planLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());

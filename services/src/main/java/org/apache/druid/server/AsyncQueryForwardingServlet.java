@@ -285,8 +285,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
    */
   private void broadcastQueryCancelRequest(HttpServletRequest request, Server targetServer)
   {
-    // send query cancellation to all brokers this query may have gone to
-    // keep the code simple, the proxy servlet will also send a request to the default targetServer.
     for (final Server server : hostFinder.getAllServers()) {
       if (server.getHost().equals(targetServer.getHost())) {
         continue;
