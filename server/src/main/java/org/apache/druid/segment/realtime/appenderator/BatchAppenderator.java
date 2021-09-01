@@ -502,7 +502,7 @@ public class BatchAppenderator implements Appenderator
     // Drop everything.
     Iterator<Map.Entry<SegmentIdWithShardSpec, Sink>> sinksIterator = sinksToClear.entrySet().iterator();
     sinksIterator.forEachRemaining(entry -> {
-      clearSinkMetadata(entry.getKey(), entry.getValue(), removeOnDiskData);
+      clearSinkMemoryCountersAndDiskStoredData(entry.getKey(), entry.getValue(), removeOnDiskData);
       sinksIterator.remove();
     });
     metrics.setSinkCount(sinksToClear.size());
@@ -523,7 +523,7 @@ public class BatchAppenderator implements Appenderator
       totalRows = Math.max(totalRowsAfter, 0);
     }
     if (sink != null) {
-      clearSinkMetadata(identifier, sink, true);
+      clearSinkMemoryCountersAndDiskStoredData(identifier, sink, true);
       if (sinks.remove(identifier) == null) {
         log.warn("Sink for identifier[%s] not found, skipping", identifier);
       }
@@ -686,7 +686,7 @@ public class BatchAppenderator implements Appenderator
             }
             File persistedDir = sm.getPersistedFileDir();
             if (persistedDir == null) {
-              throw new ISE("Sink for identifier[%s] not found in local file system", identifier);
+              throw new ISE("Prsisted directory for identifier[%s] is null in sink metadata", identifier);
             }
             identifiersDirs.add(persistedDir);
             totalHydrantsMerged += sm.getNumHydrants();
@@ -877,11 +877,37 @@ public class BatchAppenderator implements Appenderator
 
     log.debug("Shutting down...");
 
-    clear(sinks, false);
+    try {
 
-    unlockBasePersistDirectory();
+      log.debug("Shutdown & wait for persistExecutor");
+      if (persistExecutor != null) {
+        persistExecutor.shutdown();
+        if (!persistExecutor.awaitTermination(365, TimeUnit.DAYS)) {
+          log.warn("persistExecutor not terminated");
+        }
+        persistExecutor = null;
+      }
+
+      log.debug("Shutdown & wait for pushExecutor");
+      if (pushExecutor != null) {
+        pushExecutor.shutdown();
+        if (!pushExecutor.awaitTermination(365, TimeUnit.DAYS)) {
+          log.warn("pushExecutor not terminated");
+        }
+        pushExecutor = null;
+      }
+
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new ISE("Failed to wait & shutdown executors during close()");
+    }
+
+    log.debug("Waited for and shutdown executors...");
 
     // cleanup:
+    clear(sinks, false);
+    unlockBasePersistDirectory();
     List<File> persistedIdentifiers = getPersistedidentifierPaths();
     if (persistedIdentifiers != null) {
       for (File identifier : persistedIdentifiers) {
@@ -889,15 +915,10 @@ public class BatchAppenderator implements Appenderator
       }
     }
 
-    shutdownExecutors();
-
     totalRows = 0;
     sinksMetadata.clear();
   }
 
-  /**
-    Nothing to do since there are no executors
-   */
   @Override
   public void closeNow()
   {
@@ -905,8 +926,8 @@ public class BatchAppenderator implements Appenderator
       log.debug("Appenderator already closed, skipping closeNow() call.");
       return;
     }
-
     log.debug("Shutting down immediately...");
+    shutdownExecutors();
   }
 
   private void lockBasePersistDirectory()
@@ -1037,7 +1058,7 @@ public class BatchAppenderator implements Appenderator
   // This function does not remove the sink from its tracking Map (sinks), the caller is responsible for that
   // this is because the Map is not synchronized and removing elements from a map while traversing it
   // throws concurrent access exception
-  private void clearSinkMetadata(
+  private void clearSinkMemoryCountersAndDiskStoredData(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean removeOnDiskData

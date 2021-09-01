@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -393,8 +394,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
 
-      appenderator.push(Collections.singletonList(IDENTIFIERS.get(0)), null, false).get();
-
       Assert.assertEquals(
           0,
           ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory()
@@ -466,7 +465,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
         appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar_" + i, 1), null);
         appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar_" + i, 1), null);
       }
-      Thread.sleep(2000);
 
       // sinks + currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
@@ -525,7 +523,6 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
         appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar_" + i, 1), null);
         appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar_" + i, 1), null);
       }
-      Thread.sleep(2000);
 
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
@@ -790,7 +787,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
   }
 
 
-  @Test(timeout = 50000L)
+  @Test(timeout = 5000L)
   public void testTotalRowCount() throws Exception
   {
     try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(3, true)) {
@@ -898,6 +895,56 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
           appenderator.getSegments()
       );
 
+
+    }
+  }
+
+  @Test(timeout = 5000L)
+  public void testCloseContract() throws Exception
+  {
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    try (final BatchAppenderatorTester tester =
+             new BatchAppenderatorTester(1,
+                                         50000L,
+                                         null, false, rowIngestionMeters
+             )) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+
+      // each one of these adds will trigger a persist since maxRowsInMemory is set to one above
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar", 1), null);
+      appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "bar2", 1), null);
+
+      // push only a single segment
+      ListenableFuture<SegmentsAndCommitMetadata> firstFuture = appenderator.push(
+          Collections.singletonList(IDENTIFIERS.get(0)),
+          null,
+          false
+      );
+
+      // push remaining segments:
+      appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar3", 1), null);
+      ListenableFuture<SegmentsAndCommitMetadata> secondFuture = appenderator.push(
+          Collections.singletonList(IDENTIFIERS.get(1)),
+          null,
+          false
+      );
+
+      // close should wait for all pushes and persists to end:
+      appenderator.close();
+
+      Assert.assertTrue(!firstFuture.isCancelled());
+      Assert.assertTrue(!secondFuture.isCancelled());
+
+      Assert.assertTrue(firstFuture.isDone());
+      Assert.assertTrue(secondFuture.isDone());
+
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadataForFirstFuture = firstFuture.get();
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadataForSecondFuture = secondFuture.get();
+
+      // all segments must have been pushed:
+      Assert.assertEquals(segmentsAndCommitMetadataForFirstFuture.getSegments().size(), 1);
+      Assert.assertEquals(segmentsAndCommitMetadataForSecondFuture.getSegments().size(), 1);
 
     }
   }
