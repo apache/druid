@@ -125,7 +125,7 @@ public class SqlResource
 
       final Optional<Sequence<Object[]>> maybeSequence = lifecycle.execute();
       if (!maybeSequence.isPresent()) {
-        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
+        endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
         return buildCanceledResponse(sqlQueryId);
       }
       final Yielder<Object[]> yielder0 = Yielders.each(maybeSequence.get());
@@ -237,7 +237,7 @@ public class SqlResource
       final long bytesWritten
   )
   {
-    lifecycle.emitLogsAndMetrics(e, remoteAddress, bytesWritten);
+    lifecycle.finalizeStateAndEmitLogsAndMetrics(e, remoteAddress, bytesWritten);
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 

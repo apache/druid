@@ -36,9 +36,9 @@ import java.util.List;
 public class SqlRowTransformer
 {
   private final DateTimeZone timeZone;
-  // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
-  // Also store list of all column names, for X-Druid-Sql-Columns header.
   private final List<String> fieldList;
+
+  // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
   private final boolean[] timeColumns;
   private final boolean[] dateColumns;
 

@@ -79,7 +79,7 @@ import java.util.stream.Collectors;
  * <li>Validation and Authorization ({@link #validateAndAuthorize(HttpServletRequest)} or {@link #validateAndAuthorize(AuthenticationResult)})</li>
  * <li>Planning ({@link #plan()})</li>
  * <li>Execution ({@link #execute()})</li>
- * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)})</li>
+ * <li>Logging ({@link #finalizeStateAndEmitLogsAndMetrics(Throwable, String, long)})</li>
  * </ol>
  *
  * Every method in this class must be called by the same thread except for {@link #cancel()}.
@@ -95,7 +95,11 @@ public class SqlLifecycle
   private final long startMs;
   private final long startNs;
 
-  private State state = State.NEW;
+  /**
+   * This is volatile as there is a happens-before relationship between {@link #cancel}
+   * and {@link #transition}.
+   */
+  private volatile State state = State.NEW;
 
   // init during intialize
   private String sql;
@@ -106,17 +110,6 @@ public class SqlLifecycle
   private ValidationResult validationResult;
   private PrepareResult prepareResult;
   private PlannerResult plannerResult;
-
-  /**
-   * Flag indicating whether this lifecycle is canceled.
-   * Every operation becomes no-op once this flag is set.
-   *
-   * This is volatile as there is a happens-before relationship between {@link #cancel}
-   * and {@link #transition}.
-   *
-   * This is not a {@link State} to avoid excessive locking for state changes.
-   */
-  private volatile boolean canceled = false;
 
   public SqlLifecycle(
       PlannerFactory plannerFactory,
@@ -319,7 +312,7 @@ public class SqlLifecycle
    */
   public Optional<SqlRowTransformer> createRowTransformer()
   {
-    if (canceled) {
+    if (state == State.CANCELLED) {
       return Optional.empty();
     }
     assert state == State.PLANNED;
@@ -369,7 +362,7 @@ public class SqlLifecycle
       result = maybeSequence.get();
     }
     catch (Throwable e) {
-      emitLogsAndMetrics(e, null, -1);
+      finalizeStateAndEmitLogsAndMetrics(e, null, -1);
       throw e;
     }
 
@@ -378,7 +371,7 @@ public class SqlLifecycle
       @Override
       public void after(boolean isDone, Throwable thrown)
       {
-        emitLogsAndMetrics(thrown, null, -1);
+        finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
       }
     });
   }
@@ -403,7 +396,10 @@ public class SqlLifecycle
    */
   public void cancel()
   {
-    canceled = true;
+    if (state == State.CANCELLED) {
+      return;
+    }
+    state = State.CANCELLED;
 
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
@@ -420,7 +416,7 @@ public class SqlLifecycle
    * @param remoteAddress remote address, for logging; or null if unknown
    * @param bytesWritten  number of bytes written; will become a query/bytes metric if >= 0
    */
-  public void emitLogsAndMetrics(
+  public void finalizeStateAndEmitLogsAndMetrics(
       @Nullable final Throwable e,
       @Nullable final String remoteAddress,
       final long bytesWritten
@@ -431,11 +427,15 @@ public class SqlLifecycle
       return;
     }
 
-    if (state == State.DONE) {
-      log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
-    }
+    assert state != State.UNAUTHORIZED; // should not emit below metrics when the query fails to authorize
 
-    state = State.DONE;
+    if (state != State.CANCELLED) {
+      if (state == State.DONE) {
+        log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
+      }
+
+      state = State.DONE;
+    }
 
     final boolean success = e == null;
     final long queryTimeNs = System.nanoTime() - startNs;
@@ -506,7 +506,7 @@ public class SqlLifecycle
 
   private boolean transition(final State from, final State to)
   {
-    if (canceled) {
+    if (state == State.CANCELLED) {
       return false;
     }
     if (state != from) {
@@ -525,7 +525,10 @@ public class SqlLifecycle
     AUTHORIZED,
     PLANNED,
     EXECUTING,
+
+    // final states
     UNAUTHORIZED,
-    DONE
+    CANCELLED, // this query is cancelled. state transition will become no-op in this state.
+    DONE // query could either succeed or fail
   }
 }
