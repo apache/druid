@@ -22,6 +22,7 @@ package org.apache.druid.sql;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
@@ -96,10 +97,12 @@ public class SqlLifecycle
   private final long startNs;
 
   /**
-   * This is volatile as there is a happens-before relationship between {@link #cancel}
-   * and {@link #transition}.
+   * This lock coordinates the access to {@link #state} as there is a happens-before relationship
+   * between {@link #cancel} and {@link #transition}.
    */
-  private volatile State state = State.NEW;
+  private final Object stateLock = new Object();
+  @GuardedBy("stateLock")
+  private State state = State.NEW;
 
   // init during intialize
   private String sql;
@@ -182,8 +185,10 @@ public class SqlLifecycle
    */
   public void validateAndAuthorize(AuthenticationResult authenticationResult)
   {
-    if (state == State.AUTHORIZED) {
-      return;
+    synchronized (stateLock) {
+      if (state == State.AUTHORIZED) {
+        return;
+      }
     }
     if (transition(State.INITIALIZED, State.AUTHORIZING)) {
       validate(authenticationResult);
@@ -268,8 +273,10 @@ public class SqlLifecycle
    */
   public PrepareResult prepare() throws RelConversionException
   {
-    if (state != State.AUTHORIZED) {
-      throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
+    synchronized (stateLock) {
+      if (state != State.AUTHORIZED) {
+        throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
+      }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
     try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
@@ -312,10 +319,12 @@ public class SqlLifecycle
    */
   public Optional<SqlRowTransformer> createRowTransformer()
   {
-    if (state == State.CANCELLED) {
-      return Optional.empty();
+    synchronized (stateLock) {
+      if (state == State.CANCELLED) {
+        return Optional.empty();
+      }
+      assert state == State.PLANNED;
     }
-    assert state == State.PLANNED;
     assert plannerContext != null;
     assert plannerResult != null;
 
@@ -396,10 +405,12 @@ public class SqlLifecycle
    */
   public void cancel()
   {
-    if (state == State.CANCELLED) {
-      return;
+    synchronized (stateLock) {
+      if (state == State.CANCELLED) {
+        return;
+      }
+      state = State.CANCELLED;
     }
-    state = State.CANCELLED;
 
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
@@ -427,14 +438,16 @@ public class SqlLifecycle
       return;
     }
 
-    assert state != State.UNAUTHORIZED; // should not emit below metrics when the query fails to authorize
+    synchronized (stateLock) {
+      assert state != State.UNAUTHORIZED; // should not emit below metrics when the query fails to authorize
 
-    if (state != State.CANCELLED) {
-      if (state == State.DONE) {
-        log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
+      if (state != State.CANCELLED) {
+        if (state == State.DONE) {
+          log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
+        }
+
+        state = State.DONE;
       }
-
-      state = State.DONE;
     }
 
     final boolean success = e == null;
@@ -495,7 +508,9 @@ public class SqlLifecycle
   @VisibleForTesting
   public State getState()
   {
-    return state;
+    synchronized (stateLock) {
+      return state;
+    }
   }
 
   @VisibleForTesting
@@ -506,14 +521,22 @@ public class SqlLifecycle
 
   private boolean transition(final State from, final State to)
   {
-    if (state == State.CANCELLED) {
-      return false;
-    }
-    if (state != from) {
-      throw new ISE("Cannot transition from[%s] to[%s] because current state[%s] is not [%s].", from, to, state, from);
-    }
+    synchronized (stateLock) {
+      if (state == State.CANCELLED) {
+        return false;
+      }
+      if (state != from) {
+        throw new ISE(
+            "Cannot transition from[%s] to[%s] because current state[%s] is not [%s].",
+            from,
+            to,
+            state,
+            from
+        );
+      }
 
-    state = to;
+      state = to;
+    }
     return true;
   }
 
