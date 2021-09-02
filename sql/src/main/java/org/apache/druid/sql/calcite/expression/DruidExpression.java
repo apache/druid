@@ -212,14 +212,13 @@ public class DruidExpression
     }
     final DruidExpression that = (DruidExpression) o;
     return Objects.equals(simpleExtraction, that.simpleExtraction) &&
-           Objects.equals(expression, that.expression) &&
-           Objects.equals(virtualColumnFn, that.virtualColumnFn);
+           Objects.equals(expression, that.expression);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(simpleExtraction, expression, virtualColumnFn);
+    return Objects.hash(simpleExtraction, expression);
   }
 
   @Override
