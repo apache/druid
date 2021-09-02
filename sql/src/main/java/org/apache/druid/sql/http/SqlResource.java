@@ -26,9 +26,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,9 +48,7 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException;
-import org.apache.druid.sql.calcite.planner.Calcites;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.ISODateTimeFormat;
+import org.apache.druid.sql.SqlRowTransformer;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -69,7 +64,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -121,32 +115,13 @@ public class SqlResource
       sqlLifecycleManager.add(sqlQueryId, lifecycle);
 
       lifecycle.plan();
-      final Optional<DateTimeZone> maybeTimeZone = lifecycle.getTimeZone(); // can be empty when the query is canceled
-      if (!maybeTimeZone.isPresent()) {
-        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
-        return buildCanceledResponse(sqlQueryId);
-      }
-      final DateTimeZone timeZone = maybeTimeZone.get();
-      // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
-      // Also store list of all column names, for X-Druid-Sql-Columns header.
-      Optional<RelDataType> maybeRowType = lifecycle.rowType();
-      final boolean[] timeColumns, dateColumns;
-      final String[] columnNames;
-      if (!maybeRowType.isPresent()) {
-        sqlLifecycleManager.remove(sqlQueryId, lifecycle);
-        return buildCanceledResponse(sqlQueryId);
-      }
-      final List<RelDataTypeField> fieldList = maybeRowType.get().getFieldList();
-      timeColumns = new boolean[fieldList.size()];
-      dateColumns = new boolean[fieldList.size()];
-      columnNames = new String[fieldList.size()];
 
-      for (int i = 0; i < fieldList.size(); i++) {
-        final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
-        timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
-        dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
-        columnNames[i] = fieldList.get(i).getName();
+      Optional<SqlRowTransformer> maybeTransformer = lifecycle.createRowTransformer();
+      if (!maybeTransformer.isPresent()) {
+        endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
+        return buildCanceledResponse(sqlQueryId);
       }
+      final SqlRowTransformer rowTransformer = maybeTransformer.get();
 
       final Optional<Sequence<Object[]>> maybeSequence = lifecycle.execute();
       if (!maybeSequence.isPresent()) {
@@ -168,30 +143,15 @@ public class SqlResource
                     writer.writeResponseStart();
 
                     if (sqlQuery.includeHeader()) {
-                      writer.writeHeader(Arrays.asList(columnNames));
+                      writer.writeHeader(rowTransformer.getFieldList());
                     }
 
                     while (!yielder.isDone()) {
                       final Object[] row = yielder.get();
                       writer.writeRowStart();
-                      for (int i = 0; i < fieldList.size(); i++) {
-                        final Object value;
-
-                        if (row[i] == null) {
-                          value = null;
-                        } else if (timeColumns[i]) {
-                          value = ISODateTimeFormat.dateTime().print(
-                              Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                          );
-                        } else if (dateColumns[i]) {
-                          value = ISODateTimeFormat.dateTime().print(
-                              Calcites.calciteDateToJoda((int) row[i], timeZone)
-                          );
-                        } else {
-                          value = row[i];
-                        }
-
-                        writer.writeRowField(fieldList.get(i).getName(), value);
+                      for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
+                        final Object value = rowTransformer.transform(row, i);
+                        writer.writeRowField(rowTransformer.getFieldList().get(i), value);
                       }
                       writer.writeRowEnd();
                       yielder = yielder.next(null);

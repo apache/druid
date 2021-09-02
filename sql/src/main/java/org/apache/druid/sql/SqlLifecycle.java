@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
@@ -56,7 +55,6 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.planner.ValidationResult;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
-import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -316,15 +314,25 @@ public class SqlLifecycle
     }
   }
 
+  /**
+   * This method must be called after {@link #plan()}.
+   */
+  public Optional<SqlRowTransformer> createRowTransformer()
+  {
+    if (canceled) {
+      return Optional.empty();
+    }
+    assert state == State.PLANNED;
+    assert plannerContext != null;
+    assert plannerResult != null;
+
+    return Optional.of(new SqlRowTransformer(plannerContext.getTimeZone(), plannerResult.rowType()));
+  }
+
   @VisibleForTesting
   PlannerContext getPlannerContext()
   {
     return plannerContext;
-  }
-
-  public Optional<DateTimeZone> getTimeZone()
-  {
-    return Optional.ofNullable(plannerContext == null ? null : plannerContext.getTimeZone());
   }
 
   /**
@@ -402,15 +410,6 @@ public class SqlLifecycle
     for (String nativeQueryId : nativeQueryIds) {
       log.debug("canceling native query [%s]", nativeQueryId);
       queryScheduler.cancelQuery(nativeQueryId);
-    }
-  }
-
-  public Optional<RelDataType> rowType()
-  {
-    if (canceled) {
-      return Optional.empty();
-    } else {
-      return Optional.of(plannerResult != null ? plannerResult.rowType() : prepareResult.getRowType());
     }
   }
 
