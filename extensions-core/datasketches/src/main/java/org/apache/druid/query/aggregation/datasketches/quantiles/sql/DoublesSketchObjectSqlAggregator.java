@@ -113,7 +113,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           input.getDirectColumn(),
-          k
+          k,
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
     } else {
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -124,7 +125,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
-          k
+          k,
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
     }
 

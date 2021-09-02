@@ -68,6 +68,11 @@ public interface DataSegmentPusher
    */
   DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException;
 
+  default DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
   //use map instead of LoadSpec class to avoid dependency pollution.
   Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
 

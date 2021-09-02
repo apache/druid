@@ -12730,6 +12730,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " LATEST(dim1, 1024),\n"
         + " LATEST(l1),\n"
         + " ARRAY_AGG(DISTINCT dim3),\n"
+        + " STRING_AGG(DISTINCT dim3, '|'),\n"
         + " BIT_AND(l1),\n"
         + " BIT_OR(l1),\n"
         + " BIT_XOR(l1)\n"
@@ -12759,42 +12760,42 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "array_set_add_all(\"__acc\", \"a6\")",
                               null,
                               null,
-                              new HumanReadableBytes(1024),
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
                           new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a7",
+                                  ImmutableSet.of("dim3"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"dim3\")",
+                                  "array_set_add_all(\"__acc\", \"a7\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, '|'))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("dim3", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
                             new ExpressionLambdaAggregatorFactory(
-                                "a7",
+                                "a8",
                                 ImmutableSet.of("l1"),
                                 "__acc",
                                 "0",
                                 "0",
                                 NullHandling.sqlCompatible(),
                                 "bitwiseAnd(\"__acc\", \"l1\")",
-                                "bitwiseAnd(\"__acc\", \"a7\")",
+                                "bitwiseAnd(\"__acc\", \"a8\")",
                                 null,
                                 null,
-                                new HumanReadableBytes(1024),
+                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                 TestExprMacroTable.INSTANCE
                             ),
                             not(selector("l1", null, null))
-                          ),
-                          new FilteredAggregatorFactory(
-                              new ExpressionLambdaAggregatorFactory(
-                                  "a8",
-                                  ImmutableSet.of("l1"),
-                                  "__acc",
-                                  "0",
-                                  "0",
-                                  NullHandling.sqlCompatible(),
-                                  "bitwiseOr(\"__acc\", \"l1\")",
-                                  "bitwiseOr(\"__acc\", \"a8\")",
-                                  null,
-                                  null,
-                                  new HumanReadableBytes(1024),
-                                  TestExprMacroTable.INSTANCE
-                              ),
-                              not(selector("l1", null, null))
                           ),
                           new FilteredAggregatorFactory(
                               new ExpressionLambdaAggregatorFactory(
@@ -12804,11 +12805,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  "bitwiseOr(\"__acc\", \"l1\")",
+                                  "bitwiseOr(\"__acc\", \"a9\")",
+                                  null,
+                                  null,
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a10",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "0",
+                                  "0",
+                                  NullHandling.sqlCompatible(),
                                   "bitwiseXor(\"__acc\", \"l1\")",
-                                  "bitwiseXor(\"__acc\", \"a9\")",
+                                  "bitwiseXor(\"__acc\", \"a10\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -12820,8 +12838,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"", 0L, "", 0L, "", 0L, null, 0L, 0L, 0L}
-            : new Object[]{null, null, null, null, null, null, null, null, null, null}
+            ? new Object[]{"", 0L, "", 0L, "", 0L, null, "", 0L, 0L, 0L}
+            : new Object[]{null, null, null, null, null, null, null, null, null, null, null}
         )
     );
   }
@@ -12963,6 +12981,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " LATEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " LATEST(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " ARRAY_AGG(DISTINCT dim3) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + " STRING_AGG(DISTINCT dim3, '|') FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " BIT_AND(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " BIT_OR(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + " BIT_XOR(l1) FILTER(WHERE dim1 = 'nonexistent')\n"
@@ -13013,7 +13032,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "array_set_add_all(\"__acc\", \"a6\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     selector("dim1", "nonexistent", null)
@@ -13021,19 +13040,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
                                         "a7",
-                                        ImmutableSet.of("l1"),
+                                        ImmutableSet.of("dim3"),
                                         "__acc",
-                                        "0",
-                                        "0",
-                                        NullHandling.sqlCompatible(),
-                                        "bitwiseAnd(\"__acc\", \"l1\")",
-                                        "bitwiseAnd(\"__acc\", \"a7\")",
+                                        "[]",
+                                        "[]",
+                                        true,
+                                        "array_set_add(\"__acc\", \"dim3\")",
+                                        "array_set_add_all(\"__acc\", \"a7\")",
                                         null,
-                                        null,
-                                        new HumanReadableBytes(1024),
+                                        "if(array_length(o) == 0, null, array_to_string(o, '|'))",
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
-                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
+                                    and(
+                                        not(selector("dim3", null, null)),
+                                        selector("dim1", "nonexistent", null)
+                                    )
                                 ),
                                 new FilteredAggregatorFactory(
                                     new ExpressionLambdaAggregatorFactory(
@@ -13043,11 +13065,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
-                                        "bitwiseOr(\"__acc\", \"l1\")",
-                                        "bitwiseOr(\"__acc\", \"a8\")",
+                                        "bitwiseAnd(\"__acc\", \"l1\")",
+                                        "bitwiseAnd(\"__acc\", \"a8\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
@@ -13060,11 +13082,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        "bitwiseOr(\"__acc\", \"l1\")",
+                                        "bitwiseOr(\"__acc\", \"a9\")",
+                                        null,
+                                        null,
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                        TestExprMacroTable.INSTANCE
+                                    ),
+                                    and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new ExpressionLambdaAggregatorFactory(
+                                        "a10",
+                                        ImmutableSet.of("l1"),
+                                        "__acc",
+                                        "0",
+                                        "0",
+                                        NullHandling.sqlCompatible(),
                                         "bitwiseXor(\"__acc\", \"l1\")",
-                                        "bitwiseXor(\"__acc\", \"a9\")",
+                                        "bitwiseXor(\"__acc\", \"a10\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     and(not(selector("l1", null, null)), selector("dim1", "nonexistent", null))
@@ -13076,8 +13115,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"a", "", 0L, "", 0L, "", 0L, null, 0L, 0L, 0L}
-            : new Object[]{"a", null, null, null, null, null, null, null, null, null, null}
+            ? new Object[]{"a", "", 0L, "", 0L, "", 0L, null, "", 0L, 0L, 0L}
+            : new Object[]{"a", null, null, null, null, null, null, null, null, null, null, null}
         )
     );
   }
@@ -17932,7 +17971,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseAnd(\"__acc\", \"a0\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -17949,7 +17988,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseOr(\"__acc\", \"a1\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -17966,7 +18005,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "bitwiseXor(\"__acc\", \"a2\")",
                                   null,
                                   null,
-                                  new HumanReadableBytes(1024),
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                   TestExprMacroTable.INSTANCE
                               ),
                               not(selector("l1", null, null))
@@ -18015,7 +18054,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseAnd(\"__acc\", \"a0\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -18032,7 +18071,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseOr(\"__acc\", \"a1\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -18049,7 +18088,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "bitwiseXor(\"__acc\", \"a2\")",
                                         null,
                                         null,
-                                        new HumanReadableBytes(1024),
+                                        ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                                         TestExprMacroTable.INSTANCE
                                     ),
                                     not(selector("l1", null, null))
@@ -18259,6 +18298,564 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"abc", "abc"}
         )
+    );
+  }
+
+  @Test
+  public void testStringAgg() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT STRING_AGG(dim1,','), STRING_AGG(DISTINCT dim1, ','), STRING_AGG(DISTINCT dim1,',') FILTER(WHERE dim1 = 'shazbot') FROM foo WHERE dim1 is not null",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(not(selector("dim1", null, null)))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a0",
+                                  ImmutableSet.of("dim1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"dim1\")",
+                                  "array_concat(\"__acc\", \"a0\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("dim1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("dim1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"dim1\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("dim1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a2",
+                                  ImmutableSet.of("dim1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"dim1\")",
+                                  "array_set_add_all(\"__acc\", \"a2\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              and(
+                                  not(selector("dim1", null, null)),
+                                  selector("dim1", "shazbot", null)
+                              )
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"10.1,2,1,def,abc", "1,2,abc,def,10.1", ""}
+            : new Object[]{",10.1,2,1,def,abc", ",1,2,abc,def,10.1", null}
+        )
+    );
+  }
+
+  @Test
+  public void testStringAggMultiValue() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT STRING_AGG(dim3, ','), STRING_AGG(DISTINCT dim3, ',') FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a0",
+                                  ImmutableSet.of("dim3"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"dim3\")",
+                                  "array_concat(\"__acc\", \"a0\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("dim3", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("dim3"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"dim3\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("dim3", null, null))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"a,b,b,c,d", "a,b,c,d"}
+            : new Object[]{"a,b,b,c,d,", ",a,b,c,d"}
+        )
+    );
+  }
+
+  @Test
+  public void testStringAggNumeric() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT STRING_AGG(l1, ','), STRING_AGG(DISTINCT l1, ','), STRING_AGG(d1, ','), STRING_AGG(DISTINCT d1, ','), STRING_AGG(f1, ','), STRING_AGG(DISTINCT f1, ',') FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a0",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"l1\")",
+                                  "array_concat(\"__acc\", \"a0\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"l1\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a2",
+                                  ImmutableSet.of("d1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"d1\")",
+                                  "array_concat(\"__acc\", \"a2\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("d1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a3",
+                                  ImmutableSet.of("d1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"d1\")",
+                                  "array_set_add_all(\"__acc\", \"a3\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("d1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a4",
+                                  ImmutableSet.of("f1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"f1\")",
+                                  "array_concat(\"__acc\", \"a4\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("f1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a5",
+                                  ImmutableSet.of("f1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"f1\")",
+                                  "array_set_add_all(\"__acc\", \"a5\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("f1", null, null))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{
+                "7,325323,0,0,0,0",
+                "0,7,325323",
+                "1.0,1.7,0.0,0.0,0.0,0.0",
+                "0.0,1.0,1.7",
+                "1.0,0.10000000149011612,0.0,0.0,0.0,0.0",
+                "0.10000000149011612,0.0,1.0"
+            }
+            : new Object[]{
+                "7,325323,0",
+                "0,7,325323",
+                "1.0,1.7,0.0",
+                "0.0,1.0,1.7",
+                "1.0,0.10000000149011612,0.0",
+                "0.10000000149011612,0.0,1.0"
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testStringAggExpression() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), ','), STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', '|')) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "concat(\"dim1\",\"dim2\")", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a0",
+                                  ImmutableSet.of("v0"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"v0\")",
+                                  "array_set_add_all(\"__acc\", \"a0\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("v0", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("v0"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"v0\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, '||'))",
+                                  ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("v0", null, null))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{"1a,a,2,abc,10.1,defabc", "1a||a||2||abc||10.1||defabc"} : new Object[]{"1a,a,2,defabc", "1a||a||2||defabc"}
+        )
+    );
+  }
+
+  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  public void testStringAggExpressionNonConstantSeparator() throws Exception
+  {
+    testQuery(
+        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', dim1)) FROM foo",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testStringAggMaxBytes() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT STRING_AGG(l1, ',', 128), STRING_AGG(DISTINCT l1, ',', 128) FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a0",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_append(\"__acc\", \"l1\")",
+                                  "array_concat(\"__acc\", \"a0\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  new HumanReadableBytes(128),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new ExpressionLambdaAggregatorFactory(
+                                  "a1",
+                                  ImmutableSet.of("l1"),
+                                  "__acc",
+                                  "[]",
+                                  "[]",
+                                  true,
+                                  "array_set_add(\"__acc\", \"l1\")",
+                                  "array_set_add_all(\"__acc\", \"a1\")",
+                                  null,
+                                  "if(array_length(o) == 0, null, array_to_string(o, ','))",
+                                  new HumanReadableBytes(128),
+                                  TestExprMacroTable.INSTANCE
+                              ),
+                              not(selector("l1", null, null))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"7,325323,0,0,0,0", "0,7,325323"}
+            : new Object[]{"7,325323,0", "0,7,325323"}
+        )
+    );
+  }
+
+
+  /**
+   * see {@link CalciteTests#RAW_ROWS1_WITH_NUMERIC_DIMS} for the input data source of this test
+   */
+  @Test
+  public void testHumanReadableFormatFunction() throws Exception
+  {
+    // For the row where dim1 = '1', m1 = 4.0 and l1 is null
+    testQuery(
+        "SELECT m1, "
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(45678),"
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345),"
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(m1*12345, 0), "
+        + "HUMAN_READABLE_DECIMAL_BYTE_FORMAT(m1*12345), "
+        + "HUMAN_READABLE_DECIMAL_FORMAT(m1*12345), "
+        + "HUMAN_READABLE_BINARY_BYTE_FORMAT(l1),"
+        + "HUMAN_READABLE_DECIMAL_BYTE_FORMAT(l1), "
+        + "HUMAN_READABLE_DECIMAL_FORMAT(l1) "
+        + "FROM numfoo WHERE dim1 = '1' LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                //
+                // NOTE: the first expression HUMAN_READABLE_BINARY_BYTE_FORMAT(45678) in SQL is calculated during SQL parse phase,
+                // so the converted Druid native query is its result intead of the raw function call
+                //
+                .virtualColumns(expressionVirtualColumn("v0", "'44.61 KiB'", ValueType.STRING),
+                                expressionVirtualColumn("v1", "human_readable_binary_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v2", "human_readable_binary_byte_format((\"m1\" * 12345),0)", ValueType.STRING),
+                                expressionVirtualColumn("v3", "human_readable_decimal_byte_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v4", "human_readable_decimal_format((\"m1\" * 12345))", ValueType.STRING),
+                                expressionVirtualColumn("v5", "human_readable_binary_byte_format(\"l1\")", ValueType.STRING),
+                                expressionVirtualColumn("v6", "human_readable_decimal_byte_format(\"l1\")", ValueType.STRING),
+                                expressionVirtualColumn("v7", "human_readable_decimal_format(\"l1\")", ValueType.STRING)
+                )
+                .columns("m1", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+                .filters(selector("dim1", "1", null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{(float) 4.0,
+                         "44.61 KiB", // 45678 / 1024
+                         "48.22 KiB", // = m1(4.0) * 12345 / 1024
+                         "48 KiB", // = m1(4.0) * 12345 / 1024, precision = 0
+                         "49.38 KB", // decimal byte format, m1(4.0) * 12345 / 1000,
+                         "49.38 K", // decimal format, m1(4.0) * 12345 / 1000,
+                         NullHandling.replaceWithDefault() ? "0 B" : null,
+                         NullHandling.replaceWithDefault() ? "0 B" : null,
+                         NullHandling.replaceWithDefault() ? "0" : null
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testHumanReadableFormatFunctionExceptionWithWrongNumberType() throws Exception
+  {
+    this.expectedException.expect(SqlPlanningException.class);
+    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
+    testQuery(
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testHumanReadableFormatFunctionWithWrongPrecisionType() throws Exception
+  {
+    this.expectedException.expect(SqlPlanningException.class);
+    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
+    testQuery(
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments() throws Exception
+  {
+    this.expectedException.expect(SqlPlanningException.class);
+
+    /*
+     * frankly speaking, the exception message thrown here is a little bit confusion
+     * it says it's 'expecting 1 arguments' but acturally HUMAN_READABLE_BINARY_BYTE_FORMAT supports 1 or 2 arguments
+     *
+     * The message is returned from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
+     * and we can see from its implementation that it gets the min number arguments to format the exception message.
+     *
+     */
+    this.expectedException.expectMessage(
+        "Invalid number of arguments to function 'HUMAN_READABLE_BINARY_BYTE_FORMAT'. Was expecting 1 arguments");
+    testQuery(
+        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, 2, 1)",
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testCommonVirtualExpressionWithDifferentValueType() throws Exception
+  {
+    testQuery(
+        "select\n"
+        + " dim1,\n"
+        + " sum(cast(0 as bigint)) as s1,\n"
+        + " sum(cast(0 as double)) as s2\n"
+        + "from druid.foo\n"
+        + "where dim1 = 'none'\n"
+        + "group by dim1\n"
+        + "limit 1",
+        ImmutableList.of(new TopNQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .filters(selector("dim1", "none", null))
+                             .granularity(Granularities.ALL)
+                             .virtualColumns(
+                                 expressionVirtualColumn(
+                                     "v0",
+                                     "'none'",
+                                     ValueType.STRING
+                                 )
+                             )
+                             .dimension(
+                                 new DefaultDimensionSpec("v0", "d0")
+                             )
+                             .aggregators(
+                                 aggregators(
+                                     new LongSumAggregatorFactory("a0", null, "0", ExprMacroTable.nil()),
+                                     new DoubleSumAggregatorFactory("a1", null, "0", ExprMacroTable.nil())
+                                 ))
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                             .threshold(1)
+                             .build()),
+        ImmutableList.of()
     );
   }
 }

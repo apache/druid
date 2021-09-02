@@ -19,17 +19,30 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.guice.GuiceAnnotationIntrospector;
+import org.apache.druid.guice.GuiceInjectableValues;
+import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.LoadSpec;
+import org.apache.druid.segment.loading.LocalDataSegmentPuller;
+import org.apache.druid.segment.loading.LocalDataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.LocalLoadSpec;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -41,23 +54,45 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+@RunWith(Parameterized.class)
 public class ShuffleDataSegmentPusherTest
 {
+  private static final String LOCAL = "local";
+  private static final String DEEPSTORE = "deepstore";
+
+  @Parameterized.Parameters(name = "intermediateDataManager={0}")
+  public static Collection<Object[]> data()
+  {
+    return ImmutableList.of(new Object[]{LOCAL}, new Object[]{DEEPSTORE});
+  }
+
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private LocalIntermediaryDataManager intermediaryDataManager;
+  private IntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;
+  private ObjectMapper mapper;
+
+  private final String intermediateDataStore;
+  private File localDeepStore;
+
+  public ShuffleDataSegmentPusherTest(String intermediateDataStore)
+  {
+    this.intermediateDataStore = intermediateDataStore;
+  }
 
   @Before
   public void setup() throws IOException
@@ -77,19 +112,47 @@ public class ShuffleDataSegmentPusherTest
         false
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    if (LOCAL.equals(intermediateDataStore)) {
+      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    } else if (DEEPSTORE.equals(intermediateDataStore)) {
+      localDeepStore = temporaryFolder.newFolder("localStorage");
+      intermediaryDataManager = new DeepStorageIntermediaryDataManager(
+          new LocalDataSegmentPusher(
+              new LocalDataSegmentPusherConfig()
+              {
+                @Override
+                public File getStorageDirectory()
+                {
+                  return localDeepStore;
+                }
+              }));
+    }
     intermediaryDataManager.start();
     segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);
+
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> binder.bind(LocalDataSegmentPuller.class)
+        )
+    );
+    mapper = new DefaultObjectMapper();
+    mapper.registerModule(new SimpleModule("loadSpecTest").registerSubtypes(LocalLoadSpec.class));
+    mapper.setInjectableValues(new GuiceInjectableValues(injector));
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+    mapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()),
+        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector())
+    );
   }
 
   @After
-  public void teardown() throws InterruptedException
+  public void teardown()
   {
     intermediaryDataManager.stop();
   }
 
   @Test
-  public void testPush() throws IOException
+  public void testPush() throws IOException, SegmentLoadingException
   {
     final File segmentDir = generateSegmentDir();
     final DataSegment segment = newSegment(Intervals.of("2018/2019"));
@@ -98,21 +161,33 @@ public class ShuffleDataSegmentPusherTest
     Assert.assertEquals(9, pushed.getBinaryVersion().intValue());
     Assert.assertEquals(14, pushed.getSize()); // 10 bytes data + 4 bytes version
 
-    final Optional<ByteSource> zippedSegment = intermediaryDataManager.findPartitionFile(
-        "supervisorTaskId",
-        "subTaskId",
-        segment.getInterval(),
-        segment.getShardSpec().getPartitionNum()
-    );
-    Assert.assertTrue(zippedSegment.isPresent());
     final File tempDir = temporaryFolder.newFolder();
-    final FileCopyResult result = CompressionUtils.unzip(
-        zippedSegment.get(),
-        tempDir,
-        org.apache.druid.java.util.common.FileUtils.IS_EXCEPTION,
-        false
-    );
-    final List<File> unzippedFiles = new ArrayList<>(result.getFiles());
+    if (intermediaryDataManager instanceof LocalIntermediaryDataManager) {
+      final Optional<ByteSource> zippedSegment = intermediaryDataManager.findPartitionFile(
+          "supervisorTaskId",
+          "subTaskId",
+          segment.getInterval(),
+          segment.getShardSpec().getPartitionNum()
+      );
+      Assert.assertTrue(zippedSegment.isPresent());
+      CompressionUtils.unzip(
+          zippedSegment.get(),
+          tempDir,
+          org.apache.druid.java.util.common.FileUtils.IS_EXCEPTION,
+          false
+      );
+    } else if (intermediaryDataManager instanceof DeepStorageIntermediaryDataManager) {
+      final LoadSpec loadSpec = mapper.convertValue(pushed.getLoadSpec(), LoadSpec.class);
+      Assert.assertTrue(pushed.getLoadSpec()
+                              .get("path")
+                              .toString()
+                              .startsWith(localDeepStore.getAbsolutePath()
+                                          + "/"
+                                          + DeepStorageIntermediaryDataManager.SHUFFLE_DATA_DIR_PREFIX));
+      loadSpec.loadSegment(tempDir);
+    }
+
+    final List<File> unzippedFiles = Arrays.asList(tempDir.listFiles());
     unzippedFiles.sort(Comparator.comparing(File::getName));
     final File dataFile = unzippedFiles.get(0);
     Assert.assertEquals("test", dataFile.getName());

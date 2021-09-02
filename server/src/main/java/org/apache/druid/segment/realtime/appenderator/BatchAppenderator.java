@@ -676,8 +676,6 @@ public class BatchAppenderator implements Appenderator
 
           log.info("Push started, processsing[%d] sinks", identifiers.size());
 
-          // get the dirs for the identfiers:
-          List<File> identifiersDirs = new ArrayList<>();
           int totalHydrantsMerged = 0;
           for (SegmentIdWithShardSpec identifier : identifiers) {
             SinkMetadata sm = sinksMetadata.get(identifier);
@@ -686,19 +684,14 @@ public class BatchAppenderator implements Appenderator
             }
             File persistedDir = sm.getPersistedFileDir();
             if (persistedDir == null) {
-              throw new ISE("Prsisted directory for identifier[%s] is null in sink metadata", identifier);
+              throw new ISE("Persisted directory for identifier[%s] is null in sink metadata", identifier);
             }
-            identifiersDirs.add(persistedDir);
             totalHydrantsMerged += sm.getNumHydrants();
-          }
-
-          // push all sinks for identifiers:
-          for (File identifier : identifiersDirs) {
 
             // retrieve sink from disk:
-            Pair<SegmentIdWithShardSpec, Sink> identifiersAndSinks;
+            Sink sinkForIdentifier;
             try {
-              identifiersAndSinks = getIdentifierAndSinkForPersistedFile(identifier);
+              sinkForIdentifier = getSinkForIdentifierPath(identifier, persistedDir);
             }
             catch (IOException e) {
               throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
@@ -706,15 +699,15 @@ public class BatchAppenderator implements Appenderator
 
             // push it:
             final DataSegment dataSegment = mergeAndPush(
-                identifiersAndSinks.lhs,
-                identifiersAndSinks.rhs
+                identifier,
+                sinkForIdentifier
             );
 
             // record it:
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
-              log.warn("mergeAndPush[%s] returned null, skipping.", identifiersAndSinks.lhs);
+              log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
             }
           }
           log.info("Push done: total sinks merged[%d], total hydrants merged[%d]",
@@ -723,7 +716,7 @@ public class BatchAppenderator implements Appenderator
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
         },
         pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees
-                      // that segments are dropped before next add row
+        // that segments are dropped before next add row
     );
   }
 
@@ -994,15 +987,9 @@ public class BatchAppenderator implements Appenderator
     return retVal;
   }
 
-  private Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File identifierPath)
+  private Sink getSinkForIdentifierPath(SegmentIdWithShardSpec identifier, File identifierPath)
       throws IOException
   {
-
-    final SegmentIdWithShardSpec identifier = objectMapper.readValue(
-        new File(identifierPath, IDENTIFIER_FILE_NAME),
-        SegmentIdWithShardSpec.class
-    );
-
     // To avoid reading and listing of "merged" dir and other special files
     final File[] sinkFiles = identifierPath.listFiles(
         (dir, fileName) -> !(Ints.tryParse(fileName) == null)
@@ -1033,7 +1020,7 @@ public class BatchAppenderator implements Appenderator
       );
     }
 
-    Sink currSink = new Sink(
+    Sink retVal = new Sink(
         identifier.getInterval(),
         schema,
         identifier.getShardSpec(),
@@ -1044,8 +1031,8 @@ public class BatchAppenderator implements Appenderator
         null,
         hydrants
     );
-    currSink.finishWriting(); // this sink is not writable
-    return new Pair<>(identifier, currSink);
+    retVal.finishWriting(); // this sink is not writable
+    return retVal;
   }
 
   private void resetSinkMetadata()

@@ -47,7 +47,7 @@ export function parseTimeTableSelectedColumnName(
 export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
-    spec: IngestionSpec;
+    spec: Partial<IngestionSpec>;
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;

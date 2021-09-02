@@ -23,23 +23,39 @@ title: "MySQL Metadata Store"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
-> The MySQL extension requires the MySQL Connector/J library which is not included in the Druid distribution.
+> The MySQL extension requires the MySQL Connector/J library or MariaDB Connector/J library, neither of which are included in the Druid distribution.
 > Refer to the following section for instructions on how to install this library.
 
 ## Installing the MySQL connector library
 
-This extension uses Oracle's MySQL JDBC driver which is not included in the Druid distribution and must be
-installed separately. There are a few ways to obtain this library:
+This extension can use Oracle's MySQL JDBC driver which is not included in the Druid distribution. You must
+install it separately. There are a few ways to obtain this library:
 
 - It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
 - It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.48/mysql-connector-java-5.1.48.jar
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
-This should fetch a JAR file named similar to 'mysql-connector-java-x.x.xx.jar'.
+This fetches the MySQL connector JAR file with a name like `mysql-connector-java-5.1.48.jar`.
+
+Copy or symlink this file inside the folder `extensions/mysql-metadata-storage` under the distribution root directory.
+
+## Alternative: Installing the MariaDB connector library
+
+This extension also supports using the MariaDB connector jar, though it is also not included in the Druid distribution, so you must install it separately.
+
+- Download from the MariaDB site: https://mariadb.com/downloads/connector
+- Download from Maven Central: https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/2.7.3/mariadb-java-client-2.7.3.jar
+
+This fetches the MariaDB connector JAR file with a name like `maria-java-client-2.7.3.jar`.
 
 Copy or symlink this file to `extensions/mysql-metadata-storage` under the distribution root directory.
+
+To configure the `mysql-metadata-storage` extension to use the MariaDB connector library instead of MySQL, set `druid.metadata.mysql.driver.driverClassName=org.mariadb.jdbc.Driver`.
+
+Depending on the MariaDB client library version, the connector supports both `jdbc:mysql:` and `jdbc:mariadb:` connection URIs. However, the parameters to configure the connection vary between implementations, so be sure to [check the documentation](https://mariadb.com/kb/en/about-mariadb-connector-j/#connection-strings) for details.
+
 
 ## Setting up MySQL
 
@@ -51,7 +67,9 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 
   Alternatively, download and follow installation instructions for MySQL
   Community Server here:
-  [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
+  [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
+
+This extension also supports using MariaDB server, https://mariadb.org/download/, substituting for MariaDB in the following instructions where appropriate.
 
 2. Create a druid database and user
 
@@ -87,6 +105,8 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   druid.metadata.storage.connector.password=diurd
   ```
 
+If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverClassName=org.mariadb.jdbc.Driver`.
+
 ## Encrypting MySQL connections
   This extension provides support for encrypting MySQL connections. To get more information about encrypting MySQL connections using TLS/SSL in general, please refer to this [guide](https://dev.mysql.com/doc/refman/5.7/en/using-encrypted-connections.html).
 
@@ -105,9 +125,9 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 |`druid.metadata.mysql.ssl.enabledSSLCipherSuites`|Overrides the existing cipher suites with these cipher suites.|none|no|
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
 
-### MySQL Firehose
+### MySQL InputSource and Firehose
 
-The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database.
+The MySQL extension provides a connector implementation of an [SqlInputSource](../../ingestion/native-batch.md#sql-input-source) and [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database. This works with either MySQL or MariaDB connector jars.
 
 ```json
 {

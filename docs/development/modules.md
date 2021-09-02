@@ -324,6 +324,38 @@ public class MyTransformModule implements DruidModule {
 }
 ```
 
+### Adding your own custom pluggable Coordinator Duty
+
+The coordinator periodically runs jobs, so-called `CoordinatorDuty` which include loading new segments, segment balancing, etc. 
+Druid users can add custom pluggable coordinator duties, which are not part of Core Druid, without modifying any Core Druid classes.
+Users can do this by writing their own custom coordinator duty implementing the interface `CoordinatorCustomDuty` and setting the `JsonTypeName`.
+Next, users will need to register their custom coordinator as subtypes in their Module's `DruidModule#getJacksonModules()`.
+Once these steps are done, user will be able to load their custom coordinator duty using the following properties:
+```
+druid.coordinator.dutyGroups=[<GROUP_NAME_1>, <GROUP_NAME_2>, ...]
+druid.coordinator.<GROUP_NAME_1>.duties=[<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>, <DUTY_NAME_MATCHING_JSON_TYPE_NAME_2>, ...]
+druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
+
+druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_1_KEY>=<SOME_CONFIG_1_VALUE>
+druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_2_KEY>=<SOME_CONFIG_2_VALUE>
+```
+In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped together.
+The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`. 
+All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
+Currently, there is a single thread running the duties sequentially for each group. 
+
+For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and `common-custom-coordinator-duties`
+integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/common-custom-coordinator-duties`.
+The relevant configs in `integration-tests/docker/environment-configs/common-custom-coordinator-duties` are as follows:
+(The configs create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
+The custom coordinator duty `killSupervisors` also has a config called `retainDuration` which is set to 0 minute)
+```
+druid.coordinator.dutyGroups=["cleanupMetadata"]
+druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
+druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
+druid.coordinator.cleanupMetadata.period=PT10S
+```
+
 ### Bundle your extension with all the other Druid extensions
 
 When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.

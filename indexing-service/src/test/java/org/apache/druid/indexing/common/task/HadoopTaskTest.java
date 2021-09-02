@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
-import org.apache.hadoop.yarn.util.ApplicationClassLoader;
+import org.apache.hadoop.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
