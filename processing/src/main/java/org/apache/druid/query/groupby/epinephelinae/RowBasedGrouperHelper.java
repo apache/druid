@@ -1252,7 +1252,10 @@ public class RowBasedGrouperHelper
           dimensions,
           serdeHelperComparators,
           includeTimestamp,
-          sortByDimsFirst
+          sortByDimsFirst,
+          Arrays.stream(serdeHelpers)
+                .mapToInt(RowBasedKeySerdeHelper::getKeyBufferValueSize)
+                .sum()
       );
     }
 
