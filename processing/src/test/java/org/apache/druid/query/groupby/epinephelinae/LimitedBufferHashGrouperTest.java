@@ -346,7 +346,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
       OrderByColumnSpec.Direction direction
   )
   {
-    final StringComparator stringComparator = orderByColumn.equals("value")
+    final StringComparator stringComparator = "value".equals(orderByColumn)
                                               ? StringComparators.LEXICOGRAPHIC
                                               : StringComparators.NUMERIC;
     final DefaultLimitSpec orderBy = DefaultLimitSpec.builder()
