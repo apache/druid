@@ -92,7 +92,7 @@ public class SqlRowTransformerTest
   @Test
   public void testTransformNonUTC()
   {
-    DateTimeZone timeZone = DateTimeZone.forID("Asia/Seoul");
+    DateTimeZone timeZone = DateTimes.inferTzFromString("Asia/Seoul");
     SqlRowTransformer transformer = new SqlRowTransformer(
         timeZone,
         rowType

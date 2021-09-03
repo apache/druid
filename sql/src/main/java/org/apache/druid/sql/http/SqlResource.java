@@ -65,7 +65,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -116,19 +115,9 @@ public class SqlResource
 
       lifecycle.plan();
 
-      Optional<SqlRowTransformer> maybeTransformer = lifecycle.createRowTransformer();
-      if (!maybeTransformer.isPresent()) {
-        endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-        return buildCanceledResponse(sqlQueryId);
-      }
-      final SqlRowTransformer rowTransformer = maybeTransformer.get();
-
-      final Optional<Sequence<Object[]>> maybeSequence = lifecycle.execute();
-      if (!maybeSequence.isPresent()) {
-        endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-        return buildCanceledResponse(sqlQueryId);
-      }
-      final Yielder<Object[]> yielder0 = Yielders.each(maybeSequence.get());
+      final SqlRowTransformer rowTransformer = lifecycle.createRowTransformer();
+      final Sequence<Object[]> sequence = lifecycle.execute();
+      final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
       try {
         return Response
@@ -239,19 +228,6 @@ public class SqlResource
   {
     lifecycle.finalizeStateAndEmitLogsAndMetrics(e, remoteAddress, bytesWritten);
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
-  }
-
-  private Response buildCanceledResponse(String sqlQueryId) throws JsonProcessingException
-  {
-    return buildNonOkResponse(
-        Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-        new QueryInterruptedException(
-            QueryInterruptedException.QUERY_CANCELLED,
-            StringUtils.format("Query is canceled [%s]", sqlQueryId),
-            null,
-            null
-        )
-    );
   }
 
   private Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException

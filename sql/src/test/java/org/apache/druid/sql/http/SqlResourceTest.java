@@ -95,7 +95,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -1232,13 +1231,13 @@ public class SqlResourceTest extends CalciteTestBase
     }
 
     @Override
-    public Optional<Sequence<Object[]>> execute()
+    public Sequence<Object[]> execute()
     {
       if (executeLatchSupplier.get() != null) {
         if (executeLatchSupplier.get().rhs) {
-          Optional<Sequence<Object[]>> optionalSequence = super.execute();
+          Sequence<Object[]> sequence = super.execute();
           executeLatchSupplier.get().lhs.countDown();
-          return optionalSequence;
+          return sequence;
         } else {
           try {
             if (!executeLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
@@ -1253,7 +1252,6 @@ public class SqlResourceTest extends CalciteTestBase
       } else {
         return super.execute();
       }
-
     }
   }
 }

@@ -64,7 +64,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -190,17 +189,16 @@ public class SqlLifecycle
         return;
       }
     }
-    if (transition(State.INITIALIZED, State.AUTHORIZING)) {
-      validate(authenticationResult);
-      Access access = doAuthorize(
-          AuthorizationUtils.authorizeAllResourceActions(
-              authenticationResult,
-              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
-              plannerFactory.getAuthorizerMapper()
-          )
-      );
-      checkAccess(access);
-    }
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    validate(authenticationResult);
+    Access access = doAuthorize(
+        AuthorizationUtils.authorizeAllResourceActions(
+            authenticationResult,
+            Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+            plannerFactory.getAuthorizerMapper()
+        )
+    );
+    checkAccess(access);
   }
 
   /**
@@ -212,18 +210,17 @@ public class SqlLifecycle
    */
   public void validateAndAuthorize(HttpServletRequest req)
   {
-    if (transition(State.INITIALIZED, State.AUTHORIZING)) {
-      AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
-      validate(authResult);
-      Access access = doAuthorize(
-          AuthorizationUtils.authorizeAllResourceActions(
-              req,
-              Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
-              plannerFactory.getAuthorizerMapper()
-          )
-      );
-      checkAccess(access);
-    }
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
+    validate(authResult);
+    Access access = doAuthorize(
+        AuthorizationUtils.authorizeAllResourceActions(
+            req,
+            Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+            plannerFactory.getAuthorizerMapper()
+        )
+    );
+    checkAccess(access);
   }
 
   private ValidationResult validate(AuthenticationResult authenticationResult)
@@ -299,36 +296,32 @@ public class SqlLifecycle
    */
   public void plan() throws RelConversionException
   {
-    if (transition(State.AUTHORIZED, State.PLANNED)) {
-      Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-      try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
-        this.plannerResult = planner.plan(sql);
-      }
-      // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-      catch (SqlParseException e) {
-        throw new SqlPlanningException(e);
-      }
-      catch (ValidationException e) {
-        throw new SqlPlanningException(e);
-      }
+    transition(State.AUTHORIZED, State.PLANNED);
+    Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
+    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+      this.plannerResult = planner.plan(sql);
+    }
+    // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
+    catch (SqlParseException e) {
+      throw new SqlPlanningException(e);
+    }
+    catch (ValidationException e) {
+      throw new SqlPlanningException(e);
     }
   }
 
   /**
    * This method must be called after {@link #plan()}.
    */
-  public Optional<SqlRowTransformer> createRowTransformer()
+  public SqlRowTransformer createRowTransformer()
   {
     synchronized (stateLock) {
-      if (state == State.CANCELLED) {
-        return Optional.empty();
-      }
       assert state == State.PLANNED;
     }
     assert plannerContext != null;
     assert plannerResult != null;
 
-    return Optional.of(new SqlRowTransformer(plannerContext.getTimeZone(), plannerResult.rowType()));
+    return new SqlRowTransformer(plannerContext.getTimeZone(), plannerResult.rowType());
   }
 
   @VisibleForTesting
@@ -342,13 +335,10 @@ public class SqlLifecycle
    *
    * If successful, the lifecycle will first transition from {@link State#PLANNED} to {@link State#EXECUTING}.
    */
-  public Optional<Sequence<Object[]>> execute()
+  public Sequence<Object[]> execute()
   {
-    if (transition(State.PLANNED, State.EXECUTING)) {
-      return Optional.of(plannerResult.run());
-    } else {
-      return Optional.empty();
-    }
+    transition(State.PLANNED, State.EXECUTING);
+    return plannerResult.run();
   }
 
   @VisibleForTesting
@@ -366,9 +356,7 @@ public class SqlLifecycle
       setParameters(SqlQuery.getParameterList(parameters));
       validateAndAuthorize(authenticationResult);
       plan();
-      Optional<Sequence<Object[]>> maybeSequence = execute();
-      assert maybeSequence.isPresent();
-      result = maybeSequence.get();
+      result = execute();
     }
     catch (Throwable e) {
       finalizeStateAndEmitLogsAndMetrics(e, null, -1);
@@ -519,11 +507,16 @@ public class SqlLifecycle
     return queryContext;
   }
 
-  private boolean transition(final State from, final State to)
+  private void transition(final State from, final State to)
   {
     synchronized (stateLock) {
       if (state == State.CANCELLED) {
-        return false;
+        throw new QueryInterruptedException(
+            QueryInterruptedException.QUERY_CANCELLED,
+            StringUtils.format("Query is canceled [%s]", sqlQueryId()),
+            null,
+            null
+        );
       }
       if (state != from) {
         throw new ISE(
@@ -537,7 +530,6 @@ public class SqlLifecycle
 
       state = to;
     }
-    return true;
   }
 
   enum State
@@ -551,7 +543,7 @@ public class SqlLifecycle
 
     // final states
     UNAUTHORIZED,
-    CANCELLED, // this query is cancelled. state transition will become no-op in this state.
+    CANCELLED, // query is cancelled. can be transitioned to this state only after AUTHORIZED.
     DONE // query could either succeed or fail
   }
 }

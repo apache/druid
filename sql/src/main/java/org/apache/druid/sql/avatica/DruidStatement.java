@@ -218,10 +218,7 @@ public class DruidStatement implements Closeable
         sqlLifecycle.setParameters(parameters);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
         sqlLifecycle.plan();
-        Optional<Sequence<Object[]>> maybeSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
-        // The sequence must exist since sqlLifecycle is not cancellable for JDBC.
-        assert maybeSequence.isPresent();
-        final Sequence<Object[]> baseSequence = maybeSequence.get();
+        Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
