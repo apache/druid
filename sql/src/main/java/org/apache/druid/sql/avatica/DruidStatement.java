@@ -218,7 +218,7 @@ public class DruidStatement implements Closeable
         sqlLifecycle.setParameters(parameters);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
         sqlLifecycle.plan();
-        Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
+        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
