@@ -545,7 +545,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -586,7 +590,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -677,7 +685,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
@@ -730,7 +742,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.CSV, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
@@ -748,7 +764,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormatWithHeaders() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, true, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.CSV, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(

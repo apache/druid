@@ -315,9 +315,6 @@ public class SqlLifecycle
    */
   public SqlRowTransformer createRowTransformer()
   {
-    synchronized (stateLock) {
-      assert state == State.PLANNED;
-    }
     assert plannerContext != null;
     assert plannerResult != null;
 
