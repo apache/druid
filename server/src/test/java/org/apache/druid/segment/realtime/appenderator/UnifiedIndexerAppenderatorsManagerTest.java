@@ -78,7 +78,7 @@ public class UnifiedIndexerAppenderatorsManagerTest
     EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
     EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
     EasyMock.replay(appenderatorConfig);
-    appenderator = manager.createOfflineAppenderatorForTask(
+    appenderator = manager.createClosedSegmentsOfflineAppenderatorForTask(
         "taskId",
         new DataSchema(
             "myDataSource",
@@ -95,8 +95,7 @@ public class UnifiedIndexerAppenderatorsManagerTest
         TestHelper.getTestIndexIO(),
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
-        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
-        false
+        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0)
     );
   }
 

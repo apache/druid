@@ -21,6 +21,8 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -70,20 +72,50 @@ public final class BatchAppenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return appenderatorsManager.createOfflineAppenderatorForTask(
-        taskId,
-        dataSchema,
-        appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        metrics,
-        segmentPusher,
-        toolbox.getJsonMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9(),
-        rowIngestionMeters,
-        parseExceptionHandler,
-        toolbox.getConfig().getuseLegacyBatchProcessing()
-    );
+    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.LEGACY) {
+      return appenderatorsManager.createLegacyOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler
+          );
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.CLOSED_SEGMENTS) {
+      return appenderatorsManager.createClosedSegmentsOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler
+          );
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.CLOSED_SEGMENTS_SINKS) {
+      return appenderatorsManager.createOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler
+          );
+    } else {
+      throw new IAE("Invalid batchProcesingMode[%s]", toolbox.getConfig().getBatchProcessingMode());
+    }
   }
+
 
   public static BatchAppenderatorDriver newDriver(
       final Appenderator appenderator,

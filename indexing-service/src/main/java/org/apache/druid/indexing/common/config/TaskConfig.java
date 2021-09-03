@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
@@ -42,6 +43,15 @@ public class TaskConfig
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
       "org.apache.hadoop:hadoop-client:2.8.5"
   );
+
+  public enum BatchProcesingMode
+  {
+    LEGACY,
+    CLOSED_SEGMENTS,
+    CLOSED_SEGMENTS_SINKS
+  }
+
+  public static final BatchProcesingMode BATCH_PROCESSING_MODE_DEFAULT = BatchProcesingMode.CLOSED_SEGMENTS;
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
@@ -77,7 +87,10 @@ public class TaskConfig
   private final boolean ignoreTimestampSpecForDruidInputSource;
 
   @JsonProperty
-  private final boolean useLegacyBatchProcessing;
+  private final boolean batchMemoryMappedIndex;
+
+  @JsonProperty
+  private final BatchProcesingMode batchProcessingMode;
 
   @JsonCreator
   public TaskConfig(
@@ -91,7 +104,8 @@ public class TaskConfig
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
-      @JsonProperty("useLegacyBatchProcessing") boolean useLegacyBatchProcessing // only set to true to fall back to older behavior
+      @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
+      @JsonProperty("batchProcessingMode") String batchProcesingMode
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -117,7 +131,19 @@ public class TaskConfig
       this.shuffleDataLocations = shuffleDataLocations;
     }
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
-    this.useLegacyBatchProcessing = useLegacyBatchProcessing;
+
+    this.batchMemoryMappedIndex = batchMemoryMappedIndex;
+    // Conflict resolution. Assume that if batchMemoryMappedIndex is set (since false is the default) that
+    // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
+    // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
+    if (batchMemoryMappedIndex) {
+      this.batchProcessingMode = BatchProcesingMode.LEGACY;
+    } else if (EnumUtils.isValidEnum(BatchProcesingMode.class, batchProcesingMode)) {
+      this.batchProcessingMode = BatchProcesingMode.valueOf(batchProcesingMode);
+    } else {
+      // batchProcessingMode input string is invalid, just use the default...log message somewhere???
+      this.batchProcessingMode = BatchProcesingMode.CLOSED_SEGMENTS; // Default
+    }
   }
 
   @JsonProperty
@@ -201,9 +227,19 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean getuseLegacyBatchProcessing()
+  public BatchProcesingMode getBatchProcessingMode()
   {
-    return useLegacyBatchProcessing;
+    return batchProcessingMode;
+  }
+
+  /**
+   * Do not use in code! use {@link TaskConfig#getBatchProcessingMode() instead}
+   */
+  @Deprecated
+  @JsonProperty
+  public boolean getbatchMemoryMappedIndex()
+  {
+    return batchMemoryMappedIndex;
   }
 
 
