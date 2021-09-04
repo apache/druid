@@ -130,10 +130,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return new GroupByQueryResource();
     } else {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
+      final String lane = QueryContexts.getLane(query);
       if (QueryContexts.hasTimeout(query)) {
-        mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+        mergeBufferHolders = mergeBufferPool.takeBatch(lane, requiredMergeBufferNum, QueryContexts.getTimeout(query));
       } else {
-        mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
+        mergeBufferHolders = mergeBufferPool.takeBatch(lane, requiredMergeBufferNum);
       }
       if (mergeBufferHolders.isEmpty()) {
         throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(

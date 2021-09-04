@@ -1691,6 +1691,8 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.query.scheduler.numThreads`|Maximum number of HTTP threads to dedicate to query processing. To save HTTP thread capacity, this should be lower than `druid.server.http.numThreads`, but it is worth noting that like `druid.server.http.enableRequestLimit` is set that query requests over this limit will be denied instead of waiting in the Jetty HTTP request queue.|Unbounded|
 |`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
 |`druid.query.scheduler.prioritization.strategy`|Query prioritization strategy to automatically assign priorities.|`manual`|
+|`druid.query.scheduler.mergeBuffer.strategy`|Strategy to schedule merge buffer pool. With `arbitrary` strategy, every query can require all of the merge buffer pool. On the contrary, `lane` strategy will limit a query with a lane to require partial resource according to the lane configuration, and only the query without a lane can require all of the merge buffer pool.|`arbitrary`|
+|`druid.query.scheduler.mergeBuffer.ignoreUnknownLane`|If a query has a lane but the lane cannot be found from configuration, set this to be false will make the query fail directly, while set this to be true will ignore the lane and let the query require all of the merge buffer pool just as if it is not with a lane.|`true`|
 
 ##### Prioritization strategies
 

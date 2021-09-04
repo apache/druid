@@ -22,12 +22,18 @@ package org.apache.druid.collections;
 import com.google.common.base.Supplier;
 
 import java.io.Closeable;
+import java.util.Map;
 
 public class CloseableDefaultBlockingPool<T> extends DefaultBlockingPool<T> implements Closeable
 {
   public CloseableDefaultBlockingPool(Supplier<T> generator, int limit)
   {
     super(generator, limit);
+  }
+
+  public CloseableDefaultBlockingPool(Supplier<T> generator, Map<String, Integer> permits, int limit)
+  {
+    super(new SemaphoreResourceGroupScheduler(limit, permits, false), generator);
   }
 
   @Override

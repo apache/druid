@@ -152,6 +152,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     );
 
     final int priority = QueryContexts.getPriority(query);
+    final String lane = QueryContexts.getLane(query);
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
@@ -180,6 +181,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
 
               final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = getMergeBuffersHolder(
+                  lane,
                   numMergeBuffers,
                   hasTimeout,
                   timeoutAt
@@ -302,6 +304,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   }
 
   private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(
+      String lane,
       int numBuffers,
       boolean hasTimeout,
       long timeoutAt
@@ -322,11 +325,11 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
         if (timeout <= 0) {
           throw new QueryTimeoutException();
         }
-        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
+        if ((mergeBufferHolder = mergeBufferPool.takeBatch(lane, numBuffers, timeout)).isEmpty()) {
           throw new QueryTimeoutException("Cannot acquire enough merge buffers");
         }
       } else {
-        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
+        mergeBufferHolder = mergeBufferPool.takeBatch(lane, numBuffers);
       }
       return mergeBufferHolder;
     }

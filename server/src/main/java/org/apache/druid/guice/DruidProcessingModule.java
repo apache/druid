@@ -31,7 +31,6 @@ import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.guice.annotations.Global;
@@ -47,6 +46,9 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.MetricsEmittingQueryProcessingPool;
 import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.server.QuerySchedulerConfig;
+import org.apache.druid.server.ResourceScheduleStrategy;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.utils.JvmUtils;
 
@@ -126,13 +128,15 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(
+      ServerConfig serverConfig,
+      QuerySchedulerConfig querySchedulerConfig,
+      DruidProcessingConfig config
+  )
   {
     verifyDirectMemory(config);
-    return new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
-        config.getNumMergeBuffers()
-    );
+    ResourceScheduleStrategy executorStrategy = querySchedulerConfig.getMergeBufferStrategy();
+    return executorStrategy.getMergeBufferPool(serverConfig, querySchedulerConfig, config);
   }
 
   @Provides

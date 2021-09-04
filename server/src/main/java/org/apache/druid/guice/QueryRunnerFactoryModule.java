@@ -46,6 +46,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QuerySchedulerConfig;
 import org.apache.druid.server.QuerySchedulerProvider;
 
 import java.util.Map;
@@ -76,7 +77,9 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
           .in(LazySingleton.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
-
+    binder.bind(QuerySchedulerConfig.class)
+          .to(Key.get(QuerySchedulerProvider.class, Global.class))
+          .in(LazySingleton.class);
     final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(
         binder
     );

@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public interface BlockingPool<T>
@@ -31,17 +32,35 @@ public interface BlockingPool<T>
    *
    * @param elementNum number of resources to take
    * @param timeoutMs  maximum time to wait for resources, in milliseconds.
-   *
    * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
   List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs);
 
   /**
+   * Take resources from the special group pool, waiting up to the
+   * specified wait time if necessary for elements of the given number to become available.
+   *
+   * @param group resources group
+   * @param elementNum number of resources to take
+   * @param timeoutMs  maximum time to wait for resources, in milliseconds.
+   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
+   */
+  List<ReferenceCountingResourceHolder<T>> takeBatch(@Nullable String group, int elementNum, long timeoutMs);
+
+  /**
    * Take resources from the pool, waiting if necessary until the elements of the given number become available.
    *
    * @param elementNum number of resources to take
-   *
    * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
   List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum);
+
+  /**
+   * Take resources from the special group  pool, waiting if necessary until the elements of the given number become available.
+   *
+   * @param group resources group
+   * @param elementNum number of resources to take
+   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
+   */
+  List<ReferenceCountingResourceHolder<T>> takeBatch(@Nullable String group, int elementNum);
 }

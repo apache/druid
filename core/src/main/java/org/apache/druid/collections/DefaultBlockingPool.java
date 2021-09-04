@@ -22,6 +22,7 @@ package org.apache.druid.collections;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -47,12 +48,23 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   private final ReentrantLock lock;
   private final Condition notEnough;
   private final int maxSize;
+  private final ResourceGroupScheduler resourceGroupScheduler;
 
   public DefaultBlockingPool(
       Supplier<T> generator,
       int limit
   )
   {
+    this(new SemaphoreResourceGroupScheduler(limit, ImmutableMap.of(), true), generator);
+  }
+
+  public DefaultBlockingPool(
+      ResourceGroupScheduler resourceGroupScheduler,
+      Supplier<T> generator
+  )
+  {
+    int limit = resourceGroupScheduler.getTotalCapacity();
+    this.resourceGroupScheduler = resourceGroupScheduler;
     this.objects = new ArrayDeque<>(limit);
     this.maxSize = limit;
 
@@ -77,55 +89,30 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   }
 
   @Nullable
-  private ReferenceCountingResourceHolder<T> wrapObject(T theObject)
+  private ReferenceCountingResourceHolder<T> wrapObject(String group, T theObject)
   {
     return theObject == null ? null : new ReferenceCountingResourceHolder<>(
         theObject,
-        () -> offer(theObject)
+        () -> offer(group, theObject)
     );
-  }
-
-  @Nullable
-  private T pollObject()
-  {
-    final ReentrantLock lock = this.lock;
-    lock.lock();
-    try {
-      return objects.isEmpty() ? null : objects.pop();
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  @Nullable
-  private T pollObject(long timeoutMs) throws InterruptedException
-  {
-    long nanos = TIME_UNIT.toNanos(timeoutMs);
-    final ReentrantLock lock = this.lock;
-    lock.lockInterruptibly();
-    try {
-      while (objects.isEmpty()) {
-        if (nanos <= 0) {
-          return null;
-        }
-        nanos = notEnough.awaitNanos(nanos);
-      }
-      return objects.pop();
-    }
-    finally {
-      lock.unlock();
-    }
   }
 
   @Override
   public List<ReferenceCountingResourceHolder<T>> takeBatch(final int elementNum, final long timeoutMs)
   {
+    return takeBatch(null, elementNum, timeoutMs);
+  }
+
+  @Override
+  public List<ReferenceCountingResourceHolder<T>> takeBatch(String group, int elementNum, long timeoutMs)
+  {
     Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
-      final List<T> objects = timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum);
-      return objects.stream().map(this::wrapObject).collect(Collectors.toList());
+      final List<T> objects = timeoutMs > 0
+                              ? pollObjects(group, elementNum, timeoutMs)
+                              : pollObjects(group, elementNum);
+      return objects.stream().map(obj -> wrapObject(group, obj)).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -135,24 +122,33 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   @Override
   public List<ReferenceCountingResourceHolder<T>> takeBatch(final int elementNum)
   {
+    return takeBatch(null, elementNum);
+  }
+
+  @Override
+  public List<ReferenceCountingResourceHolder<T>> takeBatch(String group, int elementNum)
+  {
     checkInitialized();
     try {
-      return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
+      return takeObjects(group, elementNum).stream().map(obj -> wrapObject(group, obj)).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private List<T> pollObjects(int elementNum) throws InterruptedException
+  private List<T> pollObjects(@Nullable String group, int elementNum) throws InterruptedException
   {
     final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
-      if (objects.size() < elementNum) {
+      if (isGroupResourceUnavaiable(group, elementNum)) {
         return Collections.emptyList();
       } else {
+        if (!resourceGroupScheduler.tryAcquire(group, elementNum)) {
+          return Collections.emptyList();
+        }
         for (int i = 0; i < elementNum; i++) {
           list.add(objects.pop());
         }
@@ -164,18 +160,30 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     }
   }
 
-  private List<T> pollObjects(int elementNum, long timeoutMs) throws InterruptedException
+  private boolean isGroupResourceUnavaiable(String group, int elementNum)
+  {
+    if (objects.size() < elementNum) {
+      return true;
+    }
+    return resourceGroupScheduler.getGroupAvailableCapacity(group) < elementNum;
+  }
+
+  private List<T> pollObjects(@Nullable String group, int elementNum, long timeoutMs)
+      throws InterruptedException
   {
     long nanos = TIME_UNIT.toNanos(timeoutMs);
     final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
-      while (objects.size() < elementNum) {
+      while (isGroupResourceUnavaiable(group, elementNum)) {
         if (nanos <= 0) {
           return Collections.emptyList();
         }
         nanos = notEnough.awaitNanos(nanos);
+      }
+      if (!resourceGroupScheduler.tryAcquire(group, elementNum, nanos, TimeUnit.NANOSECONDS)) {
+        return Collections.emptyList();
       }
       for (int i = 0; i < elementNum; i++) {
         list.add(objects.pop());
@@ -187,15 +195,16 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     }
   }
 
-  private List<T> takeObjects(int elementNum) throws InterruptedException
+  private List<T> takeObjects(@Nullable String group, int elementNum) throws InterruptedException
   {
     final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
-      while (objects.size() < elementNum) {
+      while (isGroupResourceUnavaiable(group, elementNum)) {
         notEnough.await();
       }
+      resourceGroupScheduler.accquire(group, elementNum);
       for (int i = 0; i < elementNum; i++) {
         list.add(objects.pop());
       }
@@ -211,15 +220,17 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     Preconditions.checkState(maxSize > 0, "Pool was initialized with limit = 0, there are no objects to take.");
   }
 
-  private void offer(T theObject)
+  private void offer(String group, T theObject)
   {
     final ReentrantLock lock = this.lock;
     lock.lock();
     try {
       if (objects.size() < maxSize) {
         objects.push(theObject);
-        notEnough.signal();
+        resourceGroupScheduler.release(group);
+        notEnough.signalAll();
       } else {
+        resourceGroupScheduler.release(group);
         throw new ISE("Cannot exceed pre-configured maximum size");
       }
     }

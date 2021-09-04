@@ -51,7 +51,19 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
+  public List<ReferenceCountingResourceHolder<T>> takeBatch(String group, int elementNum, long timeoutMs)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<ReferenceCountingResourceHolder<T>> takeBatch(String group, int elementNum)
   {
     throw new UnsupportedOperationException();
   }
