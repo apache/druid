@@ -28,6 +28,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
@@ -38,7 +39,7 @@ import org.junit.Test;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class SqlRowTransformerTest
+public class SqlRowTransformerTest extends CalciteTestBase
 {
   private RelDataType rowType;
 
