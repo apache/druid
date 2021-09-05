@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.function.Function;
 
@@ -45,11 +46,9 @@ public class TopNColumnAggregatesProcessorFactory
       ColumnValueSelector selector
   )
   {
-    final ColumnType selectorType = capabilities.getType();
-
-    if (selectorType.equals(ColumnType.STRING)) {
+    if (capabilities.is(ValueType.STRING)) {
       return new StringTopNColumnAggregatesProcessor(capabilities, dimensionType);
-    } else if (selectorType.isNumeric()) {
+    } else if (capabilities.isNumeric()) {
       final Function<Object, Comparable<?>> converter;
       final ColumnType strategyType;
       // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
@@ -64,8 +63,8 @@ public class TopNColumnAggregatesProcessorFactory
         // Return strategy that aggregates using the _input_ type. Here we are assuming that the output type can
         // represent all possible values of the input type. This will be true for STRING, which is the only
         // non-numeric type currently supported.
-        converter = DimensionHandlerUtils.converterFromTypeToType(selectorType, dimensionType);
-        strategyType = selectorType;
+        converter = DimensionHandlerUtils.converterFromTypeToType(capabilities, dimensionType);
+        strategyType = capabilities.toColumnType();
       }
       switch (strategyType.getType()) {
         case LONG:
@@ -77,6 +76,6 @@ public class TopNColumnAggregatesProcessorFactory
       }
     }
 
-    throw new IAE("Cannot create query type helper from invalid type [%s]", selectorType);
+    throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
   }
 }

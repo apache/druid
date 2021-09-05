@@ -33,6 +33,7 @@ import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -192,7 +193,7 @@ public class TopNQueryEngine
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (capabilities != null && capabilities.getType().is(ValueType.STRING)) {
+    if (Types.is(capabilities, ValueType.STRING)) {
       // string columns must use the on heap algorithm unless they have the following capabilites
       return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
     } else {

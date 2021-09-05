@@ -112,8 +112,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
     if (null == capabilities) {
       throw new IAE("could not find the column type for column %s", fieldName);
     }
-    ColumnType type = capabilities.getType();
-    if (type.isNumeric()) {
+    if (capabilities.isNumeric()) {
       return new FixedBucketsHistogramVectorAggregator(
           columnSelectorFactory.makeValueSelector(fieldName),
           lowerLimit,
@@ -122,7 +121,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
           outlierHandlingMode
       );
     } else {
-      throw new IAE("cannot vectorize fixed bucket histogram aggregation for type %s", type);
+      throw new IAE("cannot vectorize fixed bucket histogram aggregation for type %s", capabilities.asTypeString());
     }
   }
 
@@ -130,7 +129,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return (capabilities != null) && capabilities.getType().isNumeric();
+    return capabilities != null && capabilities.isNumeric();
   }
 
   @Override

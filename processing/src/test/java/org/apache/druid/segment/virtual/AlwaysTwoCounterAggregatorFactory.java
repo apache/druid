@@ -72,7 +72,7 @@ public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    switch (capabilities.getType().getType()) {
+    switch (capabilities.getType()) {
       case LONG:
       case DOUBLE:
       case FLOAT:

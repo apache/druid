@@ -29,6 +29,8 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -270,7 +272,7 @@ public class ColumnProcessors
   )
   {
     final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
-    final ColumnType effectiveType = capabilities != null ? capabilities.getType() : processorFactory.defaultType();
+    final TypeSignature<ValueType> effectiveType = capabilities != null ? capabilities : processorFactory.defaultType();
 
     switch (effectiveType.getType()) {
       case STRING:
@@ -330,7 +332,7 @@ public class ColumnProcessors
       );
     }
 
-    switch (capabilities.getType().getType()) {
+    switch (capabilities.getType()) {
       case STRING:
         // let the processor factory decide if it prefers to use an object selector or dictionary encoded selector
         if (!processorFactory.useDictionaryEncodedSelector(capabilities)) {

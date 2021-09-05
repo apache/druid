@@ -375,7 +375,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     if (type == null) {
       ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
       if (capabilities != null) {
-        type = StringUtils.toLowerCase(capabilities.getType().getType().name());
+        type = StringUtils.toLowerCase(capabilities.getType().name());
       } else {
         type = StringUtils.toLowerCase(ValueType.FLOAT.name());
       }

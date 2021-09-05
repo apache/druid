@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.BaseTypeSignature;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 
@@ -90,7 +91,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
    *
    * @throws IllegalStateException
    */
-  public static ExpressionType fromColumnTypeStrict(@Nullable ColumnType valueType)
+  public static ExpressionType fromColumnTypeStrict(@Nullable TypeSignature<ValueType> valueType)
   {
     if (valueType == null) {
       throw new IllegalStateException("Unsupported unknown value type");
@@ -128,7 +129,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
    * @param valueType
    */
   @Nullable
-  public static ExpressionType fromColumnType(@Nullable ColumnType valueType)
+  public static ExpressionType fromColumnType(@Nullable TypeSignature<ValueType> valueType)
   {
     if (valueType == null) {
       return null;

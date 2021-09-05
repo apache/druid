@@ -99,17 +99,13 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     }
 
     if (inputType == null) {
-      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType", func);
     }
 
-    switch (inputType.getType()) {
-      case LONG:
-      case DOUBLE:
-      case FLOAT:
-        inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
-        break;
-      default:
-        throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+    if (inputType.isNumeric()) {
+      inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
+    } else {
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType.asTypeString());
     }
 
 

@@ -119,7 +119,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && metricFactory.getColumnCapabilities(fieldName).getType().isNumeric()) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchAggregator();
@@ -137,7 +137,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && metricFactory.getColumnCapabilities(fieldName).getType().isNumeric()) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final BaseDoubleColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchBufferAggregator();

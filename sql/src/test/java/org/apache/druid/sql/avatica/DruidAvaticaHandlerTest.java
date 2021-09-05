@@ -590,7 +590,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
-                Pair.of("TYPE_NAME", "OTHER"),
+                Pair.of("TYPE_NAME", "COMPLEX<hyperUnique>"),
                 Pair.of("IS_NULLABLE", "YES")
             )
         ),
@@ -673,7 +673,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
-                Pair.of("TYPE_NAME", "OTHER"),
+                Pair.of("TYPE_NAME", "COMPLEX<hyperUnique>"),
                 Pair.of("IS_NULLABLE", "YES")
             )
         ),

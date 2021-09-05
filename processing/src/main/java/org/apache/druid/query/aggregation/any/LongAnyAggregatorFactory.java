@@ -116,7 +116,7 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.getType().isNumeric()) {
+    if (capabilities == null || capabilities.isNumeric()) {
       return new LongAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
       return NumericNilVectorAggregator.longNilVectorAggregator();

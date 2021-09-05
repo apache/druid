@@ -43,7 +43,7 @@ public interface ColumnInspector extends Expr.InputBindingInspector
   {
     ColumnCapabilities capabilities = getColumnCapabilities(name);
     if (capabilities != null) {
-      return ExpressionType.fromColumnType(capabilities.getType());
+      return ExpressionType.fromColumnType(capabilities);
     }
     return null;
   }

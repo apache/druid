@@ -37,6 +37,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -101,7 +102,7 @@ public final class DimensionHandlerUtils
 
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
-    if (capabilities.getType().is(ValueType.STRING)) {
+    if (capabilities.is(ValueType.STRING)) {
       if (!capabilities.isDictionaryEncoded().isTrue()) {
         throw new IAE("String column must have dictionary encoding.");
       }
@@ -113,22 +114,22 @@ public final class DimensionHandlerUtils
       );
     }
 
-    if (capabilities.getType().is(ValueType.LONG)) {
+    if (capabilities.is(ValueType.LONG)) {
       return new LongDimensionHandler(dimensionName);
     }
 
-    if (capabilities.getType().is(ValueType.FLOAT)) {
+    if (capabilities.is(ValueType.FLOAT)) {
       return new FloatDimensionHandler(dimensionName);
     }
 
-    if (capabilities.getType().is(ValueType.DOUBLE)) {
+    if (capabilities.is(ValueType.DOUBLE)) {
       return new DoubleDimensionHandler(dimensionName);
     }
 
-    if (capabilities.getType().is(ValueType.COMPLEX) && capabilities.getType().getComplexTypeName() != null) {
-      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getType().getComplexTypeName());
+    if (capabilities.is(ValueType.COMPLEX) && capabilities.getComplexTypeName() != null) {
+      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getComplexTypeName());
       if (provider == null) {
-        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getType().getComplexTypeName());
+        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getComplexTypeName());
       }
       return provider.get(dimensionName);
     }
@@ -230,7 +231,7 @@ public final class DimensionHandlerUtils
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    if (capabilities.getType().is(ValueType.STRING)) {
+    if (capabilities.is(ValueType.STRING)) {
       return columnSelectorFactory.makeDimensionSelector(dimSpec);
     }
     return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
@@ -251,7 +252,7 @@ public final class DimensionHandlerUtils
     }
 
     // Complex dimension type is not supported
-    if (capabilities.getType().is(ValueType.COMPLEX)) {
+    if (capabilities.is(ValueType.COMPLEX)) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
@@ -272,7 +273,7 @@ public final class DimensionHandlerUtils
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
     // we need to wrap selectors on numeric columns with a string casting DimensionSelector.
-    if (capabilities.getType().isNumeric()) {
+    if (capabilities.isNumeric()) {
       if (dimSpec.mustDecorate()) {
         capabilities = DEFAULT_STRING_CAPABILITIES;
       }
@@ -360,7 +361,7 @@ public final class DimensionHandlerUtils
   @Nullable
   public static Comparable<?> convertObjectToType(
       @Nullable final Object obj,
-      final ColumnType type,
+      final TypeSignature<ValueType> type,
       final boolean reportParseExceptions
   )
   {
@@ -394,14 +395,14 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Comparable<?> convertObjectToType(@Nullable final Object obj, final ColumnType type)
+  public static Comparable<?> convertObjectToType(@Nullable final Object obj, final TypeSignature<ValueType> type)
   {
     return convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false);
   }
 
   public static Function<Object, Comparable<?>> converterFromTypeToType(
-      final ColumnType fromType,
-      final ColumnType toType
+      final TypeSignature<ValueType> fromType,
+      final TypeSignature<ValueType> toType
   )
   {
     if (Objects.equals(fromType, toType)) {

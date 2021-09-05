@@ -28,6 +28,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -185,7 +186,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -245,7 +246,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -281,7 +282,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.LONG, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.LONG, inferred.getType());
+    Assert.assertEquals(ValueType.LONG, inferred.getType());
     if (NullHandling.sqlCompatible()) {
       Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     } else {
@@ -320,7 +321,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.DOUBLE, thePlan.getOutputType());
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.DOUBLE, inferred.getType());
+    Assert.assertEquals(ValueType.DOUBLE, inferred.getType());
     if (NullHandling.sqlCompatible()) {
       Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     } else {
@@ -362,7 +363,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isTrue());
     Assert.assertTrue(inferred.isDictionaryEncoded().isTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -405,7 +406,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -456,7 +457,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertTrue(inferred.isDictionaryEncoded().isTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -491,7 +492,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasMultipleValues().isTrue());
 
     thePlan = plan("concat(multi_dictionary_string, multi_dictionary_string_nonunique)");
@@ -522,7 +523,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     );
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasMultipleValues().isTrue());
 
     thePlan = plan("array_append(multi_dictionary_string, 'foo')");
@@ -627,7 +628,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     // with a string hint, it should look like a multi-valued string
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(ColumnType.STRING);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -638,7 +639,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     // with no hint though, let the array free
     inferred = thePlan.inferColumnCapabilities(ColumnType.STRING_ARRAY);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING_ARRAY, inferred.getType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, inferred.toColumnType());
     Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
@@ -697,7 +698,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     assertArrayInput(thePlan);
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(ColumnType.STRING);
     Assert.assertNotNull(inferred);
-    Assert.assertEquals(ColumnType.STRING, inferred.getType());
+    Assert.assertEquals(ValueType.STRING, inferred.getType());
     Assert.assertTrue(inferred.hasNulls().isTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());

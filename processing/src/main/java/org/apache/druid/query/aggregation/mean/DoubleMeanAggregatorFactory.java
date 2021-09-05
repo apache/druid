@@ -123,7 +123,7 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return capabilities == null || capabilities.getType().isNumeric();
+    return capabilities == null || capabilities.isNumeric();
   }
 
   @Override

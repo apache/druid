@@ -110,7 +110,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || cap.getType().isNumeric()) {
+    if (cap == null || cap.isNumeric()) {
       return new MomentSketchBuildAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
       return new MomentSketchMergeAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
@@ -121,7 +121,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || cap.getType().isNumeric()) {
+    if (cap == null || cap.isNumeric()) {
       return new MomentSketchBuildBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
       return new MomentSketchMergeBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());

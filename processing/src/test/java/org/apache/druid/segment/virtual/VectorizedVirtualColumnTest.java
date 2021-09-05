@@ -534,7 +534,7 @@ public class VectorizedVirtualColumnTest
         .setVirtualColumns(
             new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities, canVectorize)
         )
-        .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.getType()))
+        .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.toColumnType()))
         .setAggregatorSpecs(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
         .setInterval("2000/2030")
         .setContext(context)
@@ -563,7 +563,7 @@ public class VectorizedVirtualColumnTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns()
-        .addDimension(new DefaultDimensionSpec("placement", "placement", capabilities.getType()))
+        .addDimension(new DefaultDimensionSpec("placement", "placement", capabilities.toColumnType()))
         .setAggregatorSpecs(new CountAggregatorFactory(COUNT))
         .setInterval("2000/2030")
         .setContext(context)
@@ -596,7 +596,7 @@ public class VectorizedVirtualColumnTest
 
   private Object getTwo(ColumnCapabilities capabilities)
   {
-    switch (capabilities.getType().getType()) {
+    switch (capabilities.getType()) {
       case LONG:
         return 2L;
       case DOUBLE:

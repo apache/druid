@@ -120,8 +120,7 @@ public class SegmentAnalyzer
       }
 
       final ColumnAnalysis analysis;
-      final ColumnType type = capabilities.getType();
-      switch (type.getType()) {
+      switch (capabilities.getType()) {
         case LONG:
           analysis = analyzeNumericColumn(capabilities, length, Long.BYTES);
           break;
@@ -142,8 +141,8 @@ public class SegmentAnalyzer
           analysis = analyzeComplexColumn(capabilities, columnHolder, storageAdapter.getColumnTypeName(columnName));
           break;
         default:
-          log.warn("Unknown column type[%s].", type);
-          analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", type));
+          log.warn("Unknown column type[%s].", capabilities.asTypeString());
+          analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", capabilities.asTypeString()));
       }
 
       columns.put(columnName, analysis);
@@ -194,7 +193,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().toString(),
+        capabilities.asTypeString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -250,7 +249,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().toString(),
+        capabilities.asTypeString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -328,7 +327,7 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.getType().toString(),
+        capabilities.asTypeString(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,

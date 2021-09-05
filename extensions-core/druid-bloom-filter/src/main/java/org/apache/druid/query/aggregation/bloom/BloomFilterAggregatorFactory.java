@@ -250,8 +250,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
 
     if (capabilities != null) {
-      ColumnType type = capabilities.getType();
-      switch (type.getType()) {
+      switch (capabilities.getType()) {
         case STRING:
           return new StringBloomFilterAggregator(
               columnFactory.makeDimensionSelector(field),
@@ -287,7 +286,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
           throw new IAE(
               "Cannot create bloom filter %s for invalid column type [%s]",
               onHeap ? "aggregator" : "buffer aggregator",
-              type
+              capabilities.asTypeString()
           );
       }
     } else {

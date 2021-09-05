@@ -50,6 +50,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -808,7 +809,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   public void testCapabilities()
   {
     ColumnCapabilities caps = X_PLUS_Y.capabilities("expr");
-    Assert.assertEquals(ColumnType.FLOAT, caps.getType());
+    Assert.assertEquals(ValueType.FLOAT, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -818,7 +819,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertFalse(caps.hasSpatialIndexes());
 
     caps = Z_CONCAT_X.capabilities("expr");
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());

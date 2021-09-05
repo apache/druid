@@ -264,23 +264,22 @@ public class ExpressionSelectors
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final ColumnType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
 
-      if (nativeType == null || nativeType.isArray()) {
+      if (columnCapabilities == null || columnCapabilities.isArray()) {
         // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
         supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
-      } else if (nativeType.is(ValueType.FLOAT)) {
+      } else if (columnCapabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (nativeType.is(ValueType.LONG)) {
+      } else if (columnCapabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (nativeType.is(ValueType.DOUBLE)) {
+      } else if (columnCapabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (nativeType.is(ValueType.STRING)) {
+      } else if (columnCapabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal

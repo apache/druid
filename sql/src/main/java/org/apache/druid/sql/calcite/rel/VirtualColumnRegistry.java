@@ -152,7 +152,7 @@ public class VirtualColumnRegistry
 
     for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
       final String columnName = virtualColumn.getOutputName();
-      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).getType());
+      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).toColumnType());
     }
 
     return builder.build();

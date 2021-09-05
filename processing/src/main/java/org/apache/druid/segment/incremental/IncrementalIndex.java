@@ -737,7 +737,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return NilColumnValueSelector.instance();
     }
     int metricIndex = metricDesc.getIndex();
-    switch (metricDesc.getCapabilities().getType().getType()) {
+    switch (metricDesc.getCapabilities().getType()) {
       case COMPLEX:
         return new ObjectMetricColumnSelector(metricDesc, currEntry, metricIndex);
       case LONG:

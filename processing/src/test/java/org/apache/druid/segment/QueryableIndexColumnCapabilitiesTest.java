@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -230,7 +231,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testStringColumn()
   {
     ColumnCapabilities caps = INC_INDEX.getCapabilities("d1");
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isMaybeTrue());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
@@ -250,7 +251,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -265,7 +266,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testStringColumnWithNulls()
   {
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d1");
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -284,7 +285,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d1").getCapabilities();
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -298,7 +299,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testMultiStringColumn()
   {
     ColumnCapabilities caps = INC_INDEX.getCapabilities("d2");
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -308,7 +309,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d2").getCapabilities();
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -323,7 +324,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   public void testMultiStringColumnWithNulls()
   {
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d2");
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -333,7 +334,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d2").getCapabilities();
-    Assert.assertEquals(ColumnType.STRING, caps.getType());
+    Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
     Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
@@ -355,7 +356,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
 
   private void assertComplexColumnCapabilites(ColumnCapabilities caps)
   {
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, caps.getType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -367,7 +368,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
 
   private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ColumnType valueType)
   {
-    Assert.assertEquals(valueType, caps.getType());
+    Assert.assertEquals(valueType, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -379,7 +380,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
 
   private void assertNonStringColumnCapabilitiesWithNulls(ColumnCapabilities caps, ColumnType valueType)
   {
-    Assert.assertEquals(valueType, caps.getType());
+    Assert.assertEquals(valueType, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());

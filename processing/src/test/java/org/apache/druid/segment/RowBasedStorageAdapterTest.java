@@ -332,7 +332,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.FLOAT.name());
-    Assert.assertEquals(ColumnType.FLOAT, capabilities.getType());
+    Assert.assertEquals(ValueType.FLOAT, capabilities.getType());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
@@ -342,7 +342,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.DOUBLE.name());
-    Assert.assertEquals(ColumnType.DOUBLE, capabilities.getType());
+    Assert.assertEquals(ValueType.DOUBLE, capabilities.getType());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
@@ -352,7 +352,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.LONG.name());
-    Assert.assertEquals(ColumnType.LONG, capabilities.getType());
+    Assert.assertEquals(ValueType.LONG, capabilities.getType());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
@@ -362,7 +362,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.STRING.name());
-    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
+    Assert.assertEquals(ValueType.STRING, capabilities.getType());
 
     // Note: unlike numeric types, STRING-typed columns might have multiple values, so they report as incomplete. It
     // would be good in the future to support some way of changing this, when it is known ahead of time that
@@ -378,7 +378,7 @@ public class RowBasedStorageAdapterTest
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
     // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete.
-    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.getType());
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
   }
 

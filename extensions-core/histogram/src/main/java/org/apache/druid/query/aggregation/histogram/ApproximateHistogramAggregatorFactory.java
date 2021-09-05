@@ -125,7 +125,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     /* skip vectorization for string types which may be parseable to numbers. There is no vector equivalent of
      string value selector*/
     ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return (capabilities != null) && capabilities.getType().isNumeric();
+    return capabilities != null && capabilities.isNumeric();
   }
 
   @Override

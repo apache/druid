@@ -84,7 +84,7 @@ public class ExpressionPlanner
       if (capabilities != null && !analysis.hasInputArrays() && !analysis.isOutputArray()) {
         boolean isSingleInputMappable = false;
         boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse();
-        if (capabilities.getType().is(ValueType.STRING)) {
+        if (capabilities.is(ValueType.STRING)) {
           isSingleInputScalar &= capabilities.isDictionaryEncoded().isTrue();
           isSingleInputMappable = capabilities.isDictionaryEncoded().isTrue() &&
                                   !capabilities.hasMultipleValues().isUnknown();
@@ -92,7 +92,7 @@ public class ExpressionPlanner
 
         // if satisfied, set single input output type and flags
         if (isSingleInputScalar || isSingleInputMappable) {
-          singleInputType = capabilities.getType();
+          singleInputType = capabilities.toColumnType();
           if (isSingleInputScalar) {
             traits.add(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR);
           }
@@ -112,7 +112,7 @@ public class ExpressionPlanner
         if (capabilities != null) {
           if (capabilities.hasMultipleValues().isTrue()) {
             definitelyMultiValued.add(column);
-          } else if (capabilities.getType().is(ValueType.STRING) &&
+          } else if (capabilities.is(ValueType.STRING) &&
                      capabilities.hasMultipleValues().isMaybeTrue() &&
                      !analysis.getArrayBindings().contains(column)
           ) {

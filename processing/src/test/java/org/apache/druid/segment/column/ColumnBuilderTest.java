@@ -32,7 +32,7 @@ public class ColumnBuilderTest
         .setComplexTypeName("testType")
         .build();
 
-    Assert.assertEquals("testType", holder.getCapabilities().getType().getComplexTypeName());
+    Assert.assertEquals("testType", holder.getCapabilities().getComplexTypeName());
 
   }
 }

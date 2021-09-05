@@ -337,7 +337,7 @@ public class AggregatorUtil
   {
     if (fieldName != null) {
       final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-      return capabilities == null || capabilities.getType().isNumeric();
+      return capabilities == null || capabilities.isNumeric();
     }
     if (expression != null) {
       return fieldExpression.get().canVectorize(columnInspector);

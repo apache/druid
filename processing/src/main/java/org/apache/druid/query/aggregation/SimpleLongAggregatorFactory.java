@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -236,7 +237,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   {
     if (fieldName != null) {
       ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-      return capabilities != null && capabilities.getType().is(ValueType.STRING);
+      return Types.is(capabilities, ValueType.STRING);
     }
     return false;
   }

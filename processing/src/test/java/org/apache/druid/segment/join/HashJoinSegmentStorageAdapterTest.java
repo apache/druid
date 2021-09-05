@@ -34,7 +34,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -201,7 +201,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     final ColumnCapabilities capabilities = makeFactToCountrySegment().getColumnCapabilities("countryIsoCode");
 
-    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
+    Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasBitmapIndexes());
     Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
@@ -215,7 +215,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode"
     );
 
-    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
+    Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(capabilities.areDictionaryValuesSorted().isTrue());

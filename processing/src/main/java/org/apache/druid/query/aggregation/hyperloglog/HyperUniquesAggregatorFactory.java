@@ -43,6 +43,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -133,7 +134,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || !capabilities.getType().is(ValueType.COMPLEX)) {
+    if (!Types.is(capabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {
       return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));

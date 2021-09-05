@@ -27,7 +27,6 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -115,11 +114,10 @@ public class ExpressionVectorSelectors
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
-      final ColumnType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
 
       // null capabilities should be backed by a nil vector selector since it means the column effectively doesnt exist
-      if (nativeType != null) {
-        switch (nativeType.getType()) {
+      if (columnCapabilities != null) {
+        switch (columnCapabilities.getType()) {
           case FLOAT:
           case DOUBLE:
             binding.addNumeric(columnName, ExpressionType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));

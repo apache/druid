@@ -240,8 +240,8 @@ public class IndexIO
 
       ColumnCapabilities capabilities1 = adapter1.getCapabilities(dim1Name);
       ColumnCapabilities capabilities2 = adapter2.getCapabilities(dim2Name);
-      ColumnType dim1Type = capabilities1.getType();
-      ColumnType dim2Type = capabilities2.getType();
+      ColumnType dim1Type = capabilities1.toColumnType();
+      ColumnType dim2Type = capabilities2.toColumnType();
       if (!Objects.equals(dim1Type, dim2Type)) {
         throw new SegmentValidationException(
             "Dim [%s] types not equal. Expected %d found %d",

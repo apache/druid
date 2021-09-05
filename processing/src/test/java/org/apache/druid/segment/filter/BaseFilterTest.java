@@ -744,7 +744,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // Generate rowSignature
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).getType());
+      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).toColumnType());
     }
 
     // Perform test

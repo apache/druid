@@ -71,6 +71,8 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
+      capabilities.complexTypeName = other.getComplexTypeName();
+      capabilities.elementType = other.getElementType();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
@@ -94,7 +96,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     if (capabilities == null) {
       return null;
     }
-
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
     copy.dictionaryEncoded = copy.dictionaryEncoded.coerceUnknownToBoolean(coerce.dictionaryEncoded());
     copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(coerce.dictionaryValuesSorted());
@@ -122,7 +123,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       return merged;
     }
 
-    if (merged.type == null || (merged.type.is(ValueType.COMPLEX) && merged.type.complexTypeName == null)) {
+    if (merged.type == null) {
       merged.type = other.getType();
     }
 
@@ -203,7 +204,11 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Nullable
-  private ColumnType type = null;
+  private ValueType type = null;
+  @Nullable
+  private String complexTypeName;
+  @Nullable
+  private TypeSignature<ValueType> elementType;
 
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
@@ -222,14 +227,31 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Override
   @JsonProperty
-  public ColumnType getType()
+  public ValueType getType()
   {
     return type;
   }
 
+  @Nullable
+  @Override
+  public String getComplexTypeName()
+  {
+    return complexTypeName;
+  }
+
+  @Nullable
+  @Override
+  public TypeSignature<ValueType> getElementType()
+  {
+    return elementType;
+  }
+
   public ColumnCapabilitiesImpl setType(ColumnType type)
   {
-    this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
+    Preconditions.checkNotNull(type, "'type' must be nonnull");
+    this.type = type.getType();
+    this.complexTypeName = type.getComplexTypeName();
+    this.elementType = type.getElementType();
     return this;
   }
 
@@ -331,7 +353,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @Override
   public boolean isFilterable()
   {
-    return (type != null && (type.isPrimitive() || type.isArray())) || filterable;
+    return (type != null && (isPrimitive() || isArray())) || filterable;
   }
 
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)

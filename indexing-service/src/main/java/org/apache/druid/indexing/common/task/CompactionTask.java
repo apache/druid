@@ -80,7 +80,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -870,7 +871,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionSchemaMap.put(
               dimension,
               createDimensionSchema(
-                  columnHolder.getCapabilities().getType(),
+                  columnHolder.getCapabilities(),
                   dimension,
                   dimensionHandler.getMultivalueHandling(),
                   columnHolder.getCapabilities().hasBitmapIndexes()
@@ -918,7 +919,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   private static DimensionSchema createDimensionSchema(
-      ColumnType type,
+      TypeSignature<ValueType> type,
       String name,
       MultiValueHandling multiValueHandling,
       boolean hasBitmapIndexes

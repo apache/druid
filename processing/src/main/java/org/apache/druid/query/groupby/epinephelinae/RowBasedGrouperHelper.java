@@ -706,8 +706,7 @@ public class RowBasedGrouperHelper
         ColumnValueSelector selector
     )
     {
-      ColumnType type = capabilities.getType();
-      switch (type.getType()) {
+      switch (capabilities.getType()) {
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
@@ -720,7 +719,7 @@ public class RowBasedGrouperHelper
           return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> () -> columnSelector.isNull() ? null : columnSelector.getDouble();
         default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
     }
   }

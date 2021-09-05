@@ -190,5 +190,10 @@ public class RowSignatures
     {
       return columnType.getComplexTypeName();
     }
+
+    public String asTypeString()
+    {
+      return columnType.asTypeString();
+    }
   }
 }

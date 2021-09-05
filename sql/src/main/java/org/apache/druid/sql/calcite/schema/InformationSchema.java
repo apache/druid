@@ -428,6 +428,8 @@ public class InformationSchema extends AbstractSchema
                   boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(type.getSqlTypeName());
                   boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
+
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : type.getSqlTypeName().toString();
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA
@@ -436,7 +438,7 @@ public class InformationSchema extends AbstractSchema
                       String.valueOf(field.getIndex()), // ORDINAL_POSITION
                       "", // COLUMN_DEFAULT
                       type.isNullable() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
-                      type.getSqlTypeName().toString(), // DATA_TYPE
+                      typeName, // DATA_TYPE
                       null, // CHARACTER_MAXIMUM_LENGTH
                       null, // CHARACTER_OCTET_LENGTH
                       isNumeric ? String.valueOf(type.getPrecision()) : null, // NUMERIC_PRECISION

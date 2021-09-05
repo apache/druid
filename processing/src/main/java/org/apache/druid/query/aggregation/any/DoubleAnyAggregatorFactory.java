@@ -120,7 +120,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.getType().isNumeric()) {
+    if (capabilities == null || capabilities.isNumeric()) {
       return new DoubleAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
       return NumericNilVectorAggregator.doubleNilVectorAggregator();

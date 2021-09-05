@@ -151,6 +151,6 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(capabilities).when(metricFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(type).when(capabilities).getType();
+    Mockito.doReturn(type.getType()).when(capabilities).getType();
   }
 }

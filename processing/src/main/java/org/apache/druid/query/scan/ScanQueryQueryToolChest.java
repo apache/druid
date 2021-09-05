@@ -172,7 +172,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
         final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
         if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).getType();
+          columnType = virtualColumn.capabilities(columnName).toColumnType();
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = null;

@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.java.util.common.ISE;
+
 import javax.annotation.Nullable;
 
 public class ColumnTypeFactory implements TypeFactory<ColumnType>
@@ -33,6 +35,35 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
   private ColumnTypeFactory()
   {
     // no instantiation
+  }
+
+  public static ColumnType ofType(TypeSignature<ValueType> type)
+  {
+    switch (type.getType()) {
+      case LONG:
+        return ColumnType.LONG;
+      case FLOAT:
+        return ColumnType.FLOAT;
+      case DOUBLE:
+        return ColumnType.DOUBLE;
+      case STRING:
+        return ColumnType.STRING;
+      case ARRAY:
+        switch (type.getElementType().getType()) {
+          case LONG:
+            return ColumnType.LONG_ARRAY;
+          case DOUBLE:
+            return ColumnType.DOUBLE_ARRAY;
+          case STRING:
+            return ColumnType.STRING_ARRAY;
+          default:
+            throw new ISE("Unsupported expression type[%s]", type.asTypeString());
+        }
+      case COMPLEX:
+        return new ColumnType(ValueType.COMPLEX, type.getComplexTypeName(), null);
+      default:
+        throw new ISE("Unsupported expression type[%s]", type.asTypeString());
+    }
   }
 
   @Override

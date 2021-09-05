@@ -92,7 +92,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     RowSignature.Builder sigBuilder = RowSignature.builder();
     sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
     for (String column : queryableIndex.getColumnNames()) {
-      sigBuilder.add(column, adapter.getColumnCapabilities(column).getType());
+      sigBuilder.add(column, adapter.getColumnCapabilities(column).toColumnType());
     }
     this.rowSignature = sigBuilder.build();
 
