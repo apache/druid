@@ -356,7 +356,9 @@ public class SqlLifecycle
       result = execute();
     }
     catch (Throwable e) {
-      finalizeStateAndEmitLogsAndMetrics(e, null, -1);
+      if (!(e instanceof ForbiddenException)) {
+        finalizeStateAndEmitLogsAndMetrics(e, null, -1);
+      }
       throw e;
     }
 
