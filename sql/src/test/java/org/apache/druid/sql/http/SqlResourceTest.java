@@ -29,15 +29,19 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -51,13 +55,16 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -79,6 +86,7 @@ import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -87,7 +95,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -107,6 +117,12 @@ public class SqlResourceTest extends CalciteTestBase
   private SqlResource resource;
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
+  private SqlLifecycleManager lifecycleManager;
+
+  private CountDownLatch lifecycleAddLatch;
+  private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
+  private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
+  private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
 
   private boolean sleep = false;
 
@@ -204,13 +220,45 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME
     );
 
+    lifecycleManager = new SqlLifecycleManager()
+    {
+      @Override
+      public void add(String sqlQueryId, SqlLifecycle lifecycle)
+      {
+        super.add(sqlQueryId, lifecycle);
+        if (lifecycleAddLatch != null) {
+          lifecycleAddLatch.countDown();
+        }
+      }
+    };
+    final ServiceEmitter emitter = new NoopServiceEmitter();
     resource = new SqlResource(
         JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
         new SqlLifecycleFactory(
             plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger
+            emitter,
+            testRequestLogger,
+            scheduler
         )
+        {
+          @Override
+          public SqlLifecycle factorize()
+          {
+            return new TestSqlLifecycle(
+                plannerFactory,
+                emitter,
+                testRequestLogger,
+                scheduler,
+                System.currentTimeMillis(),
+                System.nanoTime(),
+                validateAndAuthorizeLatchSupplier,
+                planLatchSupplier,
+                executeLatchSupplier
+            );
+          }
+        },
+        lifecycleManager
     );
   }
 
@@ -220,6 +268,7 @@ public class SqlResourceTest extends CalciteTestBase
     walker.close();
     walker = null;
     executorService.shutdownNow();
+    executorService.awaitTermination(2, TimeUnit.SECONDS);
   }
 
   @Test
@@ -243,7 +292,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     try {
       resource.doPost(
-          new SqlQuery("select count(*) from forbiddenDatasource", null, false, null, null),
+          createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
           testRequest
       );
       Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
@@ -252,13 +301,14 @@ public class SqlResourceTest extends CalciteTestBase
       // expected
     }
     Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
   public void testCountStar() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo", null, false, null, null)
+        createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
     ).rhs;
 
     Assert.assertEquals(
@@ -268,6 +318,7 @@ public class SqlResourceTest extends CalciteTestBase
         rows
     );
     checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
 
@@ -275,7 +326,10 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCountStarExtendedCharacters() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'", null, false, null, null)
+        createSimpleQueryWithId(
+            "id",
+            "SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'"
+        )
     ).rhs;
 
     Assert.assertEquals(
@@ -285,6 +339,7 @@ public class SqlResourceTest extends CalciteTestBase
         rows
     );
     checkSqlRequestLog(true);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -490,7 +545,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -531,7 +590,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -622,7 +685,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
@@ -675,7 +742,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.CSV, false, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
@@ -693,7 +764,11 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormatWithHeaders() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, true, null, null)).rhs;
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.CSV, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
@@ -736,13 +811,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCannotParse() throws Exception
   {
     final QueryException exception = doPost(
-        new SqlQuery(
-            "FROM druid.foo",
-            ResultFormat.OBJECT,
-            false,
-            null,
-            null
-        )
+        createSimpleQueryWithId("id", "FROM druid.foo")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -750,19 +819,14 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Encountered \"FROM\" at line 1, column 1."));
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
   public void testCannotValidate() throws Exception
   {
     final QueryException exception = doPost(
-        new SqlQuery(
-            "SELECT dim4 FROM druid.foo",
-            ResultFormat.OBJECT,
-            false,
-            null,
-            null
-        )
+        createSimpleQueryWithId("id", "SELECT dim4 FROM druid.foo")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -770,6 +834,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Column 'dim4' not found in any table"));
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -777,7 +842,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // SELECT + ORDER unsupported
     final QueryException exception = doPost(
-        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", ResultFormat.OBJECT, false, null, null)
+        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1")
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -788,6 +853,7 @@ public class SqlResourceTest extends CalciteTestBase
                  .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
     );
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -798,7 +864,7 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT DISTINCT dim1 FROM foo",
             ResultFormat.OBJECT,
             false,
-            ImmutableMap.of("maxMergingDictionarySize", 1),
+            ImmutableMap.of("maxMergingDictionarySize", 1, "sqlQueryId", "id"),
             null
         )
     ).lhs;
@@ -807,6 +873,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(exception.getErrorCode(), ResourceLimitExceededException.ERROR_CODE);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -815,7 +882,7 @@ public class SqlResourceTest extends CalciteTestBase
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
     EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
-    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
     EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
     EasyMock.replay(badQuery);
     final QueryException exception = doPost(badQuery).lhs;
@@ -823,6 +890,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -830,6 +898,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     sleep = true;
     final int numQueries = 3;
+    final String sqlQueryId = "tooManyRequestsTest";
 
     List<Future<Pair<QueryException, List<Map<String, Object>>>>> futures = new ArrayList<>(numQueries);
     for (int i = 0; i < numQueries; i++) {
@@ -840,7 +909,7 @@ public class SqlResourceTest extends CalciteTestBase
                   "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
                   null,
                   false,
-                  ImmutableMap.of("priority", -5),
+                  ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
                   null
               ),
               makeExpectedReq()
@@ -874,12 +943,14 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(2, success);
     Assert.assertEquals(1, limited);
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
 
   @Test
   public void testQueryTimeoutException() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1);
+    final String sqlQueryId = "timeoutTest";
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, "sqlQueryId", sqlQueryId);
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
@@ -892,7 +963,95 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(timeoutException);
     Assert.assertEquals(timeoutException.getErrorCode(), QueryTimeoutException.ERROR_CODE);
     Assert.assertEquals(timeoutException.getErrorClass(), QueryTimeoutException.class.getName());
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
+  }
+
+  @Test
+  public void testCancelBetweenValidateAndPlan() throws Exception
+  {
+    final String sqlQueryId = "toCancel";
+    lifecycleAddLatch = new CountDownLatch(1);
+    CountDownLatch validateAndAuthorizeLatch = new CountDownLatch(1);
+    validateAndAuthorizeLatchSupplier.set(new NonnullPair<>(validateAndAuthorizeLatch, true));
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
+            makeExpectedReq()
+        )
+    );
+    Assert.assertTrue(validateAndAuthorizeLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertTrue(lifecycleAddLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    planLatch.countDown();
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    response = future.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(
+        QueryInterruptedException.QUERY_CANCELLED,
+        exception.getErrorCode()
+    );
+  }
+
+  @Test
+  public void testCancelBetweenPlanAndExecute() throws Exception
+  {
+    final String sqlQueryId = "toCancel";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
+            makeExpectedReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    execLatch.countDown();
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+
+    Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    response = future.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(
+        QueryInterruptedException.QUERY_CANCELLED,
+        exception.getErrorCode()
+    );
+  }
+
+  @Test
+  public void testCancelInvalidQuery() throws Exception
+  {
+    final String sqlQueryId = "validQuery";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
+            makeExpectedReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery("invalidQuery", mockRequestForCancel());
+    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+
+    Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    execLatch.countDown();
+    response = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @SuppressWarnings("unchecked")
@@ -913,6 +1072,10 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
+  private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
+  {
+    return new SqlQuery(sql, null, false, ImmutableMap.of("sqlQueryId", sqlQueryId), null);
+  }
 
   private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
@@ -999,5 +1162,116 @@ public class SqlResourceTest extends CalciteTestBase
             .anyTimes();
     EasyMock.replay(req);
     return req;
+  }
+
+  private HttpServletRequest mockRequestForCancel()
+  {
+    HttpServletRequest req = EasyMock.createNiceMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(req);
+    return req;
+  }
+
+  private static class TestSqlLifecycle extends SqlLifecycle
+  {
+    private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier;
+    private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier;
+    private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier;
+
+    private TestSqlLifecycle(
+        PlannerFactory plannerFactory,
+        ServiceEmitter emitter,
+        RequestLogger requestLogger,
+        QueryScheduler queryScheduler,
+        long startMs,
+        long startNs,
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier
+    )
+    {
+      super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
+      this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
+      this.planLatchSupplier = planLatchSupplier;
+      this.executeLatchSupplier = executeLatchSupplier;
+    }
+
+    @Override
+    public void validateAndAuthorize(HttpServletRequest req)
+    {
+      if (validateAndAuthorizeLatchSupplier.get() != null) {
+        if (validateAndAuthorizeLatchSupplier.get().rhs) {
+          super.validateAndAuthorize(req);
+          validateAndAuthorizeLatchSupplier.get().lhs.countDown();
+        } else {
+          try {
+            if (!validateAndAuthorizeLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
+              throw new RuntimeException("Latch timed out");
+            }
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          super.validateAndAuthorize(req);
+        }
+      } else {
+        super.validateAndAuthorize(req);
+      }
+    }
+
+    @Override
+    public void plan() throws RelConversionException
+    {
+      if (planLatchSupplier.get() != null) {
+        if (planLatchSupplier.get().rhs) {
+          super.plan();
+          planLatchSupplier.get().lhs.countDown();
+        } else {
+          try {
+            if (!planLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
+              throw new RuntimeException("Latch timed out");
+            }
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          super.plan();
+        }
+      } else {
+        super.plan();
+      }
+    }
+
+    @Override
+    public Sequence<Object[]> execute()
+    {
+      if (executeLatchSupplier.get() != null) {
+        if (executeLatchSupplier.get().rhs) {
+          Sequence<Object[]> sequence = super.execute();
+          executeLatchSupplier.get().lhs.countDown();
+          return sequence;
+        } else {
+          try {
+            if (!executeLatchSupplier.get().lhs.await(1, TimeUnit.SECONDS)) {
+              throw new RuntimeException("Latch timed out");
+            }
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          return super.execute();
+        }
+      } else {
+        return super.execute();
+      }
+    }
   }
 }
