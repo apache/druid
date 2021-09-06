@@ -156,6 +156,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   private Connection client;
   private Connection superuserClient;
   private Connection clientLosAngeles;
+  // Other client with same properties but built through url context
+  private Connection clientLosAngelesOther;
   private DruidMeta druidMeta;
   private String url;
   private Injector injector;
@@ -222,6 +224,9 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     propertiesLosAngeles.setProperty("user", "regularUserLA");
     propertiesLosAngeles.setProperty("sqlQueryId", DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
+
+    clientLosAngelesOther = DriverManager.getConnection(
+        url + "?sqlTimeZone=America/Los_Angeles&user=regularUserLA&sqlQueryId=" + DUMMY_SQL_QUERY_ID);
   }
 
   @After
@@ -229,11 +234,13 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     client.close();
     clientLosAngeles.close();
+    clientLosAngelesOther.close();
     server.stop();
     walker.close();
     walker = null;
     client = null;
     clientLosAngeles = null;
+    clientLosAngelesOther = null;
     server = null;
   }
 
@@ -282,9 +289,20 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  public void testTimestampsInResponseLosAngelesTimeZone() throws Exception
+  public void testTimestampsInResponseLosAngelesTimeZone_withSimpleURL() throws Exception
   {
-    final ResultSet resultSet = clientLosAngeles.createStatement().executeQuery(
+    testTimestampsInResponseLosAngelesTimeZone(clientLosAngeles);
+  }
+
+  @Test
+  public void testTimestampsInResponseLosAngelesTimeZone_withPropertiesInURL() throws Exception
+  {
+    testTimestampsInResponseLosAngelesTimeZone(clientLosAngelesOther);
+  }
+
+  private void testTimestampsInResponseLosAngelesTimeZone(Connection providedClient) throws Exception
+  {
+    final ResultSet resultSet = providedClient.createStatement().executeQuery(
         "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
     );
 

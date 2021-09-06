@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -110,6 +111,14 @@ public class DruidMeta extends MetaImpl
         context.put(entry);
       }
     }
+
+    Properties currentContext = DruidURLContext.getCurrentContext();
+    if (currentContext != null) {
+      for (String property : currentContext.stringPropertyNames()) {
+        context.put(property, currentContext.getProperty(property));
+      }
+    }
+
     // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
     context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
     openDruidConnection(ch.id, context.build());

@@ -55,6 +55,7 @@ public class DruidAvaticaProtobufHandler extends AvaticaProtobufHandler
       final HttpServletResponse response
   ) throws IOException, ServletException
   {
+    DruidURLContext.populateContext(baseRequest.getParameterMap());
     if (request.getRequestURI().equals(AVATICA_PATH)) {
       super.handle(target, baseRequest, request, response);
     }
