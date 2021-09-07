@@ -36,6 +36,12 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Override
+  protected String getParameterizedJdbcConnectionString(int port, String paramString)
+  {
+    return getJdbcConnectionString(port) + "?" + paramString;
+  }
+
+  @Override
   protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(

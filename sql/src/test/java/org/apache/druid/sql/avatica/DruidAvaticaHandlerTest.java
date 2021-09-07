@@ -225,8 +225,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     propertiesLosAngeles.setProperty("sqlQueryId", DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
 
-    clientLosAngelesOther = DriverManager.getConnection(
-        url + "?sqlTimeZone=America/Los_Angeles&user=regularUserLA&sqlQueryId=" + DUMMY_SQL_QUERY_ID);
+    String parameterizedURL = this.getParameterizedJdbcConnectionString(
+        port,
+        "sqlTimeZone=America/Los_Angeles&user=regularUserLA&sqlQueryId=" + DUMMY_SQL_QUERY_ID);
+    clientLosAngelesOther = DriverManager.getConnection(parameterizedURL);
   }
 
   @After
@@ -1370,6 +1372,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   protected abstract String getJdbcConnectionString(int port);
+
+  protected abstract String getParameterizedJdbcConnectionString(int port, String paramString);
 
   protected abstract AbstractAvaticaHandler getAvaticaHandler(DruidMeta druidMeta);
 

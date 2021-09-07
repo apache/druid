@@ -36,6 +36,17 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Override
+  protected String getParameterizedJdbcConnectionString(int port, String paramString)
+  {
+    return StringUtils.format(
+        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s?%s;serialization=protobuf",
+        port,
+        DruidAvaticaProtobufHandler.AVATICA_PATH,
+        paramString
+    );
+  }
+
+  @Override
   protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaProtobufHandler(
