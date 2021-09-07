@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.opencensus.protobuf;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
@@ -40,7 +41,6 @@ import org.apache.druid.utils.CollectionUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -137,7 +137,7 @@ public class OpenCensusProtobufReader implements InputEntityReader
     for (TimeSeries ts : metric.getTimeseriesList()) {
       final LabelContext labelContext = (millis, metricName, value) -> {
         // Add common resourceLabels.
-        Map<String, Object> event = new HashMap<>(capacity);
+        Map<String, Object> event = Maps.newHashMapWithExpectedSize(capacity);
         event.putAll(resourceLabelsMap);
         // Add metric labels
         for (int i = 0; i < metric.getMetricDescriptor().getLabelKeysCount(); i++) {
