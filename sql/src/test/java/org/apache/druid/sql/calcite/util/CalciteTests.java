@@ -132,6 +132,7 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -784,7 +785,8 @@ public class CalciteTests
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger()
+        new NoopRequestLogger(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 

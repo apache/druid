@@ -422,6 +422,7 @@ exports[`tasks view matches snapshot 1`] = `
             },
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Group ID",
               "accessor": "group_id",
               "show": true,

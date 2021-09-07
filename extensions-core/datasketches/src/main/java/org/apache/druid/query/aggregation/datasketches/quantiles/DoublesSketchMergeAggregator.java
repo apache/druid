@@ -76,10 +76,12 @@ public class DoublesSketchMergeAggregator implements Aggregator
     if (object == null) {
       return;
     }
-    if (object instanceof DoublesSketch) {
-      union.update((DoublesSketch) object);
-    } else {
-      union.update(selector.getDouble());
-    }
+    DoublesSketches.handleMaxStreamLengthLimit(() -> {
+      if (object instanceof DoublesSketch) {
+        union.update((DoublesSketch) object);
+      } else {
+        union.update(selector.getDouble());
+      }
+    });
   }
 }

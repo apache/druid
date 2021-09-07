@@ -23,6 +23,7 @@ import './bootstrap/ace';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
+import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
@@ -31,6 +32,7 @@ import { Api, UrlBaser } from './singletons';
 import './entry.scss';
 
 bootstrapReactTable();
+bootstrapJsonParse();
 
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');

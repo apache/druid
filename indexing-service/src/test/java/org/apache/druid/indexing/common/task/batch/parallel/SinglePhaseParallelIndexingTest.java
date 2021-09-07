@@ -81,6 +81,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   }
 
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+  private static final String VALID_INPUT_SOURCE_FILTER = "test_*";
 
   private final LockGranularity lockGranularity;
   private final boolean useInputFormatApi;
@@ -368,7 +369,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null
-        )
+        ),
+        VALID_INPUT_SOURCE_FILTER
     );
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
@@ -391,6 +393,24 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
+  }
+
+  @Test
+  public void testRunParallelWithNoInputSplitToProcess()
+  {
+    // The input source filter on this task does not match any input
+    // Hence, the this task will has no input split to process
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2017-12/P1M"),
+        Granularities.DAY,
+        true,
+        true,
+        AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
+        "non_existing_file_filter"
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    // Task state should still be SUCCESS even if no input split to process
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
   }
 
   @Test
@@ -437,7 +457,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         segmentGranularity,
         appendToExisting,
         splittableInputSource,
-        AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING
+        AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
+        VALID_INPUT_SOURCE_FILTER
     );
   }
 
@@ -446,7 +467,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       Granularity segmentGranularity,
       boolean appendToExisting,
       boolean splittableInputSource,
-      ParallelIndexTuningConfig tuningConfig
+      ParallelIndexTuningConfig tuningConfig,
+      String inputSourceFilter
   )
   {
     // set up ingestion spec
@@ -469,7 +491,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           ),
           new ParallelIndexIOConfig(
               null,
-              new SettableSplittableLocalInputSource(inputDir, "test_*", splittableInputSource),
+              new SettableSplittableLocalInputSource(inputDir, inputSourceFilter, splittableInputSource),
               DEFAULT_INPUT_FORMAT,
               appendToExisting,
               null
@@ -499,7 +521,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               getObjectMapper()
           ),
           new ParallelIndexIOConfig(
-              new LocalFirehoseFactory(inputDir, "test_*", null),
+              new LocalFirehoseFactory(inputDir, inputSourceFilter, null),
               appendToExisting
           ),
           tuningConfig

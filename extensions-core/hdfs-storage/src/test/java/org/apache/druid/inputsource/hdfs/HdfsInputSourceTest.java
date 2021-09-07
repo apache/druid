@@ -39,8 +39,9 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -246,7 +247,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
   public static class ReaderTest
   {
-    private static final String PATH = "/test";
+    private static final String PATH = "test";
     private static final int NUM_FILE = 3;
     private static final String KEY_VALUE_SEPARATOR = ",";
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz";
@@ -254,7 +255,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    private MiniDFSCluster dfsCluster;
+    private FileSystem fileSystem;
     private HdfsInputSource target;
     private Set<Path> paths;
     private Map<Long, String> timestampToValue;
@@ -266,8 +267,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
       File dir = temporaryFolder.getRoot();
       Configuration configuration = new Configuration(true);
-      configuration.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, dir.getAbsolutePath());
-      dfsCluster = new MiniDFSCluster.Builder(configuration).build();
+      fileSystem = new LocalFileSystem();
+      fileSystem.initialize(dir.toURI(), configuration);
+      fileSystem.setWorkingDirectory(new Path(dir.getAbsolutePath()));
 
       paths = IntStream.range(0, NUM_FILE)
                        .mapToObj(
@@ -275,7 +277,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                              char value = ALPHABET.charAt(i % ALPHABET.length());
                              timestampToValue.put((long) i, Character.toString(value));
                              return createFile(
-                                 dfsCluster,
+                                 fileSystem,
                                  String.valueOf(i),
                                  i + KEY_VALUE_SEPARATOR + value
                              );
@@ -284,30 +286,29 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                        .collect(Collectors.toSet());
 
       target = HdfsInputSource.builder()
-                              .paths(dfsCluster.getURI() + PATH + "*")
+                              .paths(fileSystem.makeQualified(new Path(PATH)) + "*")
                               .configuration(CONFIGURATION)
-                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                              .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("hdfs", "file")))
                               .build();
     }
 
     @After
-    public void teardown()
+    public void teardown() throws IOException
     {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown(true);
-      }
+      temporaryFolder.delete();
+      fileSystem.close();
     }
 
-    private static Path createFile(MiniDFSCluster dfsCluster, String pathSuffix, String contents)
+    private static Path createFile(FileSystem fs, String pathSuffix, String contents)
     {
       try {
         Path path = new Path(PATH + pathSuffix);
         try (Writer writer = new BufferedWriter(
-            new OutputStreamWriter(dfsCluster.getFileSystem().create(path), StandardCharsets.UTF_8)
+            new OutputStreamWriter(fs.create(path), StandardCharsets.UTF_8)
         )) {
           writer.write(contents);
         }
-        return path;
+        return fs.makeQualified(path);
       }
       catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -339,7 +340,6 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       splits.forEach(split -> Assert.assertEquals(1, split.get().size()));
       Set<Path> actualPaths = splits.stream()
                                     .flatMap(split -> split.get().stream())
-                                    .map(Path::getPathWithoutSchemeAndAuthority)
                                     .collect(Collectors.toSet());
       Assert.assertEquals(paths, actualPaths);
     }

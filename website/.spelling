@@ -125,6 +125,7 @@ JVM
 JVMs
 Joda
 JsonProperty
+Jupyter
 KMS
 Kerberized
 Kerberos
@@ -140,10 +141,12 @@ Long.MIN_VALUE
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
 Murmur3
+MVCC
 NFS
 OCF
 OLAP
@@ -156,6 +159,7 @@ ParAccel
 ParseSpec
 ParseSpecs
 Protobuf
+pull-deps
 RDBMS
 RDDs
 RDS
@@ -238,6 +242,7 @@ datasketches
 datasource
 datasources
 dbcp
+deepstore
 denormalization
 denormalize
 denormalized
@@ -425,6 +430,7 @@ unintuitive
 unioned
 unmergeable
 unmerged
+UNNEST
 unparseable
 unparsed
 unsetting
@@ -477,7 +483,9 @@ defaultUser
 inputSegmentSizeBytes
 skipOffsetFromLatest
  - ../docs/design/router.md
+brokerService
 c3.2xlarge
+defaultManualBrokerService
 maxPriority
 minPriority
 runtime.properties
@@ -628,12 +636,16 @@ thriftJar
 timeMax
 timeMin
  - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Alibaba
 Aliyun
-aliyun
-OSS
+aliyun-oss-extensions
 AccessKey
+accessKey
 aliyun-oss
+json
+OSS
 oss
+secretKey
 url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
@@ -670,6 +682,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
@@ -828,8 +841,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
@@ -1190,6 +1201,10 @@ unix_timestamp
 value1
 value2
 valueOf
+IEC
+human_readable_binary_byte_format
+human_readable_decimal_byte_format
+human_readable_decimal_format
  - ../docs/misc/papers-and-talks.md
 RADStack
  - ../docs/operations/api-reference.md
@@ -1274,6 +1289,7 @@ nativeQueryIds
 netAddress
 netHwaddr
 netName
+noticeType
 numComplexMetrics
 numDimensions
 numMetrics
@@ -1426,6 +1442,7 @@ fieldAccess
 finalizingFieldAccess
 hyperUniqueCardinality
  - ../docs/querying/query-context.md
+brokerService
 bySegment
 doubleSum
 druid.broker.cache.populateCache
@@ -1537,6 +1554,7 @@ SCHEMA_OWNER
 SERVER_SEGMENTS
 SMALLINT
 SQL_PATH
+STRING_AGG
 SYSTEM_TABLE
 TABLE_CATALOG
 TABLE_NAME
@@ -1592,6 +1610,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+IEC
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2

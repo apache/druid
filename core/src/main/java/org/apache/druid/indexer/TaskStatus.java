@@ -47,21 +47,29 @@ public class TaskStatus
     return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null);
   }
 
+  /**
+   * The succeeded task status should not have error messages.
+   * Use {@link #success(String)} instead.
+   */
+  @Deprecated
   public static TaskStatus success(String taskId, String errorMsg)
   {
     return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg, null);
   }
 
-  public static TaskStatus failure(String taskId)
-  {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null);
-  }
-
+  /**
+   * All failed task status must have a non-null error message.
+   */
   public static TaskStatus failure(String taskId, String errorMsg)
   {
     return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, null);
   }
 
+  /**
+   * This method is deprecated because it does not handle the error message of failed task status properly.
+   * Use {@link #success(String)} or {@link #failure(String, String)} instead.
+   */
+  @Deprecated
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
     return new TaskStatus(taskId, code, -1, null, null);

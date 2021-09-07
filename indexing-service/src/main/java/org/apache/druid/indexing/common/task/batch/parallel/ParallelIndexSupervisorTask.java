@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringS
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -122,6 +123,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public static final String TYPE = "index_parallel";
 
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
+
+  private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
@@ -250,7 +253,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Nullable
-  private <T extends Task, R extends SubTaskReport> ParallelIndexTaskRunner<T, R> createRunner(
+  @VisibleForTesting
+  <T extends Task, R extends SubTaskReport> ParallelIndexTaskRunner<T, R> createRunner(
       TaskToolbox toolbox,
       Function<TaskToolbox, ParallelIndexTaskRunner<T, R>> runnerCreator
   )
@@ -351,7 +355,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   PartialGenericSegmentMergeParallelIndexTaskRunner createPartialGenericSegmentMergeRunner(
       TaskToolbox toolbox,
-      List<PartialGenericSegmentMergeIOConfig> ioConfigs,
+      List<PartialSegmentMergeIOConfig> ioConfigs,
       ParallelIndexIngestionSpec ingestionSchema
   )
   {
@@ -555,14 +559,23 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     final TaskState state = runNextPhase(runner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, runner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(runner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
+      final String errorMessage = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          runner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -608,7 +621,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     TaskState state;
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
@@ -637,7 +651,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       state = runNextPhase(cardinalityRunner);
       if (state.isFailure()) {
-        return TaskStatus.failure(getId());
+        String errMsg = StringUtils.format(
+            TASK_PHASE_FAILURE_MSG,
+            cardinalityRunner.getName()
+        );
+        return TaskStatus.failure(getId(), errMsg);
       }
 
       if (cardinalityRunner.getReports().isEmpty()) {
@@ -675,7 +693,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     // 1. Partial segment generation phase
     final ParallelIndexIngestionSpec segmentCreateIngestionSpec = ingestionSchemaToUse;
-    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
+    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport> indexingRunner =
         createRunner(
             toolbox,
             f -> createPartialHashSegmentGenerateRunner(toolbox, segmentCreateIngestionSpec, intervalToNumShards)
@@ -683,14 +701,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
-      return TaskStatus.failure(getId());
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // 2. Partial segment merge phase
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> partitionToLocations =
+    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
         groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
-    final List<PartialGenericSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
+    final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
     );
@@ -701,15 +723,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     state = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          mergeRunner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), state);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -717,7 +748,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return taskStatus;
   }
 
-  private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
     ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
@@ -728,7 +760,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState distributionState = runNextPhase(distributionRunner);
     if (distributionState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialDimensionDistributionTask.TYPE + " failed");
+      String errMsg = StringUtils.format(TASK_PHASE_FAILURE_MSG, distributionRunner.getName());
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     Map<Interval, PartitionBoundaries> intervalToPartitions =
@@ -747,7 +780,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     final ParallelIndexIngestionSpec segmentCreateIngestionSpec = ingestionSchemaToUse;
-    ParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
+    ParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport> indexingRunner =
         createRunner(
             toolbox,
             tb -> createPartialRangeSegmentGenerateRunner(tb, intervalToPartitions, segmentCreateIngestionSpec)
@@ -755,13 +788,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState indexingState = runNextPhase(indexingRunner);
     if (indexingState.isFailure()) {
-      return TaskStatus.failure(getId(), PartialRangeSegmentGenerateTask.TYPE + " failed");
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          indexingRunner.getName()
+      );
+      return TaskStatus.failure(getId(), errMsg);
     }
 
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> partitionToLocations =
+    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
         groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
-    final List<PartialGenericSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
+    final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
     );
@@ -772,14 +809,23 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs, segmentMergeIngestionSpec)
     );
     TaskState mergeState = runNextPhase(mergeRunner);
+    TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
       publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
+      taskStatus = TaskStatus.success(getId());
+    } else {
+      // there is only success or failure after running....
+      Preconditions.checkState(mergeState.isFailure(), "Unrecognized state after task is complete[%s]", mergeState);
+      String errMsg = StringUtils.format(
+          TASK_PHASE_FAILURE_MSG,
+          mergeRunner.getName()
+      );
+      taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    TaskStatus taskStatus = TaskStatus.fromCode(getId(), mergeState);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -859,13 +905,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return partitions;
   }
 
-  private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> groupGenericPartitionLocationsPerPartition(
-      Map<String, GeneratedPartitionsReport<GenericPartitionStat>> subTaskIdToReport
+  private static Map<Pair<Interval, Integer>, List<PartitionLocation>> groupGenericPartitionLocationsPerPartition(
+      Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
     final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> intervalAndIntegerToShardSpec = new HashMap<>();
     final Object2IntMap<Interval> intervalToNextPartitionId = new Object2IntOpenHashMap<>();
-    final BiFunction<String, GenericPartitionStat, GenericPartitionLocation> createPartitionLocationFunction =
+    final BiFunction<String, PartitionStat, PartitionLocation> createPartitionLocationFunction =
         (subtaskId, partitionStat) -> {
           final BuildingShardSpec<?> shardSpec = intervalAndIntegerToShardSpec.computeIfAbsent(
               Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
@@ -879,31 +925,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 return partitionStat.getSecondaryPartition().convert(partitionId);
               }
           );
-          return new GenericPartitionLocation(
-              partitionStat.getTaskExecutorHost(),
-              partitionStat.getTaskExecutorPort(),
-              partitionStat.isUseHttps(),
-              subtaskId,
-              partitionStat.getInterval(),
-              shardSpec
-          );
+          return partitionStat.toPartitionLocation(subtaskId, shardSpec);
         };
 
     return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);
   }
 
-  private static <S extends PartitionStat, L extends PartitionLocation>
+  private static <L extends PartitionLocation>
       Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
-      Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
-      BiFunction<String, S, L> createPartitionLocationFunction
+      Map<String, ? extends GeneratedPartitionsReport> subTaskIdToReport,
+      BiFunction<String, PartitionStat, L> createPartitionLocationFunction
   )
   {
     // partition (interval, partitionId) -> partition locations
     final Map<Pair<Interval, Integer>, List<L>> partitionToLocations = new HashMap<>();
-    for (Entry<String, ? extends GeneratedPartitionsReport<S>> entry : subTaskIdToReport.entrySet()) {
+    for (Entry<String, ? extends GeneratedPartitionsReport> entry : subTaskIdToReport.entrySet()) {
       final String subTaskId = entry.getKey();
-      final GeneratedPartitionsReport<S> report = entry.getValue();
-      for (S partitionStat : report.getPartitionStats()) {
+      final GeneratedPartitionsReport report = entry.getValue();
+      for (PartitionStat partitionStat : report.getPartitionStats()) {
         final List<L> locationsOfSamePartition = partitionToLocations.computeIfAbsent(
             Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
             k -> new ArrayList<>()
@@ -915,15 +954,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return partitionToLocations;
   }
 
-  private static List<PartialGenericSegmentMergeIOConfig> createGenericMergeIOConfigs(
+  private static List<PartialSegmentMergeIOConfig> createGenericMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> partitionToLocations
+      Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations
   )
   {
     return createMergeIOConfigs(
         totalNumMergeTasks,
         partitionToLocations,
-        PartialGenericSegmentMergeIOConfig::new
+        PartialSegmentMergeIOConfig::new
     );
   }
 
@@ -1046,8 +1085,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {
       return indexTask.run(toolbox);
     } else {
-      LOG.info("Task is asked to stop. Finish as failed");
-      return TaskStatus.failure(getId());
+      String msg = "Task was asked to stop. Finish as failed";
+      LOG.info(msg);
+      return TaskStatus.failure(getId(), msg);
     }
   }
 

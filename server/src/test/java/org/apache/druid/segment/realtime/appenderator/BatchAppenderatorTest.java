@@ -31,6 +31,9 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -110,6 +113,72 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       ).get();
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 3),
+          Lists.transform(
+              segmentsAndCommitMetadata.getSegments(),
+              SegmentIdWithShardSpec::fromDataSegment
+          ).stream().sorted().collect(Collectors.toList())
+      );
+      Assert.assertEquals(
+          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
+          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+
+      appenderator.close();
+      Assert.assertTrue(appenderator.getSegments().isEmpty());
+    }
+  }
+
+  /**
+   * Test the case when a segment identifier contains non UTC timestamps in its interval. This can happen
+   * when a custom segment granularity for an interval with a non UTC Chronlogy is created by
+   * {@link org.apache.druid.java.util.common.granularity.PeriodGranularity#bucketStart(DateTime)}
+   */
+  @Test
+  public void testPeriodGranularityNonUTCIngestion() throws Exception
+  {
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(1, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      // startJob
+      Assert.assertNull(appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(BatchAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // Create a segment identifier with a non-utc interval
+      SegmentIdWithShardSpec segmentIdWithNonUTCTime =
+          createNonUTCSegmentId("2021-06-27T00:00:00.000+09:00/2021-06-28T00:00:00.000+09:00",
+                          "A", 0); // should be in seg_0
+
+      Assert.assertEquals(
+          1,
+          appenderator.add(segmentIdWithNonUTCTime, createInputRow("2021-06-27T00:01:11.080Z", "foo", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // getSegments
+      Assert.assertEquals(
+          Collections.singletonList(segmentIdWithNonUTCTime),
+          appenderator.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+
+
+      // since we just added one row and the max rows in memory is one, all the segments (sinks etc)
+      // above should be cleared now
+      Assert.assertEquals(
+          Collections.emptyList(),
+          ((BatchAppenderator) appenderator).getInMemorySegments().stream().sorted().collect(Collectors.toList())
+      );
+
+
+      // push all
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          null,
+          false
+      ).get();
+      Assert.assertEquals(
+          Collections.singletonList(segmentIdWithNonUTCTime),
           Lists.transform(
               segmentsAndCommitMetadata.getSegments(),
               SegmentIdWithShardSpec::fromDataSegment
@@ -887,7 +956,19 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
     }
   }
-  
+
+
+  private static SegmentIdWithShardSpec createNonUTCSegmentId(String interval, String version, int partitionNum)
+  {
+    return new SegmentIdWithShardSpec(
+        BatchAppenderatorTester.DATASOURCE,
+        new Interval(interval, ISOChronology.getInstance(DateTimes.inferTzFromString("Asia/Seoul"))),
+        version,
+        new LinearShardSpec(partitionNum)
+
+    );
+  }
+
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(

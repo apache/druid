@@ -251,7 +251,15 @@ public class WorkerTaskManager
           @Override
           public void onFailure(Throwable t)
           {
-            submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
+            submitNoticeToExec(
+                new StatusNotice(
+                    task,
+                    TaskStatus.failure(
+                        task.getId(),
+                        "Failed to run task with an exception. See middleManager or indexer logs for more details."
+                    )
+                )
+            );
           }
         }
     );

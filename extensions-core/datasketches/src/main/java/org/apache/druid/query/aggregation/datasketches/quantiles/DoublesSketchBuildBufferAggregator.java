@@ -57,7 +57,7 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
     }
 
     final UpdateDoublesSketch sketch = helper.getSketchAtPosition(buffer, position);
-    sketch.update(selector.getDouble());
+    DoublesSketches.handleMaxStreamLengthLimit(() -> sketch.update(selector.getDouble()));
   }
 
   @Nullable
