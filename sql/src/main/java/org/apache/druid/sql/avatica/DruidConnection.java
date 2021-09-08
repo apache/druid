@@ -84,11 +84,11 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw new ISE("Uh oh, too many statements");
+        throw DruidMeta.logError(new ISE("Uh oh, too many statements"));
       }
 
       if (statements.size() >= maxStatements) {
-        throw new ISE("Too many open statements, limit is[%,d]", maxStatements);
+        throw DruidMeta.logError(new ISE("Too many open statements, limit is[%,d]", maxStatements));
       }
 
       // remove sensitive fields from the context, only the connection's context needs to have authentication

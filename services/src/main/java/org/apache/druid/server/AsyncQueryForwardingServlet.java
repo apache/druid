@@ -229,7 +229,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       targetServer = hostFinder.findServerAvatica(connectionId);
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
-      LOG.debug("Forwarding JDBC connection [%s] to broker [%s]", connectionId, targetServer);
+      LOG.debug("Forwarding JDBC connection [%s] to broker [%s]", connectionId, targetServer.getHost());
     } else if (HttpMethod.DELETE.is(method)) {
       // query cancellation request
       targetServer = hostFinder.pickDefaultServer();
@@ -244,10 +244,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
           if (inputQuery.getId() == null) {
             inputQuery = inputQuery.withId(UUID.randomUUID().toString());
           }
-          LOG.debug("Forwarding JSON query [%s] to broker [%s]", inputQuery.getId(), targetServer);
+          LOG.debug("Forwarding JSON query [%s] to broker [%s]", inputQuery.getId(), targetServer.getHost());
         } else {
           targetServer = hostFinder.pickDefaultServer();
-          LOG.debug("Forwarding JSON request to broker [%s]", targetServer);
+          LOG.debug("Forwarding JSON request to broker [%s]", targetServer.getHost());
         }
         request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
       }
@@ -264,7 +264,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
         request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
         targetServer = hostFinder.findServerSql(inputSqlQuery);
-        LOG.debug("Forwarding SQL query to broker [%s]", targetServer);
+        LOG.debug("Forwarding SQL query to broker [%s]", targetServer.getHost());
       }
       catch (IOException e) {
         handleQueryParseException(request, response, objectMapper, e, false);
@@ -276,6 +276,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
     } else {
       targetServer = hostFinder.pickDefaultServer();
+      LOG.debug("Forwarding query to broker [%s]", targetServer.getHost());
     }
 
     request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
