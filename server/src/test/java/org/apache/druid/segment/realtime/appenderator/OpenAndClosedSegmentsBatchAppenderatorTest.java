@@ -36,7 +36,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNullHandlingTest
+public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullHandlingTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
       createSegmentId("2000/2001", "A", 0),
@@ -47,10 +47,10 @@ public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNul
   @Test
   public void testSimpleIngestionWithIndexesNotMapped() throws Exception
   {
-    try (final LegacyAndClosedSegmentsAppenderatorTester tester =
-             new LegacyAndClosedSegmentsAppenderatorTester(2,
-                                                                            false,
-                                                                            false)) {
+    try (final OpenAndClosedSegmentsAppenderatorTester tester =
+             new OpenAndClosedSegmentsAppenderatorTester(2,
+                                                         false,
+                                                         false)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -58,7 +58,7 @@ public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNul
       Assert.assertEquals(null, appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(LegacyAndClosedSegmentsAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(OpenAndClosedSegmentsAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add
       Assert.assertEquals(
@@ -126,9 +126,9 @@ public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNul
   @Test
   public void testSimpleIngestionWithIndexesMapped() throws Exception
   {
-    try (final LegacyAndClosedSegmentsAppenderatorTester tester = new LegacyAndClosedSegmentsAppenderatorTester(2,
-                                                                            false,
-                                                                            true)) {
+    try (final OpenAndClosedSegmentsAppenderatorTester tester = new OpenAndClosedSegmentsAppenderatorTester(2,
+                                                                                                            false,
+                                                                                                            true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -136,7 +136,7 @@ public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNul
       Assert.assertEquals(null, appenderator.startJob());
 
       // getDataSource
-      Assert.assertEquals(LegacyAndClosedSegmentsAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+      Assert.assertEquals(OpenAndClosedSegmentsAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
       // add
       Assert.assertEquals(
@@ -203,7 +203,7 @@ public class LegacyAndClosedSegmentsBatchAppenderatorTest extends InitializedNul
   private static SegmentIdWithShardSpec createSegmentId(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
-        LegacyAndClosedSegmentsAppenderatorTester.DATASOURCE,
+        OpenAndClosedSegmentsAppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)

@@ -105,7 +105,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
- * This class is to support LEGACY and CLOSED_SEGMENTS appenderators. It is copied as-is
+ * This class is to support OPEN_SEGMENTS and CLOSED_SEGMENTS appenderators. It is mostly taken
  * from 0.21 and it is meant to keep for backward compatibility. For now though this class
  * with <code>isLegacy</code> constructor argument set to false is the default. When {@link BatchAppenderator}
  * proves stable then the plan is to remove this class

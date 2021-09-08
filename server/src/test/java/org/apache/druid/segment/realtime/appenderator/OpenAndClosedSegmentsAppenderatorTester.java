@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class LegacyAndClosedSegmentsAppenderatorTester implements AutoCloseable
+public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
@@ -74,7 +74,7 @@ public class LegacyAndClosedSegmentsAppenderatorTester implements AutoCloseable
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public LegacyAndClosedSegmentsAppenderatorTester(
+  public OpenAndClosedSegmentsAppenderatorTester(
       final int maxRowsInMemory,
       final boolean enablePushFailure,
       boolean batchMemoryMappedIndex
@@ -83,7 +83,7 @@ public class LegacyAndClosedSegmentsAppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, -1, null, enablePushFailure, batchMemoryMappedIndex);
   }
 
-  public LegacyAndClosedSegmentsAppenderatorTester(
+  public OpenAndClosedSegmentsAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -102,7 +102,7 @@ public class LegacyAndClosedSegmentsAppenderatorTester implements AutoCloseable
     );
   }
 
-  public LegacyAndClosedSegmentsAppenderatorTester(
+  public OpenAndClosedSegmentsAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,

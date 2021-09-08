@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class LegacyAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMockSupport
+public class OpenAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
@@ -73,7 +73,7 @@ public class LegacyAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMock
   );
 
   private SegmentAllocator allocator;
-  private LegacyAndClosedSegmentsAppenderatorTester legacyAndClosedSegmentsAppenderatorTester;
+  private OpenAndClosedSegmentsAppenderatorTester openAndClosedSegmentsAppenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
 
@@ -84,16 +84,16 @@ public class LegacyAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMock
   @Before
   public void setup()
   {
-    legacyAndClosedSegmentsAppenderatorTester =
-        new LegacyAndClosedSegmentsAppenderatorTester(MAX_ROWS_IN_MEMORY, false,
-                                                      false
+    openAndClosedSegmentsAppenderatorTester =
+        new OpenAndClosedSegmentsAppenderatorTester(MAX_ROWS_IN_MEMORY, false,
+                                                    false
         );
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
     driver = new BatchAppenderatorDriver(
-        legacyAndClosedSegmentsAppenderatorTester.getAppenderator(),
+        openAndClosedSegmentsAppenderatorTester.getAppenderator(),
         allocator,
-        new TestUsedSegmentChecker(legacyAndClosedSegmentsAppenderatorTester.getPushedSegments()),
+        new TestUsedSegmentChecker(openAndClosedSegmentsAppenderatorTester.getPushedSegments()),
         dataSegmentKiller
     );
 
@@ -181,7 +181,7 @@ public class LegacyAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMock
   {
     Assert.assertNull(driver.startJob(null));
     driver.close();
-    legacyAndClosedSegmentsAppenderatorTester.getAppenderator().close();
+    openAndClosedSegmentsAppenderatorTester.getAppenderator().close();
 
     Assert.assertNull(driver.startJob(null));
   }
