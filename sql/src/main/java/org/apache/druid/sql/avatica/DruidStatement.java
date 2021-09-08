@@ -361,7 +361,7 @@ public class DruidStatement implements Closeable
             sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
           }
         } else {
-          DruidMeta.logError(this.throwable);
+          DruidMeta.logFailure(this.throwable);
         }
         onClose.run();
       }
@@ -390,7 +390,7 @@ public class DruidStatement implements Closeable
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
-    DruidMeta.logError(t);
+    DruidMeta.logFailure(t);
     try {
       close();
     }
