@@ -120,7 +120,7 @@ public class DateTimesTest
 
     // Can't compare as string with mixed time zones.
     Assert.assertFalse(DateTimes.canCompareAsString(
-        DateTimes.of("2000").withZone(DateTimeZone.forID("America/Los_Angeles")))
+        DateTimes.of("2000").withZone(DateTimes.inferTzFromString("America/Los_Angeles")))
     );
   }
 }
