@@ -314,7 +314,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false,
+                           TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
