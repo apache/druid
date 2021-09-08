@@ -108,7 +108,7 @@ public class TaskConfig
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
-      @JsonProperty("batchProcessingMode") String batchProcesingMode
+      @JsonProperty("batchProcessingMode") String batchProcessingMode
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -141,13 +141,13 @@ public class TaskConfig
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
     if (batchMemoryMappedIndex) {
       this.batchProcessingMode = BatchProcessingMode.LEGACY;
-    } else if (EnumUtils.isValidEnum(BatchProcessingMode.class, batchProcesingMode)) {
-      this.batchProcessingMode = BatchProcessingMode.valueOf(batchProcesingMode);
+    } else if (EnumUtils.isValidEnum(BatchProcessingMode.class, batchProcessingMode)) {
+      this.batchProcessingMode = BatchProcessingMode.valueOf(batchProcessingMode);
     } else {
       // batchProcessingMode input string is invalid, log & use the default.
       this.batchProcessingMode = BatchProcessingMode.CLOSED_SEGMENTS; // Default
-      log.warn("Invalid batch processing mode argument value:[%s], defaulting to[%s] ",
-               batchProcesingMode, this.batchProcessingMode
+      log.warn("Batch processing mode argument value is null or not valid:[%s], defaulting to[%s] ",
+               batchProcessingMode, this.batchProcessingMode
       );
     }
     log.info("Batch processing mode:[%s]", this.batchProcessingMode);
