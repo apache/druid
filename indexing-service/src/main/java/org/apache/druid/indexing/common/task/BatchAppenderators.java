@@ -72,8 +72,8 @@ public final class BatchAppenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.LEGACY) {
-      return appenderatorsManager.createLegacyOfflineAppenderatorForTask(
+    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.OPEN_SEGMENTS) {
+      return appenderatorsManager.createOpenSegmentsOfflineAppenderatorForTask(
           taskId,
           dataSchema,
           appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),

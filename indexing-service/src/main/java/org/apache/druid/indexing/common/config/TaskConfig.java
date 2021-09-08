@@ -47,11 +47,12 @@ public class TaskConfig
       "org.apache.hadoop:hadoop-client:2.8.5"
   );
 
+  // This enum controls processing mode of batch ingestion "segment creation" phase (i.e. appenderator logic)
   public enum BatchProcessingMode
   {
-    LEGACY,
-    CLOSED_SEGMENTS,
-    CLOSED_SEGMENTS_SINKS
+    OPEN_SEGMENTS, /* mmap segments, legacy code */
+    CLOSED_SEGMENTS, /* Do not mmap segments but keep most other legacy code */
+    CLOSED_SEGMENTS_SINKS /* Most aggressive memory optimization, do not mmap segments and eliminate sinks, etc. */
   }
 
   public static final BatchProcessingMode BATCH_PROCESSING_MODE_DEFAULT = BatchProcessingMode.CLOSED_SEGMENTS;
@@ -140,7 +141,7 @@ public class TaskConfig
     // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
     if (batchMemoryMappedIndex) {
-      this.batchProcessingMode = BatchProcessingMode.LEGACY;
+      this.batchProcessingMode = BatchProcessingMode.OPEN_SEGMENTS;
     } else if (EnumUtils.isValidEnum(BatchProcessingMode.class, batchProcessingMode)) {
       this.batchProcessingMode = BatchProcessingMode.valueOf(batchProcessingMode);
     } else {

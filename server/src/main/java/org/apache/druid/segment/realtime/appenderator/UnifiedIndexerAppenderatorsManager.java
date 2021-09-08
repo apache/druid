@@ -234,7 +234,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
-  public Appenderator createLegacyOfflineAppenderatorForTask(
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,

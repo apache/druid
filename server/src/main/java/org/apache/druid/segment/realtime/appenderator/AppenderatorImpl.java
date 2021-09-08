@@ -172,7 +172,7 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile Throwable persistError;
 
-  private final boolean isLegacy;
+  private final boolean isOpenSegments;
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -208,7 +208,7 @@ public class AppenderatorImpl implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean isLegacy
+      boolean isOpenSegments
   )
   {
     this.myId = id;
@@ -224,7 +224,7 @@ public class AppenderatorImpl implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-    this.isLegacy = isLegacy;
+    this.isOpenSegments = isOpenSegments;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -237,7 +237,7 @@ public class AppenderatorImpl implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
 
-    if (isLegacy) {
+    if (isOpenSegments) {
       log.info("Running legacy appenderator");
     } else {
       log.info("Running closed segments appenderator");
@@ -882,7 +882,7 @@ public class AppenderatorImpl implements Appenderator
         for (FireHydrant fireHydrant : sink) {
 
           // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
-          if (!isLegacy()) {
+          if (!isOpenSegments()) {
 
             // sanity
             Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
@@ -955,7 +955,7 @@ public class AppenderatorImpl implements Appenderator
           5
       );
 
-      if (!isLegacy()) {
+      if (!isOpenSegments()) {
         // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
         // mapped file references
         // can generate OOMs during merge if enough of them are held back...
@@ -1090,9 +1090,9 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  public boolean isLegacy()
+  public boolean isOpenSegments()
   {
-    return isLegacy;
+    return isOpenSegments;
   }
 
   private void lockBasePersistDirectory()
@@ -1530,7 +1530,7 @@ public class AppenderatorImpl implements Appenderator
 
         // Map only when this appenderator is being driven by a real time task:
         Segment segmentToSwap = null;
-        if (isLegacy()) {
+        if (isOpenSegments()) {
           segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
         } else {
           // remember file path & segment id to rebuild the queryable index for merge:
@@ -1576,7 +1576,7 @@ public class AppenderatorImpl implements Appenderator
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     int total;
     total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
-    if (isLegacy()) {
+    if (isOpenSegments()) {
       // for real time add references to byte memory mapped references..
       total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
                (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +

@@ -78,7 +78,7 @@ public class BatchAppenderatorsTest
     try (final AppenderatorTester tester = new AppenderatorTester("LEGACY")) {
       Assert.assertTrue(tester.appenderator instanceof AppenderatorImpl);
       AppenderatorImpl appenderator = (AppenderatorImpl) tester.appenderator;
-      Assert.assertTrue(appenderator.isLegacy());
+      Assert.assertTrue(appenderator.isOpenSegments());
     }
   }
 
@@ -88,7 +88,7 @@ public class BatchAppenderatorsTest
     try (final AppenderatorTester tester = new AppenderatorTester("CLOSED_SEGMENTS")) {
       Assert.assertTrue(tester.appenderator instanceof AppenderatorImpl);
       AppenderatorImpl appenderator = (AppenderatorImpl) tester.appenderator;
-      Assert.assertFalse(appenderator.isLegacy());
+      Assert.assertFalse(appenderator.isOpenSegments());
     }
   }
 

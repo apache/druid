@@ -96,7 +96,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
   }
 
   @Override
-  public Appenderator createLegacyOfflineAppenderatorForTask(
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,

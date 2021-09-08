@@ -87,7 +87,7 @@ public interface AppenderatorsManager
   /**
    * Creates an Appenderator suited for batch ingestion.
    */
-  Appenderator createLegacyOfflineAppenderatorForTask(
+  Appenderator createOpenSegmentsOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
