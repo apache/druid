@@ -361,7 +361,7 @@ Logs are created by ingestion tasks as they run.  You can configure Druid to pus
 
 Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired.  Worker slot allocation is then `PENDING` until the task can actually start executing.
 
-The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.indexer.task.baseTaskDir`](http://localhost:3000/docs/configuration/index.html#additional-peon-configuration).
+The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.indexer.task.baseTaskDir`](http://localhost:3000/docs/configuration/index.md#additional-peon-configuration).
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
