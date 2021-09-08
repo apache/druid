@@ -87,7 +87,8 @@ public class SqlSegmentsMetadataQuery
 
   /**
    * Retrieves segments for a given datasource that are marked used (i.e. published) in the metadata store, and that
-   * *overlap* a particular interval.
+   * *overlap* any interval in a particular collection of intervals. If the collection of intervals is empty, this
+   * method will retrieve all used segments.
    *
    * You cannot assume that segments returned by this call are actually active. Because there is some delay between
    * new segment publishing and the marking-unused of older segments, it is possible that some segments returned
@@ -107,8 +108,9 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* a particular
-   * interval.
+   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
+   * unused segments.
    *
    * This call does not return any information about realtime segments.
    *
@@ -177,11 +179,26 @@ public class SqlSegmentsMetadataQuery
           .bind("dataSource", dataSource)
           .bind("used", false)
           .execute();
+    } else if (Intervals.canCompareEndpointsAsStrings(interval)
+               && interval.getStart().getYear() == interval.getEnd().getYear()) {
+      // Safe to write a WHERE clause with this interval. Note that it is unsafe if the years are different, because
+      // that means extra characters can sneak in. (Consider a query interval like "2000-01-01/2001-01-01" and a
+      // segment interval like "20001/20002".)
+      return handle
+          .createStatement(
+              StringUtils.format(
+                  "UPDATE %s SET used=:used WHERE dataSource = :dataSource AND %s",
+                  dbTables.getSegmentsTable(),
+                  IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
+              )
+          )
+          .bind("dataSource", dataSource)
+          .bind("used", false)
+          .bind("start", interval.getStart().toString())
+          .bind("end", interval.getEnd().toString())
+          .execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
-      // Note: even if Intervals.canCompareEndpointsAsStrings(interval) is true, we still can't use a WHERE clause,
-      // because the *segment intervals* might not be string-comparable. (Consider a query interval like "2000/3000" and
-      // a segment interval like "20010/20011".)
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
               retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true),
@@ -209,7 +226,7 @@ public class SqlSegmentsMetadataQuery
       sb.append(" AND (");
       for (int i = 0; i < intervals.size(); i++) {
         sb.append(
-            matchMode.makeSql(
+            matchMode.makeSqlCondition(
                 connector.getQuoteString(),
                 StringUtils.format(":start%d", i),
                 StringUtils.format(":end%d", i)
@@ -251,8 +268,8 @@ public class SqlSegmentsMetadataQuery
                 return true;
               } else {
                 // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
-                // might not be string-comparable. (Consider a query interval like "2000/3000" and a segment interval
-                // like "20010/20011".)
+                // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+                // segment interval like "20010/20011".)
                 for (Interval interval : intervals) {
                   if (matchMode.apply(interval, dataSegment.getInterval())) {
                     return true;
@@ -297,7 +314,7 @@ public class SqlSegmentsMetadataQuery
   {
     CONTAINS {
       @Override
-      public String makeSql(String quoteString, String startPlaceholder, String endPlaceholder)
+      public String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder)
       {
         // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
         // Some databases can only use an index on one of the columns. An additional condition provides
@@ -318,7 +335,7 @@ public class SqlSegmentsMetadataQuery
     },
     OVERLAPS {
       @Override
-      public String makeSql(String quoteString, String startPlaceholder, String endPlaceholder)
+      public String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder)
       {
         return StringUtils.format(
             "(start < %3$s AND %1$send%1$s > %2$s)",
@@ -335,7 +352,7 @@ public class SqlSegmentsMetadataQuery
       }
     };
 
-    public abstract String makeSql(String quoteString, String startPlaceholder, String endPlaceholder);
+    public abstract String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder);
 
     public abstract boolean apply(Interval a, Interval b);
   }

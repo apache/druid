@@ -1675,7 +1675,39 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedWithinInterval() throws IOException
+  public void testMarkSegmentsAsUnusedWithinIntervalOneYear() throws IOException
+  {
+    coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+
+    // interval covers existingSegment1 and partially overlaps existingSegment2,
+    // only existingSegment1 will be dropped
+    coordinator.markSegmentsAsUnusedWithinInterval(
+        existingSegment1.getDataSource(),
+        Intervals.of("1994-01-01/1994-01-02T12Z")
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(existingSegment1),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUnusedSegmentsForInterval(
+                existingSegment1.getDataSource(),
+                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1))
+            )
+        )
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUnusedSegmentsForInterval(
+                existingSegment2.getDataSource(),
+                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1))
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testMarkSegmentsAsUnusedWithinIntervalTwoYears() throws IOException
   {
     coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
 

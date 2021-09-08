@@ -64,6 +64,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -73,6 +74,7 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -161,6 +163,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           } else {
             return retrieveAllUsedSegmentsForIntervalsWithHandle(handle, dataSource, intervals);
           }
+        }
+    );
+  }
+
+  @Override
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  {
+    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
+    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
+    return connector.retryWithHandle(
+        handle -> {
+          Query<Map<String, Object>> query = handle
+              .createQuery(queryString)
+              .bind("dataSource", dataSource);
+          return query
+              .map((int index, ResultSet r, StatementContext ctx) ->
+                       new Pair<>(
+                           JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
+                           r.getString("created_date")
+                       )
+              )
+              .list();
         }
     );
   }
@@ -991,23 +1015,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     Set<String> existedSegments = new HashSet<>();
 
-    List<List<DataSegment>> segmentsLists = Lists.partition(
-        new ArrayList<>(segments),
-        MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
-    );
+    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
     for (List<DataSegment> segmentList : segmentsLists) {
       String segmentIds = segmentList.stream()
-                                     .map(segment -> "'"
-                                                     + StringEscapeUtils.escapeSql(segment.getId().toString())
-                                                     + "'")
-                                     .collect(Collectors.joining(","));
-      List<String> existIds = handle.createQuery(StringUtils.format(
-                                        "SELECT id FROM %s WHERE id in (%s)",
-                                        dbTables.getSegmentsTable(),
-                                        segmentIds
-                                    ))
-                                    .mapTo(String.class)
-                                    .list();
+          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
+          .collect(Collectors.joining(","));
+      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)",dbTables.getSegmentsTable(),segmentIds))
+          .mapTo(String.class)
+          .list();
       existedSegments.addAll(existIds);
     }
     return existedSegments;
@@ -1017,8 +1032,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Read dataSource metadata. Returns null if there is no metadata.
    */
   @Override
-  public @Nullable
-  DataSourceMetadata retrieveDataSourceMetadata(final String dataSource)
+  public @Nullable DataSourceMetadata retrieveDataSourceMetadata(final String dataSource)
   {
     final byte[] bytes = connector.lookup(
         dbTables.getDataSourceTable(),
@@ -1037,8 +1051,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
    */
-  private @Nullable
-  byte[] retrieveDataSourceMetadataWithHandleAsBytes(
+  private @Nullable byte[] retrieveDataSourceMetadataWithHandleAsBytes(
       final Handle handle,
       final String dataSource
   )
