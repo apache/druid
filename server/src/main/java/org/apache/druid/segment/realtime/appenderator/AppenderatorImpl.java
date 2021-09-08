@@ -238,7 +238,7 @@ public class AppenderatorImpl implements Appenderator
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
 
     if (isOpenSegments) {
-      log.info("Running legacy appenderator");
+      log.info("Running open segments appenderator");
     } else {
       log.info("Running closed segments appenderator");
     }
