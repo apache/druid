@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -63,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DruidMeta extends MetaImpl
 {
-  private static final Logger log = new Logger(DruidMeta.class);
+  private static final Logger LOG = new Logger(DruidMeta.class);
 
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final ScheduledExecutorService exec;
@@ -161,6 +162,7 @@ public class DruidMeta extends MetaImpl
       throw new ForbiddenException("Authentication failed.");
     }
     statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
+    LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
     return statement;
   }
 
@@ -200,6 +202,7 @@ public class DruidMeta extends MetaImpl
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
     final Signature signature = druidStatement.getSignature();
+    LOG.debug("Successfully prepared statement[%s] and started execution", druidStatement.getStatementId());
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -240,7 +243,9 @@ public class DruidMeta extends MetaImpl
       final int fetchMaxRowCount
   ) throws NoSuchStatementException, MissingResultsException
   {
-    return getDruidStatement(statement).nextFrame(offset, getEffectiveMaxRowsPerFrame(fetchMaxRowCount));
+    final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
+    LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
+    return getDruidStatement(statement).nextFrame(offset, maxRows);
   }
 
   @Deprecated
@@ -270,6 +275,7 @@ public class DruidMeta extends MetaImpl
                                            );
 
     final Signature signature = druidStatement.getSignature();
+    LOG.debug("Successfully started execution of statement[%s]", druidStatement.getStatementId());
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -519,15 +525,23 @@ public class DruidMeta extends MetaImpl
     }
   }
 
+  @Nullable
   private AuthenticationResult authenticateConnection(final DruidConnection connection)
   {
     Map<String, Object> context = connection.context();
     for (Authenticator authenticator : authenticators) {
+      LOG.debug("Attempting authentication with authenticator[%s]", authenticator.getClass());
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
       if (authenticationResult != null) {
+        LOG.debug(
+            "Authenticated identity[%s] for connection[%s]",
+            authenticationResult.getIdentity(),
+            connection.getConnectionId()
+        );
         return authenticationResult;
       }
     }
+    LOG.debug("No successful authentication");
     return null;
   }
 
@@ -566,7 +580,7 @@ public class DruidMeta extends MetaImpl
       throw new ISE("Connection[%s] already open.", connectionId);
     }
 
-    log.debug("Connection[%s] opened.", connectionId);
+    LOG.debug("Connection[%s] opened.", connectionId);
 
     // Call getDruidConnection to start the timeout timer.
     return getDruidConnection(connectionId);
@@ -593,7 +607,7 @@ public class DruidMeta extends MetaImpl
     return connection.sync(
         exec.schedule(
             () -> {
-              log.debug("Connection[%s] timed out.", connectionId);
+              LOG.debug("Connection[%s] timed out.", connectionId);
               closeConnection(new ConnectionHandle(connectionId));
             },
             new Interval(DateTimes.nowUtc(), config.getConnectionIdleTimeout()).toDurationMillis(),

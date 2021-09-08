@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DruidConnection
 {
-  private static final Logger log = new Logger(DruidConnection.class);
+  private static final Logger LOG = new Logger(DruidConnection.class);
   private static final Set<String> SENSITIVE_CONTEXT_FIELDS = Sets.newHashSet(
       "user", "password"
   );
@@ -69,6 +69,11 @@ public class DruidConnection
     this.maxStatements = maxStatements;
     this.context = ImmutableMap.copyOf(context);
     this.statements = new ConcurrentHashMap<>();
+  }
+
+  public String getConnectionId()
+  {
+    return connectionId;
   }
 
   public DruidStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
@@ -101,14 +106,14 @@ public class DruidConnection
           sqlLifecycleFactory.factorize(),
           () -> {
             // onClose function for the statement
-            log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
+            LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
             // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
           }
       );
 
       statements.put(statementId, statement);
-      log.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
+      LOG.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
       return statement;
     }
   }
@@ -146,11 +151,11 @@ public class DruidConnection
           statement.close();
         }
         catch (Exception e) {
-          log.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
+          LOG.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
         }
       }
 
-      log.debug("Connection[%s] closed.", connectionId);
+      LOG.debug("Connection[%s] closed.", connectionId);
       open = false;
     }
   }
