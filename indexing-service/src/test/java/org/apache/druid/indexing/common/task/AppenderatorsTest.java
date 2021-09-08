@@ -25,8 +25,6 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -47,17 +45,15 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderator;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Period;
@@ -74,10 +70,10 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class BatchAppenderatorsTest
+public class AppenderatorsTest
 {
   @Test
-  public void testLegacyOfflineAppenderator() throws Exception
+  public void testOpenSegmentsOfflineAppenderator() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester("OPEN_SEGMENTS")) {
       Assert.assertTrue(tester.appenderator instanceof AppenderatorImpl);
@@ -187,7 +183,7 @@ public class BatchAppenderatorsTest
           objectMapper,
           () -> 0
       );
-      IndexMergerV9 indexMerger = new IndexMergerV9(
+      IndexMerger indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
           OffHeapMemorySegmentWriteOutMediumFactory.instance()
@@ -239,70 +235,46 @@ public class BatchAppenderatorsTest
 
       switch (batchMode) {
         case "OPEN_SEGMENTS":
-          appenderator = BatchAppenderators.newAppenderator(
-              "foo",
-              new TestAppenderatorsManager(),
-              metrics,
-              new TestTaskToolbox(
-                  objectMapper,
-                  indexMerger,
-                  TaskConfig.BatchProcessingMode.OPEN_SEGMENTS
-              ),
+          appenderator = Appenderators.createOpenSegmentsOffline(
+              schema.getDataSource(),
               schema,
               tuningConfig,
+              metrics,
               dataSegmentPusher,
+              objectMapper,
+              indexIO,
+              indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(
-                  rowIngestionMeters,
-                  false,
-                  Integer.MAX_VALUE,
-                  0
-              )
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
           );
           break;
         case "CLOSED_SEGMENTS":
-          appenderator = BatchAppenderators.newAppenderator(
-              "foo",
-              new TestAppenderatorsManager(),
-              metrics,
-              new TestTaskToolbox(
-                  objectMapper,
-                  indexMerger,
-                  TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS
-              ),
+          appenderator = Appenderators.createClosedSegmentsOffline(
+              schema.getDataSource(),
               schema,
               tuningConfig,
+              metrics,
               dataSegmentPusher,
+              objectMapper,
+              indexIO,
+              indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(
-                  rowIngestionMeters,
-                  false,
-                  Integer.MAX_VALUE,
-                  0
-              )
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
           );
 
           break;
         case "CLOSED_SEGMENTS_SINKS":
-          appenderator = BatchAppenderators.newAppenderator(
-              "foo",
-              new TestAppenderatorsManager(),
-              metrics,
-              new TestTaskToolbox(
-                  objectMapper,
-                  indexMerger,
-                  TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS
-              ),
+          appenderator = Appenderators.createOffline(
+              schema.getDataSource(),
               schema,
               tuningConfig,
+              metrics,
               dataSegmentPusher,
+              objectMapper,
+              indexIO,
+              indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(
-                  rowIngestionMeters,
-                  false,
-                  Integer.MAX_VALUE,
-                  0
-              )
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
           );
           break;
         default:
@@ -409,7 +381,7 @@ public class BatchAppenderatorsTest
       @Override
       public TestIndexTuningConfig withBasePersistDirectory(File dir)
       {
-        return this;
+        throw new UnsupportedOperationException();
       }
 
       @Override
@@ -557,71 +529,6 @@ public class BatchAppenderatorsTest
       }
     }
 
-
-    private static class TestTaskToolbox extends TaskToolbox
-    {
-      private final Map<DataSegment, File> segmentFileMap;
-
-      TestTaskToolbox(ObjectMapper mapper, IndexMergerV9 indexMergerV9, TaskConfig.BatchProcessingMode mode)
-      {
-        super(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                mode.name()
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NoopJoinableFactory.INSTANCE,
-            null,
-            null,
-            mapper,
-            null,
-            new IndexIO(
-                new ObjectMapper(),
-                () -> 0
-            ),
-            null,
-            null,
-            null,
-            indexMergerV9,
-            null,
-            null,
-            null,
-            null,
-            new NoopTestTaskReportFileWriter(),
-            null,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopChatHandlerProvider(),
-            null,
-            new TestAppenderatorsManager(),
-            null,
-            null,
-            null,
-            null
-        );
-        this.segmentFileMap = null;
-      }
-    }
   }
-}
 
+}

@@ -107,7 +107,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return Appenderators.createLegacyOffline(
+    return Appenderators.createOpenSegmentsOffline(
         taskId,
         schema,
         config,

@@ -253,7 +253,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = Appenderators.createLegacyOffline(
+      Appenderator appenderator = Appenderators.createOpenSegmentsOffline(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),

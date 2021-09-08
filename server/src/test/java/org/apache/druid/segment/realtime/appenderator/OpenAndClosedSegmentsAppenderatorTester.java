@@ -212,7 +212,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
       }
     };
     if (batchMemoryMappedIndex) {
-      appenderator = Appenderators.createLegacyOffline(
+      appenderator = Appenderators.createOpenSegmentsOffline(
           schema.getDataSource(),
           schema,
           tuningConfig,

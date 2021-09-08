@@ -122,7 +122,7 @@ public class Appenderators
     );
   }
 
-  public static Appenderator createLegacyOffline(
+  public static Appenderator createOpenSegmentsOffline(
       String id,
       DataSchema schema,
       AppenderatorConfig config,

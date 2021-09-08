@@ -162,7 +162,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
     if (realtimeAppenderator != null) {
       throw new ISE("A realtime appenderator was already created for this peon's task.");
     } else {
-      batchAppenderator = Appenderators.createLegacyOffline(
+      batchAppenderator = Appenderators.createOpenSegmentsOffline(
           taskId,
           schema,
           config,
