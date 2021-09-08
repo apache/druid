@@ -39,6 +39,7 @@ import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -48,6 +49,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
@@ -195,6 +198,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
                 binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
                 binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+                binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+                binder.bind(QueryScheduler.class)
+                      .toProvider(QuerySchedulerProvider.class)
+                      .in(LazySingleton.class);
               }
             }
         )

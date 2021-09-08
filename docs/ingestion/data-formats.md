@@ -79,12 +79,19 @@ Unfortunately, the Input Format doesn't support all data formats or ingestion me
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
-All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the `inputFormat` entry in your [`ioConfig`](index.md#ioconfig).
+All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the `inputFormat` entry in your [`ioConfig`](ingestion-spec.md#ioconfig).
 
 ### JSON
 
-The `inputFormat` to load data of JSON format. An example is:
+Configure the JSON `inputFormat` to load JSON data as follows:
 
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `json`. | yes |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
+| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson library. Those features will be applied when parsing the input JSON data. | no |
+
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -94,18 +101,19 @@ The `inputFormat` to load data of JSON format. An example is:
 }
 ```
 
-The JSON `inputFormat` has the following components:
+### CSV
+
+Configure the CSV `inputFormat` to load CSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `json`. | yes |
-| flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson library. Those features will be applied when parsing the input JSON data. | no |
+| type | String | This should say `csv`. | yes |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
+| columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
+| findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
+| skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
 
-### CSV
-
-The `inputFormat` to load data of the CSV format. An example is:
-
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -116,30 +124,9 @@ The `inputFormat` to load data of the CSV format. An example is:
 }
 ```
 
-The CSV `inputFormat` has the following components:
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `csv`. | yes |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
-| columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
-| findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
-| skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
-
 ### TSV (Delimited)
 
-```json
-"ioConfig": {
-  "inputFormat": {
-    "type": "tsv",
-    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
-    "delimiter":"|"
-  },
-  ...
-}
-```
-
-The `inputFormat` to load data of a delimited format. An example is:
+Configure the TSV `inputFormat` to load TSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -152,15 +139,32 @@ The `inputFormat` to load data of a delimited format. An example is:
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
+ For example:
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "tsv",
+    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
+    "delimiter":"|"
+  },
+  ...
+}
+```
+
 ### ORC
 
-> You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC input format.
+To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)). 
+> To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
 
-> If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
-> please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+Configure the ORC `inputFormat` to load ORC data as follows:
 
-The `inputFormat` to load data of ORC format. An example is:
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `orc`. | yes |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
+| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -181,20 +185,19 @@ The `inputFormat` to load data of ORC format. An example is:
 }
 ```
 
-The ORC `inputFormat` has the following components:
+### Parquet
+
+To use the Parquet input format load the Druid Parquet extension ([`druid-parquet-extensions`](../development/extensions-core/parquet.md)).
+
+Configure the Parquet `inputFormat` to load Parquet data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `orc`. | yes |
-| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
+|type| String| This should be set to `parquet` to read Parquet file| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
-### Parquet
-
-> You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet input format.
-
-The `inputFormat` to load data of Parquet format. An example is:
-
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -215,21 +218,22 @@ The `inputFormat` to load data of Parquet format. An example is:
 }
 ```
 
-The Parquet `inputFormat` has the following components:
+### Avro Stream
+
+To use the Avro Stream input format load the Druid Avro extension ([`druid-avro-extensions`](../development/extensions-core/avro.md)).
+
+For more information on how Druid handles Avro types, see [Avro Types](../development/extensions-core/avro.md#avro-types) section for
+
+Configure the Avro `inputFormat` to load Avro data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `parquet` to read Parquet file| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+|type| String| This should be set to `avro_stream` to read Avro serialized data| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|`avroBytesDecoder`| JSON Object |Specifies how to decode bytes to Avro record. | yes |
+| binaryAsString | Boolean | Specifies if the bytes Avro column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
-### Avro Stream
-
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream input format.
-
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
-
-The `inputFormat` to load data of Avro format in stream ingestion. An example is:
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -262,13 +266,6 @@ The `inputFormat` to load data of Avro format in stream ingestion. An example is
   ...
 }
 ```
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| This should be set to `avro_stream` to read Avro serialized data| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|`avroBytesDecoder`| JSON Object |Specifies how to decode bytes to Avro record. | yes |
-| binaryAsString | Boolean | Specifies if the bytes Avro column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ##### Avro Bytes Decoder
 
@@ -430,11 +427,20 @@ Multiple Instances:
 
 ### Avro OCF
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro OCF input format.
+To load the Avro OCF input format, load the Druid Avro extension ([`druid-avro-extensions`](../development/extensions-core/avro.md)).
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 
-The `inputFormat` to load data of Avro OCF format. An example is:
+Configure the Avro OCF `inputFormat` to load Avro OCF data as follows:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+|type| String| This should be set to `avro_ocf` to read Avro OCF file| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro records. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|schema| JSON Object |Define a reader schema to be used when parsing Avro records, this is useful when parsing multiple versions of Avro OCF file data | no (default will decode using the writer schema contained in the OCF file) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -470,18 +476,19 @@ The `inputFormat` to load data of Avro OCF format. An example is:
 }
 ```
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| This should be set to `avro_ocf` to read Avro OCF file| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro records. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|schema| JSON Object |Define a reader schema to be used when parsing Avro records, this is useful when parsing multiple versions of Avro OCF file data | no (default will decode using the writer schema contained in the OCF file) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
-
 ### Protobuf
 
 > You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
 
-The `inputFormat` to load data of Protobuf format. An example is:
+Configure the Protobuf `inputFormat` to load Protobuf data as follows:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+|type| String| This should be set to `protobuf` to read Protobuf serialized data| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
+
+For example:
 ```json
 "ioConfig": {
   "inputFormat": {
@@ -506,18 +513,18 @@ The `inputFormat` to load data of Protobuf format. An example is:
 }
 ```
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| This should be set to `protobuf` to read Protobuf serialized data| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
-
 ### FlattenSpec
 
-The `flattenSpec` is located in `inputFormat` → `flattenSpec` and is responsible for
-bridging the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model.
-An example `flattenSpec` is:
+The `flattenSpec` bridges the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model. It is an object within the `inputFormat` object.
 
+Configure your `flattenSpec` as follows:
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
+| fields | Specifies the fields of interest and how they are accessed. See [Field flattening specifications](#field-flattening-specifications) for more detail. | `[]` |
+
+For example:
 ```json
 "flattenSpec": {
   "useFieldDiscovery": true,
@@ -528,20 +535,11 @@ An example `flattenSpec` is:
   ]
 }
 ```
-> Conceptually, after input data records are read, the `flattenSpec` is applied first before
-> any other specs such as [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec),
-> [`dimensionsSpec`](./index.md#dimensionsspec), or [`metricsSpec`](./index.md#metricsspec). Keep this in mind when writing
-> your ingestion spec.
+After Druid reads the input data records, it applies the flattenSpec before applying any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec),
+> [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec). Keep this in mind when writing your ingestion spec.
 
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
 and `parquet`.
-
-A `flattenSpec` can have the following components:
-
-| Field | Description | Default |
-|-------|-------------|---------|
-| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec), [`dimensionsSpec`](./index.md#dimensionsspec), and [`metricsSpec`](./index.md#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
-| fields | Specifies the fields of interest and how they are accessed. [See below for details.](#field-flattening-specifications) | `[]` |
 
 #### Field flattening specifications
 
@@ -550,7 +548,7 @@ Each entry in the `fields` list can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type | Options are as follows:<br><br><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
-| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./index.md#timestampspec), [`transformSpec`](./index.md#transformspec), [`dimensionsSpec`](./index.md#dimensionsspec), and [`metricsSpec`](./index.md#metricsspec).| none (required) |
+| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 
 #### Notes on flattening
@@ -663,7 +661,7 @@ the set of ingested dimensions, if missing the discovered fields will make up th
 
 `timeAndDims` parse spec must specify which fields will be extracted as dimensions through the `dimensionSpec`.
 
-[All column types](https://orc.apache.org/docs/types.md) are supported, with the exception of `union` types. Columns of
+[All column types](https://orc.apache.org/docs/types.html) are supported, with the exception of `union` types. Columns of
  `list` type, if filled with primitives, may be used as a multi-value dimension, or specific elements can be extracted with
 `flattenSpec` expressions. Likewise, primitive fields may be extracted from `map` and `struct` types in the same manner.
 Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of
@@ -1157,7 +1155,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | yes |
 | `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
 
 Sample spec:
 

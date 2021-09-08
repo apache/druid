@@ -975,7 +975,8 @@ public class GroupByQueryEngineV2
           query.getDimensions(),
           getDimensionComparators(limitSpec),
           query.getResultRowHasTimestamp(),
-          query.getContextSortByDimsFirst()
+          query.getContextSortByDimsFirst(),
+          keySize
       );
     }
 

@@ -30,6 +30,7 @@ export interface InputFormat {
   readonly findColumnsFromHeader?: boolean;
   readonly skipHeaderRows?: number;
   readonly columns?: string[];
+  readonly delimiter?: string;
   readonly listDelimiter?: string;
   readonly pattern?: string;
   readonly function?: string;
@@ -113,7 +114,7 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'delimiter',
     type: 'string',
     defaultValue: '\t',
-    suggestions: ['\t', '|', '#'],
+    suggestions: ['\t', ';', '|', '#'],
     defined: typeIs('tsv'),
     info: <>A custom delimiter for data values.</>,
   },

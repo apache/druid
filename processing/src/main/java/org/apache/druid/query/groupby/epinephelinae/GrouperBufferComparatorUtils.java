@@ -126,7 +126,8 @@ public class GrouperBufferComparatorUtils
       List<DimensionSpec> dimensions,
       Grouper.BufferComparator[] dimComparators,
       boolean includeTimestamp,
-      boolean sortByDimsFirst
+      boolean sortByDimsFirst,
+      int keyBufferTotalSize
   )
   {
     int dimCount = dimensions.size();
@@ -148,7 +149,8 @@ public class GrouperBufferComparatorUtils
         if (aggIndex >= 0) {
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
           final ValueType valueType = aggregatorFactories[aggIndex].getType();
-          final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
+          // Aggregators start after dimensions
+          final int aggOffset = keyBufferTotalSize + aggregatorOffsets[aggIndex];
 
           aggCount++;
 

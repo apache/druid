@@ -125,6 +125,7 @@ JVM
 JVMs
 Joda
 JsonProperty
+Jupyter
 KMS
 Kerberized
 Kerberos
@@ -140,6 +141,7 @@ Long.MIN_VALUE
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
@@ -240,6 +242,7 @@ datasketches
 datasource
 datasources
 dbcp
+deepstore
 denormalization
 denormalize
 denormalized
@@ -427,6 +430,7 @@ unintuitive
 unioned
 unmergeable
 unmerged
+UNNEST
 unparseable
 unparsed
 unsetting
@@ -678,6 +682,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
@@ -836,8 +841,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
@@ -1198,6 +1201,10 @@ unix_timestamp
 value1
 value2
 valueOf
+IEC
+human_readable_binary_byte_format
+human_readable_decimal_byte_format
+human_readable_decimal_format
  - ../docs/misc/papers-and-talks.md
 RADStack
  - ../docs/operations/api-reference.md
@@ -1603,6 +1610,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+IEC
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2

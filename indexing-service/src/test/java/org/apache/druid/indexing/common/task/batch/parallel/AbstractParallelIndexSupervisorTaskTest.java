@@ -95,6 +95,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CompressionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -702,7 +703,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  static class LocalShuffleClient implements ShuffleClient
+  static class LocalShuffleClient implements ShuffleClient<GenericPartitionLocation>
   {
     private final IntermediaryDataManager intermediaryDataManager;
 
@@ -712,10 +713,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        GenericPartitionLocation location
     ) throws IOException
     {
       final java.util.Optional<ByteSource> zippedFile = intermediaryDataManager.findPartitionFile(
@@ -732,7 +733,17 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           fetchedFile,
           out -> zippedFile.get().copyTo(out)
       );
-      return fetchedFile;
+      final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
+      try {
+        org.apache.commons.io.FileUtils.forceMkdir(unzippedDir);
+        CompressionUtils.unzip(fetchedFile, unzippedDir);
+      }
+      finally {
+        if (!fetchedFile.delete()) {
+          LOG.warn("Failed to delete temp file[%s]", zippedFile);
+        }
+      }
+      return unzippedDir;
     }
   }
 

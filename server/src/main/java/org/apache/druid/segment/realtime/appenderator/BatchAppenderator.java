@@ -84,7 +84,7 @@ import java.util.stream.Collectors;
  * reasons, the code for creating segments was all handled by the same code path in that class. The code
  * was correct but inefficient for batch ingestion from a memory perspective. If the input file being processed
  * by batch ingestion had enough sinks & hydrants produced then it may run out of memory either in the
- * hydrant creation phase (append) of this class or in the merge hydrants phase. Therefore a new class,
+ * hydrant creation phase (append) of this class or in the merge hydrants phase. Therefore, a new class,
  * {@code BatchAppenderator}, this class, was created to specialize in batch ingestion and the old class
  * for stream ingestion was renamed to {@link StreamAppenderator}.
  * <p>
@@ -321,10 +321,10 @@ public class BatchAppenderator implements Appenderator
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, false);
   }
 
-  @Override
   /**
    * Returns all active segments regardless whether they are in memory or persisted
    */
+  @Override
   public List<SegmentIdWithShardSpec> getSegments()
   {
     return ImmutableList.copyOf(sinksMetadata.keySet());
@@ -568,9 +568,9 @@ public class BatchAppenderator implements Appenderator
 
     log.info("Preparing to push...");
 
-    // get the dirs for the identfiers:
-    List<File> identifiersDirs = new ArrayList<>();
+    // Traverse identifiers, load their sink, and push it:
     int totalHydrantsMerged = 0;
+    final List<DataSegment> dataSegments = new ArrayList<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {
       SinkMetadata sm = sinksMetadata.get(identifier);
       if (sm == null) {
@@ -580,34 +580,28 @@ public class BatchAppenderator implements Appenderator
       if (persistedDir == null) {
         throw new ISE("Sink for identifier[%s] not found in local file system", identifier);
       }
-      identifiersDirs.add(persistedDir);
       totalHydrantsMerged += sm.getNumHydrants();
-    }
-
-    // push all sinks for identifiers:
-    final List<DataSegment> dataSegments = new ArrayList<>();
-    for (File identifier : identifiersDirs) {
 
       // retrieve sink from disk:
-      Pair<SegmentIdWithShardSpec, Sink> identifiersAndSinks;
+      Sink sinkForIdentifier;
       try {
-        identifiersAndSinks = getIdentifierAndSinkForPersistedFile(identifier);
+        sinkForIdentifier = getSinkForIdentifierPath(identifier, persistedDir);
       }
       catch (IOException e) {
-        throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
+        throw new ISE(e, "Failed to retrieve sinks for identifier[%s] in path[%s]", identifier, persistedDir);
       }
 
-      // push it:
+      // push sink:
       final DataSegment dataSegment = mergeAndPush(
-          identifiersAndSinks.lhs,
-          identifiersAndSinks.rhs
+          identifier,
+          sinkForIdentifier
       );
 
       // record it:
       if (dataSegment != null) {
         dataSegments.add(dataSegment);
       } else {
-        log.warn("mergeAndPush[%s] returned null, skipping.", identifiersAndSinks.lhs);
+        log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
       }
 
     }
@@ -862,15 +856,9 @@ public class BatchAppenderator implements Appenderator
     return retVal;
   }
 
-  private Pair<SegmentIdWithShardSpec, Sink> getIdentifierAndSinkForPersistedFile(File identifierPath)
+  private Sink getSinkForIdentifierPath(SegmentIdWithShardSpec identifier, File identifierPath)
       throws IOException
   {
-
-    final SegmentIdWithShardSpec identifier = objectMapper.readValue(
-        new File(identifierPath, IDENTIFIER_FILE_NAME),
-        SegmentIdWithShardSpec.class
-    );
-
     // To avoid reading and listing of "merged" dir and other special files
     final File[] sinkFiles = identifierPath.listFiles(
         (dir, fileName) -> !(Ints.tryParse(fileName) == null)
@@ -901,7 +889,7 @@ public class BatchAppenderator implements Appenderator
       );
     }
 
-    Sink currSink = new Sink(
+    Sink retVal = new Sink(
         identifier.getInterval(),
         schema,
         identifier.getShardSpec(),
@@ -912,8 +900,8 @@ public class BatchAppenderator implements Appenderator
         null,
         hydrants
     );
-    currSink.finishWriting(); // this sink is not writable
-    return new Pair<>(identifier, currSink);
+    retVal.finishWriting(); // this sink is not writable
+    return retVal;
   }
 
   // This function does not remove the sink from its tracking Map (sinks), the caller is responsible for that
