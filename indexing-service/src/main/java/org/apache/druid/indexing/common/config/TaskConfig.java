@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
@@ -40,18 +41,20 @@ import java.util.List;
  */
 public class TaskConfig
 {
+  private static final Logger log = new Logger(TaskConfig.class);
+
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
       "org.apache.hadoop:hadoop-client:2.8.5"
   );
 
-  public enum BatchProcesingMode
+  public enum BatchProcessingMode
   {
     LEGACY,
     CLOSED_SEGMENTS,
     CLOSED_SEGMENTS_SINKS
   }
 
-  public static final BatchProcesingMode BATCH_PROCESSING_MODE_DEFAULT = BatchProcesingMode.CLOSED_SEGMENTS;
+  public static final BatchProcessingMode BATCH_PROCESSING_MODE_DEFAULT = BatchProcessingMode.CLOSED_SEGMENTS;
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
@@ -90,7 +93,7 @@ public class TaskConfig
   private final boolean batchMemoryMappedIndex;
 
   @JsonProperty
-  private final BatchProcesingMode batchProcessingMode;
+  private final BatchProcessingMode batchProcessingMode;
 
   @JsonCreator
   public TaskConfig(
@@ -137,13 +140,17 @@ public class TaskConfig
     // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
     if (batchMemoryMappedIndex) {
-      this.batchProcessingMode = BatchProcesingMode.LEGACY;
-    } else if (EnumUtils.isValidEnum(BatchProcesingMode.class, batchProcesingMode)) {
-      this.batchProcessingMode = BatchProcesingMode.valueOf(batchProcesingMode);
+      this.batchProcessingMode = BatchProcessingMode.LEGACY;
+    } else if (EnumUtils.isValidEnum(BatchProcessingMode.class, batchProcesingMode)) {
+      this.batchProcessingMode = BatchProcessingMode.valueOf(batchProcesingMode);
     } else {
-      // batchProcessingMode input string is invalid, just use the default...log message somewhere???
-      this.batchProcessingMode = BatchProcesingMode.CLOSED_SEGMENTS; // Default
+      // batchProcessingMode input string is invalid, log & use the default.
+      this.batchProcessingMode = BatchProcessingMode.CLOSED_SEGMENTS; // Default
+      log.warn("Invalid batch processing mode argument value:[%s], defaulting to[%s] ",
+               batchProcesingMode, this.batchProcessingMode
+      );
     }
+    log.info("Batch processing mode:[%s]", this.batchProcessingMode);
   }
 
   @JsonProperty
@@ -227,7 +234,7 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public BatchProcesingMode getBatchProcessingMode()
+  public BatchProcessingMode getBatchProcessingMode()
   {
     return batchProcessingMode;
   }

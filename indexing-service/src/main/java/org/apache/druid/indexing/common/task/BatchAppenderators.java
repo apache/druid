@@ -72,7 +72,7 @@ public final class BatchAppenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.LEGACY) {
+    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.LEGACY) {
       return appenderatorsManager.createLegacyOfflineAppenderatorForTask(
           taskId,
           dataSchema,
@@ -85,7 +85,7 @@ public final class BatchAppenderators
           rowIngestionMeters,
           parseExceptionHandler
           );
-    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.CLOSED_SEGMENTS) {
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS) {
       return appenderatorsManager.createClosedSegmentsOfflineAppenderatorForTask(
           taskId,
           dataSchema,
@@ -98,7 +98,7 @@ public final class BatchAppenderators
           rowIngestionMeters,
           parseExceptionHandler
           );
-    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcesingMode.CLOSED_SEGMENTS_SINKS) {
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS) {
       return appenderatorsManager.createOfflineAppenderatorForTask(
           taskId,
           dataSchema,
