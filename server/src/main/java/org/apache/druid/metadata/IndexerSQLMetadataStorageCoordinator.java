@@ -838,17 +838,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         if (versionCompare != 0) {
                           return versionCompare;
                         } else {
-                          return Integer.compare(
-                              id1.getShardSpec().getPartitionNum(),
-                              id2.getShardSpec().getPartitionNum()
-                          );
+                          return Integer.compare(id1.getShardSpec().getPartitionNum(), id2.getShardSpec().getPartitionNum());
                         }
                       })
                       .orElse(null);
 
       // Find the major version of existing segments
-      @Nullable
-      final String versionOfExistingChunks;
+      @Nullable final String versionOfExistingChunks;
       if (!existingChunks.isEmpty()) {
         versionOfExistingChunks = existingChunks.get(0).getVersion();
       } else if (!pendings.isEmpty()) {
@@ -968,7 +964,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
               dbTables.getSegmentsTable(),
               connector.getQuoteString()
           )
@@ -1020,7 +1016,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String segmentIds = segmentList.stream()
           .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
           .collect(Collectors.joining(","));
-      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)",dbTables.getSegmentsTable(),segmentIds))
+      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
           .mapTo(String.class)
           .list();
       existedSegments.addAll(existIds);
