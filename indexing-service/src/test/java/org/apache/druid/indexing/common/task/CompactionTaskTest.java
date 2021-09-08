@@ -1747,7 +1747,20 @@ public class CompactionTaskTest
     )
     {
       super(
-          new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+          new TaskConfig(
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null,
+              null,
+              false,
+              false,
+              TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+          ),
           null,
           taskActionClient,
           null,
