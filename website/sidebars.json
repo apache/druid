@@ -242,7 +242,7 @@
       "development/extensions-contrib/time-min-max",
       "development/extensions-contrib/gce-extensions",
       "development/extensions-contrib/aliyun-oss",
-      "development/extensions-contrib/prometheus-emitter",
+      "development/extensions-contrib/prometheus",
       "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",
