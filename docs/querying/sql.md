@@ -1184,7 +1184,7 @@ This query goes a step further and shows the overall profile of available, non-r
 ```sql
 SELECT ABS("num_rows" /  1000000) as "bucket",
   COUNT(*) as segments,
-  SUM("size") / 1048576 as totalSizeMb,
+  SUM("size") / 1048576 as totalSizeMiB,
   MIN("size") / 1048576 as minSizeMb,
   AVG("size") / 1048576 as averageSizeMb,
   MAX("size") / 1048576 as maxSizeMb,
