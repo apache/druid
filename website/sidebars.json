@@ -126,6 +126,7 @@
           "operations/security-user-auth",
           "operations/auth-ldap",
           "operations/password-provider",
+          "operations/dynamic-config-provider",
           "design/auth",
           "operations/tls-support"
 
@@ -219,6 +220,8 @@
       "development/extensions-core/simple-client-sslcontext",
       "development/extensions-core/stats",
       "development/extensions-core/test-stats",
+      "development/extensions-core/druid-aws-rds",
+      "development/extensions-core/kubernetes",
       "development/extensions-contrib/ambari-metrics-emitter",
       "development/extensions-contrib/cassandra",
       "development/extensions-contrib/cloudfiles",
@@ -239,6 +242,8 @@
       "development/extensions-contrib/time-min-max",
       "development/extensions-contrib/gce-extensions",
       "development/extensions-contrib/aliyun-oss",
+      "development/extensions-contrib/prometheus",
+      "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",
       "ingestion/standalone-realtime"
