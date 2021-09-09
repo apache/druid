@@ -87,6 +87,32 @@ public interface AppenderatorsManager
   /**
    * Creates an Appenderator suited for batch ingestion.
    */
+  Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  );
+
+  Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  );
+
   Appenderator createOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
@@ -97,8 +123,7 @@ public interface AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useLegacyBatchProcessing
+      ParseExceptionHandler parseExceptionHandler
   );
 
   /**
