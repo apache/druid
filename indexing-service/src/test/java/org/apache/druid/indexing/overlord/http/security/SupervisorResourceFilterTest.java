@@ -41,6 +41,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -57,6 +58,8 @@ public class SupervisorResourceFilterTest
 
   private ContainerRequest containerRequest;
 
+  private List<Object> mocksToVerify;
+
   @Before
   public void setup()
   {
@@ -65,6 +68,7 @@ public class SupervisorResourceFilterTest
     resourceFilter = new SupervisorResourceFilter(authorizerMapper, supervisorManager);
 
     containerRequest = EasyMock.createMock(ContainerRequest.class);
+    mocksToVerify = new ArrayList<>();
   }
 
   @Test
@@ -73,13 +77,23 @@ public class SupervisorResourceFilterTest
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.WRITE, true);
     ContainerRequest filteredRequest = resourceFilter.filter(containerRequest);
     Assert.assertNotNull(filteredRequest);
+    verifyMocks();
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
   public void testGetWhenUserHasNoWriteAccess()
   {
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.WRITE, false);
-    resourceFilter.filter(containerRequest);
+
+    ForbiddenException expected = null;
+    try {
+      resourceFilter.filter(containerRequest);
+    }
+    catch (ForbiddenException e) {
+      expected = e;
+    }
+    Assert.assertNotNull(expected);
+    verifyMocks();
   }
 
   @Test
@@ -88,13 +102,23 @@ public class SupervisorResourceFilterTest
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "POST", "datasource1", Action.WRITE, true);
     ContainerRequest filteredRequest = resourceFilter.filter(containerRequest);
     Assert.assertNotNull(filteredRequest);
+    verifyMocks();
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
   public void testPostWhenUserHasNoWriteAccess()
   {
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "POST", "datasource1", Action.WRITE, false);
-    resourceFilter.filter(containerRequest);
+
+    ForbiddenException expected = null;
+    try {
+      resourceFilter.filter(containerRequest);
+    }
+    catch (ForbiddenException e) {
+      expected = e;
+    }
+    Assert.assertNotNull(expected);
+    verifyMocks();
   }
 
   private void setExpectations(
@@ -147,13 +171,31 @@ public class SupervisorResourceFilterTest
         .atLeastOnce();
     resourceFilter.setReq(servletRequest);
 
-    EasyMock.replay(authorizerMapper);
-    EasyMock.replay(supervisorSpec);
-    EasyMock.replay(supervisorManager);
-    EasyMock.replay(servletRequest);
-    EasyMock.replay(authorizer);
-    EasyMock.replay(authResult);
-    EasyMock.replay(containerRequest);
+    mocksToVerify = Arrays.asList(
+        authorizerMapper,
+        supervisorSpec,
+        supervisorManager,
+        servletRequest,
+        authorizer,
+        authResult,
+        containerRequest
+    );
+
+    replayMocks();
+  }
+
+  private void replayMocks()
+  {
+    for (Object mock : mocksToVerify) {
+      EasyMock.replay(mock);
+    }
+  }
+
+  private void verifyMocks()
+  {
+    for (Object mock : mocksToVerify) {
+      EasyMock.verify(mock);
+    }
   }
 
   private List<PathSegment> getPathSegments(String path)
