@@ -91,13 +91,11 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
         "No dataSources found to perform authorization checks"
     );
 
-    Function<String, ResourceAction> resourceActionFunction = getAction(request) == Action.READ ?
-                                                              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
-                                                              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
-
+    // Supervisor APIs should always require DATASOURCE WRITE access
+    // as they deal with ingestion related information
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         getReq(),
-        Iterables.transform(spec.getDataSources(), resourceActionFunction),
+        Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
         getAuthorizerMapper()
     );
 
