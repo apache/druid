@@ -202,7 +202,8 @@ public class ForkingTaskRunnerTest
             new Period("PT10S"),
             ImmutableList.of(),
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
         ),
         new WorkerConfig(),
         new Properties(),
@@ -255,7 +256,8 @@ public class ForkingTaskRunnerTest
             new Period("PT10S"),
             ImmutableList.of(),
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
         ),
         new WorkerConfig(),
         new Properties(),
@@ -312,7 +314,8 @@ public class ForkingTaskRunnerTest
             new Period("PT10S"),
             ImmutableList.of(),
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
         ),
         new WorkerConfig(),
         new Properties(),
