@@ -21,23 +21,30 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
@@ -61,7 +68,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -75,6 +81,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -87,12 +94,7 @@ import java.util.stream.Collectors;
  * hydrant creation phase (append) of this class or in the merge hydrants phase. Therefore, a new class,
  * {@code BatchAppenderator}, this class, was created to specialize in batch ingestion and the old class
  * for stream ingestion was renamed to {@link StreamAppenderator}.
- * <p>
- * This class is not thread safe!.
- * It is important to realize that this class is completely synchronous despite the {@link Appenderator}
- * interface suggesting otherwise. The concurrency was not required so it has been completely removed.
  */
-@NotThreadSafe
 public class BatchAppenderator implements Appenderator
 {
   public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
@@ -110,15 +112,30 @@ public class BatchAppenderator implements Appenderator
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
-  private final Map<SegmentIdWithShardSpec, Sink> sinks = new HashMap<>();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
 
+  private volatile ListeningExecutorService persistExecutor = null;
+  private volatile ListeningExecutorService pushExecutor = null;
+  private final int maxPendingPersists;
+  private static final int PERSIST_WARN_DELAY = 1000;
+  private volatile Throwable persistError;
+
+
+  /**
+   * The following map used to be accessed concurrently but not anymore since it is fully copied
+   * then initalized just before scheduling the persit callable in the {@link #persistAll(Committer)}
+   * method, so no longer need to use a syncronized map.
+   */
+  private final Map<SegmentIdWithShardSpec, Sink> sinks = new HashMap<>();
   /**
    * The following sinks metadata map and associated class are the way to retain metadata now that sinks
-   * are being completely removed from memory after each incremental persist.
+   * are being completely removed from memory after each incremental persist. This map needs to be concurrent
+   * since it is mutated in various methods potentially in different threads.
+   * For example mutated in {@link #add}  when adding rows
+   * and accessed/mutated in {@link #persistHydrant} during persists.
    */
-  private final Map<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new HashMap<>();
+  private final ConcurrentHashMap<SegmentIdWithShardSpec, SinkMetadata> sinksMetadata = new ConcurrentHashMap<>();
 
   // This variable updated in add(), persist(), and drop()
   private int rowsCurrentlyInMemory = 0;
@@ -158,6 +175,7 @@ public class BatchAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+    maxPendingPersists = tuningConfig.getMaxPendingPersists();
   }
 
   @Override
@@ -177,7 +195,51 @@ public class BatchAppenderator implements Appenderator
   {
     tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
+    initializeExecutors();
     return null;
+  }
+
+  private void throwPersistErrorIfExists()
+  {
+    if (persistError != null) {
+      throw new RE(persistError, "Error while persisting");
+    }
+  }
+
+  private void initializeExecutors()
+  {
+    log.debug("There will be up to[%d] pending persists", maxPendingPersists);
+
+    if (persistExecutor == null) {
+      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      persistExecutor = MoreExecutors.listeningDecorator(
+          Execs.newBlockingSingleThreaded(
+              "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-persist",
+              maxPendingPersists
+          )
+      );
+    }
+
+    if (pushExecutor == null) {
+      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      pushExecutor = MoreExecutors.listeningDecorator(
+          Execs.newBlockingSingleThreaded(
+              "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-push",
+              1
+          )
+      );
+    }
+
+  }
+
+  private void shutdownExecutors()
+  {
+    if (persistExecutor != null) {
+      persistExecutor.shutdownNow();
+    }
+    if (pushExecutor != null) {
+      pushExecutor.shutdownNow();
+    }
   }
 
   @Override
@@ -188,6 +250,8 @@ public class BatchAppenderator implements Appenderator
       final boolean allowIncrementalPersists
   ) throws IndexSizeExceededException, SegmentNotWritableException
   {
+
+    throwPersistErrorIfExists();
 
     Preconditions.checkArgument(
         committerSupplier == null,
@@ -240,7 +304,7 @@ public class BatchAppenderator implements Appenderator
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory += numAddedRows;
-    bytesCurrentlyInMemory += bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd;
+    bytesCurrentlyInMemory += (bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
     totalRows += numAddedRows;
     sinksMetadata.computeIfAbsent(identifier, unused -> new SinkMetadata()).addRows(numAddedRows);
 
@@ -267,6 +331,7 @@ public class BatchAppenderator implements Appenderator
           maxBytesTuningConfig
       ));
     }
+
     if (persist) {
       // persistAll clears rowsCurrentlyInMemory, no need to update it.
       log.info("Incremental persist to disk because %s.", String.join(",", persistReasons));
@@ -277,7 +342,7 @@ public class BatchAppenderator implements Appenderator
         if (sinkEntry != null) {
           bytesToBePersisted += sinkEntry.getBytesInMemory();
           if (sinkEntry.swappable()) {
-            // Code for batch no longer memory maps hydrants but they still take memory...
+            // Code for batch no longer memory maps hydrants, but they still take memory...
             int memoryStillInUse = calculateMemoryUsedByHydrant();
             bytesCurrentlyInMemory += memoryStillInUse;
           }
@@ -315,8 +380,23 @@ public class BatchAppenderator implements Appenderator
         throw new RuntimeException(errorMessage);
       }
 
-      persistAllAndRemoveSinks();
+      Futures.addCallback(
+          persistAll(null),
+          new FutureCallback<Object>()
+          {
+            @Override
+            public void onSuccess(@Nullable Object result)
+            {
+              // do nothing
+            }
 
+            @Override
+            public void onFailure(Throwable t)
+            {
+              persistError = t;
+            }
+          }
+      );
     }
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, false);
   }
@@ -388,7 +468,6 @@ public class BatchAppenderator implements Appenderator
           null
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
-
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
     }
@@ -411,20 +490,22 @@ public class BatchAppenderator implements Appenderator
   @Override
   public void clear()
   {
-    clear(true);
+    throwPersistErrorIfExists();
+    clear(sinks, true);
   }
 
-  private void clear(boolean removeOnDiskData)
+  private void clear(Map<SegmentIdWithShardSpec, Sink> sinksToClear, boolean removeOnDiskData)
   {
     // Drop commit metadata, then abandon all segments.
-    log.info("Clearing all[%d] sinks & their hydrants, removing data on disk: [%s]", sinks.size(), removeOnDiskData);
+    log.info("Clearing all[%d] sinks & their hydrants, removing data on disk: [%s]",
+             sinksToClear.size(), removeOnDiskData);
     // Drop everything.
-    Iterator<Map.Entry<SegmentIdWithShardSpec, Sink>> sinksIterator = sinks.entrySet().iterator();
+    Iterator<Map.Entry<SegmentIdWithShardSpec, Sink>> sinksIterator = sinksToClear.entrySet().iterator();
     sinksIterator.forEachRemaining(entry -> {
-      clearSinkMetadata(entry.getKey(), entry.getValue(), removeOnDiskData);
+      clearSinkMemoryCountersAndDiskStoredData(entry.getKey(), entry.getValue(), removeOnDiskData);
       sinksIterator.remove();
     });
-    metrics.setSinkCount(sinks.size());
+    metrics.setSinkCount(sinksToClear.size());
   }
 
   @Override
@@ -442,7 +523,7 @@ public class BatchAppenderator implements Appenderator
       totalRows = Math.max(totalRowsAfter, 0);
     }
     if (sink != null) {
-      clearSinkMetadata(identifier, sink, true);
+      clearSinkMemoryCountersAndDiskStoredData(identifier, sink, true);
       if (sinks.remove(identifier) == null) {
         log.warn("Sink for identifier[%s] not found, skipping", identifier);
       }
@@ -453,99 +534,123 @@ public class BatchAppenderator implements Appenderator
   @Override
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
+
+    throwPersistErrorIfExists();
+
     if (committer != null) {
       throw new ISE("committer must be null for BatchAppenderator");
     }
-    persistAllAndRemoveSinks();
-    return Futures.immediateFuture(null);
+    // Get ready to persist all sinks:
+    final Map<SegmentIdWithShardSpec, Sink> sinksToPersist = swapSinks();
+
+    final Stopwatch runExecStopwatch = Stopwatch.createStarted();
+    ListenableFuture<Object> future = persistExecutor.submit(
+        () -> {
+          log.info("Spawning intermediate persist");
+
+          // figure out hydrants (indices) to persist:
+          final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
+          int numPersistedRows = 0;
+          long bytesPersisted = 0;
+          int totalHydrantsCount = 0;
+          final long totalSinks = sinksToPersist.size();
+          for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinksToPersist.entrySet()) {
+            final SegmentIdWithShardSpec identifier = entry.getKey();
+            final Sink sink = entry.getValue();
+            if (sink == null) {
+              throw new ISE("No sink for identifier: %s", identifier);
+            }
+
+            final List<FireHydrant> hydrants = Lists.newArrayList(sink);
+            // Since everytime we persist we also get rid of the in-memory references to sink & hydrants
+            // the invariant of exactly one, always swappable, sink with exactly one unpersisted hydrant must hold
+            int totalHydrantsForSink = hydrants.size();
+            if (totalHydrantsForSink != 1) {
+              throw new ISE("There should be only one hydrant for identifier[%s] but there are[%s]",
+                            identifier, totalHydrantsForSink
+              );
+            }
+            totalHydrantsCount++;
+            numPersistedRows += sink.getNumRowsInMemory();
+            bytesPersisted += sink.getBytesInMemory();
+
+            if (!sink.swappable()) {
+              throw new ISE("Sink is not swappable![%s]", identifier);
+            }
+            indexesToPersist.add(Pair.of(sink.swap(), identifier));
+
+          }
+
+          if (indexesToPersist.isEmpty()) {
+            log.info("No indexes will be persisted");
+          }
+          final Stopwatch persistStopwatch = Stopwatch.createStarted();
+          try {
+            for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
+              metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
+            }
+
+            log.info(
+                "Persisted in-memory data for segments: %s",
+                indexesToPersist.stream()
+                                .filter(itp -> itp.rhs != null)
+                                .map(itp -> itp.rhs.asSegmentId().toString())
+                                .distinct()
+                                .collect(Collectors.joining(", "))
+            );
+            log.info(
+                "Persisted stats: processed rows: [%d], persisted rows[%d], persisted sinks: [%d], persisted fireHydrants (across sinks): [%d]",
+                rowIngestionMeters.getProcessed(),
+                numPersistedRows,
+                totalSinks,
+                totalHydrantsCount
+            );
+
+            // note that we do not need to reset sinks metadata since we did it at the start...
+
+          }
+          catch (Exception e) {
+            metrics.incrementFailedPersists();
+            throw e;
+          }
+          finally {
+            metrics.incrementNumPersists();
+            long persistMillis = persistStopwatch.elapsed(TimeUnit.MILLISECONDS);
+            metrics.incrementPersistTimeMillis(persistMillis);
+            persistStopwatch.stop();
+            // make sure no push can start while persisting:
+            log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
+                     numPersistedRows, bytesPersisted, persistMillis
+            );
+            log.info("Persist is done.");
+          }
+          return null;
+        }
+    );
+
+    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    metrics.incrementPersistBackPressureMillis(startDelay);
+    if (startDelay > PERSIST_WARN_DELAY) {
+      log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
+    }
+    runExecStopwatch.stop();
+    return future;
   }
 
   /**
-   * Persist all sinks & their hydrants, keep their metadata, and then remove them completely from
-   * memory (to be resurrected right before merge & push)
+   * All sinks will be persisted so do a shallow copy of the Sinks map, reset
+   * the map and metadata (i.e. memory consumption counters) so that ingestion can go on
+   * @return The map of sinks to persist, this map will be garbage collected after
+   * persist is complete since we will not be keeping a reference to it...
    */
-  private void persistAllAndRemoveSinks()
+  Map<SegmentIdWithShardSpec, Sink> swapSinks()
   {
-
-    final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
-    int numPersistedRows = 0;
-    long bytesPersisted = 0L;
-    int totalHydrantsCount = 0;
-    final long totalSinks = sinks.size();
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      final SegmentIdWithShardSpec identifier = entry.getKey();
-      final Sink sink = entry.getValue();
-      if (sink == null) {
-        throw new ISE("No sink for identifier: %s", identifier);
-      }
-
-      final List<FireHydrant> hydrants = Lists.newArrayList(sink);
-      // Since everytime we persist we also get rid of the in-memory references to sinks & hydrants
-      // the invariant of exactly one, always swappable, sink with exactly one unpersisted hydrant must hold
-      int totalHydrantsForSink = hydrants.size();
-      if (totalHydrantsForSink != 1) {
-        throw new ISE("There should be only one hydrant for identifier[%s] but there are[%s]",
-                      identifier, totalHydrantsForSink
-        );
-      }
-      totalHydrantsCount += 1;
-      numPersistedRows += sink.getNumRowsInMemory();
-      bytesPersisted += sink.getBytesInMemory();
-
-      if (!sink.swappable()) {
-        throw new ISE("Sink is not swappable![%s]", identifier);
-      }
-      indexesToPersist.add(Pair.of(sink.swap(), identifier));
-
-    }
-
-    if (indexesToPersist.isEmpty()) {
-      log.info("No indexes will be persisted");
-    }
-    final Stopwatch persistStopwatch = Stopwatch.createStarted();
-    try {
-      for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
-        metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
-      }
-
-      log.info(
-          "Persisted in-memory data for segments: %s",
-          indexesToPersist.stream()
-                          .filter(itp -> itp.rhs != null)
-                          .map(itp -> itp.rhs.asSegmentId().toString())
-                          .distinct()
-                          .collect(Collectors.joining(", "))
-      );
-      log.info(
-          "Persisted stats: processed rows: [%d], persisted rows[%d], persisted sinks: [%d], persisted fireHydrants (across sinks): [%d]",
-          rowIngestionMeters.getProcessed(),
-          numPersistedRows,
-          totalSinks,
-          totalHydrantsCount
-      );
-
-    }
-    catch (Exception e) {
-      metrics.incrementFailedPersists();
-      throw e;
-    }
-    finally {
-      metrics.incrementNumPersists();
-      metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
-      persistStopwatch.stop();
-    }
-
-    // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
-    rowsCurrentlyInMemory -= numPersistedRows;
-    bytesCurrentlyInMemory -= bytesPersisted;
-
-    // remove all sinks after persisting:
-    clear(false);
-
-    log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory",
-             numPersistedRows, bytesPersisted);
-
+    Map<SegmentIdWithShardSpec, Sink> retVal = ImmutableMap.copyOf(sinks);
+    sinks.clear();
+    resetSinkMetadata();
+    return retVal;
   }
+
 
   @Override
   public ListenableFuture<SegmentsAndCommitMetadata> push(
@@ -563,53 +668,56 @@ public class BatchAppenderator implements Appenderator
       throw new ISE("Batch ingestion does not require uniquePath");
     }
 
-    // Any sinks not persisted so far need to be persisted before push:
-    persistAllAndRemoveSinks();
-
-    log.info("Preparing to push...");
-
-    // Traverse identifiers, load their sink, and push it:
-    int totalHydrantsMerged = 0;
     final List<DataSegment> dataSegments = new ArrayList<>();
-    for (SegmentIdWithShardSpec identifier : identifiers) {
-      SinkMetadata sm = sinksMetadata.get(identifier);
-      if (sm == null) {
-        throw new ISE("No sink has been processed for identifier[%s]", identifier);
-      }
-      File persistedDir = sm.getPersistedFileDir();
-      if (persistedDir == null) {
-        throw new ISE("Sink for identifier[%s] not found in local file system", identifier);
-      }
-      totalHydrantsMerged += sm.getNumHydrants();
 
-      // retrieve sink from disk:
-      Sink sinkForIdentifier;
-      try {
-        sinkForIdentifier = getSinkForIdentifierPath(identifier, persistedDir);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "Failed to retrieve sinks for identifier[%s] in path[%s]", identifier, persistedDir);
-      }
+    return Futures.transform(
+        persistAll(null), // make sure persists is done before push...
+        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
 
-      // push sink:
-      final DataSegment dataSegment = mergeAndPush(
-          identifier,
-          sinkForIdentifier
-      );
+          log.info("Push started, processsing[%d] sinks", identifiers.size());
 
-      // record it:
-      if (dataSegment != null) {
-        dataSegments.add(dataSegment);
-      } else {
-        log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
-      }
+          int totalHydrantsMerged = 0;
+          for (SegmentIdWithShardSpec identifier : identifiers) {
+            SinkMetadata sm = sinksMetadata.get(identifier);
+            if (sm == null) {
+              throw new ISE("No sink has been processed for identifier[%s]", identifier);
+            }
+            File persistedDir = sm.getPersistedFileDir();
+            if (persistedDir == null) {
+              throw new ISE("Persisted directory for identifier[%s] is null in sink metadata", identifier);
+            }
+            totalHydrantsMerged += sm.getNumHydrants();
 
-    }
+            // retrieve sink from disk:
+            Sink sinkForIdentifier;
+            try {
+              sinkForIdentifier = getSinkForIdentifierPath(identifier, persistedDir);
+            }
+            catch (IOException e) {
+              throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
+            }
 
-    log.info("Push complete: total sinks merged[%d], total hydrants merged[%d]",
-             identifiers.size(), totalHydrantsMerged);
+            // push it:
+            final DataSegment dataSegment = mergeAndPush(
+                identifier,
+                sinkForIdentifier
+            );
 
-    return Futures.immediateFuture(new SegmentsAndCommitMetadata(dataSegments, null));
+            // record it:
+            if (dataSegment != null) {
+              dataSegments.add(dataSegment);
+            } else {
+              log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
+            }
+          }
+          log.info("Push done: total sinks merged[%d], total hydrants merged[%d]",
+                   identifiers.size(), totalHydrantsMerged
+          );
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+        },
+        pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees
+        // that segments are dropped before next add row
+    );
   }
 
   /**
@@ -762,11 +870,37 @@ public class BatchAppenderator implements Appenderator
 
     log.debug("Shutting down...");
 
-    clear(false);
+    try {
 
-    unlockBasePersistDirectory();
+      log.debug("Shutdown & wait for persistExecutor");
+      if (persistExecutor != null) {
+        persistExecutor.shutdown();
+        if (!persistExecutor.awaitTermination(365, TimeUnit.DAYS)) {
+          log.warn("persistExecutor not terminated");
+        }
+        persistExecutor = null;
+      }
+
+      log.debug("Shutdown & wait for pushExecutor");
+      if (pushExecutor != null) {
+        pushExecutor.shutdown();
+        if (!pushExecutor.awaitTermination(365, TimeUnit.DAYS)) {
+          log.warn("pushExecutor not terminated");
+        }
+        pushExecutor = null;
+      }
+
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new ISE("Failed to wait & shutdown executors during close()");
+    }
+
+    log.debug("Waited for and shutdown executors...");
 
     // cleanup:
+    clear(sinks, false);
+    unlockBasePersistDirectory();
     List<File> persistedIdentifiers = getPersistedidentifierPaths();
     if (persistedIdentifiers != null) {
       for (File identifier : persistedIdentifiers) {
@@ -778,9 +912,6 @@ public class BatchAppenderator implements Appenderator
     sinksMetadata.clear();
   }
 
-  /**
-    Nothing to do since there are no executors
-   */
   @Override
   public void closeNow()
   {
@@ -788,8 +919,8 @@ public class BatchAppenderator implements Appenderator
       log.debug("Appenderator already closed, skipping closeNow() call.");
       return;
     }
-
     log.debug("Shutting down immediately...");
+    shutdownExecutors();
   }
 
   private void lockBasePersistDirectory()
@@ -904,10 +1035,17 @@ public class BatchAppenderator implements Appenderator
     return retVal;
   }
 
+  private void resetSinkMetadata()
+  {
+    rowsCurrentlyInMemory = 0;
+    bytesCurrentlyInMemory = 0;
+    metrics.setSinkCount(0);
+  }
+
   // This function does not remove the sink from its tracking Map (sinks), the caller is responsible for that
   // this is because the Map is not synchronized and removing elements from a map while traversing it
-  // throws a concurrent access exception
-  private void clearSinkMetadata(
+  // throws concurrent access exception
+  private void clearSinkMemoryCountersAndDiskStoredData(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean removeOnDiskData
@@ -926,7 +1064,7 @@ public class BatchAppenderator implements Appenderator
           bytesCurrentlyInMemory -= calculateMemoryUsedByHydrant();
         }
       }
-      // totalRows are not decremented when removing the sink from memory, sink was just persisted and it
+      // totalRows are not decremented when removing the sink from memory, sink was just persisted, and it
       // still "lives" but it is in hibernation. It will be revived later just before push.
     }
 
@@ -992,7 +1130,7 @@ public class BatchAppenderator implements Appenderator
       int numRows = indexToPersist.getIndex().size();
 
       // since the sink may have been persisted before it may have lost its
-      // hydrant count, we remember that value in the sinks metadata so we have
+      // hydrant count, we remember that value in the sinks' metadata, so we have
       // to pull it from there....
       SinkMetadata sm = sinksMetadata.get(identifier);
       if (sm == null) {
@@ -1009,7 +1147,7 @@ public class BatchAppenderator implements Appenderator
       sm.setPersistedFileDir(persistDir);
 
       log.info(
-          "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+          "About to persist in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
           indexToPersist.getSegmentId(),
           indexToPersist.getCount(),
           (System.nanoTime() - startTime) / 1000000,
@@ -1072,7 +1210,7 @@ public class BatchAppenderator implements Appenderator
    * This class is used for information that needs to be kept related to Sinks as
    * they are persisted and removed from memory at every incremental persist.
    * The information is used for sanity checks and as information required
-   * for functionality, depending in the field that is used. More info about the
+   * for functionality, depending on the field that is used. More info about the
    * fields is annotated as comments in the class
    */
   private static class SinkMetadata
