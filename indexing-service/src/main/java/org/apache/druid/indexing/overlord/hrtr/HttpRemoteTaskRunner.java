@@ -1635,7 +1635,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (ImmutableWorkerInfo worker : getWorkers()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerCapacity = worker.getWorker().getCapacity();
-      totalPeons.put(workerCategory, totalPeons.getOrDefault(workerCategory, 0L) + workerCapacity);
+      totalPeons.compute(
+          workerCategory,
+          (category, totalCapacity) -> totalCapacity == null ? workerCapacity : totalCapacity + workerCapacity
+      );
     }
 
     return totalPeons;
@@ -1648,7 +1651,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerAvailableCapacity = worker.getAvailableCapacity();
-      totalIdlePeons.put(workerCategory, totalIdlePeons.getOrDefault(workerCategory, 0L) + workerAvailableCapacity);
+      totalIdlePeons.compute(
+          workerCategory,
+          (category, availableCapacity) -> availableCapacity == null ? workerAvailableCapacity : availableCapacity + workerAvailableCapacity
+      );
     }
 
     return totalIdlePeons;
@@ -1661,7 +1667,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (ImmutableWorkerInfo worker : getWorkers()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerUsedCapacity = worker.getCurrCapacityUsed();
-      totalUsedPeons.put(workerCategory, totalUsedPeons.getOrDefault(workerCategory, 0L) + workerUsedCapacity);
+      totalUsedPeons.compute(
+          workerCategory,
+          (category, usedCapacity) -> usedCapacity == null ? workerUsedCapacity : usedCapacity + workerUsedCapacity
+      );
     }
 
     return totalUsedPeons;
@@ -1674,7 +1683,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (Worker worker : getLazyWorkers()) {
       String workerCategory = worker.getCategory();
       int workerLazyPeons = worker.getCapacity();
-      totalLazyPeons.put(workerCategory, totalLazyPeons.getOrDefault(workerCategory, 0L) + workerLazyPeons);
+      totalLazyPeons.compute(
+          workerCategory,
+          (category, lazyPeons) -> lazyPeons == null ? workerLazyPeons : lazyPeons + workerLazyPeons
+      );
     }
 
     return totalLazyPeons;
@@ -1687,7 +1699,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerBlacklistedPeons = worker.getWorker().getCapacity();
-      totalBlacklistedPeons.put(workerCategory, totalBlacklistedPeons.getOrDefault(workerCategory, 0L) + workerBlacklistedPeons);
+      totalBlacklistedPeons.compute(
+          workerCategory,
+          (category, blacklistedPeons) -> blacklistedPeons == null ? workerBlacklistedPeons : blacklistedPeons + workerBlacklistedPeons
+      );
     }
 
     return totalBlacklistedPeons;

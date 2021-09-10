@@ -680,18 +680,29 @@ public class ForkingTaskRunner
     return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
   }
 
+  public long getTotalTaskSlotCountLong()
+  {
+    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
+      return config.getPorts().size();
+    }
+    return config.getEndPort() - config.getStartPort() + 1;
+  }
+
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    Map<String, Long> totalTaskSlots = getTotalTaskSlotCount();
-    Map<String, Long> usedTaskSlots = getUsedTaskSlotCount();
-    return ImmutableMap.of(workerConfig.getCategory(), Math.max(totalTaskSlots.get(workerConfig.getCategory()) - usedTaskSlots.get(workerConfig.getCategory()), 0));
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
     return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+  }
+
+  public long getUsedTaskSlotCountLong()
+  {
+    return portFinder.findUsedPortCount();
   }
 
   @Override

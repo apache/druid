@@ -462,18 +462,26 @@ public class ThreadingTaskRunner
     return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(workerConfig.getCapacity()));
   }
 
+  public long getTotalTaskSlotCountLong()
+  {
+    return workerConfig.getCapacity();
+  }
+
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    Map<String, Long> totalTaskSlots = getTotalTaskSlotCount();
-    Map<String, Long> usedTaskSlots = getTotalTaskSlotCount();
-    return ImmutableMap.of(workerConfig.getCategory(), Math.max(totalTaskSlots.get(workerConfig.getCategory()) - usedTaskSlots.get(workerConfig.getCategory()), 0));
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
     return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(getRunningTasks().size()));
+  }
+
+  public long getUsedTaskSlotCountLong()
+  {
+    return getRunningTasks().size();
   }
 
   @Override
