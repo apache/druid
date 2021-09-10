@@ -32,7 +32,7 @@ Granularity determines how to bucket data across the time dimension, or how to a
 
 For example, use time granularities in [native queries](querying.md) to bucket results by time, and in the `dataSchema` \\ [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec) section of ingestion specifications to segment incoming data.
 
-You can specify a time period as a [simple](#simple-granularities) string, as a [duration](#duration-granularities) in milliseconds, or as an arbritrary ISO8601 [period](#period-granularities).
+You can specify a time period as a [simple](#simple-granularities) string, as a [duration](#duration-granularities) in milliseconds, or as an arbitrary ISO8601 [period](#period-granularities).
 
 ### Simple Granularities
 
