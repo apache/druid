@@ -225,10 +225,10 @@ public class FastJSONReader
     int begin_index = pos;
 
     char c = safeCharAt();
+    c = Character.toLowerCase(c);
     // disit, boolean, null
     if (('0' <= c && c <= '9') || c == '-' ||
-        c == 't' || c == 'f' ||
-        c == 'n') {
+        c == 't' || c == 'f') {
       for (; pos < json.length(); pos++) {
         if (json.charAt(pos) == ',' || json.charAt(pos) == '}' || json.charAt(pos) == ']') {
           break;
