@@ -109,7 +109,8 @@ public class ShuffleDataSegmentPusherTest
         null,
         ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     if (LOCAL.equals(intermediateDataStore)) {

@@ -94,6 +94,62 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    return Appenderators.createOpenSegmentsOffline(
+        taskId,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  @Override
+  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    return Appenderators.createClosedSegmentsOffline(
+        taskId,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  @Override
   public Appenderator createOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
@@ -104,8 +160,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useLegacyBatchProcessing
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return Appenderators.createOffline(
@@ -118,8 +173,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        parseExceptionHandler,
-        useLegacyBatchProcessing
+        parseExceptionHandler
     );
   }
 
