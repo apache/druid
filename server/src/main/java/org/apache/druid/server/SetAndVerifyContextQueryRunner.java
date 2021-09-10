@@ -56,21 +56,22 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 
   public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
+    final long serverTimeout = Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout());
     Query<T> newQuery = QueryContexts.verifyMaxQueryTimeout(
         QueryContexts.withMaxScatterGatherBytes(
-            QueryContexts.withDefaultTimeout(
-                query,
-                Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout())
-            ),
+            QueryContexts.withDefaultTimeout(query, serverTimeout),
             serverConfig.getMaxScatterGatherBytes()
         ),
         serverConfig.getMaxQueryTimeout()
     );
-    return newQuery.withOverriddenContext(
-        ImmutableMap.of(
-            DirectDruidClient.QUERY_FAIL_TIME,
-            this.startTimeMillis + QueryContexts.getTimeout(newQuery)
-        )
-    );
+    // DirectDruidClient.QUERY_FAIL_TIME is used by DirectDruidClient and JsonParserIterator to determine when to
+    // fail with a timeout exception
+    final long failTime;
+    if (QueryContexts.hasTimeout(newQuery)) {
+      failTime = this.startTimeMillis + QueryContexts.getTimeout(newQuery);
+    } else {
+      failTime = this.startTimeMillis + serverTimeout;
+    }
+    return newQuery.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime));
   }
 }
