@@ -70,6 +70,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -95,6 +96,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -180,7 +182,7 @@ public class SqlResourceTest extends CalciteTestBase
         return false;
       }
     };
-    final SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+    final Pair<SchemaPlus, Set<NamedSchema>> rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
         plannerConfig,
@@ -210,7 +212,8 @@ public class SqlResourceTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        rootSchema.lhs,
+        rootSchema.rhs,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,

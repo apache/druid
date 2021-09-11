@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
@@ -65,6 +66,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -168,7 +170,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final SchemaPlus rootSchema =
+    final Pair<SchemaPlus, Set<NamedSchema>> rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
     testRequestLogger = new TestRequestLogger();
 
@@ -187,7 +189,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
                 binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
                 binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-                binder.bind(SchemaPlus.class).toInstance(rootSchema);
+                binder.bind(SchemaPlus.class).toInstance(rootSchema.lhs);
+                for (NamedSchema schema : rootSchema.rhs) {
+                  Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().toInstance(schema);
+                }
                 binder.bind(QueryLifecycleFactory.class)
                       .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
                 binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
@@ -865,12 +870,13 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
-    SchemaPlus rootSchema =
+    Pair<SchemaPlus, Set<NamedSchema>> rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
-              rootSchema,
+              rootSchema.lhs,
+              rootSchema.rhs,
               CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
               operatorTable,
               macroTable,
@@ -954,12 +960,13 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
-    SchemaPlus rootSchema =
+    Pair<SchemaPlus, Set<NamedSchema>> rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
-                rootSchema,
+                rootSchema.lhs,
+                rootSchema.rhs,
                 CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
@@ -45,9 +46,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class PlannerFactory
 {
@@ -61,6 +64,7 @@ public class PlannerFactory
       .build();
 
   private final SchemaPlus rootSchema;
+  private final Map<String, String> schemaResourceTypes;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -72,6 +76,7 @@ public class PlannerFactory
   @Inject
   public PlannerFactory(
       final SchemaPlus rootSchema,
+      final Set<NamedSchema> schemas,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
@@ -89,6 +94,11 @@ public class PlannerFactory
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.druidSchemaName = druidSchemaName;
+
+    this.schemaResourceTypes = Maps.newHashMapWithExpectedSize(schemas.size());
+    for (NamedSchema schema : schemas) {
+      schemaResourceTypes.put(schema.getSchemaName(), schema.getSchemaResourceType());
+    }
   }
 
   /**
@@ -100,6 +110,7 @@ public class PlannerFactory
         operatorTable,
         macroTable,
         plannerConfig,
+        schemaResourceTypes,
         queryContext
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);

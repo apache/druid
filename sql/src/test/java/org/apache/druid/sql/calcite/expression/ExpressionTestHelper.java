@@ -67,6 +67,7 @@ class ExpressionTestHelper
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
+      CalciteTests.createSchemaResourceTypes(),
       ImmutableMap.of()
   );
 

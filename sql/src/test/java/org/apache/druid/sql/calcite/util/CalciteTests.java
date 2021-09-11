@@ -54,6 +54,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -118,6 +119,11 @@ import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
+import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
+import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
+import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
+import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -131,7 +137,6 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -165,9 +170,6 @@ public class CalciteTests
   public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
-  public static final String SYSTEM_SCHEMA_NAME = "sys";
-  public static final String LOOKUP_SCHEMA_NAME = "lookup";
-  public static final String VIEW_SCHEMA_NAME = "view";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -180,9 +182,9 @@ public class CalciteTests
           return Access.OK;
         }
 
-        if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+        if (ResourceType.DATASOURCE.equals(resource.getType()) && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
           return new Access(false);
-        } else if (resource.getType() == ResourceType.VIEW && resource.getName().equals("forbiddenView")) {
+        } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
           return new Access(false);
         } else {
           return Access.OK;
@@ -1030,6 +1032,14 @@ public class CalciteTests
     }
   }
 
+  public static Map<String, String> createSchemaResourceTypes()
+  {
+    return ImmutableMap.of(
+        "druid", ResourceType.DATASOURCE,
+        NamedViewSchema.NAME, ResourceType.VIEW
+    );
+  }
+
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
@@ -1123,7 +1133,7 @@ public class CalciteTests
     );
   }
 
-  public static SchemaPlus createMockRootSchema(
+  public static Pair<SchemaPlus, Set<NamedSchema>> createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -1144,12 +1154,19 @@ public class CalciteTests
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
-    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
-    return rootSchema;
+    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
+    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
+    return Pair.of(
+        rootSchema,
+        ImmutableSet.of(
+            new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+            new NamedSystemSchema(systemSchema),
+            new NamedLookupSchema(lookupSchema)
+        )
+    );
   }
 
-  public static SchemaPlus createMockRootSchema(
+  public static Pair<SchemaPlus, Set<NamedSchema>> createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -1168,12 +1185,21 @@ public class CalciteTests
             CalciteTests.DRUID_SCHEMA_NAME
         );
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    ViewSchema viewSchema = new ViewSchema(viewManager);
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
-    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
-    rootSchema.add(CalciteTests.VIEW_SCHEMA_NAME, new ViewSchema(viewManager));
-    return rootSchema;
+    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
+    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
+    rootSchema.add(NamedViewSchema.NAME, viewSchema);
+    return Pair.of(
+        rootSchema,
+        ImmutableSet.of(
+            new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+            new NamedSystemSchema(systemSchema),
+            new NamedLookupSchema(lookupSchema),
+            new NamedViewSchema(viewSchema)
+        )
+    );
   }
 
   /**

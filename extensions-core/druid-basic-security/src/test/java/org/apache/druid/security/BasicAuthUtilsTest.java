@@ -60,6 +60,7 @@ public class BasicAuthUtilsTest
     final String thirdRoleName = "third-role";
     final ResourceAction fooRead = new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ);
     final ResourceAction barRead = new ResourceAction(new Resource("bar", ResourceType.DATASOURCE), Action.READ);
+    final ResourceAction customRead = new ResourceAction(new Resource("bar", "CUSTOM"), Action.READ);
 
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     mapper.registerModules(new BasicSecurityDruidModule().getJacksonModules());
@@ -76,7 +77,7 @@ public class BasicAuthUtilsTest
           )
       )
     );
-    // bad ResourceType
+    // custom ResourceType
     rawMap.put(
         otherRoleName,
         ImmutableMap.of(
@@ -92,7 +93,7 @@ public class BasicAuthUtilsTest
                     "resourceAction",
                     ImmutableMap.of(
                         "resource",
-                        ImmutableMap.of("name", "bar", "type", "UNKNOWN"),
+                        ImmutableMap.of("name", "bar", "type", "CUSTOM"),
                         "action", "READ"
                     ),
                     "resourceNamePattern", "bar"
@@ -141,11 +142,11 @@ public class BasicAuthUtilsTest
         roleMap.get(someRoleName).getPermissions()
     );
 
-    // this one has an unknown ResourceType, expect only 1 permission to deserialize correctly and failure ignored
+    // this one has custom resource type... this test is somewhat pointless, it made more sense when type was an enum
     Assert.assertTrue(roleMap.containsKey(otherRoleName));
-    Assert.assertEquals(1, roleMap.get(otherRoleName).getPermissions().size());
+    Assert.assertEquals(2, roleMap.get(otherRoleName).getPermissions().size());
     Assert.assertEquals(
-        BasicAuthorizerPermission.makePermissionList(ImmutableList.of(fooRead)),
+        BasicAuthorizerPermission.makePermissionList(ImmutableList.of(fooRead, customRead)),
         roleMap.get(otherRoleName).getPermissions()
     );
 

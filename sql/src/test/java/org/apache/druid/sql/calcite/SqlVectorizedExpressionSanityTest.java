@@ -25,6 +25,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -45,6 +46,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -61,6 +63,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -128,10 +131,11 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     CLOSER.register(WALKER);
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema =
+    final Pair<SchemaPlus, Set<NamedSchema>> rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
-        rootSchema,
+        rootSchema.lhs,
+        rootSchema.rhs,
         CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
