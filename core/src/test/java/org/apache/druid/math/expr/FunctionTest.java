@@ -70,7 +70,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("c", new Double[] {3.1, 4.2, 5.3})
         .put("json", jsonStr)
         .put("jsonInvalid", "{abc}")
-        .put("jsonEmpty", "");
+        .put("jsonEmpty", "")
+        .put("jsonNull", "{\"key\":null}");
     bindings = InputBindings.withMap(builder.build());
   }
 
@@ -644,6 +645,10 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("jsonpath_extract_double(jsonEmpty, 'not_exist')", null);
 
     assertExpr("jsonpath_extract_long(json, '$.array[0].no')", 1L);
+
+    assertExpr("json_extract_string(jsonNull, 'key')", null);
+    assertExpr("json_extract_long(jsonNull, 'key')", null);
+    assertExpr("json_extract_double(jsonNull, 'key')", null);
   }
 
 
