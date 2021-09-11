@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -49,9 +48,11 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -62,6 +63,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class InformationSchema extends AbstractSchema
 {
@@ -111,26 +113,20 @@ public class InformationSchema extends AbstractSchema
       .add("JDBC_TYPE", ValueType.LONG)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
-  private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
-    return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
-  };
-  private static final Function<String, Iterable<ResourceAction>> VIEW_TABLE_RA_GENERATOR = viewName -> {
-    return Collections.singletonList(AuthorizationUtils.VIEW_READ_RA_GENERATOR.apply(viewName));
-  };
 
   private static final String INFO_TRUE = "YES";
   private static final String INFO_FALSE = "NO";
 
   private final SchemaPlus rootSchema;
   private final Map<String, Table> tableMap;
+  private final Map<String, NamedSchema> namedSchemaMap;
   private final AuthorizerMapper authorizerMapper;
-  private final String druidSchemaName;
 
   @Inject
   public InformationSchema(
       @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final SchemaPlus rootSchema,
-      final AuthorizerMapper authorizerMapper,
-      @DruidSchemaName String druidSchemaName
+      Set<NamedSchema> namedSchemas,
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
@@ -140,7 +136,7 @@ public class InformationSchema extends AbstractSchema
         COLUMNS_TABLE, new ColumnsTable()
     );
     this.authorizerMapper = authorizerMapper;
-    this.druidSchemaName = druidSchemaName;
+    this.namedSchemaMap = namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, s -> s));
   }
 
   @Override
@@ -364,7 +360,7 @@ public class InformationSchema extends AbstractSchema
                                         return generateColumnMetadata(
                                             schemaName,
                                             functionName,
-                                            viewMacro.apply(ImmutableList.of()),
+                                            viewMacro.apply(Collections.emptyList()),
                                             typeFactory
                                         );
                                       }
@@ -483,18 +479,21 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (druidSchemaName.equals(subSchema.getName())) {
-      // The "druid" schema's tables represent Druid datasources which require authorization
+    final NamedSchema schema = namedSchemaMap.get(subSchema.getName());
+    if (schema != null && schema.getSchemaResourceType() != null) {
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               subSchema.getTableNames(),
-              DRUID_TABLE_RA_GENERATOR,
+              name ->
+                  Collections.singletonList(
+                      new ResourceAction(new Resource(name, schema.getSchemaResourceType()), Action.READ)
+                  ),
               authorizerMapper
           )
       );
     } else {
-      // for non "druid" schema, we don't filter anything
+      // for schemas with no resource type, or that are not named schemas, we don't filter anything
       return subSchema.getTableNames();
     }
   }
@@ -504,18 +503,21 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (NamedViewSchema.NAME.equals(subSchema.getName())) {
-      // The "view" subschema functions represent views on Druid datasources
+    final NamedSchema schema = namedSchemaMap.get(subSchema.getName());
+    if (schema != null && schema.getSchemaResourceType() != null) {
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               subSchema.getFunctionNames(),
-              VIEW_TABLE_RA_GENERATOR,
+              name ->
+                  Collections.singletonList(
+                      new ResourceAction(new Resource(name, schema.getSchemaResourceType()), Action.READ)
+                  ),
               authorizerMapper
           )
       );
     } else {
-      // for non "druid" schema, we don't filter anything
+      // for schemas with no resource type, or that are not named schemas, we don't filter anything
       return subSchema.getFunctionNames();
     }
   }

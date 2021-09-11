@@ -1144,25 +1144,26 @@ public class CalciteTests
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    Set<NamedSchema> namedSchemas = ImmutableSet.of(
+        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+        new NamedSystemSchema(systemSchema),
+        new NamedLookupSchema(lookupSchema)
+    );
     InformationSchema informationSchema =
         new InformationSchema(
             rootSchema,
-            authorizerMapper,
-            CalciteTests.DRUID_SCHEMA_NAME
+            namedSchemas,
+            authorizerMapper
         );
-    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
     rootSchema.add(NamedSystemSchema.NAME, systemSchema);
     rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
     return Pair.of(
         rootSchema,
-        ImmutableSet.of(
-            new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-            new NamedSystemSchema(systemSchema),
-            new NamedLookupSchema(lookupSchema)
-        )
+        namedSchemas
     );
   }
 
@@ -1177,15 +1178,23 @@ public class CalciteTests
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    ViewSchema viewSchema = new ViewSchema(viewManager);
+
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    Set<NamedSchema> namedSchemas = ImmutableSet.of(
+        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+        new NamedSystemSchema(systemSchema),
+        new NamedLookupSchema(lookupSchema),
+        new NamedViewSchema(viewSchema)
+    );
     InformationSchema informationSchema =
         new InformationSchema(
             rootSchema,
-            authorizerMapper,
-            CalciteTests.DRUID_SCHEMA_NAME
+            namedSchemas,
+            authorizerMapper
         );
-    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    ViewSchema viewSchema = new ViewSchema(viewManager);
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
     rootSchema.add(NamedSystemSchema.NAME, systemSchema);
@@ -1193,12 +1202,7 @@ public class CalciteTests
     rootSchema.add(NamedViewSchema.NAME, viewSchema);
     return Pair.of(
         rootSchema,
-        ImmutableSet.of(
-            new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-            new NamedSystemSchema(systemSchema),
-            new NamedLookupSchema(lookupSchema),
-            new NamedViewSchema(viewSchema)
-        )
+        namedSchemas
     );
   }
 
