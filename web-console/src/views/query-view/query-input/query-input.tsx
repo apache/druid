@@ -126,7 +126,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   static makeDocHtml(item: any) {
     return `
 <div class="doc-name">${escape(item.caption)}</div>
-<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-syntax">${item.syntax}</div>
 <div class="doc-description">${escape(item.description)}</div>`;
   }
 

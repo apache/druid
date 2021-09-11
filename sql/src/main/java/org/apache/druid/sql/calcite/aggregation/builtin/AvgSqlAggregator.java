@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -38,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -109,7 +111,12 @@ public class AvgSqlAggregator implements SqlAggregator
       expression = null;
     } else {
       // if the filter or anywhere else defined a virtual column for us, re-use it
-      VirtualColumn vc = virtualColumnRegistry.getVirtualColumnByExpression(arg.getExpression());
+      final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rowSignature,
+          project,
+          Iterables.getOnlyElement(aggregateCall.getArgList())
+      );
+      VirtualColumn vc = virtualColumnRegistry.getVirtualColumnByExpression(arg.getExpression(), resolutionArg.getType());
       fieldName = vc != null ? vc.getOutputName() : null;
       expression = vc != null ? null : arg.getExpression();
     }

@@ -50,7 +50,9 @@ Expressions can contain variables. Variable names may contain letters, digits, '
 
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values, as follows:  
+* When treated as a scalar type, the expression is automatically transformed so that the scalar operation is applied across all values of the multi-valued type, mimicking Druid's native behavior. 
+* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to the `UNNEST` operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
 
 
 The following built-in functions are available.
@@ -286,3 +288,12 @@ supported features:
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
 * other: `parse_long` is supported for numeric and string types
+
+
+## Other functions
+
+| function | description |
+| --- | --- |
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |

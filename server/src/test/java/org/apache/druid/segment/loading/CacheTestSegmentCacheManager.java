@@ -48,6 +48,18 @@ public class CacheTestSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public boolean reserve(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean release(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void cleanup(DataSegment segment)
   {
     segmentsInTrash.add(segment);

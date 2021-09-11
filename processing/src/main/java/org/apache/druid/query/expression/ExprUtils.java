@@ -88,7 +88,7 @@ public class ExprUtils
     return new PeriodGranularity(period, origin, timeZone);
   }
 
-  static String createErrMsg(String functionName, String msg)
+  public static String createErrMsg(String functionName, String msg)
   {
     String prefix = "Function[" + functionName + "] ";
     return prefix + msg;

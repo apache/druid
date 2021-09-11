@@ -197,7 +197,7 @@ public class ThreadingTaskRunner
                             Thread.currentThread()
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
-                            TaskStatus taskStatus = null;
+                            TaskStatus taskStatus;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
@@ -212,12 +212,13 @@ public class ThreadingTaskRunner
                             }
                             catch (Throwable t) {
                               LOGGER.error(t, "Exception caught while running the task.");
+                              taskStatus = TaskStatus.failure(
+                                  task.getId(),
+                                  "Failed with an exception. See indexer logs for more details."
+                              );
                             }
                             finally {
                               taskWorkItem.setState(RunnerTaskState.NONE);
-                              if (taskStatus == null) {
-                                taskStatus = TaskStatus.failure(task.getId());
-                              }
                               Thread.currentThread().setName(priorThreadName);
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);

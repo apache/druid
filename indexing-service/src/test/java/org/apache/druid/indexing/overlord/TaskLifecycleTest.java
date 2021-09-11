@@ -602,7 +602,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false,
+                                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -929,7 +930,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     }
 
     final Task killUnusedSegmentsTask =
-        new KillUnusedSegmentsTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
+        new KillUnusedSegmentsTask(
+            null,
+            "test_kill_task",
+            Intervals.of("2011-04-01/P4D"),
+            null,
+            false
+        );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
     Assert.assertEquals(taskLocation, status.getLocation());

@@ -170,6 +170,35 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   }
 
   @Test
+  public void testReIndexWithNonExistingDatasource() throws Exception
+  {
+    Pair<Boolean, Boolean> dummyPair = new Pair<>(false, false);
+    final String fullBaseDatasourceName = "nonExistingDatasource2904";
+    final String fullReindexDatasourceName = "newDatasource123";
+
+    String taskSpec = StringUtils.replace(
+        getResourceAsString(REINDEX_TASK_WITH_DRUID_INPUT_SOURCE),
+        "%%DATASOURCE%%",
+        fullBaseDatasourceName
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%REINDEX_DATASOURCE%%",
+        fullReindexDatasourceName
+    );
+
+    // This method will also verify task is successful after task finish running
+    // We expect task to be successful even if the datasource to reindex does not exist
+    submitTaskAndWait(
+        taskSpec,
+        fullReindexDatasourceName,
+        false,
+        false,
+        dummyPair
+    );
+  }
+
+  @Test
   public void testMERGEIndexData() throws Exception
   {
     final String reindexDatasource = MERGE_REINDEX_DATASOURCE + "-testMergeIndexData";

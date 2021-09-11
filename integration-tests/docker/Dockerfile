@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG JDK_VERSION=8-slim
+ARG JDK_VERSION=8-slim-buster
 FROM openjdk:$JDK_VERSION as druidbase
 
 # Bundle everything into one script so cleanup can reduce image size.
@@ -123,8 +123,8 @@ ENTRYPOINT /tls/generate-server-certs-and-keystores.sh \
             # Some test groups require pre-existing data to be setup
             && setupData \
             # Export the service config file path to use in supervisord conf file
-            && export DRUID_COMMON_CONF_DIR="$(. /druid.sh; getConfPath ${DRUID_SERVICE})" \
+            && export DRUID_SERVICE_CONF_DIR="$(. /druid.sh; getConfPath ${DRUID_SERVICE})" \
             # Export the common config file path to use in supervisord conf file
-            && export DRUID_SERVICE_CONF_DIR="$(. /druid.sh; getConfPath _common)" \
+            && export DRUID_COMMON_CONF_DIR="$(. /druid.sh; getConfPath _common)" \
             # Run Druid service using supervisord
             && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

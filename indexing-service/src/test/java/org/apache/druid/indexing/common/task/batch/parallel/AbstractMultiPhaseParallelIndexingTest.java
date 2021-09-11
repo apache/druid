@@ -173,7 +173,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  private ParallelIndexSupervisorTask newTask(
+  protected ParallelIndexSupervisorTask newTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,

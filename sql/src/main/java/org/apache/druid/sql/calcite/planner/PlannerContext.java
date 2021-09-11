@@ -71,7 +71,7 @@ public class PlannerContext
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
-  private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
@@ -204,7 +204,7 @@ public class PlannerContext
     return sqlQueryId;
   }
 
-  public List<String> getNativeQueryIds()
+  public CopyOnWriteArrayList<String> getNativeQueryIds()
   {
     return nativeQueryIds;
   }
