@@ -168,6 +168,7 @@ public class CalciteTests
   public static final String SYSTEM_SCHEMA_NAME = "sys";
   public static final String LOOKUP_SCHEMA_NAME = "lookup";
   public static final String VIEW_SCHEMA_NAME = "view";
+  public static final String JSON_STRINGSOURCE = "jsonString";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -375,6 +376,17 @@ public class CalciteTests
       )
       .withRollup(false)
       .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
+      .build();
+
+  private static final IncrementalIndexSchema INDEX_SCHEMA_JSON_STRING = new IncrementalIndexSchema.Builder()
+      .withDimensionsSpec(
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("json_string")
+              )
+          )
+      )
+      .withRollup(false)
       .build();
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
@@ -715,6 +727,16 @@ public class CalciteTests
                   .build()
   );
 
+  private static final List<String> JSON_STRING_DIMS = ImmutableList.of("json_string");
+
+  private static List<InputRow> JSON_STRING_ROWS = ImmutableList.of(
+      toRow(
+          "2021-01-01T01:00:00Z",
+          JSON_STRING_DIMS,
+          ImmutableMap.of("json_string", "{\"string\":\"string_value\",\"long\":123456789,\"double\":12345.6789}")
+      )
+  );
+
   private static final Set<String> KEY_COLUMNS = ImmutableSet.of("dim4");
 
   private static final RowBasedIndexedTable JOINABLE_TABLE = new RowBasedIndexedTable(
@@ -904,6 +926,13 @@ public class CalciteTests
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
+    final QueryableIndex jsonFooIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA_JSON_STRING)
+        .rows(JSON_STRING_ROWS)
+        .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
@@ -1000,6 +1029,15 @@ public class CalciteTests
                    .size(0)
                    .build(),
         userVisitIndex
+    ).add(
+        DataSegment.builder()
+                   .dataSource(JSON_STRINGSOURCE)
+                   .interval(jsonFooIndex.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        jsonFooIndex
     );
   }
 

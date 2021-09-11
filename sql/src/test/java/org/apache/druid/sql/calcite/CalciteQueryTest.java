@@ -18902,4 +18902,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
+
+  @Test
+  public void testJsonExtract() throws Exception
+  {
+    testQuery(
+        "SELECT json_extract_string(json_string, 'string'),\n"
+        + " json_extract_long(json_string, 'long'),\n"
+        + " json_extract_double(json_string, 'double'),\n"
+        + " jsonpath_extract_string(json_string, 'string'),\n"
+        + " jsonpath_extract_long(json_string, 'long'),\n"
+        + " jsonpath_extract_double(json_string, 'double')\n"
+        + " FROM druid.jsonString",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.JSON_STRINGSOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "json_extract_string(\"json_string\",'string')", ValueType.STRING),
+                    expressionVirtualColumn("v1", "json_extract_long(\"json_string\",'long')", ValueType.LONG),
+                    expressionVirtualColumn("v2", "json_extract_double(\"json_string\",'double')", ValueType.DOUBLE),
+                    expressionVirtualColumn("v3", "jsonpath_extract_string(\"json_string\",'string')", ValueType.STRING),
+                    expressionVirtualColumn("v4", "jsonpath_extract_long(\"json_string\",'long')", ValueType.LONG),
+                    expressionVirtualColumn("v5", "jsonpath_extract_double(\"json_string\",'double')", ValueType.DOUBLE)
+                )
+                .columns("v0", "v1", "v2", "v3", "v4", "v5")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"string_value", 123456789L, 12345.6789, "string_value", 123456789L, 12345.6789}
+        )
+    );
+  }
 }
