@@ -1156,29 +1156,29 @@ ORDER BY 1`;
                 } = original as Datasource;
                 const segmentGranularities: string[] = [];
                 if (!num_segments || isNumberLikeNaN(year_aligned_segments)) return '-';
+                if (all_granularity_segments) {
+                  segmentGranularities.push('All');
+                }
+                if (year_aligned_segments) {
+                  segmentGranularities.push('Year');
+                }
+                if (month_aligned_segments !== year_aligned_segments) {
+                  segmentGranularities.push('Month');
+                }
+                if (day_aligned_segments !== month_aligned_segments) {
+                  segmentGranularities.push('Day');
+                }
+                if (hour_aligned_segments !== day_aligned_segments) {
+                  segmentGranularities.push('Hour');
+                }
+                if (minute_aligned_segments !== hour_aligned_segments) {
+                  segmentGranularities.push('Minute');
+                }
                 if (
                   Number(num_segments) - Number(all_granularity_segments) !==
                   Number(minute_aligned_segments)
                 ) {
                   segmentGranularities.push('Sub minute');
-                }
-                if (minute_aligned_segments !== hour_aligned_segments) {
-                  segmentGranularities.push('Minute');
-                }
-                if (hour_aligned_segments !== day_aligned_segments) {
-                  segmentGranularities.push('Hour');
-                }
-                if (day_aligned_segments !== month_aligned_segments) {
-                  segmentGranularities.push('Day');
-                }
-                if (month_aligned_segments !== year_aligned_segments) {
-                  segmentGranularities.push('Month');
-                }
-                if (year_aligned_segments) {
-                  segmentGranularities.push('Year');
-                }
-                if (all_granularity_segments) {
-                  segmentGranularities.push('All');
                 }
                 return segmentGranularities.join(', ');
               },
