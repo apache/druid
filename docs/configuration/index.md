@@ -566,23 +566,17 @@ These properties do not apply to metadata storage connections.
 
 ### Task Logging
 
-If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+You can use the `druid.indexer` configuration to set a [long-term storage](#log-long-term-storage) location for task log files, and to set a [retention policy](#log-retention-policy).
+
+For more information about ingestion tasks and the process of generating logs, see the [task reference](../ingestion/tasks.md).
+
+#### Log Long-term Storage
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
+|`druid.indexer.logs.type`|Where to store task logs.  `noop`, [`s3`](#s3-task-logs), [`azure`](#azure-blob-store-task-logs), [`google`](#google-cloud-storage-task-logs), [`hdfs`](#hdfs-task-logs), [`file`](#file-task-logs) |`file`|
 
-You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables for only x milliseconds by configuring following additional properties.
-Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid processes and backing store nodes might result in unintended behavior.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
-|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
-|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
-
-#### File Task Logs
+##### File Task Logs
 
 Store task logs in the local filesystem.
 
@@ -590,7 +584,7 @@ Store task logs in the local filesystem.
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|Local filesystem path.|log|
 
-#### S3 Task Logs
+##### S3 Task Logs
 
 Store task logs in S3. Note that the `druid-s3-extensions` extension must be loaded.
 
@@ -600,7 +594,7 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
 |`druid.indexer.logs.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. If the task logs bucket is the same as the deep storage (S3) bucket, then the value of this property will need to be set to true if druid.storage.disableAcl has been set to true.|false|
 
-#### Azure Blob Store Task Logs
+##### Azure Blob Store Task Logs
 Store task logs in Azure Blob Store.
 
 Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
@@ -610,7 +604,7 @@ Note: The `druid-azure-extensions` extension must be loaded, and this uses the s
 |`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-#### Google Cloud Storage Task Logs
+##### Google Cloud Storage Task Logs
 Store task logs in Google Cloud Storage.
 
 Note: The `druid-google-extensions` extension must be loaded, and this uses the same storage settings as the deep storage module for google.
@@ -620,13 +614,22 @@ Note: The `druid-google-extensions` extension must be loaded, and this uses the 
 |`druid.indexer.logs.bucket`|The Google Cloud Storage bucket to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-#### HDFS Task Logs
+##### HDFS Task Logs
 
 Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|The directory to store logs.|none|
+
+#### Log Retention Policy
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
+|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
 ### Overlord Discovery
 
