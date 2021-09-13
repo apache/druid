@@ -1000,8 +1000,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(
-            new DefaultDimensionSpec("dimA", "d0", ValueType.STRING),
-            new DefaultDimensionSpec("dimB", "d1", ValueType.STRING)
+            new DefaultDimensionSpec("dimA", "d0", ColumnType.STRING),
+            new DefaultDimensionSpec("dimB", "d1", ColumnType.STRING)
         ).setAggregatorSpecs(new LongSumAggregatorFactory("a0", "metA"))
         .setLimitSpec(ls)
         .setContext(context)
