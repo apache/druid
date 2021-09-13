@@ -26,6 +26,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2012-4449</cve>
     <cve>CVE-2017-3162</cve>
+    <cve>CVE-2018-8009</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
@@ -386,5 +387,9 @@
      ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
     <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <!-- misattributed to datasketches, actual vulnerability affects some collaboration tool called sketch -->
+    <cve>CVE-2021-40531</cve>
   </suppress>
 </suppressions>
