@@ -859,8 +859,15 @@ the SQL planner.
 
 ### HTTP POST
 
-You can make Druid SQL queries using HTTP via POST to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+To use the SQL API to make Druid SQL queries, POST your query to the following endpoint on either the Router or Broker:
+```
+POST https://ROUTER:8082/druid/v2/sql/`. 
+```  
+
+Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```
 
 ##### Request
       
@@ -878,7 +885,7 @@ You can use _curl_ to send SQL queries from the command-line:
 $ cat query.json
 {"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
-$ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
+$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8082/druid/v2/sql/ -d @query.json
 [{"TheCount":24433}]
 ```
 
@@ -956,28 +963,35 @@ through a JSON parsing error or through a missing trailing newline, you should a
 delivered due to an error.
 
 ### HTTP DELETE
-You can use the HTTP `DELETE` method to cancel a SQL query. The query cancellation is done in a best-effort manner. When you cancel a query, Druid marks the query canceled immediately and aborts the query execution as soon as it is possible. Since the query cancellation is best-effort, your query may be running for a while even after you cancel it.
+You can use the HTTP `DELETE` method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
 
 Druid SQL's HTTP DELETE method uses the following syntax:
 ```
-DELETE https://BROKER:8082/druid/v2/sql/{sqlQueryId}
+DELETE https://ROUTER:8082/druid/v2/sql/{sqlQueryId}
 ```
 
-The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context.
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQeryId` in the query context. If you issue a cancel request for a `sqlQeryId` active in more than one query context, Druid cancels all requests that use the query id.
 
 For example if you issue the following query:
 ```bash
-curl --request POST 'https://BROKER:8082/druid/v2/sql' \
+curl --request POST 'https://ROUTER:8082/druid/v2/sql' \
 --header 'Content-Type: application/json' \
 --data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
 "context" : {"sqlQueryId" : "myQuery01"}}'
 ```
-You can cancel the query using the query id as follows:
+You can cancel the query using the query id `myQuery01` as follows:
 ```bash
-curl --request DELETE 'https://BROKER:8082/druid/v2/sql/myQuery01' \
+curl --request DELETE 'https://ROUTER:8082/druid/v2/sql/myQuery01' \
 ```
 
-Druid returns an HTTP 202 response for successful deletion requests. If the the query id is incorrect or if the query completes before your cancellation request, Druid returns an HTTP 404 response. 
+Cancellation requests require READ permission on all resources used in the sql query. 
+
+Druid returns an HTTP 202 response for successful deletion requests.
+
+Druid returns an HTTP 404 response in the following cases:
+  - Authorization fails.
+  - The query id is incorrect.
+  - The query completes before your cancellation request is processed.
 
 ### JDBC
 
