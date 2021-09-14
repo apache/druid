@@ -849,7 +849,6 @@ include:
 
 - [Inline datasources](datasource.md#inline).
 - [Spatial filters](../development/geo.md).
-- [Query cancellation](querying.md#query-cancellation).
 - [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
@@ -955,6 +954,30 @@ formats, since truncated responses will be invalid JSON. For the line-oriented f
 trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
 through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
 delivered due to an error.
+
+### HTTP DELETE
+You can use the HTTP `DELETE` method to cancel a SQL query. When you cancel a query canceled, Druid marks its `SqlLifecycle` canceled immediately. After that, any operations in `SqlLifecycle` become non-operational to avoid unnecessary execution of expensive operations.
+
+HTTP DELETE method uses the following syntax:
+```
+DELETE https://BROKER:8082/druid/v2/sql/{sqlQueryId}
+```
+
+The DELETE method requires the `sqlQueryId`, therefore to predict the query id you must set it in the query context.
+
+For example if you issue the following query:
+```bash
+curl --request POST 'https://BROKER:8082/druid/v2/sql' \
+--header 'Content-Type: application/json' \
+--data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
+"context" : {"sqlQueryId" : "myQuery01"}}'
+```
+You can cancel the query using the query id as follows:
+```bash
+curl --request DELETE 'https://BROKER:8082/druid/v2/sql/myQuery01' \
+```
+
+Druid returns an HTTP 202 response for successful deletion requests. If the the query id is incorrect or if the query completes before your cancellation request, Druid returns an HTTP 404 response. 
 
 ### JDBC
 
