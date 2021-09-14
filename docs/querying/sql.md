@@ -958,7 +958,7 @@ delivered due to an error.
 ### HTTP DELETE
 You can use the HTTP `DELETE` method to cancel a SQL query. The query cancellation is done in a best-effort manner. When you cancel a query, Druid marks the query canceled immediately and aborts the query execution as soon as it is possible. Since the query cancellation is best-effort, your query may be running for a while even after you cancel it.
 
-HTTP DELETE method uses the following syntax:
+Druid SQL's HTTP DELETE method uses the following syntax:
 ```
 DELETE https://BROKER:8082/druid/v2/sql/{sqlQueryId}
 ```
