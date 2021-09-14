@@ -173,9 +173,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
-  private IndexTask sequentialIndexTask;
-  private ParallelIndexTaskRunner<SinglePhaseSubTask, PushedSegmentsReport> parallelSinglePhaseRunner;
-
   private IngestionState ingestionState;
 
   @JsonCreator
@@ -565,7 +562,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private TaskStatus runSinglePhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ingestionState = IngestionState.BUILD_SEGMENTS;
-    parallelSinglePhaseRunner = createRunner(
+    ParallelIndexTaskRunner<SinglePhaseSubTask, PushedSegmentsReport> parallelSinglePhaseRunner = createRunner(
         toolbox,
         this::createSinglePhaseTaskRunner
     );
@@ -1080,7 +1077,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
   {
-    sequentialIndexTask = new IndexTask(
+    IndexTask sequentialIndexTask = new IndexTask(
         getId(),
         getGroupId(),
         getTaskResource(),
@@ -1436,6 +1433,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private RowIngestionMetersTotals getTotalsFromBuildSegmentsRowStats(Object buildSegmentsRowStats)
   {
     if (buildSegmentsRowStats instanceof RowIngestionMetersTotals) {
+      // This case is for unit tests. Normally when deserialized the row stats will apppear as a Map<String, Object>.
       return (RowIngestionMetersTotals) buildSegmentsRowStats;
     } else if (buildSegmentsRowStats instanceof Map) {
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
@@ -1452,6 +1450,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelSinglePhase(
+      SinglePhaseParallelIndexTaskRunner parallelSinglePhaseRunner,
       boolean includeUnparseable
   )
   {
@@ -1536,13 +1535,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
   {
-    if (sequentialIndexTask != null) {
-      return Pair.of(sequentialIndexTask.doGetRowStats(full), sequentialIndexTask.doGetUnparseableEvents(full));
-    } else if (parallelSinglePhaseRunner != null) {
-      return doGetRowStatsAndUnparseableEventsParallelSinglePhase(includeUnparseable);
-    } else {
-      // multiphase is not supported yet
+    Object currentRunner = currentSubTaskHolder.getTask();
+    if (currentRunner == null) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());
+    }
+
+    if (isParallelMode()) {
+      if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+        // multiphase is not supported yet
+        return Pair.of(ImmutableMap.of(), ImmutableMap.of());
+      } else {
+        return doGetRowStatsAndUnparseableEventsParallelSinglePhase(
+            (SinglePhaseParallelIndexTaskRunner) currentRunner,
+            includeUnparseable
+        );
+      }
+    } else {
+      IndexTask currentSequentialTask = (IndexTask) currentRunner;
+      return Pair.of(currentSequentialTask.doGetRowStats(full), currentSequentialTask.doGetUnparseableEvents(full));
     }
   }
 
@@ -1569,9 +1579,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         doGetRowStatsAndUnparseableEvents(full, true);
 
     // use the sequential task's ingestion state if we were running that mode
-    IngestionState ingestionStateForReport = sequentialIndexTask != null ?
-                                             sequentialIndexTask.getIngestionState() :
-                                             ingestionState;
+    IngestionState ingestionStateForReport;
+    if (isParallelMode()) {
+      ingestionStateForReport = ingestionState;
+    } else {
+      IndexTask currentSequentialTask = (IndexTask) currentSubTaskHolder.getTask();
+      ingestionStateForReport = currentSequentialTask == null
+                                ? ingestionState
+                                : currentSequentialTask.getIngestionState();
+    }
 
     payload.put("ingestionState", ingestionStateForReport);
     payload.put("unparseableEvents", rowStatsAndUnparsebleEvents.rhs);
