@@ -298,6 +298,7 @@ public interface VirtualColumn extends Cacheable
    * @param selector
    * @return BitmapIndex
    */
+  @SuppressWarnings("unused")
   @Nullable
   default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
   {
