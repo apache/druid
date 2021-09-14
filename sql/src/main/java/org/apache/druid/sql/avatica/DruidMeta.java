@@ -72,7 +72,7 @@ public class DruidMeta extends MetaImpl
 
   public static <T extends Throwable> T logFailure(T error)
   {
-    LOG.noStackTrace().error(error, error.getMessage());
+    LOG.error(error, error.getMessage());
     return error;
   }
 
