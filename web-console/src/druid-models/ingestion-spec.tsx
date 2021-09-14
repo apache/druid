@@ -1361,7 +1361,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year'],
+    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
     required: true,
     info: (
       <>
