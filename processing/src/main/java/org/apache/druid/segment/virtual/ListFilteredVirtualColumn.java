@@ -208,12 +208,13 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            '}';
   }
 
-  private static abstract class ListFilteredBitmapIndex implements BitmapIndex
+  private abstract static class ListFilteredBitmapIndex implements BitmapIndex
   {
     final Set<String> values;
     final BitmapIndex delegate;
 
-    private ListFilteredBitmapIndex(Set<String> values, BitmapIndex delegate) {
+    private ListFilteredBitmapIndex(Set<String> values, BitmapIndex delegate)
+    {
       this.values = values;
       this.delegate = delegate;
     }
