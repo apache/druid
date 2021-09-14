@@ -22,6 +22,8 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -35,6 +37,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -130,7 +133,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    return new ColumnCapabilitiesImpl().setType(delegate.getOutputType());
+    return new ColumnCapabilitiesImpl().setType(delegate.getOutputType())
+                                       .setDictionaryEncoded(true)
+                                       .setHasBitmapIndexes(true);
   }
 
   @Override
@@ -152,12 +157,24 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public BitmapIndex getBitmapIndex(
+  public @Nullable BitmapIndex getBitmapIndex(
       String columnName,
       ColumnSelector selector
   )
   {
-    return selector.getColumnHolder(delegate.getDimension()).getBitmapIndex();
+    final ColumnHolder holder = selector.getColumnHolder(delegate.getDimension());
+    if (holder == null) {
+      return null;
+    }
+    final BitmapIndex underlyingIndex = holder.getBitmapIndex();
+    if (underlyingIndex == null) {
+      return null;
+    }
+    if (allowList) {
+      return new AllowListBitmapIndex(values, underlyingIndex);
+    } else {
+      return new DenyListBitmapIndex(values, underlyingIndex);
+    }
   }
 
   @Override
@@ -189,5 +206,89 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            ", values=" + values +
            ", isAllowList=" + allowList +
            '}';
+  }
+
+  private static abstract class ListFilteredBitmapIndex implements BitmapIndex
+  {
+    final Set<String> values;
+    final BitmapIndex delegate;
+
+    private ListFilteredBitmapIndex(Set<String> values, BitmapIndex delegate) {
+      this.values = values;
+      this.delegate = delegate;
+    }
+
+    @Override
+    public String getValue(int index)
+    {
+      return delegate.getValue(index);
+    }
+
+    @Override
+    public boolean hasNulls()
+    {
+      return delegate.hasNulls();
+    }
+
+    @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return delegate.getBitmapFactory();
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap(int idx)
+    {
+      return delegate.getBitmap(idx);
+    }
+  }
+
+  private static class AllowListBitmapIndex extends ListFilteredBitmapIndex
+  {
+
+    private AllowListBitmapIndex(Set<String> values, BitmapIndex delegate)
+    {
+      super(values, delegate);
+    }
+
+    @Override
+    public int getCardinality()
+    {
+      // cardinality might be smaller than filter if values are not present in the column, but it will not be larger
+      return values.size();
+    }
+
+    @Override
+    public int getIndex(@Nullable String value)
+    {
+      if (values.contains(value)) {
+        return delegate.getIndex(value);
+      }
+      return -1;
+    }
+  }
+
+  private static class DenyListBitmapIndex extends ListFilteredBitmapIndex
+  {
+    private DenyListBitmapIndex(Set<String> values, BitmapIndex delegate)
+    {
+      super(values, delegate);
+    }
+
+    @Override
+    public int getCardinality()
+    {
+      // values in the filter don't necessarily need be present in the column, so report underlying cardinality
+      return delegate.getCardinality();
+    }
+
+    @Override
+    public int getIndex(@Nullable String value)
+    {
+      if (!values.contains(value)) {
+        return delegate.getIndex(value);
+      }
+      return -1;
+    }
   }
 }
