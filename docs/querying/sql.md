@@ -963,7 +963,7 @@ Druid SQL's HTTP DELETE method uses the following syntax:
 DELETE https://BROKER:8082/druid/v2/sql/{sqlQueryId}
 ```
 
-The DELETE method requires the `sqlQueryId`, therefore to predict the query id you must set it in the query context.
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context.
 
 For example if you issue the following query:
 ```bash
