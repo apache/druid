@@ -956,7 +956,7 @@ through a JSON parsing error or through a missing trailing newline, you should a
 delivered due to an error.
 
 ### HTTP DELETE
-You can use the HTTP `DELETE` method to cancel a SQL query. When you cancel a query canceled, Druid marks its `SqlLifecycle` canceled immediately. After that, any operations in `SqlLifecycle` become non-operational to avoid unnecessary execution of expensive operations.
+You can use the HTTP `DELETE` method to cancel a SQL query. The query cancellation is done in a best-effort manner. When you cancel a query, Druid marks the query canceled immediately and aborts the query execution as soon as it is possible. Since the query cancellation is best-effort, your query may be running for a while even after you cancel it.
 
 HTTP DELETE method uses the following syntax:
 ```
