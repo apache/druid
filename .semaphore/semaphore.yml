@@ -63,7 +63,7 @@ blocks:
 
         - name: "forbidden api checks"
           commands:
-            - ${MVN} compile ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+            - ${MVN} test-compile ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
             - ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
         - name: "pmd checks"
