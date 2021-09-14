@@ -228,7 +228,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       targetServer = hostFinder.findServerAvatica(connectionId);
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
-    } else if (isNativeQueryEndpoint && HttpMethod.DELETE.is(method)) {
+    } else if (HttpMethod.DELETE.is(method)) {
       // query cancellation request
       targetServer = hostFinder.pickDefaultServer();
       broadcastQueryCancelRequest(request, targetServer);
@@ -285,8 +285,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
    */
   private void broadcastQueryCancelRequest(HttpServletRequest request, Server targetServer)
   {
-    // send query cancellation to all brokers this query may have gone to
-    // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
     for (final Server server : hostFinder.getAllServers()) {
       if (server.getHost().equals(targetServer.getHost())) {
         continue;

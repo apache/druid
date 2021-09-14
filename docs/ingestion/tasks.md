@@ -355,6 +355,32 @@ The task context is used for various individual task configuration. The followin
 > When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
 > As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.
 
+## Task Logs
+
+Logs are created by ingestion tasks as they run.  You can configure Druid to push these into a repository for long-term storage after they complete.
+
+Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired.  Worker slot allocation is then `PENDING` until the task can actually start executing.
+
+The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.indexer.task.baseTaskDir`](../configuration/index.md#additional-peon-configuration).
+
+When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
+
+Task logs on the Druid web console are retrieved via an [API](../operations/api-reference.md#overlord) on the Overlord.  It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+
+If you don't see the log file in long-term storage, it means either:
+
+1. the middleManager / indexer failed to push the log file to deep storage or
+2. the task failed before the Step 5 in the above flow.
+
+You can check the middleManager / indexer logs locally to see if there was a push failure.  If there was not, check the Overlord's own process logs to see why the task failed before it started.
+
+> If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+
+You can configure retention periods for logs in milliseconds by setting `druid.indexer.logs.kill` properties in [configuration](../configuration/index.md#task-logging).  The Overlord will then automatically manage task logs in log directories along with entries in task-related metadata storage tables.
+
+> Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store.  Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+
+
 ## All task types
 
 ### `index`

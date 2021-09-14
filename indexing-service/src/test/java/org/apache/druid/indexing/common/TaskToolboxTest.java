@@ -113,7 +113,8 @@ public class TaskToolboxTest
             null,
             null,
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,

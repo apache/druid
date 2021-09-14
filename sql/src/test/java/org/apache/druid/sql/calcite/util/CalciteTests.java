@@ -784,7 +784,8 @@ public class CalciteTests
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger()
+        new NoopRequestLogger(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 
