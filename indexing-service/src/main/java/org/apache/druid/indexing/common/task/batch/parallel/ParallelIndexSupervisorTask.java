@@ -1535,6 +1535,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
   {
+    if (currentSubTaskHolder == null) {
+      return Pair.of(ImmutableMap.of(), ImmutableMap.of());
+    }
+
     Object currentRunner = currentSubTaskHolder.getTask();
     if (currentRunner == null) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());
