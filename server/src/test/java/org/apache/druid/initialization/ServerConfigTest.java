@@ -57,7 +57,9 @@ public class ServerConfigTest
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel(),
         true,
-        ImmutableList.of(HttpMethod.OPTIONS)
+        ImmutableList.of(HttpMethod.OPTIONS),
+        true,
+        ImmutableList.of()
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);

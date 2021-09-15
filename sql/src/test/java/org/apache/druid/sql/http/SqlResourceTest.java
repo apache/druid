@@ -262,7 +262,8 @@ public class SqlResourceTest extends CalciteTestBase
             );
           }
         },
-        lifecycleManager
+        lifecycleManager,
+        new ServerConfig()
     );
   }
 

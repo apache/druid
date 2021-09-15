@@ -44,6 +44,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.QueryHostFinder;
@@ -98,22 +99,35 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
 
+  private static final String DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE = "Unable to parse query";
+  private static final String DEFAULT_ERROR_UNEXPECTED_MESSAGE = "Unexpected error occurs";
+
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
 
-  private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
+  private void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
+    log.warn(exception, "Unexpected exception occurs");
     if (!response.isCommitted()) {
       final String errorMessage = exception.getMessage() == null ? "null exception" : exception.getMessage();
 
       response.resetBuffer();
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-      objectMapper.writeValue(
-          response.getOutputStream(),
-          ImmutableMap.of("error", errorMessage)
-      );
+
+      if (serverConfig.isFilterResponse()
+          && serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+        objectMapper.writeValue(
+            response.getOutputStream(),
+            ImmutableMap.of("error", DEFAULT_ERROR_UNEXPECTED_MESSAGE)
+        );
+      } else {
+        objectMapper.writeValue(
+            response.getOutputStream(),
+            ImmutableMap.of("error", errorMessage)
+        );
+      }
     }
     response.flushBuffer();
   }
@@ -129,6 +143,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AuthenticatorMapper authenticatorMapper;
   private final ProtobufTranslation protobufTranslation;
+  private final ServerConfig serverConfig;
 
   private final boolean routeSqlQueries;
 
@@ -146,7 +161,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory,
       AuthenticatorMapper authenticatorMapper,
-      Properties properties
+      Properties properties,
+      final ServerConfig serverConfig
   )
   {
     this.warehouse = warehouse;
@@ -163,6 +179,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.routeSqlQueries = Boolean.parseBoolean(
         properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -350,10 +367,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Write to the response
     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     response.setContentType(MediaType.APPLICATION_JSON);
-    objectMapper.writeValue(
-        response.getOutputStream(),
-        ImmutableMap.of("error", errorMessage)
-    );
+    if (serverConfig.isFilterResponse()
+        && serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+      objectMapper.writeValue(
+          response.getOutputStream(),
+          ImmutableMap.of("error", DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE)
+      );
+    } else {
+      objectMapper.writeValue(
+          response.getOutputStream(),
+          ImmutableMap.of("error", errorMessage)
+      );
+    }
   }
 
   protected void doService(

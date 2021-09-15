@@ -22,6 +22,7 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -39,6 +40,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -77,19 +79,22 @@ public class SqlResource
   private final AuthorizerMapper authorizerMapper;
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
+  private final ServerConfig serverConfig;
 
   @Inject
   public SqlResource(
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
       SqlLifecycleFactory sqlLifecycleFactory,
-      SqlLifecycleManager sqlLifecycleManager
+      SqlLifecycleManager sqlLifecycleManager,
+      ServerConfig serverConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.serverConfig = serverConfig;
   }
 
   @POST
@@ -170,39 +175,65 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
+      if (serverConfig.isFilterResponse()) {
+        cap = new QueryCapacityExceededException(cap.getErrorCode(), applyErrorMessageFilter(cap.getMessage()), null, null);
+      }
       return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
+      if (serverConfig.isFilterResponse()) {
+        unsupported = new QueryUnsupportedException(unsupported.getErrorCode(), applyErrorMessageFilter(unsupported.getMessage()), null, null);
+      }
       return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
+      if (serverConfig.isFilterResponse()) {
+        timeout = new QueryTimeoutException(timeout.getErrorCode(), applyErrorMessageFilter(timeout.getMessage()), null, null);
+      }
       return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
     }
-    catch (SqlPlanningException | ResourceLimitExceededException e) {
-      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
+    catch (SqlPlanningException sqlPlanningException) {
+      endLifecycle(sqlQueryId, lifecycle, sqlPlanningException, remoteAddr, -1);
+      if (serverConfig.isFilterResponse()) {
+        sqlPlanningException = new SqlPlanningException(sqlPlanningException.getErrorCode(), applyErrorMessageFilter(sqlPlanningException.getMessage()), null);
+      }
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, sqlPlanningException);
+    }
+    catch (ResourceLimitExceededException resourceLimitExceededException) {
+      endLifecycle(sqlQueryId, lifecycle, resourceLimitExceededException, remoteAddr, -1);
+      if (serverConfig.isFilterResponse()) {
+        resourceLimitExceededException = new ResourceLimitExceededException(resourceLimitExceededException.getErrorCode(), applyErrorMessageFilter(resourceLimitExceededException.getMessage()), null, null);
+      }
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, resourceLimitExceededException);
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
+      if (serverConfig.isFilterResponse() && Strings.isNullOrEmpty(applyErrorMessageFilter(e.getMessage()))) {
+        e = new ForbiddenException();
+      }
       throw e; // let ForbiddenExceptionMapper handle this
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Exception exceptionToReport;
+      QueryInterruptedException exceptionToReport;
 
       if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
+        exceptionToReport = QueryInterruptedException.wrapIfNeeded((new ISE("Cannot build plan for query: %s", sqlQuery.getQuery())));
       } else {
-        exceptionToReport = e;
+        exceptionToReport = QueryInterruptedException.wrapIfNeeded(e);
+      }
+
+      if (serverConfig.isFilterResponse()) {
+        exceptionToReport = new QueryInterruptedException(exceptionToReport.getErrorCode(), applyErrorMessageFilter(exceptionToReport.getMessage()), null, null);
       }
 
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
+          exceptionToReport
       );
     }
     finally {
@@ -270,6 +301,15 @@ public class SqlResource
     } else {
       // Return 404 for authorization failures as well
       return Response.status(Status.NOT_FOUND).build();
+    }
+  }
+
+  private String applyErrorMessageFilter(final String errorMessage)
+  {
+    if (serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+      return null;
+    } else {
+      return errorMessage;
     }
   }
 }

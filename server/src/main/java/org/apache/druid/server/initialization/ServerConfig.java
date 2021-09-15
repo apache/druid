@@ -32,6 +32,7 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 
 /**
@@ -61,7 +62,9 @@ public class ServerConfig
       int inflateBufferSize,
       int compressionLevel,
       boolean enableForwardedRequestCustomizer,
-      @NotNull List<String> allowedHttpMethods
+      @NotNull List<String> allowedHttpMethods,
+      boolean filterResponse,
+      List<Pattern> responseWhitelistRegex
   )
   {
     this.numThreads = numThreads;
@@ -79,6 +82,8 @@ public class ServerConfig
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
+    this.filterResponse = filterResponse;
+    this.responseWhitelistRegex = responseWhitelistRegex;
   }
 
   public ServerConfig()
@@ -144,6 +149,12 @@ public class ServerConfig
   @JsonProperty
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
+
+  @JsonProperty
+  private List<Pattern> responseWhitelistRegex = ImmutableList.of();
+
+  @JsonProperty
+  private boolean filterResponse = false;
 
   public int getNumThreads()
   {
@@ -215,6 +226,16 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  public boolean isFilterResponse()
+  {
+    return filterResponse;
+  }
+
+  public List<Pattern> getResponseWhitelistRegex()
+  {
+    return responseWhitelistRegex;
+  }
+
   @NotNull
   public List<String> getAllowedHttpMethods()
   {
@@ -235,17 +256,19 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           filterResponse == that.filterResponse &&
            maxIdleTime.equals(that.maxIdleTime) &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
-           allowedHttpMethods.equals(that.allowedHttpMethods);
+           allowedHttpMethods.equals(that.allowedHttpMethods) &&
+           Objects.equals(responseWhitelistRegex, that.responseWhitelistRegex);
   }
 
   @Override
@@ -266,7 +289,9 @@ public class ServerConfig
         inflateBufferSize,
         compressionLevel,
         enableForwardedRequestCustomizer,
-        allowedHttpMethods
+        allowedHttpMethods,
+        responseWhitelistRegex,
+        filterResponse
     );
   }
 
@@ -288,7 +313,9 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
-           ", allowedMethods=" + allowedHttpMethods +
+           ", allowedHttpMethods=" + allowedHttpMethods +
+           ", responseWhitelistRegex=" + responseWhitelistRegex +
+           ", filterResponse=" + filterResponse +
            '}';
   }
 

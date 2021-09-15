@@ -71,7 +71,7 @@ public class SqlPlanningException extends BadQueryException
   }
 
   @JsonCreator
-  private SqlPlanningException(
+  public SqlPlanningException(
       @JsonProperty("error") String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
       @JsonProperty("errorClass") String errorClass

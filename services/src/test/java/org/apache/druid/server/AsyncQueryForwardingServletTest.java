@@ -296,7 +296,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
-        properties
+        properties,
+        new ServerConfig()
     )
     {
       @Override
@@ -389,7 +390,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               new NoopRequestLogger(),
               new DefaultGenericQueryMetricsFactory(),
               new AuthenticatorMapper(ImmutableMap.of()),
-              new Properties()
+              new Properties(),
+              new ServerConfig()
           )
           {
             @Override

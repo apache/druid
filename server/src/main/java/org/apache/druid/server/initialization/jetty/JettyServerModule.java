@@ -64,14 +64,17 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.Dispatcher;
 import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -82,6 +85,11 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.security.KeyStore;
 import java.security.cert.CRL;
 import java.util.ArrayList;
@@ -465,6 +473,28 @@ public class JettyServerModule extends JerseyServletModule
         },
         Lifecycle.Stage.SERVER
     );
+
+    if (config.isFilterResponse()) {
+      server.setErrorHandler(new ErrorHandler() {
+        @Override
+        public boolean isShowServlet()
+        {
+          return false;
+        }
+
+        @Override
+        public void handle(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response
+        ) throws IOException, ServletException
+        {
+          request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
+          super.handle(target, baseRequest, request, response);
+        }
+      });
+    }
 
     return server;
   }
