@@ -72,4 +72,21 @@ public class ExpressionTypeTest
     // this works though because array recursively calls on element type...
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, MAPPER.readValue("\"ARRAY<double>\"", ExpressionType.class));
   }
+
+  @Test
+  public void testFutureProof() throws JsonProcessingException
+  {
+    // in case we ever want to switch from string serde to JSON objects for type info, be ready
+    Assert.assertEquals(ExpressionType.STRING, MAPPER.readValue("{\"type\":\"STRING\"}", ExpressionType.class));
+    Assert.assertEquals(ExpressionType.LONG, MAPPER.readValue("{\"type\":\"LONG\"}", ExpressionType.class));
+    Assert.assertEquals(ExpressionType.DOUBLE, MAPPER.readValue("{\"type\":\"DOUBLE\"}", ExpressionType.class));
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, MAPPER.readValue("{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"STRING\"}}", ExpressionType.class));
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, MAPPER.readValue("{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"LONG\"}}", ExpressionType.class));
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, MAPPER.readValue("{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"DOUBLE\"}}", ExpressionType.class));
+
+    Assert.assertEquals(SOME_COMPLEX, MAPPER.readValue("{\"type\":\"COMPLEX\", \"complexTypeName\":\"foo\"}", ExpressionType.class));
+
+    ExpressionType whatHaveIdone = new ExpressionType(ExprType.ARRAY, null, new ExpressionType(ExprType.ARRAY, null, SOME_COMPLEX));
+    Assert.assertEquals(whatHaveIdone, MAPPER.readValue("{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"COMPLEX\", \"complexTypeName\":\"foo\"}}}", ExpressionType.class));
+  }
 }
