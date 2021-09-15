@@ -991,6 +991,8 @@ Druid returns an HTTP 202 response for successful deletion requests.
 Druid returns an HTTP 404 response in the following cases:
   - `sqlQueryId` is incorrect.
   - The query completes before your cancellation request is processed.
+  
+Druid returns an HTTP 403 response for authorization failure.
 
 ### JDBC
 
