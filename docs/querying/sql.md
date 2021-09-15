@@ -970,7 +970,7 @@ Druid SQL's HTTP DELETE method uses the following syntax:
 DELETE https://ROUTER:8082/druid/v2/sql/{sqlQueryId}
 ```
 
-The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQeryId` in the query context. If you issue a cancel request for a `sqlQeryId` active in more than one query context, Druid cancels all requests that use the query id.
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
 
 For example if you issue the following query:
 ```bash
