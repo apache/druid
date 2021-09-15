@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -33,11 +34,13 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdMapping;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -170,11 +173,23 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     if (underlyingIndex == null) {
       return null;
     }
+    final IdMapping idMapping;
     if (allowList) {
-      return new AllowListBitmapIndex(values, underlyingIndex);
+      idMapping = ListFilteredDimensionSpec.buildAllowListIdMapping(
+          values,
+          underlyingIndex.getCardinality(),
+          null,
+          underlyingIndex::getValue
+      );
     } else {
-      return new DenyListBitmapIndex(values, underlyingIndex);
+      idMapping = ListFilteredDimensionSpec.buildDenyListIdMapping(
+          values,
+          underlyingIndex.getCardinality(),
+          underlyingIndex::getValue
+      );
     }
+
+    return new ListFilteredBitmapIndex(underlyingIndex, idMapping);
   }
 
   @Override
@@ -208,21 +223,21 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            '}';
   }
 
-  private abstract static class ListFilteredBitmapIndex implements BitmapIndex
+  private static class ListFilteredBitmapIndex implements BitmapIndex
   {
-    final Set<String> values;
     final BitmapIndex delegate;
+    final IdMapping idMapping;
 
-    private ListFilteredBitmapIndex(Set<String> values, BitmapIndex delegate)
+    private ListFilteredBitmapIndex(BitmapIndex delegate, IdMapping idMapping)
     {
-      this.values = values;
       this.delegate = delegate;
+      this.idMapping = idMapping;
     }
 
     @Override
     public String getValue(int index)
     {
-      return delegate.getValue(index);
+      return delegate.getValue(idMapping.getReverseId(index));
     }
 
     @Override
@@ -240,56 +255,18 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     @Override
     public ImmutableBitmap getBitmap(int idx)
     {
-      return delegate.getBitmap(idx);
+      return delegate.getBitmap(idMapping.getReverseId(idx));
     }
-  }
-
-  private static class AllowListBitmapIndex extends ListFilteredBitmapIndex
-  {
-
-    private AllowListBitmapIndex(Set<String> values, BitmapIndex delegate)
-    {
-      super(values, delegate);
-    }
-
     @Override
     public int getCardinality()
     {
-      // cardinality might be smaller than filter if values are not present in the column, but it will not be larger
-      return values.size();
+      return idMapping.getValueCardinality();
     }
 
     @Override
     public int getIndex(@Nullable String value)
     {
-      if (values.contains(value)) {
-        return delegate.getIndex(value);
-      }
-      return -1;
-    }
-  }
-
-  private static class DenyListBitmapIndex extends ListFilteredBitmapIndex
-  {
-    private DenyListBitmapIndex(Set<String> values, BitmapIndex delegate)
-    {
-      super(values, delegate);
-    }
-
-    @Override
-    public int getCardinality()
-    {
-      // values in the filter don't necessarily need be present in the column, so report underlying cardinality
-      return delegate.getCardinality();
-    }
-
-    @Override
-    public int getIndex(@Nullable String value)
-    {
-      if (!values.contains(value)) {
-        return delegate.getIndex(value);
-      }
-      return -1;
+      return Indexed.indexOf(this::getValue, getCardinality(), Comparators.naturalNullsFirst(), value);
     }
   }
 }

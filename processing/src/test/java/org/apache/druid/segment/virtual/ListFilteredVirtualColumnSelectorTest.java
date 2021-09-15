@@ -160,7 +160,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
         new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
-        ImmutableSet.of("a", "b"),
+        ImmutableSet.of("b", "c"),
         true
     );
 
@@ -174,8 +174,12 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
 
-    EasyMock.expect(index.getIndex("a")).andReturn(1).once();
-    EasyMock.expect(index.getBitmap(1)).andReturn(bitmap).once();
+    EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
+    EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
+    EasyMock.expect(index.getValue(1)).andReturn("b").atLeastOnce();
+    EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
+
+    EasyMock.expect(index.getBitmap(2)).andReturn(bitmap).once();
     EasyMock.expect(index.getBitmapFactory()).andReturn(bitmapFactory).once();
     EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
@@ -191,9 +195,12 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     Assert.assertTrue(filter.shouldUseBitmapIndex(bitmapIndexSelector));
 
     BitmapIndex listFilteredIndex = bitmapIndexSelector.getBitmapIndex(ALLOW_VIRTUAL_NAME);
-    Assert.assertEquals(1, listFilteredIndex.getIndex("a"));
-    Assert.assertEquals(-1, listFilteredIndex.getIndex("c"));
+    Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
+    Assert.assertEquals(0, listFilteredIndex.getIndex("b"));
+    Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
     Assert.assertEquals(2, listFilteredIndex.getCardinality());
+    Assert.assertEquals("b", listFilteredIndex.getValue(0));
+    Assert.assertEquals("c", listFilteredIndex.getValue(1));
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
     Assert.assertEquals(bitmapFactory, listFilteredIndex.getBitmapFactory());
     Assert.assertTrue(listFilteredIndex.hasNulls());
@@ -222,9 +229,12 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
 
-    EasyMock.expect(index.getCardinality()).andReturn(10).atLeastOnce();
-    EasyMock.expect(index.getIndex("c")).andReturn(1).once();
-    EasyMock.expect(index.getBitmap(1)).andReturn(bitmap).once();
+    EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
+    EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
+    EasyMock.expect(index.getValue(1)).andReturn("b").atLeastOnce();
+    EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
+
+    EasyMock.expect(index.getBitmap(0)).andReturn(bitmap).once();
     EasyMock.expect(index.getBitmapFactory()).andReturn(bitmapFactory).once();
     EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
@@ -241,8 +251,9 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     BitmapIndex listFilteredIndex = bitmapIndexSelector.getBitmapIndex(DENY_VIRTUAL_NAME);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
-    Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
-    Assert.assertEquals(10, listFilteredIndex.getCardinality());
+    Assert.assertEquals(-1, listFilteredIndex.getIndex("b"));
+    Assert.assertEquals(0, listFilteredIndex.getIndex("c"));
+    Assert.assertEquals(1, listFilteredIndex.getCardinality());
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
     Assert.assertEquals(bitmapFactory, listFilteredIndex.getBitmapFactory());
     Assert.assertTrue(listFilteredIndex.hasNulls());
