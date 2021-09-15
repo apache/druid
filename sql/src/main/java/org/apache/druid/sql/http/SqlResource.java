@@ -268,8 +268,7 @@ public class SqlResource
       lifecycles.forEach(SqlLifecycle::cancel);
       return Response.status(Status.ACCEPTED).build();
     } else {
-      // Return 404 for authorization failures as well
-      return Response.status(Status.NOT_FOUND).build();
+      return Response.status(Status.FORBIDDEN).build();
     }
   }
 }

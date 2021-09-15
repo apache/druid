@@ -61,6 +61,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -986,7 +987,7 @@ public class SqlResourceTest extends CalciteTestBase
                   ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
                   null
               ),
-              makeExpectedReq()
+              makeRegularUserReq()
           );
         }
         catch (Exception e) {
@@ -1053,7 +1054,7 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(1, TimeUnit.SECONDS));
@@ -1084,7 +1085,7 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
@@ -1114,12 +1115,37 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
     Response response = resource.cancelQuery("invalidQuery", mockRequestForCancel());
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+
+    Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    execLatch.countDown();
+    response = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testCancelForbidden() throws Exception
+  {
+    final String sqlQueryId = "toCancel";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM forbiddenDatasource"),
+            makeSuperUserReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
@@ -1222,24 +1248,34 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
-  private HttpServletRequest makeExpectedReq()
+  private HttpServletRequest makeSuperUserReq()
+  {
+    return makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT);
+  }
+
+  private HttpServletRequest makeRegularUserReq()
+  {
+    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
+  }
+
+  private HttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
   {
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     EasyMock.replay(req);
     return req;
