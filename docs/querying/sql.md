@@ -861,7 +861,7 @@ the SQL planner.
 
 To use the SQL API to make Druid SQL queries, POST your query to the following endpoint on either the Router or Broker:
 ```
-POST https://ROUTER:8082/druid/v2/sql/`. 
+POST https://ROUTER:8888/druid/v2/sql/`. 
 ```  
 
 Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
@@ -885,7 +885,7 @@ You can use _curl_ to send SQL queries from the command-line:
 $ cat query.json
 {"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
-$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8082/druid/v2/sql/ -d @query.json
+$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
 [{"TheCount":24433}]
 ```
 
@@ -967,21 +967,21 @@ You can use the HTTP `DELETE` method to cancel a SQL query on either the Router 
 
 Druid SQL's HTTP DELETE method uses the following syntax:
 ```
-DELETE https://ROUTER:8082/druid/v2/sql/{sqlQueryId}
+DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
 ```
 
 The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
 
 For example if you issue the following query:
 ```bash
-curl --request POST 'https://ROUTER:8082/druid/v2/sql' \
+curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
 --header 'Content-Type: application/json' \
 --data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
 "context" : {"sqlQueryId" : "myQuery01"}}'
 ```
 You can cancel the query using the query id `myQuery01` as follows:
 ```bash
-curl --request DELETE 'https://ROUTER:8082/druid/v2/sql/myQuery01' \
+curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
 ```
 
 Cancellation requests require READ permission on all resources used in the sql query. 
