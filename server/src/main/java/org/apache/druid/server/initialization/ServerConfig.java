@@ -64,7 +64,7 @@ public class ServerConfig
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean filterResponse,
-      List<Pattern> responseWhitelistRegex
+      @NotNull List<Pattern> responseWhitelistRegex
   )
   {
     this.numThreads = numThreads;
@@ -151,6 +151,7 @@ public class ServerConfig
   private List<String> allowedHttpMethods = ImmutableList.of();
 
   @JsonProperty
+  @NotNull
   private List<Pattern> responseWhitelistRegex = ImmutableList.of();
 
   @JsonProperty
@@ -256,6 +257,7 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
@@ -264,11 +266,9 @@ public class ServerConfig
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            filterResponse == that.filterResponse &&
            maxIdleTime.equals(that.maxIdleTime) &&
-           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
-           allowedHttpMethods.equals(that.allowedHttpMethods) &&
-           Objects.equals(responseWhitelistRegex, that.responseWhitelistRegex);
+           allowedHttpMethods.equals(that.allowedHttpMethods);
   }
 
   @Override
@@ -290,7 +290,6 @@ public class ServerConfig
         compressionLevel,
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
-        responseWhitelistRegex,
         filterResponse
     );
   }

@@ -99,14 +99,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
 
-  private static final String DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE = "Unable to parse query";
-  private static final String DEFAULT_ERROR_UNEXPECTED_MESSAGE = "Unexpected error occurs";
+  static final String DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE = "Unable to parse query";
+  static final String DEFAULT_ERROR_UNEXPECTED_MESSAGE = "Unexpected error occurs";
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
 
-  private void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
+  @VisibleForTesting
+  void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
     log.warn(exception, "Unexpected exception occurs");
@@ -330,7 +331,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     interruptedQueryCount.incrementAndGet();
   }
 
-  private void handleQueryParseException(
+  @VisibleForTesting
+  void handleQueryParseException(
       HttpServletRequest request,
       HttpServletResponse response,
       ObjectMapper objectMapper,

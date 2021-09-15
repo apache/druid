@@ -78,13 +78,22 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.net.ssl.SSLEngine;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -94,6 +103,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
@@ -222,6 +232,219 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.replay(hostFinder);
 
     verifyServletCallsForQuery(query, false, hostFinder, new Properties());
+  }
+
+  @Test
+  public void testHandleExceptionWithFilterDisabled() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+    Exception testException = new IllegalStateException(errorMessage);
+    servlet.handleException(response, mockMapper, testException);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+  }
+
+  @Test
+  public void testHandleExceptionWithFilterEnabled() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig() {
+          @Override
+          public boolean isFilterResponse()
+          {
+            return true;
+          }
+        }
+    );
+    Exception testException = new IllegalStateException(errorMessage);
+    servlet.handleException(response, mockMapper, testException);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", AsyncQueryForwardingServlet.DEFAULT_ERROR_UNEXPECTED_MESSAGE), captor.getValue());
+  }
+
+  @Test
+  public void testHandleExceptionWithFilterEnabledButMessageMatchWhitelist() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig() {
+          @Override
+          public boolean isFilterResponse()
+          {
+            return true;
+          }
+
+          @Override
+          public List<Pattern> getResponseWhitelistRegex()
+          {
+            return ImmutableList.of(Pattern.compile("test .*"));
+          }
+        }
+    );
+    Exception testException = new IllegalStateException(errorMessage);
+    servlet.handleException(response, mockMapper, testException);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+  }
+
+  @Test
+  public void testHandleQueryParseExceptionWithFilterDisabled() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+    IOException testException = new IOException(errorMessage);
+    servlet.handleQueryParseException(request, response, mockMapper, testException, false);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+  }
+
+  @Test
+  public void testHandleQueryParseExceptionWithFilterEnabled() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig() {
+          @Override
+          public boolean isFilterResponse()
+          {
+            return true;
+          }
+        }
+    );
+    IOException testException = new IOException(errorMessage);
+    servlet.handleQueryParseException(request, response, mockMapper, testException, false);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", AsyncQueryForwardingServlet.DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE), captor.getValue());
+  }
+
+  @Test
+  public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchWhitelist() throws Exception
+  {
+    String errorMessage = "test exception message";
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        mockMapper,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig() {
+          @Override
+          public boolean isFilterResponse()
+          {
+            return true;
+          }
+
+          @Override
+          public List<Pattern> getResponseWhitelistRegex()
+          {
+            return ImmutableList.of(Pattern.compile("test .*"));
+          }
+        }
+    );
+    IOException testException = new IOException(errorMessage);
+    servlet.handleQueryParseException(request, response, mockMapper, testException, false);
+    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
   }
 
   /**
