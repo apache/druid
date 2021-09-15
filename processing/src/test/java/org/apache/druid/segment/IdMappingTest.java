@@ -43,6 +43,11 @@ public class IdMappingTest
       Assert.assertEquals(i * 10, mapping.getReverseId(i));
       Assert.assertEquals(i, mapping.getForwardedId(i * 10));
     }
+
+    Assert.assertEquals(-1, mapping.getForwardedId(1));
+    Assert.assertEquals(-1, mapping.getForwardedId(-1));
+    Assert.assertEquals(-1, mapping.getReverseId(-1));
+    Assert.assertEquals(-1, mapping.getReverseId(10));
   }
 
   @Test
@@ -58,6 +63,11 @@ public class IdMappingTest
       Assert.assertEquals(i * 10, mapping.getReverseId(i));
       Assert.assertEquals(i, mapping.getForwardedId(i * 10));
     }
+
+    Assert.assertEquals(-1, mapping.getForwardedId(1));
+    Assert.assertEquals(-1, mapping.getForwardedId(-1));
+    Assert.assertEquals(-1, mapping.getReverseId(-1));
+    Assert.assertEquals(-1, mapping.getReverseId(10));
   }
 
   @Test

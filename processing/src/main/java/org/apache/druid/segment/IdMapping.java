@@ -54,8 +54,8 @@ public class IdMapping
    */
   public int getReverseId(int id)
   {
-    if (id < 0 || id > reverseMapping.length) {
-      return id;
+    if (id < 0 || id >= reverseMapping.length) {
+      return -1;
     }
     return reverseMapping[id];
   }
