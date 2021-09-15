@@ -989,7 +989,6 @@ Cancellation requests require READ permission on all resources used in the sql q
 Druid returns an HTTP 202 response for successful deletion requests.
 
 Druid returns an HTTP 404 response in the following cases:
-  - Authorization fails.
   - `sqlQueryId` is incorrect.
   - The query completes before your cancellation request is processed.
 
