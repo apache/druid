@@ -64,7 +64,6 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
-import org.eclipse.jetty.server.Dispatcher;
 import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
