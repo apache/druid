@@ -21,6 +21,7 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -68,6 +69,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Path("/druid/v2/sql/")
@@ -176,41 +178,65 @@ public class SqlResource
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
       if (serverConfig.isFilterResponse()) {
-        cap = new QueryCapacityExceededException(cap.getErrorCode(), applyErrorMessageFilter(cap.getMessage()), null, null);
+        cap = new QueryCapacityExceededException(
+            cap.getErrorCode(),
+            applyErrorMessageFilter(cap.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null,
+            null
+        );
       }
       return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
       if (serverConfig.isFilterResponse()) {
-        unsupported = new QueryUnsupportedException(unsupported.getErrorCode(), applyErrorMessageFilter(unsupported.getMessage()), null, null);
+        unsupported = new QueryUnsupportedException(
+            unsupported.getErrorCode(),
+            applyErrorMessageFilter(unsupported.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null,
+            null
+        );
       }
       return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
       if (serverConfig.isFilterResponse()) {
-        timeout = new QueryTimeoutException(timeout.getErrorCode(), applyErrorMessageFilter(timeout.getMessage()), null, null);
+        timeout = new QueryTimeoutException(
+            timeout.getErrorCode(),
+            applyErrorMessageFilter(timeout.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null,
+            null
+        );
       }
       return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
     }
     catch (SqlPlanningException sqlPlanningException) {
       endLifecycle(sqlQueryId, lifecycle, sqlPlanningException, remoteAddr, -1);
       if (serverConfig.isFilterResponse()) {
-        sqlPlanningException = new SqlPlanningException(sqlPlanningException.getErrorCode(), applyErrorMessageFilter(sqlPlanningException.getMessage()), null);
+        sqlPlanningException = new SqlPlanningException(
+            sqlPlanningException.getErrorCode(),
+            applyErrorMessageFilter(sqlPlanningException.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null
+        );
       }
       return buildNonOkResponse(BadQueryException.STATUS_CODE, sqlPlanningException);
     }
     catch (ResourceLimitExceededException resourceLimitExceededException) {
       endLifecycle(sqlQueryId, lifecycle, resourceLimitExceededException, remoteAddr, -1);
       if (serverConfig.isFilterResponse()) {
-        resourceLimitExceededException = new ResourceLimitExceededException(resourceLimitExceededException.getErrorCode(), applyErrorMessageFilter(resourceLimitExceededException.getMessage()), null, null);
+        resourceLimitExceededException = new ResourceLimitExceededException(
+            resourceLimitExceededException.getErrorCode(),
+            applyErrorMessageFilter(resourceLimitExceededException.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null,
+            null
+        );
       }
       return buildNonOkResponse(BadQueryException.STATUS_CODE, resourceLimitExceededException);
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-      if (serverConfig.isFilterResponse() && Strings.isNullOrEmpty(applyErrorMessageFilter(e.getMessage()))) {
+      if (serverConfig.isFilterResponse() && Strings.isNullOrEmpty(applyErrorMessageFilter(e.getMessage(), serverConfig.getResponseWhitelistRegex()))) {
         e = new ForbiddenException();
       }
       throw e; // let ForbiddenExceptionMapper handle this
@@ -228,7 +254,11 @@ public class SqlResource
       }
 
       if (serverConfig.isFilterResponse()) {
-        exceptionToReport = new QueryInterruptedException(exceptionToReport.getErrorCode(), applyErrorMessageFilter(exceptionToReport.getMessage()), null, null);
+        exceptionToReport = new QueryInterruptedException(
+            exceptionToReport.getErrorCode(),
+            applyErrorMessageFilter(exceptionToReport.getMessage(), serverConfig.getResponseWhitelistRegex()),
+            null,
+            null);
       }
 
       return buildNonOkResponse(
@@ -304,9 +334,10 @@ public class SqlResource
     }
   }
 
-  private String applyErrorMessageFilter(final String errorMessage)
+  @VisibleForTesting
+  String applyErrorMessageFilter(final String errorMessage, final List<Pattern> whitelistRegex)
   {
-    if (serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+    if (whitelistRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
       return null;
     } else {
       return errorMessage;

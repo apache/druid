@@ -101,6 +101,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SqlResourceTest extends CalciteTestBase
@@ -120,6 +121,7 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -235,33 +237,34 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
-    resource = new SqlResource(
-        JSON_MAPPER,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        new SqlLifecycleFactory(
+    sqlLifecycleFactory = new SqlLifecycleFactory(
+        plannerFactory,
+        emitter,
+        testRequestLogger,
+        scheduler
+    )
+    {
+      @Override
+      public SqlLifecycle factorize()
+      {
+        return new TestSqlLifecycle(
             plannerFactory,
             emitter,
             testRequestLogger,
-            scheduler
-        )
-        {
-          @Override
-          public SqlLifecycle factorize()
-          {
-            return new TestSqlLifecycle(
-                plannerFactory,
-                emitter,
-                testRequestLogger,
-                scheduler,
-                System.currentTimeMillis(),
-                System.nanoTime(),
-                validateAndAuthorizeLatchSupplier,
-                planLatchSupplier,
-                executeLatchSupplier,
-                sequenceMapFnSupplier
-            );
-          }
-        },
+            scheduler,
+            System.currentTimeMillis(),
+            System.nanoTime(),
+            validateAndAuthorizeLatchSupplier,
+            planLatchSupplier,
+            executeLatchSupplier,
+            sequenceMapFnSupplier
+        );
+      }
+    };
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
         lifecycleManager,
         new ServerConfig()
     );
@@ -969,6 +972,39 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testUnsupportedQueryThrowsExceptionWithFilterResponse() throws Exception
+  {
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig() {
+          @Override
+          public boolean isFilterResponse()
+          {
+            return true;
+          }
+        }
+    );
+
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertNull(exception.getMessage());
+    Assert.assertNull(exception.getHost());
+    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertNull(exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
   public void testTooManyRequests() throws Exception
   {
     sleep = true;
@@ -1127,6 +1163,33 @@ public class SqlResourceTest extends CalciteTestBase
     execLatch.countDown();
     response = future.get();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testApplyErrorMessageFilterWithMatchingWhitelistFilter()
+  {
+    String message = "test message 123";
+    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"));
+    String result = resource.applyErrorMessageFilter(message, whitelists);
+    Assert.assertEquals(message, result);
+  }
+
+  @Test
+  public void testApplyErrorMessageFilterWithNoMatchingWhitelistFilter()
+  {
+    String message = "test message 123";
+    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"));
+    String result = resource.applyErrorMessageFilter(message, whitelists);
+    Assert.assertNull(result);
+  }
+
+  @Test
+  public void testApplyErrorMessageFilterWithEmptyWhitelistFilter()
+  {
+    String message = "test message 123";
+    List<Pattern> whitelists = ImmutableList.of();
+    String result = resource.applyErrorMessageFilter(message, whitelists);
+    Assert.assertNull(result);
   }
 
   @SuppressWarnings("unchecked")
