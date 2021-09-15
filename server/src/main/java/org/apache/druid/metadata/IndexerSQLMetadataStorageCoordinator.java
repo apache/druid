@@ -253,13 +253,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return numSegmentsMarkedUnused;
   }
 
-  private List<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
+  private Set<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
       final Interval interval
   ) throws IOException
   {
-    final List<SegmentIdWithShardSpec> identifiers = new ArrayList<>();
+    final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
 
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
@@ -268,6 +268,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .map(ByteArrayMapper.FIRST)
+              .iterator();
+
+    while (dbSegments.hasNext()) {
+      final byte[] payload = dbSegments.next();
+      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
+
+      if (interval.overlaps(identifier.getInterval())) {
+        identifiers.add(identifier);
+      }
+    }
+
+    dbSegments.close();
+
+    return identifiers;
+  }
+
+  private Set<SegmentIdWithShardSpec> getAllSegmentsForIntervalWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final Interval interval
+  ) throws IOException
+  {
+    final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
+
+    final ResultIterator<byte[]> dbSegments =
+        handle.createQuery(
+                  StringUtils.format(
+                      "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
+                      dbTables.getSegmentsTable(), connector.getQuoteString()
+                  )
+              )
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
@@ -890,17 +925,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
       }
 
-      final List<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
+      final Set<SegmentIdWithShardSpec> segmentsForMaxId = getPendingSegmentsForIntervalWithHandle(
           handle,
           dataSource,
           interval
       );
 
       if (maxId != null) {
-        pendings.add(maxId);
+        segmentsForMaxId.add(maxId);
+      } else {
+        // This is a bit of defensive programming: If maxId is null it is because there were
+        // no used segments for the interval, in this case, there may be some scenarios where picking the
+        // maxId only from the pending segments may introduce a clash with an existing, unused, segment
+        // so add the segments (all of them should be unused) to the set to consider them when
+        // computing the maxId below...
+        segmentsForMaxId.addAll(getAllSegmentsForIntervalWithHandle(handle, dataSource, interval));
       }
 
-      maxId = pendings.stream()
+      maxId = segmentsForMaxId.stream()
                       .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
@@ -916,8 +958,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final String versionOfExistingChunks;
       if (!existingChunks.isEmpty()) {
         versionOfExistingChunks = existingChunks.get(0).getVersion();
-      } else if (!pendings.isEmpty()) {
-        versionOfExistingChunks = pendings.get(0).getVersion();
+      } else if (!segmentsForMaxId.isEmpty()) {
+        versionOfExistingChunks = maxId.getVersion();
       } else {
         versionOfExistingChunks = null;
       }

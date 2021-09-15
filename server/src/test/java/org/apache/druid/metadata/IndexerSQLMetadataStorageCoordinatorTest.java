@@ -275,7 +275,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void markAllSegmentsUnused()
   {
-    for (final DataSegment segment : SEGMENTS) {
+    markAllSegmentsUnused(SEGMENTS);
+  }
+
+  private void markAllSegmentsUnused(Set<DataSegment> segments)
+  {
+    for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
           (int) derbyConnector.getDBI().<Integer>withHandle(
@@ -313,6 +318,22 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
+  private List<String> retrieveAllSegmentIds()
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        new HandleCallback<List<String>>()
+        {
+          @Override
+          public List<String> withHandle(Handle handle)
+          {
+            return handle.createQuery("SELECT id FROM " + table + " ORDER BY id")
+                         .map(StringMapper.FIRST)
+                         .list();
+          }
+        }
+    );
+  }
   private Boolean insertUsedSegments(Set<DataSegment> dataSegments)
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
@@ -1201,6 +1222,266 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", identifier4.toString());
+  }
+
+  /**
+   * This test simulates an issue detected on the field consisting of the following sequence of events:
+   * - A kafka stream segment was created on a given interval
+   * - Later, after the above was published, another segment on same interval was created by the stream
+   * - Later, after the above was published, another segment on same interval was created by the stream
+   * - Later a compaction was issued for the three segments above
+   * - Later, after the above was published, another segment on same interval was created by the stream
+   * - Later, the compacted segment got dropped due to a drop rule
+   * - Later, after the above was dropped, another segment on same interval was created by the stream but this
+   *   time there was an integrity violation in the pending segments table because the
+   *   {@link IndexerSQLMetadataStorageCoordinator#createNewSegment(Handle, String, Interval, PartialShardSpec, String)}
+   *   method returned an segment id that already existed in the pending segments table
+   */
+  @Test
+  public void testAllocatePendingSegmentAfterDroppingExistingSegment()
+  {
+    String maxVersion = "version_newer_newer";
+
+    // simulate one load using kafka streaming
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        null,
+        interval,
+        partialShardSpec,
+        "version",
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
+
+    // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq2",
+        identifier.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
+
+    // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq3",
+        identifier1.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
+
+    // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version_new",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(0),
+        9,
+        100
+    );
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new", ids.get(0));
+
+    // one more load on same interval:
+    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq4",
+        identifier1.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_1", identifier3.toString());
+
+    // now drop the used segment previously loaded:
+    markAllSegmentsUnused(ImmutableSet.of(segment));
+
+    // and final load, this reproduces an issue that could happen with multiple streaming appends,
+    // followed by a reindex, followed by a drop, and more streaming data coming in for same interval
+    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq5",
+        identifier1.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_2", identifier4.toString());
+
+  }
+
+  /**
+   * Slightly different that the above test
+   * 1) pending segment 0, 1, 2 allocated as pending segments with version = A and also have used segment entries in the table
+   * 2) segment 3 with version = A is added directly to the used segment entries without a pending segment
+   * 3) all four (0, 1, 2, 3) are marked unused
+   * 4) next allocation will try to allocate #3 with version = A (since it's looking at pendings) and collides with the unused segment 3
+   */
+  @Test
+  public void testAnotherAllocatePendingSegmentAfterDroppingExistingSegment()
+  {
+    String maxVersion = "version_newer_newer";
+    Set<DataSegment> segments = new HashSet<>();
+
+    // 1.0) simulate one load using kafka streaming
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        null,
+        interval,
+        partialShardSpec,
+        "version",
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
+    // Assume it publishes; create its corresponding segment
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(0),
+        9,
+        100
+    );
+    segments.add(segment);
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", ids.get(0));
+
+
+
+    // 1.1) simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq2",
+        identifier.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
+    // Assume it publishes; create its corresponding segment
+    segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(1),
+        9,
+        100
+    );
+    segments.add(segment);
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", ids.get(1));
+
+
+    // 1.2) simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq3",
+        identifier1.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
+    // Assume it publishes; create its corresponding segment
+    segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(2),
+        9,
+        100
+    );
+    segments.add(segment);
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", ids.get(2));
+
+
+    // 2)
+    // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
+    // Note that the version is forced to be the same as the previous segments created during streaming but this
+    // may not happen with real code...just trying to simulate a potential scenario here
+    segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(3),
+        9,
+        100
+    );
+    // since this load was done by batch ingestion it won't create a pending segment for it, just a used segment:
+    segments.add(segment);
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", ids.get(3));
+
+    // 3) now drop the used segment previously loaded:
+    markAllSegmentsUnused(segments);
+
+    // 4) and final stream load
+    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq4",
+        identifier2.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_4", identifier3.toString());
+    // create its corresponding segment
+    segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "version",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(4),
+        9,
+        100
+    );
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    ids = retrieveAllSegmentIds();
+    Assert.assertTrue(ids.contains(identifier3.toString()));
+
   }
 
   @Test
