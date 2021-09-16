@@ -286,7 +286,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    return Response.ok(doGetUnparseableEvents(full)).build();
+  }
+
+  public Map<String, Object> doGetUnparseableEvents(String full)
+  {
+    Map<String, Object> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -325,11 +330,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           )
       );
     }
-
-    return Response.ok(events).build();
+    return events;
   }
 
-  private Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(String full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -782,6 +786,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     return hllCollectors;
+  }
+
+  public IngestionState getIngestionState()
+  {
+    return ingestionState;
   }
 
   /**
