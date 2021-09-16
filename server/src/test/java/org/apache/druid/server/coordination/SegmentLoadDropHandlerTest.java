@@ -509,15 +509,8 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    result = segmentLoadDropHandler.processBatch(batch).get();
+    result = segmentLoadDropHandler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
     Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(0).getStatus());
-    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
-
-
-    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : segmentLoadDropHandler.processBatch(batch)
-                                                                                            .get()) {
-      Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, e.getStatus());
-    }
 
     segmentLoadDropHandler.stop();
   }
