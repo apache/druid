@@ -41,7 +41,7 @@ public class NamedViewSchema implements NamedSchema
   }
 
   @Override
-  public String getSchemaResourceType()
+  public String getSchemaResourceType(String resourceName)
   {
     return ResourceType.VIEW;
   }

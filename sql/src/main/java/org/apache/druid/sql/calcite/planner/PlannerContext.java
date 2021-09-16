@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -69,7 +70,7 @@ public class PlannerContext
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
-  private final Map<String, String> schemaResourceTypes;
+  private final DruidSchemaCatalog rootSchema;
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
@@ -89,14 +90,14 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
-      final Map<String, String> schemaResourceTypes,
+      final DruidSchemaCatalog rootSchema,
       final Map<String, Object> queryContext
   )
   {
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
-    this.schemaResourceTypes = schemaResourceTypes;
+    this.rootSchema = rootSchema;
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
@@ -113,7 +114,7 @@ public class PlannerContext
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
-      final Map<String, String> schemaResourceTypes,
+      final DruidSchemaCatalog rootSchema,
       final Map<String, Object> queryContext
   )
   {
@@ -155,7 +156,7 @@ public class PlannerContext
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
-        schemaResourceTypes,
+        rootSchema,
         queryContext
     );
   }
@@ -186,9 +187,9 @@ public class PlannerContext
   }
 
   @Nullable
-  public String getSchemaResourceType(String schema)
+  public String getSchemaResourceType(String schema, String resourceName)
   {
-    return schemaResourceTypes.get(schema);
+    return rootSchema.getResourceType(schema, resourceName);
   }
 
   public Map<String, Object> getQueryContext()

@@ -35,7 +35,7 @@ public interface NamedSchema
   String getSchemaName();
 
   @Nullable
-  default String getSchemaResourceType()
+  default String getSchemaResourceType(String resourceName)
   {
     return null;
   }

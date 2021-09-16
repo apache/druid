@@ -65,12 +65,13 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
       // this should not probably be null if the namespace was not null,
       if (validatorTable != null) {
         List<String> qualifiedNameParts = validatorTable.getQualifiedName();
-        // 'schema'.'identifier'
+        // 'schema'.'identifier' d
         if (qualifiedNameParts.size() == 2) {
           final String schema = qualifiedNameParts.get(0);
-          final String resourceType = plannerContext.getSchemaResourceType(schema);
+          final String resourceName = qualifiedNameParts.get(1);
+          final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);
           if (resourceType != null) {
-            resources.add(new Resource(qualifiedNameParts.get(1), resourceType));
+            resources.add(new Resource(resourceName, resourceType));
           }
         }
       }

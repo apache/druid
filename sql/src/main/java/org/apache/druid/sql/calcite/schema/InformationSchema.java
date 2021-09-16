@@ -63,7 +63,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class InformationSchema extends AbstractSchema
 {
@@ -117,15 +116,13 @@ public class InformationSchema extends AbstractSchema
   private static final String INFO_TRUE = "YES";
   private static final String INFO_FALSE = "NO";
 
-  private final SchemaPlus rootSchema;
+  private final DruidSchemaCatalog rootSchema;
   private final Map<String, Table> tableMap;
-  private final Map<String, NamedSchema> namedSchemaMap;
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public InformationSchema(
-      @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final SchemaPlus rootSchema,
-      Set<NamedSchema> namedSchemas,
+      @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final DruidSchemaCatalog rootSchema,
       final AuthorizerMapper authorizerMapper
   )
   {
@@ -136,7 +133,6 @@ public class InformationSchema extends AbstractSchema
         COLUMNS_TABLE, new ColumnsTable()
     );
     this.authorizerMapper = authorizerMapper;
-    this.namedSchemaMap = namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, s -> s));
   }
 
   @Override
@@ -479,23 +475,11 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    final NamedSchema schema = namedSchemaMap.get(subSchema.getName());
-    if (schema != null && schema.getSchemaResourceType() != null) {
-      return ImmutableSet.copyOf(
-          AuthorizationUtils.filterAuthorizedResources(
-              authenticationResult,
-              subSchema.getTableNames(),
-              name ->
-                  Collections.singletonList(
-                      new ResourceAction(new Resource(name, schema.getSchemaResourceType()), Action.READ)
-                  ),
-              authorizerMapper
-          )
-      );
-    } else {
-      // for schemas with no resource type, or that are not named schemas, we don't filter anything
-      return subSchema.getTableNames();
-    }
+    return getAuthorizedNamesFromNamedSchema(
+        authenticationResult,
+        rootSchema.getNamedSchema(subSchema.getName()),
+        subSchema.getTableNames()
+    );
   }
 
   private Set<String> getAuthorizedFunctionNamesFromSubSchema(
@@ -503,22 +487,40 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    final NamedSchema schema = namedSchemaMap.get(subSchema.getName());
-    if (schema != null && schema.getSchemaResourceType() != null) {
+    return getAuthorizedNamesFromNamedSchema(
+        authenticationResult,
+        rootSchema.getNamedSchema(subSchema.getName()),
+        subSchema.getFunctionNames()
+    );
+  }
+
+  private Set<String> getAuthorizedNamesFromNamedSchema(
+      final AuthenticationResult authenticationResult,
+      final NamedSchema schema,
+      final Set<String> names
+  )
+  {
+    if (schema != null) {
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
-              subSchema.getFunctionNames(),
-              name ->
-                  Collections.singletonList(
-                      new ResourceAction(new Resource(name, schema.getSchemaResourceType()), Action.READ)
-                  ),
+              names,
+              name -> {
+                final String resoureType = schema.getSchemaResourceType(name);
+                if (resoureType != null) {
+                  return Collections.singletonList(
+                      new ResourceAction(new Resource(name, resoureType), Action.READ)
+                  );
+                } else {
+                  return Collections.emptyList();
+                }
+              },
               authorizerMapper
           )
       );
     } else {
       // for schemas with no resource type, or that are not named schemas, we don't filter anything
-      return subSchema.getFunctionNames();
+      return names;
     }
   }
 }
