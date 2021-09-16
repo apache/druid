@@ -23,7 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 import org.apache.druid.query.BadQueryException;
+import org.apache.druid.query.QueryException;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * An exception for SQL query planning failures.
@@ -78,5 +83,11 @@ public class SqlPlanningException extends BadQueryException
   )
   {
     super(errorCode, errorMessage, errorClass);
+  }
+
+  @Override
+  public SqlPlanningException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new SqlPlanningException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null);
   }
 }

@@ -22,8 +22,11 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * This exception is for the query engine to surface when a query cannot be run. This can be due to the
@@ -53,5 +56,11 @@ public class QueryUnsupportedException extends QueryException
   public QueryUnsupportedException(String errorMessage)
   {
     super(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+  }
+
+  @Override
+  public QueryUnsupportedException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new QueryUnsupportedException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }

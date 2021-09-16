@@ -66,6 +66,7 @@ public class ServerConfigTest
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
     Assert.assertEquals(modifiedConfig, modifiedConfig2);
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
+    Assert.assertEquals(888, modifiedConfig2.getQueueSize());
     Assert.assertEquals(1, modifiedConfig2.getResponseWhitelistRegex().size());
     Assert.assertEquals(".*", modifiedConfig2.getResponseWhitelistRegex().get(0).toString());
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());

@@ -21,12 +21,18 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
+import org.apache.druid.query.QueryException;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
  * take care of sending the response.
  */
-public class ForbiddenException extends RuntimeException
+public class ForbiddenException extends RuntimeException implements FilterableExceptionMessageAndFields<ForbiddenException>
 {
   public ForbiddenException()
   {
@@ -43,5 +49,15 @@ public class ForbiddenException extends RuntimeException
   public String getErrorMessage()
   {
     return super.getMessage();
+  }
+
+  @Override
+  public ForbiddenException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    if (Strings.isNullOrEmpty(FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex))) {
+      return new ForbiddenException();
+    } else {
+      return this;
+    }
   }
 }

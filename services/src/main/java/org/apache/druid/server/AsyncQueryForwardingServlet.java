@@ -42,6 +42,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -110,25 +111,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
-    log.warn(exception, "Unexpected exception occurs");
+    QueryInterruptedException exceptionToReport = QueryInterruptedException.wrapIfNeeded(exception);
+    log.warn(exceptionToReport, "Unexpected exception occurs");
     if (!response.isCommitted()) {
-      final String errorMessage = exception.getMessage() == null ? "null exception" : exception.getMessage();
-
       response.resetBuffer();
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
-      if (serverConfig.isFilterResponse()
-          && serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
-        objectMapper.writeValue(
-            response.getOutputStream(),
-            ImmutableMap.of("error", DEFAULT_ERROR_UNEXPECTED_MESSAGE)
-        );
-      } else {
-        objectMapper.writeValue(
-            response.getOutputStream(),
-            ImmutableMap.of("error", errorMessage)
-        );
+      if (serverConfig.isFilterResponse()) {
+        exceptionToReport = exceptionToReport.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
       }
+      objectMapper.writeValue(
+          response.getOutputStream(),
+          exceptionToReport
+      );
     }
     response.flushBuffer();
   }
@@ -340,11 +335,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       boolean isNativeQuery
   ) throws IOException
   {
-    log.warn(parseException, "Exception parsing query");
+    QueryInterruptedException exceptionToReport = QueryInterruptedException.wrapIfNeeded(parseException);
+    log.warn(exceptionToReport, "Exception parsing query");
 
     // Log the error message
-    final String errorMessage = parseException.getMessage() == null
-                                ? "no error message" : parseException.getMessage();
+    final String errorMessage = exceptionToReport.getMessage() == null
+                                ? "no error message" : exceptionToReport.getMessage();
     if (isNativeQuery) {
       requestLogger.logNativeQuery(
           RequestLogLine.forNative(
@@ -369,18 +365,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Write to the response
     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     response.setContentType(MediaType.APPLICATION_JSON);
-    if (serverConfig.isFilterResponse()
-        && serverConfig.getResponseWhitelistRegex().stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
-      objectMapper.writeValue(
-          response.getOutputStream(),
-          ImmutableMap.of("error", DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE)
-      );
-    } else {
-      objectMapper.writeValue(
-          response.getOutputStream(),
-          ImmutableMap.of("error", errorMessage)
-      );
+    if (serverConfig.isFilterResponse()) {
+      exceptionToReport = exceptionToReport.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
     }
+    objectMapper.writeValue(
+        response.getOutputStream(),
+        exceptionToReport
+    );
   }
 
   protected void doService(

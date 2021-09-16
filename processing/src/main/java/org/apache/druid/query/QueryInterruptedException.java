@@ -21,10 +21,13 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.CancellationException;
+import java.util.regex.Pattern;
 
 /**
  * Exception representing a failed query. The name "QueryInterruptedException" is a misnomer; this is actually
@@ -131,5 +134,11 @@ public class QueryInterruptedException extends QueryException
   public static QueryInterruptedException wrapIfNeeded(Throwable e)
   {
     return e instanceof QueryInterruptedException ? (QueryInterruptedException) e : new QueryInterruptedException(e);
+  }
+
+  @Override
+  public QueryInterruptedException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new QueryInterruptedException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }

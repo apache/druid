@@ -1191,33 +1191,6 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
-  @Test
-  public void testApplyErrorMessageFilterWithMatchingWhitelistFilter()
-  {
-    String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"));
-    String result = resource.applyErrorMessageFilter(message, whitelists);
-    Assert.assertEquals(message, result);
-  }
-
-  @Test
-  public void testApplyErrorMessageFilterWithNoMatchingWhitelistFilter()
-  {
-    String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"));
-    String result = resource.applyErrorMessageFilter(message, whitelists);
-    Assert.assertNull(result);
-  }
-
-  @Test
-  public void testApplyErrorMessageFilterWithEmptyWhitelistFilter()
-  {
-    String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of();
-    String result = resource.applyErrorMessageFilter(message, whitelists);
-    Assert.assertNull(result);
-  }
-
   @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
   {

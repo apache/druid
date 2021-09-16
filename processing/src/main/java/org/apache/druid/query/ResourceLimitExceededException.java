@@ -21,7 +21,11 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 import org.apache.druid.java.util.common.StringUtils;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Exception indicating that an operation failed because it exceeded some configured resource limit.
@@ -58,5 +62,11 @@ public class ResourceLimitExceededException extends BadQueryException
   )
   {
     this(errorCode, errorMessage, errorClass, resolveHostname());
+  }
+
+  @Override
+  public ResourceLimitExceededException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new ResourceLimitExceededException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }

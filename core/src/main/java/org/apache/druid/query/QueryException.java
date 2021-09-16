@@ -22,16 +22,19 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Base serializable error response
  *
  * QueryResource and SqlResource are expected to emit the JSON form of this object when errors happen.
  */
-public class QueryException extends RuntimeException
+public class QueryException extends RuntimeException implements FilterableExceptionMessageAndFields<QueryException>
 {
   private final String errorCode;
   private final String errorClass;
@@ -95,5 +98,11 @@ public class QueryException extends RuntimeException
     catch (Exception e) {
       return null;
     }
+  }
+
+  @Override
+  public QueryException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new QueryException(errorCode, FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }

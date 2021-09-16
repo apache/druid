@@ -22,6 +22,10 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 public class BadJsonQueryException extends BadQueryException
 {
@@ -41,5 +45,11 @@ public class BadJsonQueryException extends BadQueryException
   )
   {
     super(errorCode, errorMessage, errorClass);
+  }
+
+  @Override
+  public BadJsonQueryException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new BadJsonQueryException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null);
   }
 }

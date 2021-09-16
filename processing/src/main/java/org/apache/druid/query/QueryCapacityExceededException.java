@@ -22,7 +22,11 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 import org.apache.druid.java.util.common.StringUtils;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * This exception is for QueryResource and SqlResource to surface when a query is cast away after
@@ -86,5 +90,11 @@ public class QueryCapacityExceededException extends QueryException
   public static String makeLaneErrorMessage(String lane, int capacity)
   {
     return StringUtils.format(LANE_ERROR_MESSAGE_TEMPLATE, lane, capacity);
+  }
+
+  @Override
+  public QueryCapacityExceededException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
+  {
+    return new QueryCapacityExceededException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }
