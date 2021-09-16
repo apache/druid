@@ -34,6 +34,11 @@ public interface NamedSchema
    */
   String getSchemaName();
 
+  /**
+   * For a given name of a table, function, etc of this schema, return the value most appropriate to use for
+   * {@link org.apache.druid.server.security.Resource#getType()} for the resource, used during authorization. If this
+   * method returns null then the resource does not need any authorization.
+   */
   @Nullable
   default String getSchemaResourceType(String resourceName)
   {

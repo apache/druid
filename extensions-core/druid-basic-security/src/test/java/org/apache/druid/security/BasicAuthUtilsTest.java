@@ -90,12 +90,7 @@ public class BasicAuthUtilsTest
                     "resourceNamePattern", "foo"
                 ),
                 ImmutableMap.of(
-                    "resourceAction",
-                    ImmutableMap.of(
-                        "resource",
-                        ImmutableMap.of("name", "bar", "type", "CUSTOM"),
-                        "action", "READ"
-                    ),
+                    "resourceAction", customRead,
                     "resourceNamePattern", "bar"
                 )
             )
