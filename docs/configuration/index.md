@@ -566,23 +566,17 @@ These properties do not apply to metadata storage connections.
 
 ### Task Logging
 
-If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+You can use the `druid.indexer` configuration to set a [long-term storage](#log-long-term-storage) location for task log files, and to set a [retention policy](#log-retention-policy).
+
+For more information about ingestion tasks and the process of generating logs, see the [task reference](../ingestion/tasks.md).
+
+#### Log Long-term Storage
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
+|`druid.indexer.logs.type`|Where to store task logs.  `noop`, [`s3`](#s3-task-logs), [`azure`](#azure-blob-store-task-logs), [`google`](#google-cloud-storage-task-logs), [`hdfs`](#hdfs-task-logs), [`file`](#file-task-logs) |`file`|
 
-You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables for only x milliseconds by configuring following additional properties.
-Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid processes and backing store nodes might result in unintended behavior.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
-|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
-|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
-
-#### File Task Logs
+##### File Task Logs
 
 Store task logs in the local filesystem.
 
@@ -590,7 +584,7 @@ Store task logs in the local filesystem.
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|Local filesystem path.|log|
 
-#### S3 Task Logs
+##### S3 Task Logs
 
 Store task logs in S3. Note that the `druid-s3-extensions` extension must be loaded.
 
@@ -600,7 +594,7 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
 |`druid.indexer.logs.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. If the task logs bucket is the same as the deep storage (S3) bucket, then the value of this property will need to be set to true if druid.storage.disableAcl has been set to true.|false|
 
-#### Azure Blob Store Task Logs
+##### Azure Blob Store Task Logs
 Store task logs in Azure Blob Store.
 
 Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
@@ -610,7 +604,7 @@ Note: The `druid-azure-extensions` extension must be loaded, and this uses the s
 |`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-#### Google Cloud Storage Task Logs
+##### Google Cloud Storage Task Logs
 Store task logs in Google Cloud Storage.
 
 Note: The `druid-google-extensions` extension must be loaded, and this uses the same storage settings as the deep storage module for google.
@@ -620,13 +614,22 @@ Note: The `druid-google-extensions` extension must be loaded, and this uses the 
 |`druid.indexer.logs.bucket`|The Google Cloud Storage bucket to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-#### HDFS Task Logs
+##### HDFS Task Logs
 
 Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|The directory to store logs.|none|
+
+#### Log Retention Policy
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, Overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
+|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
 ### Overlord Discovery
 
@@ -1343,7 +1346,7 @@ Additional peon configs include:
 |`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone process (Not recommended).|remote|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/task`|
-|`druid.indexer.task.batchProcessingMode`| Batch ingestion tasks have three operating modes that control how intermediary segments are constructed and tracked: `OPEN_SEGMENTS`, `CLOSED_SEGMENTS`, and `CLOSED_SEGMENT_SINKS`. `OPEN_SEGMENTS` will use code based on the original batch ingestion path and performs a `mmap` on intermediary segments to build a timeline so that these segments can be queryable by realtime queries. This is not needed at all for batch, so the default mode, `CLOSED_SEGMENTS`, eliminates `mmap` of intermediary segments, but still tracks the entire set of segments in heap. The `CLOSED_SEGMENTS_SINKS` mode is the most aggressive and should have the smallest memory footprint, and works by eliminating in memory tracking and `mmap` of intermediary segments produced during segment creation. This mode isn't as well tested as other modes so is currently considered experimental. `OPEN_SEGMENTS` mode can be selected if any problems occur with the 2 newer modes. |`CLOSED_SEGMENTS`|
+|`druid.indexer.task.batchProcessingMode`| Batch ingestion tasks have three operating modes to control construction and tracking for intermediary segments: `OPEN_SEGMENTS`, `CLOSED_SEGMENTS`, and `CLOSED_SEGMENT_SINKS`. `OPEN_SEGMENTS` uses the streaming ingestion code path and performs a `mmap` on intermediary segments to build a timeline to make these segments available to realtime queries. Batch ingestion doesn't require intermediary segments, so the default mode, `CLOSED_SEGMENTS`, eliminates `mmap` of intermediary segments. `CLOSED_SEGMENTS` mode still tracks the entire set of segments in heap. The `CLOSED_SEGMENTS_SINKS` mode is the most aggressive configuration and should have the smallest memory footprint. It eliminates in-memory tracking and `mmap` of intermediary segments produced during segment creation. `CLOSED_SEGMENTS_SINKS` mode isn't as well tested as other modes so is currently considered experimental. You can use `OPEN_SEGMENTS` mode if problems occur with the 2 newer modes. |`CLOSED_SEGMENTS`|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.8.5|
 |`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|75000|
 |`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie peons to exit before giving up on their replacements.|PT10M|
@@ -1678,7 +1681,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |Long.MAX_VALUE|
-|`druid.server.http.maxSubqueryRows`|Maximum number of rows from subqueries per query. These rows are stored in memory.|100000|
+|`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br><br>It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br><br>There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
