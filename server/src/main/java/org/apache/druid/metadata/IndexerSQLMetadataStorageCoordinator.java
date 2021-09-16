@@ -958,7 +958,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final String versionOfExistingChunks;
       if (!existingChunks.isEmpty()) {
         versionOfExistingChunks = existingChunks.get(0).getVersion();
-      } else if (!segmentsForMaxId.isEmpty()) {
+      } else if (!segmentsForMaxId.isEmpty() && maxId != null) {
         versionOfExistingChunks = maxId.getVersion();
       } else {
         versionOfExistingChunks = null;
