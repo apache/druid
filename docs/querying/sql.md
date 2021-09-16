@@ -613,6 +613,8 @@ All 'array' references in the multi-value string function documentation can refe
 |Function|Notes|
 |--------|-----|
 | `ARRAY[expr1,expr ...]` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `MV_FILTER_ONLY(expr, arr)` | filters multi-value `expr` to include only values contained in array `arr` |
+| `MV_FILTER_NONE(expr, arr)` | filters multi-value `expr` to include no values contained in array `arr` |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |

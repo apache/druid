@@ -22,13 +22,15 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.IdMapping;
+import org.apache.druid.segment.data.Indexed;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
@@ -78,64 +80,80 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     if (isWhitelist) {
-      return filterWhiteList(selector);
+      return filterAllowList(values, selector);
     } else {
-      return filterBlackList(selector);
+      return filterDenyList(values, selector);
     }
   }
 
-  private DimensionSelector filterWhiteList(DimensionSelector selector)
+  public static IdMapping buildAllowListIdMapping(
+      Set<String> values,
+      int cardinality,
+      @Nullable IdLookup idLookup,
+      Indexed.IndexedGetter<String> fn
+  )
   {
-    final int selectorCardinality = selector.getValueCardinality();
-    if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
-      return new PredicateFilteredDimensionSelector(selector, Predicates.in(values));
-    }
-    final int maxPossibleFilteredCardinality = values.size();
-    int count = 0;
-    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
-    forwardMapping.defaultReturnValue(-1);
-    final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
-    IdLookup idLookup = selector.idLookup();
+    final IdMapping.Builder builder = IdMapping.Builder.ofCardinality(values.size());
     if (idLookup != null) {
       for (String value : values) {
         int i = idLookup.lookupId(value);
         if (i >= 0) {
-          forwardMapping.put(i, count);
-          reverseMapping[count++] = i;
+          builder.addMapping(i);
         }
       }
     } else {
-      for (int i = 0; i < selectorCardinality; i++) {
-        if (values.contains(NullHandling.nullToEmptyIfNeeded(selector.lookupName(i)))) {
-          forwardMapping.put(i, count);
-          reverseMapping[count++] = i;
+      for (int i = 0; i < cardinality; i++) {
+        if (values.contains(NullHandling.nullToEmptyIfNeeded(fn.get(i)))) {
+          builder.addMapping(i);
         }
       }
     }
-    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
+    return builder.build();
   }
 
-  private DimensionSelector filterBlackList(DimensionSelector selector)
+  public static IdMapping buildDenyListIdMapping(
+      Set<String> values,
+      int cardinality,
+      Indexed.IndexedGetter<String> fn
+  )
   {
-    final int selectorCardinality = selector.getValueCardinality();
-    if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
+    final IdMapping.Builder builder = IdMapping.Builder.ofCardinality(cardinality);
+    for (int i = 0; i < cardinality; i++) {
+      if (!values.contains(NullHandling.nullToEmptyIfNeeded(fn.get(i)))) {
+        builder.addMapping(i);
+      }
+    }
+    return builder.build();
+  }
+
+  public static DimensionSelector filterAllowList(Set<String> values, DimensionSelector selector)
+  {
+    if (selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
+      return new PredicateFilteredDimensionSelector(selector, Predicates.in(values));
+    }
+    final IdMapping idMapping = buildAllowListIdMapping(
+        values,
+        selector.getValueCardinality(),
+        selector.idLookup(),
+        selector::lookupName
+    );
+    return new ForwardingFilteredDimensionSelector(selector, idMapping);
+  }
+
+  public static DimensionSelector filterDenyList(Set<String> values, DimensionSelector selector)
+  {
+    if (selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(
           selector,
           input -> !values.contains(input)
       );
     }
-    final int maxPossibleFilteredCardinality = selectorCardinality;
-    int count = 0;
-    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
-    forwardMapping.defaultReturnValue(-1);
-    final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
-    for (int i = 0; i < selectorCardinality; i++) {
-      if (!values.contains(NullHandling.nullToEmptyIfNeeded(selector.lookupName(i)))) {
-        forwardMapping.put(i, count);
-        reverseMapping[count++] = i;
-      }
-    }
-    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
+    final IdMapping idMapping = buildDenyListIdMapping(
+        values,
+        selector.getValueCardinality(),
+        selector::lookupName
+    );
+    return new ForwardingFilteredDimensionSelector(selector, idMapping);
   }
 
   @Override
