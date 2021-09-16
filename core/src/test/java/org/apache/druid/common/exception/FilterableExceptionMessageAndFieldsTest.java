@@ -20,7 +20,6 @@
 package org.apache.druid.common.exception;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.query.QueryException;
 import org.junit.Assert;
 import org.junit.Test;
 
