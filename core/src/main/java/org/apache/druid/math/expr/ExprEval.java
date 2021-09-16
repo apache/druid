@@ -825,7 +825,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(asStringArray());
           }
       }
-      throw new IAE("invalid type ", castTo);
+      throw new IAE("invalid type " + castTo);
     }
 
     @Override

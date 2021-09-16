@@ -113,10 +113,15 @@ public class ArraySqlAggregator implements SqlAggregator
     final String fieldName;
     final String initialvalue;
     final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
+    final ColumnType elementType;
     if (druidType == null || !druidType.isArray()) {
       initialvalue = "[]";
+      elementType = ColumnType.STRING;
     } else {
-      switch (druidType.getElementType().getType()) {
+      elementType = (ColumnType) druidType.getElementType();
+      // elementType should never be null if druidType.isArray is true
+      assert elementType != null;
+      switch (elementType.getType()) {
         case LONG:
           initialvalue = "<LONG>[]";
           break;
@@ -131,7 +136,7 @@ public class ArraySqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, (ColumnType) druidType.getElementType());
+      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
       fieldName = vc.getOutputName();
     }
 

@@ -157,6 +157,9 @@ public class RowSignatures
     return builder.build();
   }
 
+  /**
+   * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information
+   */
   public static final class ComplexSqlType extends AbstractSqlType
   {
     private final ColumnType columnType;
@@ -178,12 +181,10 @@ public class RowSignatures
       return RelDataTypeComparability.UNORDERED;
     }
 
-
-
     @Override
     protected void generateTypeString(StringBuilder sb, boolean withDetail)
     {
-      sb.append(columnType.toString());
+      sb.append(columnType.asTypeString());
     }
 
     public String getComplexTypeName()
