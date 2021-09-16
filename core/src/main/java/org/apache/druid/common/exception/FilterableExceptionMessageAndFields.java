@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 
 public interface FilterableExceptionMessageAndFields<T>
 {
-  T applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex);
+  T applyErrorMessageFilterAndRemoveInternalFields(List<Pattern> whitelistRegex);
 
   @VisibleForTesting
   static String applyErrorMessageFilter(final String errorMessage, final List<Pattern> whitelistRegex)
