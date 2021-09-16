@@ -25,7 +25,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 import org.apache.druid.query.BadQueryException;
-import org.apache.druid.query.QueryException;
 
 import java.util.List;
 import java.util.regex.Pattern;
