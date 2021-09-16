@@ -140,11 +140,12 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 
 ### Routing of SQL queries using Strategies
 
-To enable routing of SQL queries using strategies, set `druid.router.sql.enable` to `true` (`false` by default). The broker service for a
+To enable routing of SQL queries using strategies, set `druid.router.sql.enable` to `true`. The broker service for a
 given SQL query is resolved using only the provided Router strategies. If not resolved using any of the strategies, the
 Router uses the `defaultBrokerServiceName`. This behavior is slightly different from native queries where the Router
 first tries to resolve the broker service using strategies, then load rules and finally using the `defaultBrokerServiceName`
-if still not resolved.
+if still not resolved. When `druid.router.sql.enable` is set to `false` (default value), the Router uses the
+`defaultBrokerServiceName`.
 
 Setting `druid.router.sql.enable` does not affect either Avatica JDBC requests or Native Queries.
 Native queries are always routed using strategies and load rules as explained above.
