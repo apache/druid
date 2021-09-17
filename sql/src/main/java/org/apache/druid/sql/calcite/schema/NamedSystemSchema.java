@@ -21,6 +21,10 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
+
+import javax.annotation.Nullable;
 
 /**
  * The schema for Druid system tables to be accessible via SQL.
@@ -30,10 +34,12 @@ public class NamedSystemSchema implements NamedSchema
   public static final String NAME = "sys";
 
   private final SystemSchema systemSchema;
+  private final PlannerConfig plannerConfig;
 
   @Inject
-  public NamedSystemSchema(SystemSchema systemSchema)
+  public NamedSystemSchema(PlannerConfig plannerConfig, SystemSchema systemSchema)
   {
+    this.plannerConfig = plannerConfig;
     this.systemSchema = systemSchema;
   }
 
@@ -47,5 +53,15 @@ public class NamedSystemSchema implements NamedSchema
   public Schema getSchema()
   {
     return systemSchema;
+  }
+
+  @Nullable
+  @Override
+  public String getSchemaResourceType(String resourceName)
+  {
+    if (plannerConfig.isAuthorizeSystemTablesDirectly()) {
+      return ResourceType.SYSTEM_TABLE;
+    }
+    return null;
   }
 }

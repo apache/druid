@@ -67,6 +67,30 @@ public class AuthorizationUtils
   }
 
   /**
+   * Check a resource-action using the authorization fields from the identity represented by authenticationResult.
+   *
+   * Otherwise, if the resource-actions is authorized, return ACCESS_OK.
+   *
+   * @param authenticationResult  Authentication result representing identity of requester
+   * @param resourceAction   A resource identifier and the action to be taken the resource.
+   * @param authorizerMapper The singleton AuthorizerMapper instance
+   *
+   * @return ACCESS_OK or the failed Access object returned by the Authorizer that checked the request.
+   */
+  public static Access authorizeResourceAction(
+      final AuthenticationResult authenticationResult,
+      final ResourceAction resourceAction,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    return authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(resourceAction),
+        authorizerMapper
+    );
+  }
+
+  /**
    * Returns the authentication information for a request.
    *
    * @param request http request
