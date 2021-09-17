@@ -199,6 +199,7 @@ public class FastJSONReader
     for (; pos < json.length(); pos++) {
       char c = json.charAt(pos);
       if (c == '\\') {
+        pos = Math.min(pos + 1, json.length() - 1);
         continue;
       } else if (c == '"') {
         if (needResult) {
@@ -226,7 +227,7 @@ public class FastJSONReader
 
     char c = safeCharAt();
     c = Character.toLowerCase(c);
-    // disit, boolean, null
+    // disit, boolean
     if (('0' <= c && c <= '9') || c == '-' ||
         c == 't' || c == 'f') {
       for (; pos < json.length(); pos++) {
