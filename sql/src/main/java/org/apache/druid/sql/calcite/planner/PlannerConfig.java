@@ -161,6 +161,11 @@ public class PlannerConfig
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
+    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
+        context,
+        CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
@@ -168,9 +173,6 @@ public class PlannerConfig
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
     newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(context,
-                                                               CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
-                                                               computeInnerJoinCostAsFilter);
     return newConfig;
   }
 
