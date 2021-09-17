@@ -77,7 +77,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("json", jsonStr)
         .put("jsonInvalid", "{abc}")
         .put("jsonEmpty", "")
-        .put("jsonNull", "{\"key\":null}");
+        .put("jsonNull", "{\"key\":null}")
+        .put("jsonStringEscape", "{\"key\":\"haha\\\"hoho\\\"huhu\"");
     bindings = InputBindings.withMap(builder.build());
   }
 
@@ -836,6 +837,8 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("json_extract_string(jsonNull, 'key')", null);
     assertExpr("json_extract_long(jsonNull, 'key')", null);
     assertExpr("json_extract_double(jsonNull, 'key')", null);
+    
+    assertExpr("json_extract_string(jsonStringEscape, 'key')", "haha\\\"hoho\\\"huhu");
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
