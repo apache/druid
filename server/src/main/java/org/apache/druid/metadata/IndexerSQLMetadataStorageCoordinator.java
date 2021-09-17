@@ -288,41 +288,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return identifiers;
   }
 
-  private Set<SegmentIdWithShardSpec> getAllSegmentsForIntervalWithHandle(
-      final Handle handle,
-      final String dataSource,
-      final Interval interval
-  ) throws IOException
-  {
-    final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
-
-    final ResultIterator<byte[]> dbSegments =
-        handle.createQuery(
-                  StringUtils.format(
-                      "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
-                      dbTables.getSegmentsTable(), connector.getQuoteString()
-                  )
-              )
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
-              .iterator();
-
-    while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
-
-      if (interval.overlaps(identifier.getInterval())) {
-        identifiers.add(identifier);
-      }
-    }
-
-    dbSegments.close();
-
-    return identifiers;
-  }
-
   private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
@@ -925,43 +890,51 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
       }
 
-      final Set<SegmentIdWithShardSpec> segmentsForMaxId = getPendingSegmentsForIntervalWithHandle(
+      final Set<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
           handle,
           dataSource,
           interval
       );
 
       if (maxId != null) {
-        segmentsForMaxId.add(maxId);
-      } else {
-        // This is a bit of defensive programming: If maxId is null it is because there were
-        // no used segments for the interval, in this case, there may be some scenarios where picking the
-        // maxId only from the pending segments may introduce a clash with an existing, unused, segment
-        // so add the segments (all of them should be unused) to the set to consider them when
-        // computing the maxId below...
-        segmentsForMaxId.addAll(getAllSegmentsForIntervalWithHandle(handle, dataSource, interval));
+        pendings.add(maxId);
       }
 
-      maxId = segmentsForMaxId.stream()
+      @Nullable
+      final String versionOfExistingChunks;
+      if (!existingChunks.isEmpty()) {
+        versionOfExistingChunks = existingChunks.get(0).getVersion();
+      } else {
+        versionOfExistingChunks = null;
+      }
+
+      // the versionOfExistingChunks filter is ensure that we pick the max id with the version of the existing chunk
+      // in the case that there may be a pending segment with a higher version but no corresponding used segments
+      // which may generate a clash with an existing segment once the new id is generated
+      maxId = pendings.stream()
                       .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
+                      .filter(id -> versionOfExistingChunks == null ? true : id.getVersion().equals(versionOfExistingChunks))
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
                         if (versionCompare != 0) {
                           return versionCompare;
                         } else {
-                          return Integer.compare(id1.getShardSpec().getPartitionNum(), id2.getShardSpec().getPartitionNum());
+                          return Integer.compare(
+                              id1.getShardSpec().getPartitionNum(),
+                              id2.getShardSpec().getPartitionNum()
+                          );
                         }
                       })
                       .orElse(null);
 
       // Find the major version of existing segments
-      @Nullable final String versionOfExistingChunks;
-      if (!existingChunks.isEmpty()) {
-        versionOfExistingChunks = existingChunks.get(0).getVersion();
-      } else if (!segmentsForMaxId.isEmpty() && maxId != null) {
-        versionOfExistingChunks = maxId.getVersion();
+      final String majorVersion;
+      if (versionOfExistingChunks != null) {
+        majorVersion = versionOfExistingChunks;
+      } else if (!pendings.isEmpty() && maxId != null) {
+        majorVersion = maxId.getVersion();
       } else {
-        versionOfExistingChunks = null;
+        majorVersion = null;
       }
 
       if (maxId == null) {
@@ -973,7 +946,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
                                    ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
                                    : PartitionIds.ROOT_GEN_START_PARTITION_ID;
-        String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
+        String version = majorVersion == null ? maxVersion : majorVersion;
         return new SegmentIdWithShardSpec(
             dataSource,
             interval,
@@ -1000,7 +973,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),
-            Preconditions.checkNotNull(versionOfExistingChunks, "versionOfExistingChunks"),
+            Preconditions.checkNotNull(majorVersion, "majorVersion"),
             partialShardSpec.complete(
                 jsonMapper,
                 maxId.getShardSpec().getPartitionNum() + 1,

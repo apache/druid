@@ -301,6 +301,45 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
   }
 
+  private void markAllSegmentsUsed(Set<DataSegment> segments)
+  {
+    for (final DataSegment segment : segments) {
+      Assert.assertEquals(
+          1,
+          (int) derbyConnector.getDBI().<Integer>withHandle(
+              new HandleCallback<Integer>()
+              {
+                @Override
+                public Integer withHandle(Handle handle)
+                {
+                  String request = StringUtils.format(
+                      "UPDATE %s SET used = true WHERE id = :id",
+                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
+                  );
+                  return handle.createStatement(request).bind("id", segment.getId().toString()).execute();
+                }
+              }
+          )
+      );
+    }
+  }
+
+  private List<String> retrievePendingSegmentIds()
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        new HandleCallback<List<String>>()
+        {
+          @Override
+          public List<String> withHandle(Handle handle)
+          {
+            return handle.createQuery("SELECT id FROM " + table + "  ORDER BY id")
+                         .map(StringMapper.FIRST)
+                         .list();
+          }
+        }
+    );
+  }
   private List<String> retrieveUsedSegmentIds()
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
@@ -318,7 +357,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private List<String> retrieveAllSegmentIds()
+  private List<String> retrieveUnusedSegmentIds()
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
     return derbyConnector.retryWithHandle(
@@ -327,13 +366,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           @Override
           public List<String> withHandle(Handle handle)
           {
-            return handle.createQuery("SELECT id FROM " + table + " ORDER BY id")
+            return handle.createQuery("SELECT id FROM " + table + " WHERE used = false ORDER BY id")
                          .map(StringMapper.FIRST)
                          .list();
           }
         }
     );
   }
+
+
   private Boolean insertUsedSegments(Set<DataSegment> dataSegments)
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
@@ -1329,18 +1370,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   /**
    * Slightly different that the above test
-   * 1) pending segment 0, 1, 2 allocated as pending segments with version = A and also have used segment entries in the table
-   * 2) segment 3 with version = A is added directly to the used segment entries without a pending segment
-   * 3) all four (0, 1, 2, 3) are marked unused
-   * 4) next allocation will try to allocate #3 with version = A (since it's looking at pendings) and collides with the unused segment 3
+   1) used segments of version = A, id = 0, 1, 2
+   2) overwrote segments of version = B, id = 0 <= compaction
+   3) marked segments unused for version = A, id = 0, 1, 2 <= overshadowing
+   4) pending segment of version = B, id = 1 <= appending new data, aborted
+   5) reverted compaction, mark segments used for version = A, id = 0, 1, 2, and mark compacted segments unused
+   6) used segments of version = A, id = 0, 1, 2
+   7) pending segment of version = B, id = 1
    */
   @Test
   public void testAnotherAllocatePendingSegmentAfterDroppingExistingSegment()
   {
-    String maxVersion = "version_newer_newer";
+    String maxVersion = "Z";
     Set<DataSegment> segments = new HashSet<>();
 
-    // 1.0) simulate one load using kafka streaming
+    // 1.0) simulate one append load
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
@@ -1350,15 +1394,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         interval,
         partialShardSpec,
-        "version",
+        "A",
         true
     );
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", identifier.toString());
     // Assume it publishes; create its corresponding segment
     DataSegment segment = new DataSegment(
         "ds",
         Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version",
+        "A",
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
@@ -1369,11 +1413,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     segments.add(segment);
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     List<String> ids = retrieveUsedSegmentIds();
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", ids.get(0));
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
 
 
-
-    // 1.1) simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    // 1.1) simulate one more append load  (as if previous segment was published, note different sequence name)
     final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
         dataSource,
         "seq2",
@@ -1383,12 +1426,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         maxVersion,
         true
     );
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", identifier1.toString());
     // Assume it publishes; create its corresponding segment
     segment = new DataSegment(
         "ds",
         Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version",
+        "A",
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
@@ -1399,10 +1442,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     segments.add(segment);
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     ids = retrieveUsedSegmentIds();
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", ids.get(1));
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", ids.get(1));
 
 
-    // 1.2) simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
+    // 1.2) simulate one more append load  (as if previous segment was published, note different sequence name)
     final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
         dataSource,
         "seq3",
@@ -1412,12 +1455,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         maxVersion,
         true
     );
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", identifier2.toString());
     // Assume it publishes; create its corresponding segment
     segment = new DataSegment(
         "ds",
         Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version",
+        "A",
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
@@ -1428,34 +1471,31 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     segments.add(segment);
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     ids = retrieveUsedSegmentIds();
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", ids.get(2));
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", ids.get(2));
 
 
     // 2)
     // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
-    // Note that the version is forced to be the same as the previous segments created during streaming but this
-    // may not happen with real code...just trying to simulate a potential scenario here
-    segment = new DataSegment(
+    DataSegment compactedSegment = new DataSegment(
         "ds",
         Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version",
+        "B",
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
-        new LinearShardSpec(3),
+        new LinearShardSpec(0),
         9,
         100
     );
-    // since this load was done by batch ingestion it won't create a pending segment for it, just a used segment:
-    segments.add(segment);
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(compactedSegment)));
     ids = retrieveUsedSegmentIds();
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", ids.get(3));
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B", ids.get(3));
 
-    // 3) now drop the used segment previously loaded:
+
+    // 3) marked segments unused for version = A, id = 0, 1, 2 <= overshadowing
     markAllSegmentsUnused(segments);
 
-    // 4) and final stream load
+    // 4) pending segment of version = B, id = 1 <= appending new data, aborted
     final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
         dataSource,
         "seq4",
@@ -1465,24 +1505,100 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         maxVersion,
         true
     );
-    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_4", identifier3.toString());
-    // create its corresponding segment
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B_1", identifier3.toString());
+    // no corresponding segment, pending aborted
+
+    // 5) reverted compaction, mark segments used for version = A, id = 0, 1, 2, and mark compacted segments unused
+    markAllSegmentsUsed(segments);
+    markAllSegmentsUnused(ImmutableSet.of(compactedSegment));
+
+    //        pending: version = A, id = 0,1,2
+    //                 version = B, id = 1
+    //
+    //        used segment: version = A, id = 0,1,2
+    //        unused segment: version = B, id = 0
+    List<String> pendings = retrievePendingSegmentIds();
+    Assert.assertTrue(pendings.size() == 4);
+
+    List<String> used = retrieveUsedSegmentIds();
+    Assert.assertTrue(used.size() == 3);
+
+    List<String> unused = retrieveUnusedSegmentIds();
+    Assert.assertTrue(unused.size() == 1);
+
+    // Simulate one more append load
+    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq5",
+        identifier1.toString(),
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    // maxid = B_1 -> new partno = 2
+    // versionofexistingchunk=A
+    // ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_3", identifier4.toString());
+    // Assume it publishes; create its corresponding segment
     segment = new DataSegment(
         "ds",
         Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version",
+        "A",
         ImmutableMap.of(),
         ImmutableList.of("dim1"),
         ImmutableList.of("m1"),
-        new LinearShardSpec(4),
+        new LinearShardSpec(3),
+        9,
+        100
+    );
+    segments.add(segment);
+    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
+    ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_3", ids.get(3));
+
+  }
+
+  @Test
+  public void testNoPendingSegmentsAndOneUsedSegment()
+  {
+    String maxVersion = "Z";
+
+    // create one used segment
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
+        "A",
+        ImmutableMap.of(),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(0),
         9,
         100
     );
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    ids = retrieveAllSegmentIds();
-    Assert.assertTrue(ids.contains(identifier3.toString()));
+    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
 
+
+    // simulate one aborted append load
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        null,
+        interval,
+        partialShardSpec,
+        maxVersion,
+        true
+    );
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", identifier.toString());
+    
   }
+
+
 
   @Test
   public void testDeletePendingSegment() throws InterruptedException
