@@ -34,7 +34,7 @@ There are four resource types:
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * STATE &ndash; Cluster-wide state resources.
-* SYSTEM_TABLE &ndash; if `druid.sql.planner.authorizeSystemTablesDirectly` is enabled, then System tables (the `sys` schema in SQL) are authorized as this type of resource.
+* SYSTEM_TABLE &ndash; if `druid.sql.planner.authorizeSystemTablesDirectly` is enabled, then system tables (the `sys` schema in SQL) are authorized as this type of resource.
 
 For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](./api-reference.md).
 
