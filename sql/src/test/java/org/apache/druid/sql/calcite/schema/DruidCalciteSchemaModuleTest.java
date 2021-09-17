@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -203,12 +202,12 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaAnnotatedIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog rootSchema = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -216,10 +215,10 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -227,7 +226,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAndHasInformationSchema()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
     Assert.assertNotNull(rootSchema);
     Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));

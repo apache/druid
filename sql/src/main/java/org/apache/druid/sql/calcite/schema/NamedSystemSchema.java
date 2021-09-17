@@ -25,14 +25,14 @@ import org.apache.calcite.schema.Schema;
 /**
  * The schema for Druid system tables to be accessible via SQL.
  */
-class NamedSystemSchema implements NamedSchema
+public class NamedSystemSchema implements NamedSchema
 {
-  private static final String NAME = "sys";
+  public static final String NAME = "sys";
 
   private final SystemSchema systemSchema;
 
   @Inject
-  NamedSystemSchema(SystemSchema systemSchema)
+  public NamedSystemSchema(SystemSchema systemSchema)
   {
     this.systemSchema = systemSchema;
   }
