@@ -1179,7 +1179,7 @@ GROUP BY 1
 ORDER BY 2 DESC
 ```
 
-This query goes a step further and shows the overall profile of available, non-realtime segments across 1m row buckets for the `foo` datasource:
+This query goes a step further and shows the overall profile of available, non-realtime segments across buckets of 1 million rows each for the `foo` datasource:
 
 ```sql
 SELECT ABS("num_rows" /  1000000) as "bucket",
