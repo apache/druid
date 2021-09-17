@@ -1354,9 +1354,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @return authorization result
    */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
+  private Access datasourceWriteAuthCheck(final HttpServletRequest req)
   {
-    return IndexTaskUtils.datasourceAuthorizationCheck(req, action, task.getDataSource(), authorizerMapper);
+    return IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, task.getDataSource(), authorizerMapper);
   }
 
   public Appenderator getAppenderator()
@@ -1433,7 +1433,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    datasourceWriteAuthCheck(req);
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -1443,7 +1443,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return status;
   }
 
@@ -1458,7 +1458,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return getCurrentOffsets();
   }
 
@@ -1472,7 +1472,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return getEndOffsets();
   }
 
@@ -1492,7 +1492,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    datasourceWriteAuthCheck(req);
     return setEndOffsets(sequences, finish);
   }
 
@@ -1542,7 +1542,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return Response.ok(doGetRowStats()).build();
   }
 
@@ -1553,7 +1553,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return Response.ok(doGetLiveReports()).build();
   }
 
@@ -1565,7 +1565,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );
@@ -1716,7 +1716,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    datasourceWriteAuthCheck(req);
     return getCheckpoints();
   }
 
@@ -1743,7 +1743,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    datasourceWriteAuthCheck(req);
     return pause();
   }
 
@@ -1798,7 +1798,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    datasourceWriteAuthCheck(req);
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -1831,7 +1831,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    datasourceWriteAuthCheck(req);
     return startTime;
   }
 

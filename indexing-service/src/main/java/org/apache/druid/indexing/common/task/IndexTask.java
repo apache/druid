@@ -285,7 +285,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
     return Response.ok(doGetUnparseableEvents(full)).build();
   }
 
@@ -394,7 +394,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full)).build();
   }
 
@@ -406,7 +406,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
     Map<String, Object> payload = new HashMap<>();
