@@ -1369,7 +1369,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   /**
-   * Slightly different that the above test
+   * Slightly different that the above test but that involves reverted compaction
    1) used segments of version = A, id = 0, 1, 2
    2) overwrote segments of version = B, id = 0 <= compaction
    3) marked segments unused for version = A, id = 0, 1, 2 <= overshadowing
@@ -1379,10 +1379,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
    7) pending segment of version = B, id = 1
    */
   @Test
-  public void testAnotherAllocatePendingSegmentAfterDroppingExistingSegment()
+  public void testAnotherAllocatePendingSegmentAfterRevertingCompaction()
   {
     String maxVersion = "Z";
-    Set<DataSegment> segments = new HashSet<>();
 
     // 1.0) simulate one append load
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
@@ -1410,7 +1409,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    segments.add(segment);
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     List<String> ids = retrieveUsedSegmentIds();
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
@@ -1439,7 +1437,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    segments.add(segment);
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     ids = retrieveUsedSegmentIds();
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", ids.get(1));
@@ -1468,7 +1465,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    segments.add(segment);
+    // state so far:
+    // pendings: A: 0,1,2
+    // used segments A: 0,1,2
+    // unused segments:
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     ids = retrieveUsedSegmentIds();
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", ids.get(2));
@@ -1490,10 +1490,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(compactedSegment)));
     ids = retrieveUsedSegmentIds();
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B", ids.get(3));
-
-
-    // 3) marked segments unused for version = A, id = 0, 1, 2 <= overshadowing
-    markAllSegmentsUnused(segments);
+    // 3) When overshadowing, segments are still marked as "used" in the segments table
+    // state so far:
+    // pendings: A: 0,1,2
+    // used segments: A: 0,1,2; B: 0 <- new compacted segment, overshadows previous version A
+    // unused segment:
 
     // 4) pending segment of version = B, id = 1 <= appending new data, aborted
     final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
@@ -1507,11 +1508,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B_1", identifier3.toString());
     // no corresponding segment, pending aborted
+    // state so far:
+    // pendings: A: 0,1,2; B:1 (note that B_1 does not make it into segments since its task aborted)
+    // used segments: A: 0,1,2; B: 0 <-  compacted segment, overshadows previous version A
+    // unused segment:
 
-    // 5) reverted compaction, mark segments used for version = A, id = 0, 1, 2, and mark compacted segments unused
-    markAllSegmentsUsed(segments);
-    markAllSegmentsUnused(ImmutableSet.of(compactedSegment));
-
+    // 5) reverted compaction (by marking B_0 as unused)
+    // Revert compaction a manual metadata update which is basically the following two steps:
+    markAllSegmentsUnused(ImmutableSet.of(compactedSegment)); // <- drop compacted segment
     //        pending: version = A, id = 0,1,2
     //                 version = B, id = 1
     //
@@ -1552,13 +1556,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    segments.add(segment);
+    //        pending: version = A, id = 0,1,2,3
+    //                 version = B, id = 1
+    //
+    //        used segment: version = A, id = 0,1,2,3
+    //        unused segment: version = B, id = 0
     Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
     ids = retrieveUsedSegmentIds();
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_3", ids.get(3));
 
   }
-
+  
   @Test
   public void testNoPendingSegmentsAndOneUsedSegment()
   {
