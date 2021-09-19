@@ -86,14 +86,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   public Function<JsonNode, Object> makeJsonPathExtractor(final String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
-    return node -> {
-      Object val = jsonPath.read(node, JSONPATH_CONFIGURATION);
-      if (val instanceof JsonNode) {
-        return valueConversionFunction((JsonNode) val);
-      } else {
-        return val;
-      }
-    };
+    return node -> valueConversionFunction(jsonPath.read(node, JSONPATH_CONFIGURATION));
   }
 
   @Override
@@ -122,7 +115,17 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Nullable
-  private Object valueConversionFunction(JsonNode val)
+  private Object valueConversionFunction(Object val)
+  {
+    if (val instanceof JsonNode) {
+      return convertJsonNode((JsonNode) val);
+    } else {
+      return val;
+    }
+  }
+
+  @Nullable
+  private Object convertJsonNode(JsonNode val)
   {
     if (val == null || val.isNull()) {
       return null;
