@@ -1,0 +1,24 @@
+[
+  {
+    "description": "timeseries",
+    "query":{
+      "queryType" : "timeseries",
+      "dataSource": "%%DATASOURCE%%",
+      "granularity":"day",
+      "intervals":[
+        "1000/3000"
+      ]
+    },
+    "expectedResults":[
+      {
+        "timestamp" : "2013-08-31T01:02:33Z",
+        "result" : {
+          "min":"0",
+          "max":"4",
+          "len": 5,
+          "sum": 10
+        }
+      }
+    ]
+  }
+]
