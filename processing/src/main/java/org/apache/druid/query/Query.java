@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
@@ -109,7 +108,7 @@ public interface Query<T>
   /**
    * Comparator that represents the order in which results are generated from the
    * {@link QueryRunnerFactory#createRunner(Segment)} and
-   * {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} calls. This is used to combine streams of
+   * {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} calls. This is used to combine streams of
    * results from different sources; for example, it's used by historicals to combine streams from different segments,
    * and it's used by the broker to combine streams from different historicals.
    *

@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Icon, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import {
   QueryResult,
@@ -32,7 +33,14 @@ import ReactTable from 'react-table';
 
 import { BracedText, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql, stringifyValue } from '../../../utils';
+import {
+  copyAndAlert,
+  deepSet,
+  filterMap,
+  oneOf,
+  prettyPrintSql,
+  stringifyValue,
+} from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -64,7 +72,7 @@ function getNumericColumnBraces(
     const numColumns = queryResult.header.length;
     for (let c = 0; c < numColumns; c++) {
       const brace = filterMap(rows, row =>
-        typeof row[c] === 'number' ? String(row[c]) : undefined,
+        oneOf(typeof row[c], 'number', 'bigint') ? String(row[c]) : undefined,
       );
       if (rows.length === brace.length) {
         numericColumnBraces[c] = brace;
@@ -91,9 +99,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (pagination.page) {
-      setPagination(changePage(pagination, 0));
-    }
+    setPagination(pagination => {
+      return pagination.page ? changePage(pagination, 0) : pagination;
+    });
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -244,7 +252,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
           onQueryChange(
-            having ? parsedQuery.addToHaving(clause) : parsedQuery.addToWhere(clause),
+            having ? parsedQuery.addHaving(clause) : parsedQuery.addWhere(clause),
             true,
           );
         }}
@@ -287,7 +295,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         if (having && outputName) {
           ex = SqlRef.column(outputName);
         } else {
-          ex = selectValue.expression as SqlExpression;
+          ex = selectValue.getUnderlyingExpression();
         }
       } else if (parsedQuery.hasStarInSelect()) {
         ex = SqlRef.column(header);
@@ -357,17 +365,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     setRenamingColumn(-1);
     if (renameTo && parsedQuery) {
       if (parsedQuery.hasStarInSelect()) return;
-      const selectExpression = parsedQuery.selectExpressions.get(renamingColumn);
+      const selectExpression = parsedQuery.getSelectExpressionForIndex(renamingColumn);
       if (!selectExpression) return;
-      onQueryChange(
-        parsedQuery.changeSelectExpressions(
-          parsedQuery.selectExpressions.change(
-            renamingColumn,
-            selectExpression.changeAliasName(renameTo),
-          ),
-        ),
-        true,
-      );
+      onQueryChange(parsedQuery.changeSelect(renamingColumn, selectExpression.as(renameTo)), true);
     }
   }
 
@@ -404,14 +404,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover className="clickable-cell" content={getHeaderMenu(h, i)}>
+                      <Popover2 className="clickable-cell" content={getHeaderMenu(h, i)}>
                         <div>
                           {h}
                           {hasFilterOnHeader(h, i) && (
                             <Icon icon={IconNames.FILTER} iconSize={14} />
                           )}
                         </div>
-                      </Popover>
+                      </Popover2>
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
@@ -420,7 +420,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
               const value = row.value;
               return (
                 <div>
-                  <Popover content={getCellMenu(h, i, value)}>
+                  <Popover2 content={getCellMenu(h, i, value)}>
                     {numericColumnBraces[i] ? (
                       <BracedText
                         text={String(value)}
@@ -430,7 +430,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover>
+                  </Popover2>
                 </div>
               );
             },

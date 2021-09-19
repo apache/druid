@@ -220,6 +220,16 @@ public class DefaultLimitSpec implements LimitSpec
       sortingNeeded = !query.getGranularity().equals(Granularities.ALL) && query.getContextSortByDimsFirst();
     }
 
+    if (!sortingNeeded) {
+      String timestampField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+      if (timestampField != null && !timestampField.isEmpty()) {
+        int timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        sortingNeeded = query.getContextSortByDimsFirst()
+                        ? timestampResultFieldIndex != query.getDimensions().size() - 1
+                        : timestampResultFieldIndex != 0;
+      }
+    }
+
     final Function<Sequence<ResultRow>, Sequence<ResultRow>> sortAndLimitFn;
 
     if (sortingNeeded) {
@@ -520,7 +530,7 @@ public class DefaultLimitSpec implements LimitSpec
    * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
    * exclusions (see spotbugs-exclude.xml).
    */
-  @SuppressWarnings("EqualsAndHashcode")
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
   static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
   {
     @Override

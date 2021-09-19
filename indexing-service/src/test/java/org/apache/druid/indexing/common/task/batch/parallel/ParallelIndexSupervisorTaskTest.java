@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -69,35 +70,43 @@ public class ParallelIndexSupervisorTaskTest
   public static class CreateMergeIoConfigsTest
   {
     private static final int TOTAL_NUM_MERGE_TASKS = 10;
-    private static final Function<List<GenericPartitionLocation>, PartialGenericSegmentMergeIOConfig>
-        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialGenericSegmentMergeIOConfig::new;
+    private static final Function<List<PartitionLocation>, PartialSegmentMergeIOConfig>
+        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialSegmentMergeIOConfig::new;
 
-    @Parameterized.Parameters(name = "count = {0}")
-    public static Iterable<? extends Object> data()
+    @Parameterized.Parameters(name = "count = {0}, partitionLocationType = {1}")
+    public static Iterable<? extends Object[]> data()
     {
       // different scenarios for last (index = 10 - 1 = 9) partition:
       return Arrays.asList(
-          20,  // even partitions per task: round(20 / 10) * (10 - 1) = 2 * 9 = 18 < 20
-          24,  // round down:               round(24 / 10) * (10 - 1) = 2 * 9 = 18 < 24
-          25,  // round up to greater:      round(25 / 10) * (10 - 1) = 3 * 9 = 27 > 25 (index out of bounds)
-          27   // round up to equal:        round(27 / 10) * (10 - 1) = 3 * 9 = 27 == 27 (empty partition)
+          new Object[][]{
+              {20, GenericPartitionStat.TYPE},  // even partitions per task: round(20 / 10) * (10 - 1) = 2 * 9 = 18 < 20
+              {24, DeepStoragePartitionStat.TYPE},  // round down:               round(24 / 10) * (10 - 1) = 2 * 9 = 18 < 24
+              {25, GenericPartitionStat.TYPE},  // round up to greater:      round(25 / 10) * (10 - 1) = 3 * 9 = 27 > 25 (index out of bounds)
+              {27, DeepStoragePartitionStat.TYPE} // round up to equal:        round(27 / 10) * (10 - 1) = 3 * 9 = 27 == 27 (empty partition)
+          }
       );
     }
 
-    @Parameterized.Parameter
+    public CreateMergeIoConfigsTest(int count, String partitionLocationType)
+    {
+      this.count = count;
+      this.partitionLocationType = partitionLocationType;
+    }
+
     public int count;
+    public String partitionLocationType;
 
     @Test
     public void handlesLastPartitionCorrectly()
     {
-      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       assertNoMissingPartitions(count, assignedPartitionLocation);
     }
 
     @Test
     public void sizesPartitionsEvenly()
     {
-      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
                                                                     .map(i -> i.getPartitionLocations().size())
                                                                     .collect(Collectors.toList());
@@ -113,42 +122,56 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private List<PartialGenericSegmentMergeIOConfig> createMergeIOConfigs()
+    private List<PartialSegmentMergeIOConfig> createMergeIOConfigs()
     {
       return ParallelIndexSupervisorTask.createMergeIOConfigs(
           TOTAL_NUM_MERGE_TASKS,
-          createPartitionToLocations(count),
+          createPartitionToLocations(count, partitionLocationType),
           CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> createPartitionToLocations(int count)
+    private static Map<Pair<Interval, Integer>, List<PartitionLocation>> createPartitionToLocations(
+        int count,
+        String partitionLocationType
+    )
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
               i -> Pair.of(createInterval(i), i),
-              i -> Collections.singletonList(createPartitionLocation(i))
+              i -> Collections.singletonList(createPartitionLocation(i, partitionLocationType))
           )
       );
     }
 
-    private static GenericPartitionLocation createPartitionLocation(int id)
+    private static PartitionLocation createPartitionLocation(int id, String partitionLocationType)
     {
-      return new GenericPartitionLocation(
-          "host",
-          0,
-          false,
-          "subTaskId",
-          createInterval(id),
-          new BuildingHashBasedNumberedShardSpec(
-              id,
-              id,
-              id + 1,
-              null,
-              HashPartitionFunction.MURMUR3_32_ABS,
-              new ObjectMapper()
-          )
-      );
+      if (DeepStoragePartitionStat.TYPE.equals(partitionLocationType)) {
+        return new DeepStoragePartitionLocation("", Intervals.of("2000/2099"), new BuildingHashBasedNumberedShardSpec(
+            id,
+            id,
+            id + 1,
+            null,
+            HashPartitionFunction.MURMUR3_32_ABS,
+            new ObjectMapper()
+        ), ImmutableMap.of());
+      } else {
+        return new GenericPartitionLocation(
+            "host",
+            0,
+            false,
+            "subTaskId",
+            createInterval(id),
+            new BuildingHashBasedNumberedShardSpec(
+                id,
+                id,
+                id + 1,
+                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
+                new ObjectMapper()
+            )
+        );
+      }
     }
 
     private static Interval createInterval(int id)
@@ -158,7 +181,7 @@ public class ParallelIndexSupervisorTaskTest
 
     private static void assertNoMissingPartitions(
         int count,
-        List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation
+        List<PartialSegmentMergeIOConfig> assignedPartitionLocation
     )
     {
       List<Integer> expectedIds = IntStream.range(0, count).boxed().collect(Collectors.toList());
@@ -167,7 +190,7 @@ public class ParallelIndexSupervisorTaskTest
                                                          .flatMap(
                                                              i -> i.getPartitionLocations()
                                                                    .stream()
-                                                                   .map(GenericPartitionLocation::getBucketId)
+                                                                   .map(PartitionLocation::getBucketId)
                                                          )
                                                          .sorted()
                                                          .collect(Collectors.toList());

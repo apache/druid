@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { Code, Intent, Switch, Tooltip } from '@blueprintjs/core';
+import { Code, Intent, Switch } from '@blueprintjs/core';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
@@ -26,34 +27,31 @@ import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
 import { Loader } from '../../components';
-import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
 import { Api, AppToaster } from '../../singletons';
 import {
-  BasicQueryExplanation,
   ColumnMetadata,
   downloadFile,
   DruidError,
   findEmptyLiteralPosition,
-  getDruidErrorMessage,
   localStorageGet,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageSet,
   localStorageSetJson,
-  parseQueryPlan,
   queryDruidSql,
   QueryManager,
   QueryState,
+  QueryWithContext,
   RowColumn,
-  SemiJoinQueryExplanation,
   stringifyValue,
 } from '../../utils';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
+import { ExplainDialog } from './explain-dialog/explain-dialog';
 import {
   LIVE_QUERY_MODES,
   LiveQueryMode,
@@ -76,12 +74,6 @@ const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   }
 });
 
-interface QueryWithContext {
-  queryString: string;
-  queryContext: QueryContext;
-  wrapQueryLimit: number | undefined;
-}
-
 export interface QueryViewProps {
   initQuery: string | undefined;
   defaultQueryContext?: Record<string, any>;
@@ -99,8 +91,7 @@ export interface QueryViewState {
 
   queryResultState: QueryState<QueryResult, DruidError>;
 
-  explainDialogOpen: boolean;
-  explainResultState: QueryState<BasicQueryExplanation | SemiJoinQueryExplanation | string>;
+  explainDialogQuery?: QueryWithContext;
 
   defaultSchema?: string;
   defaultTable?: string;
@@ -111,23 +102,8 @@ export interface QueryViewState {
 }
 
 export class QueryView extends React.PureComponent<QueryViewProps, QueryViewState> {
-  static trimSemicolon(query: string): string {
-    // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
-    return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
-  }
-
   static isEmptyQuery(query: string): boolean {
     return query.trim() === '';
-  }
-
-  static isExplainQuery(query: string): boolean {
-    return /EXPLAIN\sPLAN\sFOR/i.test(query);
-  }
-
-  static wrapInExplainIfNeeded(query: string): string {
-    query = QueryView.trimSemicolon(query);
-    if (QueryView.isExplainQuery(query)) return query;
-    return `EXPLAIN PLAN FOR (${query}\n)`;
   }
 
   static isJsonLike(queryString: string): boolean {
@@ -158,10 +134,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   private readonly metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
   private readonly queryManager: QueryManager<QueryWithContext, QueryResult>;
-  private readonly explainQueryManager: QueryManager<
-    QueryWithContext,
-    BasicQueryExplanation | SemiJoinQueryExplanation | string
-  >;
 
   private readonly queryInputRef: RefObject<QueryInput>;
 
@@ -195,9 +167,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       columnMetadataState: QueryState.INIT,
 
       queryResultState: QueryState.INIT,
-
-      explainDialogOpen: false,
-      explainResultState: QueryState.INIT,
 
       editContextDialogOpen: false,
       historyDialogOpen: false,
@@ -260,37 +229,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         });
       },
     });
-
-    this.explainQueryManager = new QueryManager({
-      processQuery: async (queryWithContext: QueryWithContext) => {
-        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit + 1;
-          }
-        }
-
-        let result: QueryResult | undefined;
-        try {
-          result = await queryRunner.runQuery({
-            query: QueryView.wrapInExplainIfNeeded(queryString),
-            extraQueryContext: context,
-          });
-        } catch (e) {
-          throw new Error(getDruidErrorMessage(e));
-        }
-
-        return parseQueryPlan(result.rows[0][0]);
-      },
-      onStateChange: explainResultState => {
-        this.setState({
-          explainResultState,
-        });
-      },
-    });
   }
 
   componentDidMount(): void {
@@ -307,10 +245,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   componentWillUnmount(): void {
     this.metadataQueryManager.terminate();
     this.queryManager.terminate();
-    this.explainQueryManager.terminate();
   }
 
-  prettyPrintJson(): void {
+  private prettyPrintJson(): void {
     this.setState(prevState => {
       let parsed: any;
       try {
@@ -367,21 +304,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   };
 
-  renderExplainDialog() {
-    const { explainDialogOpen, explainResultState } = this.state;
-    if (explainResultState.loading || !explainDialogOpen) return;
+  private renderExplainDialog() {
+    const { mandatoryQueryContext } = this.props;
+    const { explainDialogQuery } = this.state;
+    if (!explainDialogQuery) return;
 
     return (
-      <QueryPlanDialog
-        explainResult={explainResultState.data}
-        explainError={explainResultState.error}
+      <ExplainDialog
+        queryWithContext={explainDialogQuery}
+        mandatoryQueryContext={mandatoryQueryContext}
         setQueryString={this.handleQueryStringChange}
-        onClose={() => this.setState({ explainDialogOpen: false })}
+        onClose={() => this.setState({ explainDialogQuery: undefined })}
       />
     );
   }
 
-  renderHistoryDialog() {
+  private renderHistoryDialog() {
     const { historyDialogOpen, queryHistory } = this.state;
     if (!historyDialogOpen) return;
 
@@ -397,7 +335,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  renderEditContextDialog() {
+  private renderEditContextDialog() {
     const { editContextDialogOpen, queryContext } = this.state;
     if (!editContextDialogOpen) return;
 
@@ -412,7 +350,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  renderLiveQueryModeSelector() {
+  private renderLiveQueryModeSelector() {
     const { liveQueryMode, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
 
@@ -425,12 +363,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  renderWrapQueryLimitSelector() {
+  private renderWrapQueryLimitSelector() {
     const { wrapQueryLimit, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <Tooltip
+      <Tooltip2
         content="Automatically wrap the query with a limit to protect against queries with very large result sets."
         hoverOpenDelay={800}
       >
@@ -440,11 +378,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           label="Auto limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
         />
-      </Tooltip>
+      </Tooltip2>
     );
   }
 
-  renderMainArea() {
+  private renderMainArea() {
     const { queryString, queryContext, queryResultState, columnMetadataState } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
     const queryResult = queryResultState.data;
@@ -636,11 +574,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private readonly handleExplain = () => {
     const { queryString, queryContext, wrapQueryLimit } = this.state;
 
-    this.setState({ explainDialogOpen: true });
-    this.explainQueryManager.runQuery({
-      queryString,
-      queryContext,
-      wrapQueryLimit,
+    this.setState({
+      explainDialogQuery: {
+        queryString,
+        queryContext,
+        wrapQueryLimit,
+      },
     });
   };
 

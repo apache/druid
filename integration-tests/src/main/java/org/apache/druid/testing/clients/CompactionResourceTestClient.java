@@ -183,7 +183,9 @@ public class CompactionResourceTestClient
     StatusResponseHolder response = httpClient.go(
         new Request(HttpMethod.GET, new URL(url)), responseHandler
     ).get();
-    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+      return null;
+    } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
       throw new ISE(
           "Error while getting compaction status status[%s] content[%s]",
           response.getStatus(),

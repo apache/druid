@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord.http.security;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -31,11 +30,9 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.ResourceAction;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
@@ -91,13 +88,11 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
         "No dataSources found to perform authorization checks"
     );
 
-    Function<String, ResourceAction> resourceActionFunction = getAction(request) == Action.READ ?
-                                                              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
-                                                              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
-
+    // Supervisor APIs should always require DATASOURCE WRITE access
+    // as they deal with ingestion related information
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         getReq(),
-        Iterables.transform(spec.getDataSources(), resourceActionFunction),
+        Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
         getAuthorizerMapper()
     );
 

@@ -405,13 +405,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         if (specVersion.compareTo(version) < 0) {
           version = specVersion;
         } else {
-          log.error(
-              "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
-              specVersion,
-              version
-          );
+          String errMsg =
+              StringUtils.format(
+                  "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
+                  specVersion,
+                  version
+              );
+          log.error(errMsg);
           toolbox.getTaskReportFileWriter().write(getId(), null);
-          return TaskStatus.failure(getId());
+          return TaskStatus.failure(getId(), errMsg);
         }
       }
 
@@ -450,16 +452,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths = buildSegmentsStatus.getDataSegmentAndIndexZipFilePaths();
         if (dataSegmentAndIndexZipFilePaths != null) {
           indexGeneratorJobSuccess = true;
-          try {
-            Thread.currentThread().setContextClassLoader(oldLoader);
-            renameSegmentIndexFilesJob(
-                toolbox.getJsonMapper().writeValueAsString(indexerSchema),
-                toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
-            );
-          }
-          finally {
-            Thread.currentThread().setContextClassLoader(loader);
-          }
+          renameSegmentIndexFilesJob(
+              toolbox.getJsonMapper().writeValueAsString(indexerSchema),
+              toolbox.getJsonMapper().writeValueAsString(dataSegmentAndIndexZipFilePaths)
+          );
+
           ArrayList<DataSegment> segments = new ArrayList<>(dataSegmentAndIndexZipFilePaths.stream()
                                                                                            .map(
                                                                                                DataSegmentAndIndexZipFilePath::getSegment)
@@ -545,22 +542,20 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
   }
 
+  /**
+   * Must be called only when the hadoopy classloader is the current classloader
+   */
   private void renameSegmentIndexFilesJob(
       String hadoopIngestionSpecStr,
       String dataSegmentAndIndexZipFilePathListStr
   )
   {
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     try {
-      ClassLoader loader = HadoopTask.buildClassLoader(
-          getHadoopDependencyCoordinates(),
-          taskConfig.getDefaultHadoopCoordinates()
+      final Class<?> clazz = loader.loadClass(
+          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner"
       );
-
-      Object renameSegmentIndexFilesRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner",
-          loader
-      );
+      Object renameSegmentIndexFilesRunner = clazz.newInstance();
 
       String[] renameSegmentIndexFilesJobInput = new String[]{
           hadoopIngestionSpecStr,
@@ -573,7 +568,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           renameSegmentIndexFilesJobInput.getClass()
       );
 
-      Thread.currentThread().setContextClassLoader(loader);
       renameSegmentIndexFiles.invoke(
           renameSegmentIndexFilesRunner,
           new Object[]{renameSegmentIndexFilesJobInput}
@@ -581,9 +575,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
 

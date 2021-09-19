@@ -25,14 +25,14 @@ import { getLink } from '../links';
 import { TIME_COLUMN } from './timestamp-spec';
 
 export interface TransformSpec {
-  transforms?: Transform[];
-  filter?: Record<string, any>;
+  readonly transforms?: Transform[];
+  readonly filter?: Record<string, any>;
 }
 
 export interface Transform {
-  type: string;
-  name: string;
-  expression: string;
+  readonly type: string;
+  readonly name: string;
+  readonly expression: string;
 }
 
 export const TRANSFORM_FIELDS: Field<Transform>[] = [
@@ -77,6 +77,7 @@ export function getTimestampExpressionFields(transforms: Transform[]): Field<Tra
         `timestamp_parse(concat("date", ' ', "time"))`,
         `timestamp_parse(concat("date", ' ', "time"), 'M/d/yyyy H:mm:ss')`,
         `timestamp_parse(concat("year", '-', "month", '-', "day"))`,
+        `timestamp_parse("west_coast_time", 'yyyy-MM-dd\\'T\\'HH:mm:ss.SSS', 'America/Los_Angeles')`,
         `timestamp_parse("local_time", 'yyyy-MM-dd HH:mm:ss', "timezone")`,
       ],
       info: (

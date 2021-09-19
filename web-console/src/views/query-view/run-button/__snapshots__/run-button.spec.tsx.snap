@@ -36,36 +36,32 @@ exports[`run button matches snapshot loading state 1`] = `
     </span>
   </button>
   <span
-    class="bp3-popover-wrapper"
+    class="bp3-popover2-target"
   >
-    <span
-      class="bp3-popover-target"
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
     >
-      <button
-        class="bp3-button bp3-intent-primary"
-        type="button"
+      <span
+        class="bp3-icon bp3-icon-more"
+        icon="more"
       >
-        <span
-          class="bp3-icon bp3-icon-more"
-          icon="more"
+        <svg
+          data-icon="more"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
         >
-          <svg
-            data-icon="more"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <desc>
-              more
-            </desc>
-            <path
-              d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
-      </button>
-    </span>
+          <desc>
+            more
+          </desc>
+          <path
+            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
   </span>
 </div>
 `;
@@ -104,36 +100,32 @@ exports[`run button matches snapshot non-loading state 1`] = `
     </span>
   </button>
   <span
-    class="bp3-popover-wrapper"
+    class="bp3-popover2-target"
   >
-    <span
-      class="bp3-popover-target"
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
     >
-      <button
-        class="bp3-button bp3-intent-primary"
-        type="button"
+      <span
+        class="bp3-icon bp3-icon-more"
+        icon="more"
       >
-        <span
-          class="bp3-icon bp3-icon-more"
-          icon="more"
+        <svg
+          data-icon="more"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
         >
-          <svg
-            data-icon="more"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <desc>
-              more
-            </desc>
-            <path
-              d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
-      </button>
-    </span>
+          <desc>
+            more
+          </desc>
+          <path
+            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
   </span>
 </div>
 `;

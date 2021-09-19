@@ -41,6 +41,7 @@ public interface ColumnCapabilities
    *
    * If ValueType is COMPLEX, then the typeName associated with it.
    */
+  @Nullable
   String getComplexTypeName();
 
   /**

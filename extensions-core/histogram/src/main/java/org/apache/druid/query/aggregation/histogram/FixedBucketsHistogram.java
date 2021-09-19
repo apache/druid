@@ -94,7 +94,7 @@ public class FixedBucketsHistogram
   public static final byte SPARSE_ENCODING_MODE = 0x02;
 
   /**
-   * Determines how the the histogram handles outliers.
+   * Determines how the histogram handles outliers.
    *
    * Ignore:   do not track outliers at all
    * Overflow: track outlier counts in upperOutlierCount and lowerOutlierCount.

@@ -139,7 +139,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -182,7 +182,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -222,7 +222,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -262,7 +262,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -300,7 +300,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -328,7 +328,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -373,7 +373,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -456,7 +456,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -490,7 +490,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentLoaderFactory(),
+        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder

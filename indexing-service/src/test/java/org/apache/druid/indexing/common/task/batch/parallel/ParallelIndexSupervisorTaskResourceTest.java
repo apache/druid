@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -708,7 +709,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
       taskClient.report(
           getSupervisorTaskId(),
-          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment))
+          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment), ImmutableMap.of())
       );
       return TaskStatus.fromCode(getId(), state);
     }
