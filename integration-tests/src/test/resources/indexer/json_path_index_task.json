@@ -1,5 +1,5 @@
 {
-  "type": "index_parallel",
+  "type": "index",
   "dataSource": "json_path_index_test",
   "spec": {
     "dataSchema": {
@@ -42,7 +42,7 @@
       }
     },
     "ioConfig": {
-      "type": "index_parallel",
+      "type": "index",
       "inputSource": {
         "type": "inline",
         "data": "{\"timestamp\": \"2013-08-31T01:02:33Z\", \"values\": [0,1,2,3,4] }"
