@@ -29,14 +29,17 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -267,6 +270,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
       Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
 
       return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
+    }
+    catch (ConfigException e) {
+      throw new IAE("Unable to construct Kafka Consumer: %s", e.getMessage());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

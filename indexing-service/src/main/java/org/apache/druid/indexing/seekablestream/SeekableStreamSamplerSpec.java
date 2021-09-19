@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -92,9 +93,22 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
       );
       inputFormat = null;
     } else {
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
+
+      try {
+        recordSupplier = createRecordSupplier();
+      }
+      catch (Exception e) {
+        if (e.getCause() != null) {
+          throw new SamplerException(e, "Unable to sample data: %s. Cause: %s", e.getMessage(), e.getCause().getMessage());
+        } else {
+          throw new SamplerException(e, "Unable to sample data: %s", e.getMessage());
+        }
+      }
+
       inputSource = new RecordSupplierInputSource<>(
           ioConfig.getStream(),
-          createRecordSupplier(),
+          recordSupplier,
           ioConfig.isUseEarliestSequenceNumber()
       );
       inputFormat = Preconditions.checkNotNull(
