@@ -31,6 +31,8 @@ import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.WhitelistErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -102,6 +104,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SqlResourceTest extends CalciteTestBase
@@ -984,6 +987,11 @@ public class SqlResourceTest extends CalciteTestBase
           public boolean isSanitizeJettyErrorResponse()
           {
             return true;
+          }
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
           }
         }
     );
