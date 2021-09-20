@@ -100,9 +100,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
 
-  static final String DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE = "Unable to parse query";
-  static final String DEFAULT_ERROR_UNEXPECTED_MESSAGE = "Unexpected error occurs";
-
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();

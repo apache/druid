@@ -32,6 +32,8 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.WhitelistErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
@@ -50,6 +52,8 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
@@ -90,6 +94,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -254,9 +259,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
     Exception testException = new IllegalStateException(errorMessage);
     servlet.handleException(response, mockMapper, testException);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assert.assertEquals(IllegalStateException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
   }
 
   @Test
@@ -285,13 +293,23 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           {
             return true;
           }
+
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
+          }
         }
     );
     Exception testException = new IllegalStateException(errorMessage);
     servlet.handleException(response, mockMapper, testException);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", AsyncQueryForwardingServlet.DEFAULT_ERROR_UNEXPECTED_MESSAGE), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertNull(captor.getValue().getMessage());
+    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -322,17 +340,21 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           }
 
           @Override
-          public List<Pattern> getResponseWhitelistRegex()
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return ImmutableList.of(Pattern.compile("test .*"));
+            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
           }
         }
     );
     Exception testException = new IllegalStateException(errorMessage);
     servlet.handleException(response, mockMapper, testException);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -360,9 +382,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assert.assertEquals(IOException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
   }
 
   @Test
@@ -392,13 +417,23 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           {
             return true;
           }
+
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
+          }
         }
     );
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", AsyncQueryForwardingServlet.DEFAULT_QUERY_PARSE_EXCEPTION_MESSAGE), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertNull(captor.getValue().getMessage());
+    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -430,17 +465,21 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           }
 
           @Override
-          public List<Pattern> getResponseWhitelistRegex()
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return ImmutableList.of(Pattern.compile("test .*"));
+            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
           }
         }
     );
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
-    ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertEquals(ImmutableMap.of("error", errorMessage), captor.getValue());
+    Assert.assertTrue(captor.getValue() instanceof QueryException);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
+    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   /**
