@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.query.QueryException;
 
 import java.util.function.Function;
 
