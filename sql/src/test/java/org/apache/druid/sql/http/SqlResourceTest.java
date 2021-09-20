@@ -32,7 +32,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
-import org.apache.druid.common.exception.WhitelistErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -990,7 +990,7 @@ public class SqlResourceTest extends CalciteTestBase
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         }
     );

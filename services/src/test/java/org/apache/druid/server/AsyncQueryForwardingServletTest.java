@@ -33,7 +33,7 @@ import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
-import org.apache.druid.common.exception.WhitelistErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
@@ -296,7 +296,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         }
     );
@@ -312,7 +312,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testHandleExceptionWithFilterEnabledButMessageMatchWhitelist() throws Exception
+  public void testHandleExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
     String errorMessage = "test exception message";
     ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
@@ -341,7 +341,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
           }
         }
     );
@@ -420,7 +420,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of());
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         }
     );
@@ -436,7 +436,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchWhitelist() throws Exception
+  public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
     String errorMessage = "test exception message";
     ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
@@ -466,7 +466,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new WhitelistErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
           }
         }
     );

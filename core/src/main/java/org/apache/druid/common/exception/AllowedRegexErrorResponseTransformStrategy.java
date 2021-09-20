@@ -27,24 +27,24 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-public class WhitelistErrorResponseTransformStrategy implements ErrorResponseTransformStrategy
+public class AllowedRegexErrorResponseTransformStrategy implements ErrorResponseTransformStrategy
 {
   @JsonProperty
-  private final List<Pattern> whitelistRegex;
+  private final List<Pattern> allowedRegex;
 
   @JsonCreator
-  public WhitelistErrorResponseTransformStrategy(
-      @JsonProperty("whitelistRegex") List<Pattern> whitelistRegex
+  public AllowedRegexErrorResponseTransformStrategy(
+      @JsonProperty("allowedRegex") List<Pattern> allowedRegex
   )
   {
-    this.whitelistRegex = whitelistRegex == null ? ImmutableList.of() : whitelistRegex;
+    this.allowedRegex = allowedRegex == null ? ImmutableList.of() : allowedRegex;
   }
 
   @Override
   public Function<String, String> getErrorMessageTransformFunction()
   {
     return (String errorMessage) -> {
-      if (whitelistRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+      if (allowedRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
         return null;
       } else {
         return errorMessage;

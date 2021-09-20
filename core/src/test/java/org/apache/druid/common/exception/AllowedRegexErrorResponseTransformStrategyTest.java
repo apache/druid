@@ -25,38 +25,38 @@ import org.junit.Test;
 
 import java.util.regex.Pattern;
 
-public class WhitelistErrorResponseTransformStrategyTest
+public class AllowedRegexErrorResponseTransformStrategyTest
 {
   @Test
-  public void testgetErrorMessageTransformFunctionWithMatchingWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithMatchingAllowedRegexFilter()
   {
-    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+    AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
         ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"))
     );
     String message = "test message 123";
-    String result = whitelist.getErrorMessageTransformFunction().apply(message);
+    String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
     Assert.assertEquals(message, result);
   }
 
   @Test
-  public void testgetErrorMessageTransformFunctionWithNoMatchingWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithNoMatchingAllowedRegexFilter()
   {
-    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+    AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
         ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("qwer"))
     );
     String message = "test message 123";
-    String result = whitelist.getErrorMessageTransformFunction().apply(message);
+    String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
     Assert.assertNull(result);
   }
 
   @Test
-  public void testgetErrorMessageTransformFunctionWithEmptyWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithEmptyAllowedRegexFilter()
   {
-    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+    AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
         ImmutableList.of()
     );
     String message = "test message 123";
-    String result = whitelist.getErrorMessageTransformFunction().apply(message);
+    String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
     Assert.assertNull(result);
   }
 }
