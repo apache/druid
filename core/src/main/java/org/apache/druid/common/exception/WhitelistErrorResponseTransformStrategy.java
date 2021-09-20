@@ -21,6 +21,7 @@ package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.function.Function;
@@ -36,7 +37,7 @@ public class WhitelistErrorResponseTransformStrategy implements ErrorResponseTra
       @JsonProperty("whitelistRegex") List<Pattern> whitelistRegex
   )
   {
-    this.whitelistRegex = whitelistRegex;
+    this.whitelistRegex = whitelistRegex == null ? ImmutableList.of() : whitelistRegex;
   }
 
   @Override
