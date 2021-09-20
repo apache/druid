@@ -19,22 +19,15 @@
 
 package org.apache.druid.common.exception;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.function.Function;
 
-import java.util.List;
-import java.util.regex.Pattern;
-
-public interface FilterableExceptionMessageAndFields<T>
+public interface SanitizableException
 {
-  T applyErrorMessageFilterAndRemoveInternalFields(List<Pattern> whitelistRegex);
-
-  @VisibleForTesting
-  static String applyErrorMessageFilter(final String errorMessage, final List<Pattern> whitelistRegex)
-  {
-    if (whitelistRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
-      return null;
-    } else {
-      return errorMessage;
-    }
-  }
+  /**
+   * Apply the function for transforming the error message then
+   * return new Exception with sanitized fields and transformed message.
+   */
+  Exception applyErrorMessageTransformAndSanitizeFields(
+      Function<String, String> errorMessageTransformFunction
+  );
 }

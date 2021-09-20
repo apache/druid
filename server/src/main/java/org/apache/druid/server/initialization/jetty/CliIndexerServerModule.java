@@ -161,8 +161,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.getCompressionLevel(),
         oldConfig.isEnableForwardedRequestCustomizer(),
         oldConfig.getAllowedHttpMethods(),
-        oldConfig.isFilterResponse(),
-        oldConfig.getResponseWhitelistRegex()
+        oldConfig.isSanitizeJettyErrorResponse(),
+        oldConfig.getErrorResponseTransformStrategy()
     );
   }
 }

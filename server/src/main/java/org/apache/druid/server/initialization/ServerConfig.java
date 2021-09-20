@@ -21,6 +21,8 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
@@ -63,8 +65,8 @@ public class ServerConfig
       int compressionLevel,
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
-      boolean filterResponse,
-      @NotNull List<Pattern> responseWhitelistRegex
+      boolean sanitizeJettyErrorResponse,
+      ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
     this.numThreads = numThreads;
@@ -82,8 +84,8 @@ public class ServerConfig
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
-    this.filterResponse = filterResponse;
-    this.responseWhitelistRegex = responseWhitelistRegex;
+    this.sanitizeJettyErrorResponse = sanitizeJettyErrorResponse;
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   public ServerConfig()
@@ -150,12 +152,11 @@ public class ServerConfig
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
 
-  @JsonProperty
-  @NotNull
-  private List<Pattern> responseWhitelistRegex = ImmutableList.of();
+  @JsonProperty("sanitizeDruidErrorResponse")
+  private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
 
   @JsonProperty
-  private boolean filterResponse = false;
+  private boolean sanitizeJettyErrorResponse = false;
 
   public int getNumThreads()
   {
@@ -227,14 +228,14 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
-  public boolean isFilterResponse()
+  public boolean isSanitizeJettyErrorResponse()
   {
-    return filterResponse;
+    return sanitizeJettyErrorResponse;
   }
 
-  public List<Pattern> getResponseWhitelistRegex()
+  public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
   {
-    return responseWhitelistRegex;
+    return errorResponseTransformStrategy;
   }
 
   @NotNull
@@ -257,15 +258,15 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
-           filterResponse == that.filterResponse &&
+           sanitizeJettyErrorResponse == that.sanitizeJettyErrorResponse &&
            maxIdleTime.equals(that.maxIdleTime) &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
            allowedHttpMethods.equals(that.allowedHttpMethods);
@@ -290,7 +291,7 @@ public class ServerConfig
         compressionLevel,
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
-        filterResponse
+        sanitizeJettyErrorResponse
     );
   }
 
@@ -313,8 +314,8 @@ public class ServerConfig
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            ", allowedHttpMethods=" + allowedHttpMethods +
-           ", responseWhitelistRegex=" + responseWhitelistRegex +
-           ", filterResponse=" + filterResponse +
+           ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
+           ", sanitizeJettyErrorResponse=" + sanitizeJettyErrorResponse +
            '}';
   }
 

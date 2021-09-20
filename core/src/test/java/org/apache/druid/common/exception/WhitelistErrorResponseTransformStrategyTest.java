@@ -23,35 +23,40 @@ import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
-public class FilterableExceptionMessageAndFieldsTest
+public class WhitelistErrorResponseTransformStrategyTest
 {
   @Test
-  public void testApplyErrorMessageFilterWithMatchingWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithMatchingWhitelistFilter()
   {
+    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+        ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"))
+    );
     String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"));
-    String result = FilterableExceptionMessageAndFields.applyErrorMessageFilter(message, whitelists);
+    String result = whitelist.getErrorMessageTransformFunction().apply(message);
     Assert.assertEquals(message, result);
   }
 
   @Test
-  public void testApplyErrorMessageFilterWithNoMatchingWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithNoMatchingWhitelistFilter()
   {
+    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+        ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("qwer"))
+    );
     String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of(Pattern.compile("acbd"));
-    String result = FilterableExceptionMessageAndFields.applyErrorMessageFilter(message, whitelists);
+    String result = whitelist.getErrorMessageTransformFunction().apply(message);
     Assert.assertNull(result);
   }
 
   @Test
-  public void testApplyErrorMessageFilterWithEmptyWhitelistFilter()
+  public void testgetErrorMessageTransformFunctionWithEmptyWhitelistFilter()
   {
+    WhitelistErrorResponseTransformStrategy whitelist = new WhitelistErrorResponseTransformStrategy(
+        ImmutableList.of()
+    );
     String message = "test message 123";
-    List<Pattern> whitelists = ImmutableList.of();
-    String result = FilterableExceptionMessageAndFields.applyErrorMessageFilter(message, whitelists);
+    String result = whitelist.getErrorMessageTransformFunction().apply(message);
     Assert.assertNull(result);
   }
 }

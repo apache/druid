@@ -116,13 +116,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     if (!response.isCommitted()) {
       response.resetBuffer();
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
-      if (serverConfig.isFilterResponse()) {
-        exceptionToReport = exceptionToReport.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
       objectMapper.writeValue(
           response.getOutputStream(),
-          exceptionToReport
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
       );
     }
     response.flushBuffer();
@@ -372,12 +368,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Write to the response
     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     response.setContentType(MediaType.APPLICATION_JSON);
-    if (serverConfig.isFilterResponse()) {
-      exceptionToReport = exceptionToReport.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-    }
     objectMapper.writeValue(
         response.getOutputStream(),
-        exceptionToReport
+        serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
     );
   }
 

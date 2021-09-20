@@ -17,46 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
-import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.query.QueryException;
 
+import java.util.List;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
-/**
- * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
- * take care of sending the response.
- */
-public class ForbiddenException extends RuntimeException implements SanitizableException
+public class WhitelistErrorResponseTransformStrategy implements ErrorResponseTransformStrategy
 {
-  public ForbiddenException()
-  {
-    super("Unauthorized.");
-  }
+  @JsonProperty
+  private final List<Pattern> whitelistRegex;
 
   @JsonCreator
-  public ForbiddenException(@JsonProperty("errorMessage") String msg)
+  public WhitelistErrorResponseTransformStrategy(
+      @JsonProperty("whitelistRegex") List<Pattern> whitelistRegex
+  )
   {
-    super(msg);
-  }
-
-  @JsonProperty
-  public String getErrorMessage()
-  {
-    return super.getMessage();
+    this.whitelistRegex = whitelistRegex;
   }
 
   @Override
-  public ForbiddenException applyErrorMessageTransformAndSanitizeFields(Function<String, String> errorMessageTransformFunction)
+  public Function<String, String> getErrorMessageTransformFunction()
   {
-    if (Strings.isNullOrEmpty(errorMessageTransformFunction.apply(getMessage()))) {
-      return new ForbiddenException();
-    } else {
-      return this;
-    }
+    return (String errorMessage) -> {
+      if (whitelistRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+        return null;
+      } else {
+        return errorMessage;
+      }
+    };
   }
 }

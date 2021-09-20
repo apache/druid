@@ -21,11 +21,8 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.exception.FilterableExceptionMessageAndFields;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * This exception is thrown when a query does not finish before the configured query timeout.
@@ -67,11 +64,5 @@ public class QueryTimeoutException extends QueryException
   public QueryTimeoutException(String errorMessage, String host)
   {
     super(ERROR_CODE, errorMessage, ERROR_CLASS, host);
-  }
-
-  @Override
-  public QueryTimeoutException applyErrorMessageFilterAndRemoveInternalFields(final List<Pattern> whitelistRegex)
-  {
-    return new QueryTimeoutException(getErrorCode(), FilterableExceptionMessageAndFields.applyErrorMessageFilter(getMessage(), whitelistRegex), null, null);
   }
 }

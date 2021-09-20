@@ -174,45 +174,35 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
-      if (serverConfig.isFilterResponse()) {
-        cap = cap.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
+      return buildNonOkResponse(
+          QueryCapacityExceededException.STATUS_CODE,
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(cap)
+      );
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
-      if (serverConfig.isFilterResponse()) {
-        unsupported = unsupported.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
+      return buildNonOkResponse(
+          QueryUnsupportedException.STATUS_CODE,
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(unsupported)
+      );
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
-      if (serverConfig.isFilterResponse()) {
-        timeout = timeout.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
+      return buildNonOkResponse(
+          QueryTimeoutException.STATUS_CODE,
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(timeout)
+      );
     }
-    catch (SqlPlanningException sqlPlanningException) {
-      endLifecycle(sqlQueryId, lifecycle, sqlPlanningException, remoteAddr, -1);
-      if (serverConfig.isFilterResponse()) {
-        sqlPlanningException = sqlPlanningException.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, sqlPlanningException);
-    }
-    catch (ResourceLimitExceededException resourceLimitException) {
-      endLifecycle(sqlQueryId, lifecycle, resourceLimitException, remoteAddr, -1);
-      if (serverConfig.isFilterResponse()) {
-        resourceLimitException = resourceLimitException.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, resourceLimitException);
+    catch (SqlPlanningException | ResourceLimitExceededException e) {
+      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      return buildNonOkResponse(
+          BadQueryException.STATUS_CODE,
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
+      );
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-      if (serverConfig.isFilterResponse()) {
-        e = e.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-      throw e; // let ForbiddenExceptionMapper handle this
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
@@ -225,14 +215,9 @@ public class SqlResource
       } else {
         exceptionToReport = QueryInterruptedException.wrapIfNeeded(e);
       }
-
-      if (serverConfig.isFilterResponse()) {
-        exceptionToReport = exceptionToReport.applyErrorMessageFilterAndRemoveInternalFields(serverConfig.getResponseWhitelistRegex());
-      }
-
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          exceptionToReport
+          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
       );
     }
     finally {

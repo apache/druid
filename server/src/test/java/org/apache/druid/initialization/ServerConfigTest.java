@@ -22,6 +22,7 @@ package org.apache.druid.initialization;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.common.exception.WhitelistErrorResponseTransformStrategy;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
@@ -60,15 +61,14 @@ public class ServerConfigTest
         true,
         ImmutableList.of(HttpMethod.OPTIONS),
         true,
-        ImmutableList.of(Pattern.compile(".*"))
+        new WhitelistErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile(".*")))
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
     Assert.assertEquals(modifiedConfig, modifiedConfig2);
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
-    Assert.assertEquals(1, modifiedConfig2.getResponseWhitelistRegex().size());
-    Assert.assertEquals(".*", modifiedConfig2.getResponseWhitelistRegex().get(0).toString());
+    Assert.assertTrue(modifiedConfig2.getErrorResponseTransformStrategy() instanceof WhitelistErrorResponseTransformStrategy);
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
     Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
     Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
@@ -81,7 +81,7 @@ public class ServerConfigTest
                   // this class uses non-final fields for serialization / de-serialization.
                   // There are no setters that mutate the fields, once the object is instantiated.
                   .suppress(Warning.NONFINAL_FIELDS)
-                  .withIgnoredFields("responseWhitelistRegex")
+                  .withIgnoredFields("errorResponseTransformStrategy")
                   .usingGetClass()
                   .verify();
   }
