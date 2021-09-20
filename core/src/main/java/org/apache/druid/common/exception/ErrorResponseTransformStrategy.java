@@ -35,7 +35,8 @@ public interface ErrorResponseTransformStrategy
    * For a given {@link SanitizableException} apply the transformation strategy and return the sanitized Exception
    * if the transformation stategy was applied.
    */
-  default Exception transformIfNeeded(SanitizableException exception) {
+  default Exception transformIfNeeded(SanitizableException exception)
+  {
     return exception.applyErrorMessageTransformAndSanitizeFields(getErrorMessageTransformFunction());
   }
 

@@ -26,9 +26,7 @@ import org.apache.druid.common.exception.SanitizableException;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;
-import java.util.List;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 /**
  * Base serializable error response
