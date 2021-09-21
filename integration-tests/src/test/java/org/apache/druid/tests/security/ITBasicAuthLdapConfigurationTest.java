@@ -42,6 +42,7 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 @Test(groups = TestNGGroup.LDAP_SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -119,7 +120,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
 
 
   @Override
-  void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceOnlyGroup",
@@ -128,7 +129,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceWithSysGroup",
@@ -137,7 +138,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceWithStateGroup",
@@ -146,7 +147,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  void setupSysTableAndStateOnlyUser() throws Exception
+  protected void setupSysTableAndStateOnlyUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
         "stateOnlyGroup",
@@ -163,7 +164,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  void setupTestSpecificHttpClients()
+  protected void setupTestSpecificHttpClients()
   {
     druidUserClient = new CredentialedHttpClient(
         new BasicCredentials("druid", "helloworld"),
@@ -174,6 +175,42 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         new BasicCredentials("stateOnlyNoLdapGroup", "helloworld"),
         httpClient
     );
+  }
+
+  @Override
+  protected String getAuthenticatorName()
+  {
+    return LDAP_AUTHENTICATOR;
+  }
+
+  @Override
+  protected String getAuthorizerName()
+  {
+    return LDAP_AUTHORIZER;
+  }
+
+  @Override
+  protected String getExpectedAvaticaAuthError()
+  {
+    return EXPECTED_AVATICA_AUTH_ERROR;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionProperties()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "priest");
+    return connectionProperties;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesFailure()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "wrongpassword");
+    return connectionProperties;
   }
 
   private void createRoleWithPermissionsAndGroupMapping(
@@ -254,23 +291,5 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         ),
         null
     );
-  }
-
-  @Override
-  String getAuthenticatorName()
-  {
-    return LDAP_AUTHENTICATOR;
-  }
-
-  @Override
-  String getAuthorizerName()
-  {
-    return LDAP_AUTHORIZER;
-  }
-
-  @Override
-  String getExpectedAvaticaAuthError()
-  {
-    return EXPECTED_AVATICA_AUTH_ERROR;
   }
 }
