@@ -336,6 +336,32 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     }
   }
 
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId))
+          )
+      );
+
+      if (responseHolder.getContent().length() == 0) {
+        return null;
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   @Override
   public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {

@@ -17,35 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-/**
- * The schema for Druid system tables to be accessible via SQL.
- */
-public class NamedSystemSchema implements NamedSchema
+public class PushedSegmentsReportTest
 {
-  public static final String NAME = "sys";
-
-  private final SystemSchema systemSchema;
-
-  @Inject
-  public NamedSystemSchema(SystemSchema systemSchema)
+  @Test
+  public void testEquals()
   {
-    this.systemSchema = systemSchema;
-  }
-
-  @Override
-  public String getSchemaName()
-  {
-    return NAME;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return systemSchema;
+    EqualsVerifier.forClass(PushedSegmentsReport.class).usingGetClass().verify();
   }
 }

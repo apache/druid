@@ -1104,7 +1104,9 @@ INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
 > Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
@@ -1158,6 +1160,14 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
 
+For example, this query returns [data type](#data-types) information for columns in the `foo` table:
+
+```sql
+SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE"
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_NAME" = 'foo'
+```
+
 ### SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
@@ -1207,6 +1217,26 @@ SELECT
 FROM sys.segments
 GROUP BY 1
 ORDER BY 2 DESC
+```
+
+This query goes a step further and shows the overall profile of available, non-realtime segments across buckets of 1 million rows each for the `foo` datasource:
+
+```sql
+SELECT ABS("num_rows" /  1000000) as "bucket",
+  COUNT(*) as segments,
+  SUM("size") / 1048576 as totalSizeMiB,
+  MIN("size") / 1048576 as minSizeMiB,
+  AVG("size") / 1048576 as averageSizeMiB,
+  MAX("size") / 1048576 as maxSizeMiB,
+  SUM("num_rows") as totalRows,
+  MIN("num_rows") as minRows,
+  AVG("num_rows") as averageRows,
+  MAX("num_rows") as maxRows,
+  (AVG("size") / AVG("num_rows"))  as avgRowSizeB
+FROM sys.segments
+WHERE is_available = 1 AND is_realtime = 0 AND "datasource" = `foo`
+GROUP BY 1
+ORDER BY 1
 ```
 
 If you want to retrieve segment that was compacted (ANY compaction):
