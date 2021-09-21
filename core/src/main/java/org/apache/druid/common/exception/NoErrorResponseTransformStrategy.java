@@ -33,14 +33,7 @@ public class NoErrorResponseTransformStrategy implements ErrorResponseTransformS
   @Override
   public Exception transformIfNeeded(SanitizableException exception)
   {
-    if (exception instanceof Exception) {
-      return (Exception) exception;
-    } else {
-      return new IAE(
-          "Cannot sanitize error response as given argument[%s] is not an Exception",
-          exception.getClass().getName()
-      );
-    }
+    return (Exception) exception;
   }
 
   @Override

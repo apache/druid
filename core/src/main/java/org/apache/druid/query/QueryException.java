@@ -100,7 +100,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   }
 
   @Override
-  public QueryException applyErrorMessageTransformAndSanitizeFields(Function<String, String> errorMessageTransformFunction)
+  public QueryException transform(Function<String, String> errorMessageTransformFunction)
   {
     return new QueryException(errorCode, errorMessageTransformFunction.apply(getMessage()), null, null);
   }

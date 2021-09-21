@@ -37,7 +37,7 @@ public interface ErrorResponseTransformStrategy
    */
   default Exception transformIfNeeded(SanitizableException exception)
   {
-    return exception.applyErrorMessageTransformAndSanitizeFields(getErrorMessageTransformFunction());
+    return exception.transform(getErrorMessageTransformFunction());
   }
 
   /**

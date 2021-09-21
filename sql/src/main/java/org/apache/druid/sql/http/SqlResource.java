@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -174,31 +175,19 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
-      return buildNonOkResponse(
-          QueryCapacityExceededException.STATUS_CODE,
-          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(cap)
-      );
+      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
-      return buildNonOkResponse(
-          QueryUnsupportedException.STATUS_CODE,
-          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(unsupported)
-      );
+      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
-      return buildNonOkResponse(
-          QueryTimeoutException.STATUS_CODE,
-          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(timeout)
-      );
+      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
     }
     catch (SqlPlanningException | ResourceLimitExceededException e) {
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
-      return buildNonOkResponse(
-          BadQueryException.STATUS_CODE,
-          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
-      );
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
@@ -208,16 +197,17 @@ public class SqlResource
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      QueryInterruptedException exceptionToReport;
+      final Exception exceptionToReport;
 
       if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = QueryInterruptedException.wrapIfNeeded((new ISE("Cannot build plan for query: %s", sqlQuery.getQuery())));
+        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
       } else {
-        exceptionToReport = QueryInterruptedException.wrapIfNeeded(e);
+        exceptionToReport = e;
       }
+
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
+          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
       );
     }
     finally {
@@ -245,11 +235,15 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
-  private Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+  private Response buildNonOkResponse(int status, SanitizableException e) throws JsonProcessingException
   {
     return Response.status(status)
                    .type(MediaType.APPLICATION_JSON_TYPE)
-                   .entity(jsonMapper.writeValueAsBytes(e))
+                   .entity(
+                       jsonMapper.writeValueAsBytes(
+                           serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
+                       )
+                   )
                    .build();
   }
 

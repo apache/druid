@@ -50,7 +50,7 @@ public class ForbiddenException extends RuntimeException implements SanitizableE
   }
 
   @Override
-  public ForbiddenException applyErrorMessageTransformAndSanitizeFields(Function<String, String> errorMessageTransformFunction)
+  public ForbiddenException transform(Function<String, String> errorMessageTransformFunction)
   {
     if (Strings.isNullOrEmpty(errorMessageTransformFunction.apply(getMessage()))) {
       return new ForbiddenException();

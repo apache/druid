@@ -27,7 +27,7 @@ public interface SanitizableException
    * Apply the function for transforming the error message then
    * return new Exception with sanitized fields and transformed message.
    */
-  Exception applyErrorMessageTransformAndSanitizeFields(
+  Exception transform(
       Function<String, String> errorMessageTransformFunction
   );
 }
