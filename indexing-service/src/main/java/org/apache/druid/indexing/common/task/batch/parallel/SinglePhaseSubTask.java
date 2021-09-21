@@ -21,13 +21,20 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -35,6 +42,7 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -58,16 +66,29 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +101,7 @@ import java.util.concurrent.TimeoutException;
  * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexTaskRunner} instead of
  * publishing on its own.
  */
-public class SinglePhaseSubTask extends AbstractBatchSubtask
+public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHandler
 {
   public static final String TYPE = "single_phase_sub_task";
   public static final String OLD_TYPE_NAME = "index_sub";
@@ -105,6 +126,20 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
    * in the task logs.
    */
   private final boolean missingIntervalsInOverwriteMode;
+
+  @MonotonicNonNull
+  private AuthorizerMapper authorizerMapper;
+
+  @MonotonicNonNull
+  private RowIngestionMeters rowIngestionMeters;
+
+  @MonotonicNonNull
+  private ParseExceptionHandler parseExceptionHandler;
+
+  @Nullable
+  private String errorMsg;
+
+  private IngestionState ingestionState;
 
   @JsonCreator
   public SinglePhaseSubTask(
@@ -144,6 +179,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
+    this.ingestionState = IngestionState.NOT_STARTED;
   }
 
   @Override
@@ -187,43 +223,74 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
   }
 
   @Override
-  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
-    if (missingIntervalsInOverwriteMode) {
-      LOG.warn(
-          "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
-          + "Forced to use timeChunk lock."
+    try {
+      if (missingIntervalsInOverwriteMode) {
+        LOG.warn(
+            "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
+            + "Forced to use timeChunk lock."
+        );
+      }
+      this.authorizerMapper = toolbox.getAuthorizerMapper();
+
+      toolbox.getChatHandlerProvider().register(getId(), this, false);
+
+      rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+      parseExceptionHandler = new ParseExceptionHandler(
+          rowIngestionMeters,
+          ingestionSchema.getTuningConfig().isLogParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxParseExceptions(),
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
+
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+          ingestionSchema.getDataSchema().getParser()
+      );
+
+      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
+          new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
+          getId(),
+          1, // always use a single http thread
+          ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
+          ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
+      );
+      ingestionState = IngestionState.BUILD_SEGMENTS;
+      final Set<DataSegment> pushedSegments = generateAndPushSegments(
+          toolbox,
+          taskClient,
+          inputSource,
+          toolbox.getIndexingTmpDir()
+      );
+      
+      // Find inputSegments overshadowed by pushedSegments
+      final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
+      allSegments.addAll(pushedSegments);
+      final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+      final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
+                                                         .transformAndConcat(TimelineObjectHolder::getObject)
+                                                         .transform(PartitionChunk::getObject)
+                                                         .toSet();
+
+      Map<String, TaskReport> taskReport = getTaskCompletionReports();
+      taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+
+      toolbox.getTaskReportFileWriter().write(getId(), taskReport);
+
+      return TaskStatus.success(getId());
+    }
+    catch (Exception e) {
+      LOG.error(e, "Encountered exception in parallel sub task.");
+      errorMsg = Throwables.getStackTraceAsString(e);
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+      return TaskStatus.failure(
+          getId(),
+          errorMsg
       );
     }
-    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
-
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
-        ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
-        ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
-    );
-    final Set<DataSegment> pushedSegments = generateAndPushSegments(
-        toolbox,
-        taskClient,
-        inputSource,
-        toolbox.getIndexingTmpDir()
-    );
-
-    // Find inputSegments overshadowed by pushedSegments
-    final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
-    allSegments.addAll(pushedSegments);
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
-                                                       .transformAndConcat(TimelineObjectHolder::getObject)
-                                                       .transform(PartitionChunk::getObject)
-                                                       .toSet();
-    taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments));
-
-    return TaskStatus.success(getId());
+    finally {
+      toolbox.getChatHandlerProvider().unregister(getId());
+    }
   }
 
   @Override
@@ -324,13 +391,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
         useLineageBasedSegmentAllocation
     );
 
-    final RowIngestionMeters rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
-    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
-        rowIngestionMeters,
-        tuningConfig.isLogParseExceptions(),
-        tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
-    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -339,12 +399,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
         dataSchema,
         tuningConfig,
         rowIngestionMeters,
-        new ParseExceptionHandler(
-            rowIngestionMeters,
-            tuningConfig.isLogParseExceptions(),
-            tuningConfig.getMaxParseExceptions(),
-            tuningConfig.getMaxSavedParseExceptions()
-        )
+        parseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (
@@ -423,5 +478,171 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask
         appenderator.close();
       }
     }
+  }
+
+  @GET
+  @Path("/unparseableEvents")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnparseableEvents(
+      @Context final HttpServletRequest req,
+      @QueryParam("full") String full
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    Map<String, List<String>> events = new HashMap<>();
+
+    boolean needsBuildSegments = false;
+
+    if (full != null) {
+      needsBuildSegments = true;
+    } else {
+      switch (ingestionState) {
+        case BUILD_SEGMENTS:
+        case COMPLETED:
+          needsBuildSegments = true;
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (needsBuildSegments) {
+      events.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(
+              parseExceptionHandler.getSavedParseExceptions()
+          )
+      );
+    }
+
+    return Response.ok(events).build();
+  }
+
+  private Map<String, Object> doGetRowStats(String full)
+  {
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
+
+    boolean needsBuildSegments = false;
+
+    if (full != null) {
+      needsBuildSegments = true;
+    } else {
+      switch (ingestionState) {
+        case BUILD_SEGMENTS:
+        case COMPLETED:
+          needsBuildSegments = true;
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (needsBuildSegments) {
+      totalsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          rowIngestionMeters.getTotals()
+      );
+      averagesMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          rowIngestionMeters.getMovingAverages()
+      );
+    }
+
+    returnMap.put("totals", totalsMap);
+    returnMap.put("movingAverages", averagesMap);
+    return returnMap;
+  }
+
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req,
+      @QueryParam("full") String full
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return Response.ok(doGetRowStats(full)).build();
+  }
+
+  @VisibleForTesting
+  public Map<String, Object> doGetLiveReports(String full)
+  {
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
+    Map<String, Object> payload = new HashMap<>();
+    Map<String, Object> events = getTaskCompletionUnparseableEvents();
+
+    payload.put("ingestionState", ingestionState);
+    payload.put("unparseableEvents", events);
+    payload.put("rowStats", doGetRowStats(full));
+
+    ingestionStatsAndErrors.put("taskId", getId());
+    ingestionStatsAndErrors.put("payload", payload);
+    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
+
+    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
+    return returnMap;
+  }
+
+  @GET
+  @Path("/liveReports")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLiveReports(
+      @Context final HttpServletRequest req,
+      @QueryParam("full") String full
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return Response.ok(doGetLiveReports(full)).build();
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
+  {
+    Map<String, Object> metrics = new HashMap<>();
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    return metrics;
+  }
+
+  /**
+   * Generate an IngestionStatsAndErrorsTaskReport for the task.
+   **
+   * @return
+   */
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                IngestionState.COMPLETED,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats(),
+                errorMsg,
+                false // not applicable for parallel subtask
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
+    List<String> parseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptions()
+    );
+
+    if (parseExceptionMessages != null) {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, parseExceptionMessages);
+    } else {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, ImmutableList.of());
+    }
+
+    return unparseableEventsMap;
   }
 }

@@ -360,6 +360,8 @@ public class DruidStatement implements Closeable
           synchronized (lock) {
             sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
           }
+        } else {
+          DruidMeta.logFailure(this.throwable);
         }
         onClose.run();
       }
@@ -388,6 +390,7 @@ public class DruidStatement implements Closeable
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
+    DruidMeta.logFailure(t);
     try {
       close();
     }

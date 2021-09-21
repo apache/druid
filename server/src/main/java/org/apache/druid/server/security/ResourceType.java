@@ -19,22 +19,44 @@
 
 package org.apache.druid.server.security;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.collect.Sets;
 
-public enum ResourceType
+import java.util.Set;
+
+/**
+ * Set of built-in and 'registered' {@link Resource} types for use by {@link Authorizer}
+ */
+public class ResourceType
 {
-  DATASOURCE,
-  VIEW,
-  CONFIG,
-  STATE;
+  public static final String DATASOURCE = "DATASOURCE";
+  public static final String VIEW = "VIEW";
+  public static final String CONFIG = "CONFIG";
+  public static final String STATE = "STATE";
 
-  @JsonCreator
-  public static ResourceType fromString(String name)
+  private static final Set<String> KNOWN_TYPES = Sets.newConcurrentHashSet();
+
+  // initialize built-ins
+  static {
+    registerResourceType(DATASOURCE);
+    registerResourceType(VIEW);
+    registerResourceType(CONFIG);
+    registerResourceType(STATE);
+  }
+
+  /**
+   * Set of 'known' {@link Resource} types which have been registered with {@link #registerResourceType}, for use by
+   * utility methods looking to construct permission sets for all types (e.g. 'superuser' permission set)
+   */
+  public static Set<String> knownTypes()
   {
-    if (name == null) {
-      return null;
-    }
-    return valueOf(StringUtils.toUpperCase(name));
+    return KNOWN_TYPES;
+  }
+
+  /**
+   * 'register' a 'known' type of {@link Resource} to make available via {@link #knownTypes()}
+   */
+  public static void registerResourceType(String type)
+  {
+    KNOWN_TYPES.add(type);
   }
 }
