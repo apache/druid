@@ -84,7 +84,6 @@ import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -531,7 +530,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
+    authorizeRequest(req, authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
@@ -557,7 +556,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
+    authorizeRequest(req, authorizerMapper);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );

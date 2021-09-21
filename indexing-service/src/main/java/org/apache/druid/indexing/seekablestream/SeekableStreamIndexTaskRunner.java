@@ -81,8 +81,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
@@ -1351,12 +1349,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
    */
-  private Access datasourceWriteAuthCheck(final HttpServletRequest req)
+  private void authorizeRequest(final HttpServletRequest req)
   {
-    return IndexTaskUtils.datasourceAuthorizationCheck(req, Action.WRITE, task.getDataSource(), authorizerMapper);
+    task.authorizeRequest(req, authorizerMapper);
   }
 
   public Appenderator getAppenderator()
@@ -1433,7 +1429,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -1443,7 +1439,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return status;
   }
 
@@ -1458,7 +1454,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return getCurrentOffsets();
   }
 
@@ -1472,7 +1468,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return getEndOffsets();
   }
 
@@ -1492,7 +1488,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return setEndOffsets(sequences, finish);
   }
 
@@ -1542,7 +1538,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return Response.ok(doGetRowStats()).build();
   }
 
@@ -1553,7 +1549,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return Response.ok(doGetLiveReports()).build();
   }
 
@@ -1565,7 +1561,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );
@@ -1716,7 +1712,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return getCheckpoints();
   }
 
@@ -1743,7 +1739,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return pause();
   }
 
@@ -1798,7 +1794,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -1831,7 +1827,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    datasourceWriteAuthCheck(req);
+    authorizeRequest(req);
     return startTime;
   }
 
