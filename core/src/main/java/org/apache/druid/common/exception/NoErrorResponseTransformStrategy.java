@@ -19,8 +19,6 @@
 
 package org.apache.druid.common.exception;
 
-import org.apache.druid.java.util.common.IAE;
-
 import java.util.function.Function;
 
 /**
