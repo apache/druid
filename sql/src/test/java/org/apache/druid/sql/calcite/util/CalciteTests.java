@@ -1140,7 +1140,7 @@ public class CalciteTests
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     Set<NamedSchema> namedSchemas = ImmutableSet.of(
         new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(systemSchema),
+        new NamedSystemSchema(plannerConfig, systemSchema),
         new NamedLookupSchema(lookupSchema)
     );
     DruidSchemaCatalog catalog = new DruidSchemaCatalog(
@@ -1178,7 +1178,7 @@ public class CalciteTests
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     Set<NamedSchema> namedSchemas = ImmutableSet.of(
         new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(systemSchema),
+        new NamedSystemSchema(plannerConfig, systemSchema),
         new NamedLookupSchema(lookupSchema),
         new NamedViewSchema(viewSchema)
     );

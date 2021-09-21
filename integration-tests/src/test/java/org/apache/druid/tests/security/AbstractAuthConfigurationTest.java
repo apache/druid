@@ -21,6 +21,7 @@ package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -34,6 +35,10 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -43,6 +48,7 @@ import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -50,19 +56,17 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public abstract class AbstractAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(AbstractAuthConfigurationTest.class);
-
-  static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<List<Map<String, Object>>>()
-      {
-      };
+  private static final String INVALID_NAME = "invalid%2Fname";
 
   static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
       "/results/auth_test_sys_schema_segments.json";
@@ -85,7 +89,84 @@ public abstract class AbstractAuthConfigurationTest
   static final String SYS_SCHEMA_TASKS_QUERY =
       "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
 
-  private static final String INVALID_NAME = "invalid%2Fname";
+  static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
+      new TypeReference<List<Map<String, Object>>>()
+      {
+      };
+
+  /**
+   * create a ResourceAction set of permissions that can only read a 'auth_test' datasource, for Authorizer
+   * implementations which use ResourceAction pattern matching
+   */
+  static final List<ResourceAction> DATASOURCE_ONLY_PERMISSIONS = Collections.singletonList(
+      new ResourceAction(
+          new Resource("auth_test", ResourceType.DATASOURCE),
+          Action.READ
+      )
+  );
+
+  /**
+   * create a ResourceAction set of permissions that can only read 'auth_test' + partial SYSTEM_TABLE, for Authorizer
+   * implementations which use ResourceAction pattern matching
+   */
+  static final List<ResourceAction> DATASOURCE_SYS_PERMISSIONS = ImmutableList.of(
+      new ResourceAction(
+          new Resource("auth_test", ResourceType.DATASOURCE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource("segments", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+      // test missing state permission but having servers permission
+      new ResourceAction(
+          new Resource("servers", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+      // test missing state permission but having server_segments permission
+      new ResourceAction(
+          new Resource("server_segments", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource("tasks", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      )
+  );
+
+  /**
+   * create a ResourceAction set of permissions that can only read 'auth_test' + STATE + SYSTEM_TABLE read access, for
+   * Authorizer implementations which use ResourceAction pattern matching
+   */
+  static final List<ResourceAction> DATASOURCE_SYS_STATE_PERMISSIONS = ImmutableList.of(
+      new ResourceAction(
+          new Resource("auth_test", ResourceType.DATASOURCE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(".*", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(".*", ResourceType.STATE),
+          Action.READ
+      )
+  );
+
+  /**
+   * create a ResourceAction set of permissions with only STATE and SYSTEM_TABLE read access, for Authorizer
+   * implementations which use ResourceAction pattern matching
+   */
+  static final List<ResourceAction> STATE_ONLY_PERMISSIONS = ImmutableList.of(
+      new ResourceAction(
+          new Resource(".*", ResourceType.STATE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(".*", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      )
+  );
 
   List<Map<String, Object>> adminSegments;
   List<Map<String, Object>> adminTasks;
@@ -107,10 +188,322 @@ public abstract class AbstractAuthConfigurationTest
 
   HttpClient adminClient;
   HttpClient datasourceOnlyUserClient;
+  HttpClient datasourceAndSysUserClient;
   HttpClient datasourceWithStateUserClient;
   HttpClient stateOnlyUserClient;
   HttpClient internalSystemClient;
 
+
+  abstract void setupDatasourceOnlyUser() throws Exception;
+  abstract void setupDatasourceAndSysTableUser() throws Exception;
+  abstract void setupDatasourceAndSysAndStateUser() throws Exception;
+  abstract void setupSysTableAndStateOnlyUser() throws Exception;
+
+  abstract void setupTestSpecificHttpClients() throws Exception;
+
+  abstract String getAuthenticatorName();
+
+  abstract String getAuthorizerName();
+
+  abstract String getExpectedAvaticaAuthError();
+
+  @Test
+  public void test_systemSchemaAccess_admin() throws Exception
+  {
+    // check that admin access works on all nodes
+    checkNodeAccess(adminClient);
+
+    // as admin
+    LOG.info("Checking sys.segments query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments
+    );
+
+    LOG.info("Checking sys.servers query as admin...");
+    verifySystemSchemaServerQuery(
+        adminClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        getServersWithoutCurrentSize(adminServers)
+    );
+
+    LOG.info("Checking sys.server_segments query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        adminServerSegments
+    );
+
+    LOG.info("Checking sys.tasks query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks
+    );
+  }
+
+  @Test
+  public void test_systemSchemaAccess_datasourceOnlyUser() throws Exception
+  {
+    // check that we can access a datasource-permission restricted resource on the broker
+    HttpUtil.makeRequest(
+        datasourceOnlyUserClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
+        null
+    );
+
+    // as user that can only read auth_test
+    LOG.info("Checking sys.segments query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.servers query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
+    );
+  }
+
+  @Test
+  public void test_systemSchemaAccess_datasourceAndSysUser() throws Exception
+  {
+    // check that we can access a datasource-permission restricted resource on the broker
+    HttpUtil.makeRequest(
+        datasourceAndSysUserClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
+        null
+    );
+
+    // as user that can only read auth_test
+    LOG.info("Checking sys.segments query as datasourceAndSysUser...");
+    verifySystemSchemaQuery(
+        datasourceAndSysUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments.stream()
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.servers query as datasourceAndSysUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceAndSysUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.server_segments query as datasourceAndSysUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceAndSysUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.tasks query as datasourceAndSysUser...");
+    verifySystemSchemaQuery(
+        datasourceAndSysUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks.stream()
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_systemSchemaAccess_datasourceAndSysWithStateUser() throws Exception
+  {
+    // check that we can access a state-permission restricted resource on the broker
+    HttpUtil.makeRequest(
+        datasourceWithStateUserClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/status",
+        null
+    );
+
+    // as user that can read auth_test and STATE
+    LOG.info("Checking sys.segments query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments.stream()
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.servers query as datasourceWithStateUser...");
+    verifySystemSchemaServerQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        adminServerSegments.stream()
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
+                               "auth_test"))
+                           .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.tasks query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks.stream()
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_systemSchemaAccess_stateOnlyUser() throws Exception
+  {
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+
+    // as user that can only read STATE
+    LOG.info("Checking sys.segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.servers query as stateOnlyUser...");
+    verifySystemSchemaServerQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.tasks query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        Collections.emptyList()
+    );
+  }
+  @Test
+  public void test_unsecuredPathWithoutCredentials_allowed()
+  {
+    // check that we are allowed to access unsecured path without credentials.
+    checkUnsecuredCoordinatorLoadQueuePath(httpClient);
+  }
+
+  @Test
+  public void test_admin_loadStatus() throws Exception
+  {
+    checkLoadStatus(adminClient);
+  }
+
+  @Test
+  public void test_admin_hasNodeAccess()
+  {
+    checkNodeAccess(adminClient);
+  }
+
+  @Test
+  public void test_internalSystemUser_hasNodeAccess()
+  {
+    checkNodeAccess(internalSystemClient);
+  }
+
+  @Test
+  public void test_avaticaQuery_broker()
+  {
+    testAvaticaQuery(getBrokerAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQuery_router()
+  {
+    testAvaticaQuery(getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryAuthFailure_broker() throws Exception
+  {
+    testAvaticaAuthFailure(getBrokerAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryAuthFailure_router() throws Exception
+  {
+    testAvaticaAuthFailure(getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_admin_optionsRequest()
+  {
+    verifyAdminOptionsRequest();
+  }
+
+  @Test
+  public void test_authentication_invalidAuthName_fails()
+  {
+    verifyAuthenticationInvalidAuthNameFails();
+  }
+
+  @Test
+  public void test_authorization_invalidAuthName_fails()
+  {
+    verifyAuthorizationInvalidAuthNameFails();
+  }
+
+  @Test
+  public void test_groupMappings_invalidAuthName_fails()
+  {
+    verifyGroupMappingsInvalidAuthNameFails();
+  }
+
+  @Test
+  public void testMaliciousUser()
+  {
+    verifyMaliciousUser();
+  }
+
+  void setupHttpClientsAndUsers() throws Exception
+  {
+    setupHttpClients();
+    setupDatasourceOnlyUser();
+    setupDatasourceAndSysTableUser();
+    setupDatasourceAndSysAndStateUser();
+    setupSysTableAndStateOnlyUser();
+  }
 
   void checkNodeAccess(HttpClient httpClient)
   {
@@ -302,7 +695,7 @@ public abstract class AbstractAuthConfigurationTest
     testOptionsRequests(adminClient);
   }
 
-  void verifyAuthenticatioInvalidAuthNameFails()
+  void verifyAuthenticationInvalidAuthNameFails()
   {
     verifyInvalidAuthNameFails(StringUtils.format(
         "%s/druid-ext/basic-security/authentication/listen/%s",
@@ -370,7 +763,6 @@ public abstract class AbstractAuthConfigurationTest
     setupTestSpecificHttpClients();
   }
 
-  abstract void setupUsers() throws Exception;
 
   void setupCommonHttpClients()
   {
@@ -381,6 +773,11 @@ public abstract class AbstractAuthConfigurationTest
 
     datasourceOnlyUserClient = new CredentialedHttpClient(
         new BasicCredentials("datasourceOnlyUser", "helloworld"),
+        httpClient
+    );
+
+    datasourceAndSysUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceAndSysUser", "helloworld"),
         httpClient
     );
 
@@ -399,8 +796,6 @@ public abstract class AbstractAuthConfigurationTest
         httpClient
     );
   }
-
-  abstract void setupTestSpecificHttpClients() throws Exception;
 
   void setExpectedSystemSchemaObjects() throws IOException
   {
@@ -462,10 +857,4 @@ public abstract class AbstractAuthConfigurationTest
     json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return json;
   }
-
-  abstract String getAuthenticatorName();
-
-  abstract String getAuthorizerName();
-
-  abstract String getExpectedAvaticaAuthError();
 }

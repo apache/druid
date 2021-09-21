@@ -180,6 +180,7 @@ SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
+SYSTEM_TABLE
 TCP
 TGT
 TLS
