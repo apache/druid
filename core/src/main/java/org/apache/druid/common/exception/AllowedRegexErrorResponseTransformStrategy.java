@@ -24,31 +24,57 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class AllowedRegexErrorResponseTransformStrategy implements ErrorResponseTransformStrategy
 {
   @JsonProperty
-  private final List<Pattern> allowedRegex;
+  private final List<String> allowedRegexString;
+
+  private final List<Pattern> allowedRegexPattern;
 
   @JsonCreator
   public AllowedRegexErrorResponseTransformStrategy(
-      @JsonProperty("allowedRegex") List<Pattern> allowedRegex
+      @JsonProperty("allowedRegex") List<String> allowedRegexString
   )
   {
-    this.allowedRegex = allowedRegex == null ? ImmutableList.of() : allowedRegex;
+    this.allowedRegexString = allowedRegexString;
+    this.allowedRegexPattern = allowedRegexString == null
+                               ? ImmutableList.of()
+                               : allowedRegexString.stream().map(Pattern::compile).collect(Collectors.toList());
   }
 
   @Override
   public Function<String, String> getErrorMessageTransformFunction()
   {
     return (String errorMessage) -> {
-      if (allowedRegex.stream().noneMatch(pattern -> pattern.matcher(errorMessage).matches())) {
-        return null;
-      } else {
+      if (allowedRegexPattern.stream().anyMatch(pattern -> pattern.matcher(errorMessage).matches())) {
         return errorMessage;
+      } else {
+        return null;
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AllowedRegexErrorResponseTransformStrategy that = (AllowedRegexErrorResponseTransformStrategy) o;
+    return Objects.equals(allowedRegexString, that.allowedRegexString);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(allowedRegexString);
   }
 }

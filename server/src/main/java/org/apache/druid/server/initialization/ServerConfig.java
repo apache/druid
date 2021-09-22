@@ -152,6 +152,7 @@ public class ServerConfig
   private List<String> allowedHttpMethods = ImmutableList.of();
 
   @JsonProperty("sanitizeDruidErrorResponse")
+  @NotNull
   private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
 
   @JsonProperty
@@ -268,7 +269,8 @@ public class ServerConfig
            maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
-           allowedHttpMethods.equals(that.allowedHttpMethods);
+           allowedHttpMethods.equals(that.allowedHttpMethods) &&
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy);
   }
 
   @Override
@@ -290,6 +292,7 @@ public class ServerConfig
         compressionLevel,
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
+        errorResponseTransformStrategy,
         sanitizeJettyErrorResponse
     );
   }

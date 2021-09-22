@@ -24,10 +24,14 @@ import java.util.function.Function;
 public interface SanitizableException
 {
   /**
-   * Apply the function for transforming the error message then
-   * return new Exception with sanitized fields and transformed message.
+   * Apply the function for transforming the error message then return new Exception with sanitized fields and transformed message.
+   * The {@param errorMessageTransformFunction} is only intended to be use to transform the error message
+   * String of the Exception as only the error message String is common to all Exception classes.
+   * For other fields (which may be unique to each particular Exception class), each implementation of this method can
+   * decide for itself how to sanitized those fields (i.e. leaving unchanged, changing to null, changing to a fixed String, etc.).
+   * Note that this method returns a new Exception of the same type since Exception error message is immutable.
    */
-  Exception transform(
+  Exception sanitize(
       Function<String, String> errorMessageTransformFunction
   );
 }

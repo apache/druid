@@ -28,10 +28,10 @@ import java.util.regex.Pattern;
 public class AllowedRegexErrorResponseTransformStrategyTest
 {
   @Test
-  public void testgetErrorMessageTransformFunctionWithMatchingAllowedRegexFilter()
+  public void testGetErrorMessageTransformFunctionWithMatchingAllowedRegexFilter()
   {
     AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
-        ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("test .*"))
+        ImmutableList.of("acbd", "test .*")
     );
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
@@ -39,10 +39,10 @@ public class AllowedRegexErrorResponseTransformStrategyTest
   }
 
   @Test
-  public void testgetErrorMessageTransformFunctionWithNoMatchingAllowedRegexFilter()
+  public void testGetErrorMessageTransformFunctionWithNoMatchingAllowedRegexFilter()
   {
     AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
-        ImmutableList.of(Pattern.compile("acbd"), Pattern.compile("qwer"))
+        ImmutableList.of("acbd", "qwer")
     );
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
@@ -50,7 +50,7 @@ public class AllowedRegexErrorResponseTransformStrategyTest
   }
 
   @Test
-  public void testgetErrorMessageTransformFunctionWithEmptyAllowedRegexFilter()
+  public void testGetErrorMessageTransformFunctionWithEmptyAllowedRegexFilter()
   {
     AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
         ImmutableList.of()

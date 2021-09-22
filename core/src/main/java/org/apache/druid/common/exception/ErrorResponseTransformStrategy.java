@@ -22,6 +22,7 @@ package org.apache.druid.common.exception;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import javax.validation.constraints.NotNull;
 import java.util.function.Function;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoErrorResponseTransformStrategy.class)
@@ -37,12 +38,13 @@ public interface ErrorResponseTransformStrategy
    */
   default Exception transformIfNeeded(SanitizableException exception)
   {
-    return exception.transform(getErrorMessageTransformFunction());
+    return exception.sanitize(getErrorMessageTransformFunction());
   }
 
   /**
    * Return a function for checking and transforming the error message if needed.
    * Function can return null if error message needs to be omitted or return String to be use instead.
    */
+  @NotNull
   Function<String, String> getErrorMessageTransformFunction();
 }

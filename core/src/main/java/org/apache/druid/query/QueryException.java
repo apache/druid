@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.exception.SanitizableException;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.util.function.Function;
 
@@ -100,7 +101,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   }
 
   @Override
-  public QueryException transform(Function<String, String> errorMessageTransformFunction)
+  public QueryException sanitize(@NotNull Function<String, String> errorMessageTransformFunction)
   {
     return new QueryException(errorCode, errorMessageTransformFunction.apply(getMessage()), null, null);
   }

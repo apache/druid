@@ -40,5 +40,17 @@ public class NoErrorResponseTransformStrategy implements ErrorResponseTransformS
     return (String errorMessage) -> errorMessage;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    return !(o == null || getClass() != o.getClass());
+  }
 
+  @Override
+  public int hashCode() {
+    return NoErrorResponseTransformStrategy.class.hashCode();
+  }
 }

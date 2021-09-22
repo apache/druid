@@ -61,7 +61,7 @@ public class ServerConfigTest
         true,
         ImmutableList.of(HttpMethod.OPTIONS),
         true,
-        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile(".*")))
+        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*"))
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -81,7 +81,6 @@ public class ServerConfigTest
                   // this class uses non-final fields for serialization / de-serialization.
                   // There are no setters that mutate the fields, once the object is instantiated.
                   .suppress(Warning.NONFINAL_FIELDS)
-                  .withIgnoredFields("errorResponseTransformStrategy")
                   .usingGetClass()
                   .verify();
   }
