@@ -38,7 +38,9 @@ import {
   deepSet,
   filterMap,
   oneOf,
-  prettyPrintSql, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  prettyPrintSql,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
 } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';

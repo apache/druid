@@ -55,7 +55,9 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  sqlQueryCustomTableFilter, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  sqlQueryCustomTableFilter,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
@@ -373,7 +375,7 @@ END AS "partitioning"`,
               await Api.instance.get(
                 `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
               )
-            ).data.segments;
+            ).data?.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {

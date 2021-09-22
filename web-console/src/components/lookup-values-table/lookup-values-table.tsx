@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import {queryDruidSql, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS} from '../../utils';
+import { queryDruidSql, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './lookup-values-table.scss';

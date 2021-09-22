@@ -64,7 +64,9 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
-  QueryState, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS
+  QueryState,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';

@@ -26,7 +26,7 @@ import {
   caseInsensitiveContains,
   filterMap,
   STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 

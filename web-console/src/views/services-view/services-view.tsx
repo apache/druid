@@ -48,7 +48,9 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
-  QueryState, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  QueryState,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
@@ -315,7 +317,7 @@ ORDER BY "rank" DESC, "service" DESC`;
       );
     };
 
-    const services = servicesState.data|| [];
+    const services = servicesState.data || [];
     return (
       <ReactTable
         data={services}

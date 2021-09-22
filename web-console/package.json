@@ -127,7 +127,7 @@
     "@types/react-splitter-layout": "^3.0.0",
     "@types/react-table": "6.8.5",
     "@types/uuid": "^7.0.2",
-    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/eslint-plugin": "^4.30.0",
     "autoprefixer": "^10.2.6",
     "babel-loader": "^8.2.2",
     "browserslist": "^4.16.6",
