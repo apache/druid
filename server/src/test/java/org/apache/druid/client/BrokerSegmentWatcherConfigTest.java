@@ -45,9 +45,10 @@ public class BrokerSegmentWatcherConfigTest
     );
 
     Assert.assertNull(config.getWatchedTiers());
+    Assert.assertTrue(config.isWatchRealtimeNodes());
 
     //non-defaults
-    json = "{ \"watchedTiers\": [\"t1\", \"t2\"], \"watchedDataSources\": [\"ds1\", \"ds2\"] }";
+    json = "{ \"watchedTiers\": [\"t1\", \"t2\"], \"watchedDataSources\": [\"ds1\", \"ds2\"], \"watchRealtimeNodes\": false }";
 
     config = MAPPER.readValue(
         MAPPER.writeValueAsString(
@@ -58,6 +59,7 @@ public class BrokerSegmentWatcherConfigTest
 
     Assert.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
     Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    Assert.assertFalse(config.isWatchRealtimeNodes());
 
   }
 }
