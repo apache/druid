@@ -681,10 +681,6 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void verifyAdminOptionsRequest()
   {
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
-    );
     testOptionsRequests(adminClient);
   }
 
@@ -717,11 +713,6 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void verifyInvalidAuthNameFails(String endpoint)
   {
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
-    );
-
     HttpUtil.makeRequestWithExpectedStatus(
         adminClient,
         HttpMethod.POST,
