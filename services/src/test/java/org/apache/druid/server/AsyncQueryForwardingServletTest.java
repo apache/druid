@@ -341,7 +341,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of("test .*"));
           }
         }
     );
@@ -466,7 +466,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
-            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(Pattern.compile("test .*")));
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of("test .*"));
           }
         }
     );
