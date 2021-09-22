@@ -473,7 +473,7 @@ public class JettyServerModule extends JerseyServletModule
         Lifecycle.Stage.SERVER
     );
 
-    if (config.isSanitizeJettyErrorResponse()) {
+    if (!config.isShowDetailedJettyErrors()) {
       server.setErrorHandler(new ErrorHandler() {
         @Override
         public boolean isShowServlet()

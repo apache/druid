@@ -983,7 +983,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new ServerConfig() {
           @Override
-          public boolean isSanitizeJettyErrorResponse()
+          public boolean isShowDetailedJettyErrors()
           {
             return true;
           }

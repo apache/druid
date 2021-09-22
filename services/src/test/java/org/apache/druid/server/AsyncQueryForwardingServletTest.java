@@ -288,7 +288,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new Properties(),
         new ServerConfig() {
           @Override
-          public boolean isSanitizeJettyErrorResponse()
+          public boolean isShowDetailedJettyErrors()
           {
             return true;
           }
@@ -333,7 +333,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new Properties(),
         new ServerConfig() {
           @Override
-          public boolean isSanitizeJettyErrorResponse()
+          public boolean isShowDetailedJettyErrors()
           {
             return true;
           }
@@ -412,7 +412,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new Properties(),
         new ServerConfig() {
           @Override
-          public boolean isSanitizeJettyErrorResponse()
+          public boolean isShowDetailedJettyErrors()
           {
             return true;
           }
@@ -458,7 +458,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new Properties(),
         new ServerConfig() {
           @Override
-          public boolean isSanitizeJettyErrorResponse()
+          public boolean isShowDetailedJettyErrors()
           {
             return true;
           }

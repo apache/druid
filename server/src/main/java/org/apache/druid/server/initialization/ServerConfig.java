@@ -64,7 +64,7 @@ public class ServerConfig
       int compressionLevel,
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
-      boolean sanitizeJettyErrorResponse,
+      boolean showDetailedJettyErrors,
       ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
@@ -83,7 +83,7 @@ public class ServerConfig
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
-    this.sanitizeJettyErrorResponse = sanitizeJettyErrorResponse;
+    this.showDetailedJettyErrors = showDetailedJettyErrors;
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
@@ -151,12 +151,12 @@ public class ServerConfig
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
 
-  @JsonProperty("sanitizeDruidErrorResponse")
+  @JsonProperty
   @NotNull
   private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
 
   @JsonProperty
-  private boolean sanitizeJettyErrorResponse = false;
+  private boolean showDetailedJettyErrors = true;
 
   public int getNumThreads()
   {
@@ -228,9 +228,9 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
-  public boolean isSanitizeJettyErrorResponse()
+  public boolean isShowDetailedJettyErrors()
   {
-    return sanitizeJettyErrorResponse;
+    return showDetailedJettyErrors;
   }
 
   public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
@@ -264,7 +264,7 @@ public class ServerConfig
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
-           sanitizeJettyErrorResponse == that.sanitizeJettyErrorResponse &&
+           showDetailedJettyErrors == that.showDetailedJettyErrors &&
            maxIdleTime.equals(that.maxIdleTime) &&
            maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
@@ -293,7 +293,7 @@ public class ServerConfig
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         errorResponseTransformStrategy,
-        sanitizeJettyErrorResponse
+        showDetailedJettyErrors
     );
   }
 
@@ -317,7 +317,7 @@ public class ServerConfig
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
-           ", sanitizeJettyErrorResponse=" + sanitizeJettyErrorResponse +
+           ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            '}';
   }
 
