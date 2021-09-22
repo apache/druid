@@ -48,7 +48,7 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
-  QueryState,
+  QueryState, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
@@ -315,10 +315,10 @@ ORDER BY "rank" DESC, "service" DESC`;
       );
     };
 
-    const services = servicesState.data;
+    const services = servicesState.data|| [];
     return (
       <ReactTable
-        data={services || []}
+        data={services}
         loading={servicesState.loading}
         noDataText={
           servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
@@ -329,7 +329,9 @@ ORDER BY "rank" DESC, "service" DESC`;
           this.setState({ serviceFilter: filtered });
         }}
         pivotBy={groupServicesBy ? [groupServicesBy] : []}
-        defaultPageSize={50}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Service',

@@ -38,7 +38,7 @@ import {
   deepSet,
   filterMap,
   oneOf,
-  prettyPrintSql,
+  prettyPrintSql, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
 } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
@@ -396,6 +396,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
         ofText={hasMoreResults ? '' : 'of'}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={queryResult.rows.length > SMALL_TABLE_PAGE_SIZE}
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
           return {

@@ -55,7 +55,7 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  sqlQueryCustomTableFilter,
+  sqlQueryCustomTableFilter, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
@@ -167,8 +167,6 @@ export interface SegmentsViewState {
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
-  static PAGE_SIZE = 25;
-
   static baseQuery(hiddenColumns: LocalStorageBackedArray<string>) {
     const columns = compact([
       hiddenColumns.exists('Segment ID') && `"segment_id"`,
@@ -513,6 +511,9 @@ END AS "partitioning"`,
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={segments.length > STANDARD_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Segment ID',
@@ -687,7 +688,6 @@ END AS "partitioning"`,
             Aggregated: () => '',
           },
         ]}
-        defaultPageSize={SegmentsView.PAGE_SIZE}
       />
     );
   }

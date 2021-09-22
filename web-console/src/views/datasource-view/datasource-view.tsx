@@ -64,7 +64,7 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
-  QueryState,
+  QueryState, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';
@@ -1011,6 +1011,9 @@ ORDER BY 1`;
           onFilteredChange={filtered => {
             this.setState({ datasourceFilter: filtered });
           }}
+          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={datasources.length > STANDARD_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: twoLines('Datasource', 'name'),
@@ -1387,7 +1390,6 @@ ORDER BY 1`;
               },
             },
           ]}
-          defaultPageSize={50}
         />
         {this.renderUnuseAction()}
         {this.renderUseAction()}

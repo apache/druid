@@ -40,7 +40,7 @@ import {
   isLookupsUninitialized,
   LocalStorageKeys,
   QueryManager,
-  QueryState,
+  QueryState, STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
@@ -305,7 +305,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   renderLookupsTable() {
     const { lookupEntriesAndTiersState, hiddenColumns } = this.state;
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
-    const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : undefined;
+    const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : [];
 
     if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
@@ -322,15 +322,18 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     return (
       <>
         <ReactTable
-          data={lookups || []}
+          data={lookups}
           loading={lookupEntriesAndTiersState.loading}
           noDataText={
-            !lookupEntriesAndTiersState.loading && lookups && !lookups.length
+            !lookupEntriesAndTiersState.loading && !lookups.length
               ? 'No lookups'
               : lookupEntriesAndTiersState.getErrorMessage() || ''
           }
           filterable
           defaultSorted={[{ id: 'lookup_name', desc: false }]}
+          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={lookups.length > STANDARD_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Lookup name',
@@ -415,7 +418,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
               },
             },
           ]}
-          defaultPageSize={50}
         />
       </>
     );
