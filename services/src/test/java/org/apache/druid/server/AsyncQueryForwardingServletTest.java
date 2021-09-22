@@ -103,7 +103,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
