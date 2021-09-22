@@ -151,7 +151,7 @@ public class ServerConfig
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
 
-  @JsonProperty
+  @JsonProperty("errorResponseTransform")
   @NotNull
   private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
 
