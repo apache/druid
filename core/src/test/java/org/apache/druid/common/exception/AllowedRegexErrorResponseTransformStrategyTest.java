@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.regex.Pattern;
-
 public class AllowedRegexErrorResponseTransformStrategyTest
 {
   @Test

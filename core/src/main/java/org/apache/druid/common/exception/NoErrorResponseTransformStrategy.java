@@ -50,7 +50,8 @@ public class NoErrorResponseTransformStrategy implements ErrorResponseTransformS
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return NoErrorResponseTransformStrategy.class.hashCode();
   }
 }
