@@ -196,6 +196,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
     });
 
+    const generateQueryId = (): string => {
+      return Math.random().toString(36).substr(2, 9);
+    };
+
     this.queryManager = new QueryManager({
       processQuery: async (
         queryWithContext: QueryWithContext,
@@ -205,13 +209,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
 
+        const queryId = generateQueryId();
+
+        const isSql = !QueryView.isJsonLike(queryString);
+
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
           context = { ...queryContext, ...(mandatoryQueryContext || {}) };
+          context.sqlQueryId = queryId;
           if (typeof wrapQueryLimit !== 'undefined') {
             context.sqlOuterLimit = wrapQueryLimit + 1;
           }
         }
+
+        void cancelToken.promise.then(() => {
+          void Api.instance.delete(`/druid/v2/${isSql ? '/sql' : ''}/${queryId}`);
+        });
 
         try {
           return await queryRunner.runQuery({
