@@ -156,6 +156,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   private SpecificSegmentsQuerySegmentWalker walker;
   private Server server;
   private Connection client;
+  private Connection clientNoTrailingSlash;
   private Connection superuserClient;
   private Connection clientLosAngeles;
   private DruidMeta druidMeta;
@@ -221,6 +222,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     url = this.getJdbcConnectionString(port);
     client = DriverManager.getConnection(url, "regularUser", "druid");
     superuserClient = DriverManager.getConnection(url, CalciteTests.TEST_SUPERUSER_NAME, "druid");
+    clientNoTrailingSlash = DriverManager.getConnection(StringUtils.maybeRemoveTrailingSlash(url), CalciteTests.TEST_SUPERUSER_NAME, "druid");
 
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
@@ -246,6 +248,19 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testSelectCount() throws Exception
   {
     final ResultSet resultSet = client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6L)
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testSelectCountNoTrailingSlash() throws Exception
+  {
+    final ResultSet resultSet = clientNoTrailingSlash.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
     final List<Map<String, Object>> rows = getRows(resultSet);
     Assert.assertEquals(
         ImmutableList.of(
