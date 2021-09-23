@@ -166,7 +166,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  public @Nullable BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
   {
     if (enableBitmaps) {
       ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);

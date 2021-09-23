@@ -17,20 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.segment.virtual;
+package org.apache.druid.segment.incremental;
 
-public class VirtualColumnCacheHelper
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class RowIngestionMetersTotalsTest
 {
-  public static final byte CACHE_TYPE_ID_MAP = 0x00;
-  public static final byte CACHE_TYPE_ID_EXPRESSION = 0x01;
-  public static final byte CACHE_TYPE_ID_LIST_FILTERED = 0x02;
-
-  // Starting byte 0xFF is reserved for site-specific virtual columns.
-  @SuppressWarnings("unused")
-  public static final byte CACHE_TYPE_ID_USER_DEFINED = (byte) 0xFF;
-
-  private VirtualColumnCacheHelper()
+  @Test
+  public void testEquals()
   {
-    // No instantiation.
+    EqualsVerifier.forClass(RowIngestionMetersTotals.class).usingGetClass().verify();
   }
 }
