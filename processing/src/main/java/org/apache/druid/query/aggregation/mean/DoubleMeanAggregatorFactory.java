@@ -35,7 +35,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -47,7 +46,7 @@ import java.util.List;
  */
 public class DoubleMeanAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "doubleMean", null);
+  public static final ColumnType TYPE = ColumnType.ofComplex("doubleMean");
   private final String name;
   private final String fieldName;
 

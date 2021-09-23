@@ -39,7 +39,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -50,7 +49,7 @@ import java.util.Objects;
 
 public class BloomFilterAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME, null);
+  public static final ColumnType TYPE = ColumnType.ofComplex(BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME);
   private static final int DEFAULT_NUM_ENTRIES = 1500;
 
   private static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {

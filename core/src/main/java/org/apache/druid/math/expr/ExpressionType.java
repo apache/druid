@@ -35,12 +35,24 @@ import javax.annotation.Nullable;
 @JsonSerialize(using = ToStringSerializer.class)
 public class ExpressionType extends BaseTypeSignature<ExprType>
 {
-  public static final ExpressionType STRING = new ExpressionType(ExprType.STRING, null, null);
-  public static final ExpressionType LONG = new ExpressionType(ExprType.LONG, null, null);
-  public static final ExpressionType DOUBLE = new ExpressionType(ExprType.DOUBLE, null, null);
-  public static final ExpressionType STRING_ARRAY = new ExpressionType(ExprType.ARRAY, null, STRING);
-  public static final ExpressionType LONG_ARRAY = new ExpressionType(ExprType.ARRAY, null, LONG);
-  public static final ExpressionType DOUBLE_ARRAY = new ExpressionType(ExprType.ARRAY, null, DOUBLE);
+  public static final ExpressionType STRING = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.STRING, null, null)
+  );
+  public static final ExpressionType LONG = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.LONG, null, null)
+  );
+  public static final ExpressionType DOUBLE = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.DOUBLE, null, null)
+  );
+  public static final ExpressionType STRING_ARRAY = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.ARRAY, null, STRING)
+  );
+  public static final ExpressionType LONG_ARRAY = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.ARRAY, null, LONG)
+  );
+  public static final ExpressionType DOUBLE_ARRAY = ExpressionTypeFactory.INTERNER.intern(
+      new ExpressionType(ExprType.ARRAY, null, DOUBLE)
+  );
 
   @JsonCreator
   public ExpressionType(
@@ -177,10 +189,10 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
           case STRING:
             return ColumnType.STRING_ARRAY;
           default:
-            throw new ISE("Unsupported expression type[%s]", exprType);
+            return ColumnType.ofArray(toColumnType((ExpressionType) exprType.getElementType()));
         }
       case COMPLEX:
-        return new ColumnType(ValueType.COMPLEX, exprType.getComplexTypeName(), null);
+        return ColumnType.ofComplex(exprType.getComplexTypeName());
       default:
         throw new ISE("Unsupported expression type[%s]", exprType);
     }

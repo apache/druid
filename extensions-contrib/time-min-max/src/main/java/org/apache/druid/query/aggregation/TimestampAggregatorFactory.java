@@ -26,7 +26,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -38,7 +37,7 @@ import java.util.Objects;
 
 public abstract class TimestampAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType FINALIZED_TYPE = new ColumnType(ValueType.COMPLEX, "dateTime", null);
+  public static final ColumnType FINALIZED_TYPE = ColumnType.ofComplex("dateTime");
   final String name;
   @Nullable
   final String fieldName;

@@ -19,6 +19,8 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.segment.column.TypeFactory;
 
 import javax.annotation.Nullable;
@@ -31,6 +33,7 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
   {
     return INSTANCE;
   }
+  protected static final Interner<ExpressionType> INTERNER = Interners.newStrongInterner();
 
   private ExpressionTypeFactory()
   {
@@ -74,14 +77,13 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
           return ExpressionType.LONG_ARRAY;
       }
     }
-    // todo: interning or something so we re-use the same type for the same type
-    return new ExpressionType(ExprType.ARRAY, null, elementType);
+    // i guess this is potentially unbounded if we ever support arbitrarily deep nested arrays
+    return INTERNER.intern(new ExpressionType(ExprType.ARRAY, null, elementType));
   }
 
   @Override
   public ExpressionType ofComplex(@Nullable String complexTypeName)
   {
-    // todo: interning or something so we re-use the same type for the same type
-    return new ExpressionType(ExprType.COMPLEX, complexTypeName, null);
+    return INTERNER.intern(new ExpressionType(ExprType.COMPLEX, complexTypeName, null));
   }
 }

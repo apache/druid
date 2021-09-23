@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -27,6 +29,7 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
 {
   private static final ColumnTypeFactory INSTANCE = new ColumnTypeFactory();
 
+  protected static final Interner<ColumnType> INTERNER = Interners.newStrongInterner();
   public static ColumnTypeFactory getInstance()
   {
     return INSTANCE;
@@ -60,9 +63,27 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
             throw new ISE("Unsupported expression type[%s]", type.asTypeString());
         }
       case COMPLEX:
-        return new ColumnType(ValueType.COMPLEX, type.getComplexTypeName(), null);
+        return INTERNER.intern(new ColumnType(ValueType.COMPLEX, type.getComplexTypeName(), null));
       default:
-        throw new ISE("Unsupported expression type[%s]", type.asTypeString());
+        throw new ISE("Unsupported column type[%s]", type.asTypeString());
+    }
+  }
+
+  public static ColumnType ofValueType(ValueType type)
+  {
+    switch (type) {
+      case LONG:
+        return ColumnType.LONG;
+      case FLOAT:
+        return ColumnType.FLOAT;
+      case DOUBLE:
+        return ColumnType.DOUBLE;
+      case STRING:
+        return ColumnType.STRING;
+      case COMPLEX:
+        return ColumnType.UNKNOWN_COMPLEX;
+      default:
+        throw new ISE("Unsupported column type[%s]", type);
     }
   }
 
@@ -103,8 +124,8 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
           return ColumnType.LONG_ARRAY;
       }
     }
-    // todo: interning or something so we re-use the same type for the same type
-    return new ColumnType(ValueType.ARRAY, null, elementType);
+    // i guess this is potentially unbounded if we ever support arbitrarily deep nested arrays
+    return INTERNER.intern(new ColumnType(ValueType.ARRAY, null, elementType));
   }
 
   @Override
@@ -113,7 +134,6 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
     if (complexTypeName == null) {
       return ColumnType.UNKNOWN_COMPLEX;
     }
-    // todo: interning or something so we re-use the same type for the same type
-    return new ColumnType(ValueType.COMPLEX, complexTypeName, null);
+    return INTERNER.intern(new ColumnType(ValueType.COMPLEX, complexTypeName, null));
   }
 }

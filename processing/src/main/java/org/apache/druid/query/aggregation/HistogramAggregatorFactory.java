@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -38,9 +37,9 @@ import java.util.List;
 
 public class HistogramAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "histogram", null);
+  public static final ColumnType TYPE = ColumnType.ofComplex("histogram");
   // todo: this isn't registered with serde, is it a lie? should we just report null as the type name? or register a serde?
-  public static final ColumnType TYPE_VISUAL = new ColumnType(ValueType.COMPLEX, "histogramVisual", null);
+  public static final ColumnType TYPE_VISUAL = ColumnType.ofComplex("histogramVisual");
 
   private final String name;
   private final String fieldName;

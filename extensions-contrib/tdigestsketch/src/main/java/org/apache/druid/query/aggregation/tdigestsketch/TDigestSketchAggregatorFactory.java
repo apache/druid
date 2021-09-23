@@ -35,7 +35,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -76,7 +75,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "tDigestSketch";
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, TYPE_NAME, null);
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   @JsonCreator
   public TDigestSketchAggregatorFactory(

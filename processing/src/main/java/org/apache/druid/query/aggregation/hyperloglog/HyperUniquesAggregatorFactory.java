@@ -43,6 +43,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -58,8 +59,8 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType PRECOMPUTED_TYPE = new ColumnType(ValueType.COMPLEX, "preComputedHyperUnique", null);
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "hyperUnique", null);
+  public static final ColumnType PRECOMPUTED_TYPE = ColumnType.ofComplex("preComputedHyperUnique");
+  public static final ColumnType TYPE = ColumnType.ofComplex("hyperUnique");
 
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {

@@ -33,7 +33,6 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetI
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetNotOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetUnionOperatorConversion;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -46,8 +45,8 @@ public class SketchModule implements DruidModule
 
   public static final String THETA_SKETCH_MERGE_AGG = "thetaSketchMerge";
   public static final String THETA_SKETCH_BUILD_AGG = "thetaSketchBuild";
-  public static final ColumnType BUILD_TYPE = new ColumnType(ValueType.COMPLEX, THETA_SKETCH_BUILD_AGG, null);
-  public static final ColumnType MERGE_TYPE = new ColumnType(ValueType.COMPLEX, THETA_SKETCH_MERGE_AGG, null);
+  public static final ColumnType BUILD_TYPE = ColumnType.ofComplex(THETA_SKETCH_BUILD_AGG);
+  public static final ColumnType MERGE_TYPE = ColumnType.ofComplex(THETA_SKETCH_MERGE_AGG);
 
   public static final String THETA_SKETCH_ESTIMATE_POST_AGG = "thetaSketchEstimate";
   public static final String THETA_SKETCH_SET_OP_POST_AGG = "thetaSketchSetOp";

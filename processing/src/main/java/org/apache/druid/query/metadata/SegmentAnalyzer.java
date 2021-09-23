@@ -45,7 +45,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -344,8 +343,8 @@ public class SegmentAnalyzer
       final String typeName
   )
   {
-    // serialize using toString (which is also used for JSON so can easily round-trip complex type info back into ColumnType)
-    final String serdeTypeName = new ColumnType(ValueType.COMPLEX, typeName, null).toString();
+    // serialize using asTypeString (which is also used for JSON so can easily round-trip complex type info back into ColumnType)
+    final String serdeTypeName = ColumnType.ofComplex(typeName).asTypeString();
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();

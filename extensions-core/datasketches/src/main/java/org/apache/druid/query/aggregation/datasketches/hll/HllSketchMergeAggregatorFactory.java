@@ -34,7 +34,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -45,7 +44,7 @@ import javax.annotation.Nullable;
  */
 public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 {
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, HllSketchModule.MERGE_TYPE_NAME, null);
+  public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.MERGE_TYPE_NAME);
 
   @JsonCreator
   public HllSketchMergeAggregatorFactory(

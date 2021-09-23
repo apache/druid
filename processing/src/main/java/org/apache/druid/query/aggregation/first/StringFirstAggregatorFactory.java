@@ -37,7 +37,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -51,7 +50,7 @@ import java.util.Objects;
 @JsonTypeName("stringFirst")
 public class StringFirstAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, "serializablePairLongString", null);
+  public static final ColumnType TYPE = ColumnType.ofComplex("serializablePairLongString");
 
   private static final Aggregator NIL_AGGREGATOR = new StringFirstAggregator(
       NilColumnValueSelector.instance(),

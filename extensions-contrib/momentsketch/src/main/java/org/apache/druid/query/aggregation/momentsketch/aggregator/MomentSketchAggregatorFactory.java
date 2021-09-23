@@ -33,7 +33,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -66,7 +65,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "momentSketch";
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, TYPE_NAME, null);
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   @JsonCreator
   public MomentSketchAggregatorFactory(

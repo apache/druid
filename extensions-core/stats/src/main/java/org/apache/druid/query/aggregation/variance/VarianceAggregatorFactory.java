@@ -44,6 +44,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -61,7 +62,7 @@ import java.util.Objects;
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
   private static final String VARIANCE_TYPE_NAME = "variance";
-  public static final ColumnType TYPE = new ColumnType(ValueType.COMPLEX, VARIANCE_TYPE_NAME, null);
+  public static final ColumnType TYPE = ColumnType.ofComplex(VARIANCE_TYPE_NAME);
 
   protected final String fieldName;
   protected final String name;
