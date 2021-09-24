@@ -20,6 +20,7 @@
 package org.apache.druid.common.exception;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -56,5 +57,14 @@ public class AllowedRegexErrorResponseTransformStrategyTest
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
     Assert.assertNull(result);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(AllowedRegexErrorResponseTransformStrategy.class)
+                  .withIgnoredFields("allowedRegexPattern")
+                  .usingGetClass()
+                  .verify();
   }
 }
