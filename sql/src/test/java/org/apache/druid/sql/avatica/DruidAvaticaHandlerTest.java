@@ -115,7 +115,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     public int getMaxConnections()
     {
       // This must match the number of Connection objects created in setUp()
-      return 3;
+      return 4;
     }
 
     @Override
@@ -236,11 +236,13 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     client.close();
     clientLosAngeles.close();
+    clientNoTrailingSlash.close();
     server.stop();
     walker.close();
     walker = null;
     client = null;
     clientLosAngeles = null;
+    clientNoTrailingSlash = null;
     server = null;
   }
 
@@ -826,19 +828,15 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyConnections() throws Exception
   {
-    final Connection connection1 = DriverManager.getConnection(url);
-    final Statement statement1 = connection1.createStatement();
-
-    final Connection connection2 = DriverManager.getConnection(url);
-    final Statement statement2 = connection2.createStatement();
-
-    final Connection connection3 = DriverManager.getConnection(url);
-    final Statement statement3 = connection3.createStatement();
+    client.createStatement();
+    clientLosAngeles.createStatement();
+    superuserClient.createStatement();
+    clientNoTrailingSlash.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections, limit is[3]");
+    expectedException.expectMessage("Too many connections, limit is[4]");
 
-    final Connection connection4 = DriverManager.getConnection(url);
+    final Connection connection5 = DriverManager.getConnection(url);
   }
 
   @Test
