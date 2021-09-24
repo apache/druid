@@ -231,12 +231,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         cancelToken.promise
           .then(() => {
-            Api.instance
-              .delete(`/druid/v2/${isSql ? '/sql' : ''}/${queryId}`)
-              .then()
-              .catch(e => {
-                throw new DruidError(e);
-              });
+            Api.instance.delete(`/druid/v2/${isSql ? '/sql' : ''}/${queryId}`).catch(e => {
+              throw new DruidError(e);
+            });
           })
           .catch(e => {
             throw new DruidError(e);
