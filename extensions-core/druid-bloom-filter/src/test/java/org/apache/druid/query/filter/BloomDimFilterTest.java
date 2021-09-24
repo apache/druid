@@ -379,7 +379,7 @@ public class BloomDimFilterTest extends BaseFilterTest
     Assert.assertFalse(druidFilter.testString("not_match"));
   }
 
-
+  @Ignore
   @Test
   public void testFloatHiveCompat() throws IOException
   {
