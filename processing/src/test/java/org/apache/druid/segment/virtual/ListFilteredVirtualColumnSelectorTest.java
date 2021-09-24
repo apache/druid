@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
@@ -265,7 +266,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
     Assert.assertNotNull(capabilities);
-    Assert.assertEquals(ColumnType.STRING, capabilities.getType());
+    Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
