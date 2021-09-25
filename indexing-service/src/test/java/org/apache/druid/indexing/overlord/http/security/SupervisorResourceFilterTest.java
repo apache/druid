@@ -38,8 +38,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -121,6 +123,39 @@ public class SupervisorResourceFilterTest
     verifyMocks();
   }
 
+  @Test
+  public void testSupervisorNotFound()
+  {
+    String dataSource = "not_exist_data_source";
+    expect(containerRequest.getPathSegments())
+        .andReturn(getPathSegments("/druid/indexer/v1/supervisor/" + dataSource))
+        .anyTimes();
+    expect(containerRequest.getMethod()).andReturn("POST").anyTimes();
+
+    SupervisorSpec supervisorSpec = EasyMock.createMock(SupervisorSpec.class);
+    expect(supervisorSpec.getDataSources())
+        .andReturn(Collections.singletonList(dataSource))
+        .anyTimes();
+    expect(supervisorManager.getSupervisorSpec(dataSource))
+        .andReturn(Optional.absent())
+        .atLeastOnce();
+    EasyMock.replay(containerRequest);
+    EasyMock.replay(supervisorManager);
+
+    WebApplicationException expected = null;
+    try {
+      resourceFilter.filter(containerRequest);
+    }
+    catch (WebApplicationException e) {
+      expected = e;
+    }
+
+    Assert.assertNotNull(expected);
+    Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    EasyMock.verify(containerRequest);
+    EasyMock.verify(supervisorManager);
+  }
+
   private void setExpectations(
       String path,
       String requestMethod,
@@ -130,7 +165,7 @@ public class SupervisorResourceFilterTest
   )
   {
     expect(containerRequest.getPathSegments())
-        .andReturn(getPathSegments("/druid/indexer/v1/supervisor/datasource1"))
+        .andReturn(getPathSegments(path))
         .anyTimes();
     expect(containerRequest.getMethod()).andReturn(requestMethod).anyTimes();
 
