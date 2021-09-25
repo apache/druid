@@ -29,7 +29,9 @@ import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
@@ -50,6 +52,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 public class MaterializedViewSupervisorSpecTest
 {
@@ -153,6 +156,85 @@ public class MaterializedViewSupervisorSpecTest
     Assert.assertEquals(expected.getDataSourceName(), spec.getDataSourceName());
     Assert.assertEquals(expected.getDimensions(), spec.getDimensions());
     Assert.assertEquals(expected.getMetrics(), spec.getMetrics());
+  }
+
+  @Test
+  public void testMaterializedViewSupervisorSpecCreated()
+  {
+    Exception ex = null;
+
+    try {
+      MaterializedViewSupervisorSpec spec = new MaterializedViewSupervisorSpec(
+              "wikiticker",
+              new DimensionsSpec(
+                      Lists.newArrayList(
+                              new StringDimensionSchema("isUnpatrolled"),
+                              new StringDimensionSchema("metroCode"),
+                              new StringDimensionSchema("namespace"),
+                              new StringDimensionSchema("page"),
+                              new StringDimensionSchema("regionIsoCode"),
+                              new StringDimensionSchema("regionName"),
+                              new StringDimensionSchema("user")
+                      ),
+                      null,
+                      null
+              ),
+              new AggregatorFactory[]{
+                  new CountAggregatorFactory("count"),
+                  new LongSumAggregatorFactory("added", "added")
+              },
+              HadoopTuningConfig.makeDefaultTuningConfig(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              objectMapper,
+              null,
+              null,
+              null,
+              null,
+              null,
+              new MaterializedViewTaskConfig(),
+              EasyMock.createMock(AuthorizerMapper.class),
+              new NoopChatHandlerProvider(),
+              new SupervisorStateManagerConfig()
+      );
+      Supervisor supervisor = spec.createSupervisor();
+      Assert.assertTrue(supervisor instanceof MaterializedViewSupervisor);
+
+      SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor);
+      Assert.assertNull(autoscaler);
+
+      try {
+        supervisor.computeLagStats();
+      }
+      catch (Exception e) {
+        Assert.assertTrue(e instanceof UnsupportedOperationException);
+      }
+
+      try {
+        int count = supervisor.getActiveTaskGroupsCount();
+      }
+      catch (Exception e) {
+        Assert.assertTrue(e instanceof UnsupportedOperationException);
+      }
+
+      Callable<Integer> noop = new Callable<Integer>() {
+        @Override
+        public Integer call()
+        {
+          return -1;
+        }
+      };
+
+    }
+    catch (Exception e) {
+      ex = e;
+    }
+
+    Assert.assertNull(ex);
   }
 
   @Test

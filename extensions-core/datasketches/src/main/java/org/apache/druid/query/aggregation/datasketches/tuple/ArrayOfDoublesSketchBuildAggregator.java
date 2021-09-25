@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is {@link org.apache.datasketches.tuple.ArrayOfDoublesSketch}.
+ * The output is {@link org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 {

@@ -27,7 +27,7 @@ describe('supervisor table action dialog', () => {
   it('matches snapshot', () => {
     const supervisorTableActionDialog = (
       <SupervisorTableActionDialog
-        supervisorId={'test'}
+        supervisorId="test"
         actions={[basicAction, basicAction, basicAction, basicAction]}
         onClose={() => {}}
       />

@@ -35,13 +35,13 @@ running on your local machine. You don't need to have loaded any data yet.
 ## Download and start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 2.6.0. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 2.7.0. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/2.6.0/kafka_2.13-2.6.0.tgz
-tar -xzf kafka_2.13-2.6.0.tgz
-cd kafka_2.13-2.6.0
+curl -O https://archive.apache.org/dist/kafka/2.7.0/kafka_2.13-2.7.0.tgz
+tar -xzf kafka_2.13-2.7.0.tgz
+cd kafka_2.13-2.7.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -112,9 +112,9 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-In the `Configure schema` step, you can configure which [dimensions](../ingestion/index.md#dimensions) and [metrics](../ingestion/index.md#metrics) will be ingested into Druid.
+In the `Configure schema` step, you can configure which [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/rollup.md) by clicking on the switch and confirming the change.
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 

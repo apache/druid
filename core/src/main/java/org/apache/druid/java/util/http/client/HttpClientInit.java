@@ -35,7 +35,6 @@ import org.jboss.netty.logging.Slf4JLoggerFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.Timer;
-import org.joda.time.Duration;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -107,29 +106,6 @@ public class HttpClientInit
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Deprecated
-  public static HttpClient createClient(ResourcePoolConfig config, final SSLContext sslContext, Lifecycle lifecycle)
-  {
-    return createClient(
-        new HttpClientConfig(config.getMaxPerKey(), sslContext, Duration.ZERO),
-        lifecycle
-    );
-  }
-
-  @Deprecated // use createClient directly
-  public static ClientBootstrap createBootstrap(Lifecycle lifecycle, Timer timer)
-  {
-    final HttpClientConfig defaultConfig = HttpClientConfig.builder().build();
-    return createBootstrap(lifecycle, timer, defaultConfig.getBossPoolSize(), defaultConfig.getWorkerPoolSize());
-  }
-
-  @Deprecated // use createClient directly
-  public static ClientBootstrap createBootstrap(Lifecycle lifecycle)
-  {
-    final Timer timer = new HashedWheelTimer(new ThreadFactoryBuilder().setDaemon(true).build());
-    return createBootstrap(lifecycle, timer);
   }
 
   public static SSLContext sslContextWithTrustedKeyStore(final String keyStorePath, final String keyStorePassword)

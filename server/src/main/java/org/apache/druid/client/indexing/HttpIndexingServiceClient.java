@@ -44,6 +44,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +70,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
     runTask(taskId, taskQuery);
   }
 
@@ -78,7 +79,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
-      ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
   {
@@ -97,8 +100,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments), dropExisting),
         tuningConfig,
+        granularitySpec,
         context
     );
     return runTask(taskId, taskQuery);
@@ -328,6 +332,82 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId))
+          )
+      );
+
+      if (responseHolder.getContent().length() == 0) {
+        return null;
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(minTaskPriority))
+      );
+
+      final Map<String, List<Interval>> response = jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<Map<String, List<Interval>>>()
+          {
+          }
+      );
+      return response == null ? Collections.emptyMap() : response;
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public SamplerResponse sample(SamplerSpec samplerSpec)
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/sampler")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(samplerSpec))
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        if (!Strings.isNullOrEmpty(response.getContent())) {
+          throw new ISE(
+              "Failed to sample with sampler spec[%s], response[%s].",
+              samplerSpec,
+              response.getContent()
+          );
+        } else {
+          throw new ISE("Failed to sample with sampler spec[%s]. Please check overlord log", samplerSpec);
+        }
+      }
+
+      return jsonMapper.readValue(response.getContent(), SamplerResponse.class);
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }

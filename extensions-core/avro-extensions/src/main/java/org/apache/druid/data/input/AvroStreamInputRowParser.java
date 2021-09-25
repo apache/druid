@@ -36,6 +36,8 @@ import java.util.Objects;
 public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
+  private final Boolean binaryAsString;
+  private final Boolean extractUnionsByType;
   private final AvroBytesDecoder avroBytesDecoder;
   private final ObjectFlattener<GenericRecord> avroFlattener;
   private final MapInputRowParser mapParser;
@@ -43,12 +45,16 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   @JsonCreator
   public AvroStreamInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder
+      @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder,
+      @JsonProperty("binaryAsString") Boolean binaryAsString,
+      @JsonProperty("extractUnionsByType") Boolean extractUnionsByType
   )
   {
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, false);
+    this.binaryAsString = binaryAsString != null && binaryAsString;
+    this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, this.binaryAsString, this.extractUnionsByType);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 
@@ -71,12 +77,26 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
     return avroBytesDecoder;
   }
 
+  @JsonProperty
+  public Boolean getBinaryAsString()
+  {
+    return binaryAsString;
+  }
+
+  @JsonProperty
+  public Boolean isExtractUnionsByType()
+  {
+    return extractUnionsByType;
+  }
+
   @Override
   public ByteBufferInputRowParser withParseSpec(ParseSpec parseSpec)
   {
     return new AvroStreamInputRowParser(
         parseSpec,
-        avroBytesDecoder
+        avroBytesDecoder,
+        binaryAsString,
+        extractUnionsByType
     );
   }
 
@@ -91,12 +111,25 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
     }
     final AvroStreamInputRowParser that = (AvroStreamInputRowParser) o;
     return Objects.equals(parseSpec, that.parseSpec) &&
-           Objects.equals(avroBytesDecoder, that.avroBytesDecoder);
+           Objects.equals(avroBytesDecoder, that.avroBytesDecoder) &&
+           Objects.equals(binaryAsString, that.binaryAsString) &&
+           Objects.equals(extractUnionsByType, that.extractUnionsByType);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(parseSpec, avroBytesDecoder);
+    return Objects.hash(parseSpec, avroBytesDecoder, binaryAsString, extractUnionsByType);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AvroStreamInputRowParser{" +
+           "parseSpec=" + parseSpec +
+           ", binaryAsString=" + binaryAsString +
+           ", extractUnionsByType=" + extractUnionsByType +
+           ", avroBytesDecoder=" + avroBytesDecoder +
+           '}';
   }
 }

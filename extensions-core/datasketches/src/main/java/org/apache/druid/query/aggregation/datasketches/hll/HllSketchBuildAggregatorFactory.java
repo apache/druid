@@ -26,8 +26,11 @@ import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 
@@ -75,6 +78,24 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchBuildBufferAggregator(
         selector,
+        getLgK(),
+        TgtHllType.valueOf(getTgtHllType()),
+        getMaxIntermediateSize()
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    return new HllSketchBuildVectorAggregator(
+        selectorFactory,
+        getFieldName(),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
         getMaxIntermediateSize()

@@ -28,6 +28,7 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -56,7 +57,21 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
   @Override
   public Map<String, Object> toMap()
   {
-    return ImmutableMap.of();
+    final Map<String, Object> map = new HashMap<>();
+    map.put("feed", getFeed());
+    map.put("timestamp", getCreatedTime());
+    map.put("service", getService());
+    map.put("host", getHost());
+    if (getQuery() != null) {
+      map.put("query", getQuery());
+    }
+    if (getSql() != null) {
+      map.put("sql", getSql());
+      map.put("sqlQueryContext", getSqlQueryContext());
+    }
+    map.put("remoteAddr", getRemoteAddr());
+    map.put("queryStats", getQueryStats());
+    return map;
   }
 
   @Override

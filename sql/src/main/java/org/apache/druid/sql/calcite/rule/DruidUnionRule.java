@@ -55,7 +55,10 @@ public class DruidUnionRule extends RelOptRule
   public boolean matches(RelOptRuleCall call)
   {
     // Make DruidUnionRule and DruidUnionDataSourceRule mutually exclusive.
-    return !DruidUnionDataSourceRule.instance().matches(call);
+    final Union unionRel = call.rel(0);
+    final DruidRel<?> firstDruidRel = call.rel(1);
+    final DruidRel<?> secondDruidRel = call.rel(2);
+    return !DruidUnionDataSourceRule.isCompatible(unionRel, firstDruidRel, secondDruidRel);
   }
 
   @Override

@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -46,7 +47,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DoublesSketchObjectSqlAggregator implements SqlAggregator
@@ -74,7 +74,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
@@ -109,13 +109,12 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           input.getDirectColumn(),
-          k
+          k,
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
     } else {
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -123,16 +122,15 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           input,
           ValueType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
-          k
+          k,
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         null
     );

@@ -40,6 +40,12 @@ exports[`segments-view matches snapshot 1`] = `
           text="View SQL query for table"
         />
       </Memo(MoreButton)>
+      <Blueprint3.Switch
+        checked={false}
+        disabled={false}
+        label="Show segment timeline"
+        onChange={[Function]}
+      />
       <Memo(TableColumnSelector)
         columns={
           Array [
@@ -62,6 +68,7 @@ exports[`segments-view matches snapshot 1`] = `
           ]
         }
         onChange={[Function]}
+        onClose={[Function]}
         tableColumnsHidden={Array []}
       />
     </Memo(ViewControlBar)>
@@ -125,7 +132,9 @@ exports[`segments-view matches snapshot 1`] = `
           Object {
             "Header": "Segment ID",
             "accessor": "segment_id",
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 300,
           },
           Object {
@@ -139,7 +148,9 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Interval",
             "accessor": "interval",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": false,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -147,7 +158,9 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Start",
             "accessor": "start",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -155,14 +168,18 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "End",
             "accessor": "end",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           Object {
             "Header": "Version",
             "accessor": "version",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -171,6 +188,7 @@ exports[`segments-view matches snapshot 1`] = `
             "accessor": "time_span",
             "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 100,
           },
           Object {
@@ -179,6 +197,7 @@ exports[`segments-view matches snapshot 1`] = `
             "accessor": "partitioning",
             "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 100,
           },
           Object {
@@ -186,6 +205,7 @@ exports[`segments-view matches snapshot 1`] = `
             "accessor": "partition_num",
             "filterable": false,
             "show": true,
+            "sortable": true,
             "width": 60,
           },
           Object {
@@ -195,6 +215,7 @@ exports[`segments-view matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+            "sortable": true,
           },
           Object {
             "Cell": [Function],

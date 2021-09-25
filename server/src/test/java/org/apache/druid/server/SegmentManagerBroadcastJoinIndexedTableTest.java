@@ -41,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
@@ -51,8 +52,9 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -101,7 +103,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
   private IndexIO indexIO;
   private File segmentCacheDir;
   private File segmentDeepStorageDir;
-  private SegmentLoaderLocalCacheManager segmentLoader;
+  private SegmentLocalCacheManager segmentCacheManager;
   private SegmentManager segmentManager;
   private BroadcastTableJoinableFactory joinableFactory;
 
@@ -124,8 +126,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
-    segmentLoader = new SegmentLoaderLocalCacheManager(
-        indexIO,
+    segmentCacheManager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig()
         {
           @Override
@@ -138,7 +139,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
         },
         objectMapper
     );
-    segmentManager = new SegmentManager(segmentLoader);
+    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
     joinableFactory = new BroadcastTableJoinableFactory(segmentManager);
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -159,7 +160,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     DataSegment segment = createSegment(data, interval, version);
-    Assert.assertTrue(segmentManager.loadSegment(segment, false));
+    Assert.assertTrue(segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -208,8 +209,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     DataSegment segment1 = createSegment(data, interval, version);
     DataSegment segment2 = createSegment(data2, interval2, version2);
-    Assert.assertTrue(segmentManager.loadSegment(segment1, false));
-    Assert.assertTrue(segmentManager.loadSegment(segment2, false));
+    Assert.assertTrue(segmentManager.loadSegment(segment1, false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(segment2, false, SegmentLazyLoadFailCallback.NOOP));
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -271,7 +272,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), false, SegmentLazyLoadFailCallback.NOOP));
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
 
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -293,7 +294,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
 
     // add another segment with smaller interval, only partially overshadows so there will be 2 segments in timeline
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false));
+    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false, SegmentLazyLoadFailCallback.NOOP));
 
 
     expectedException.expect(ISE.class);

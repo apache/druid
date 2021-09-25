@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.BroadcastSegmentIndexedTable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.DataSegment;
@@ -57,10 +58,10 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactory implements Segm
   }
 
   @Override
-  public Segment factorize(DataSegment dataSegment, File parentDir, boolean lazy) throws SegmentLoadingException
+  public Segment factorize(DataSegment dataSegment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     try {
-      return new QueryableIndexSegment(indexIO.loadIndex(parentDir, lazy), dataSegment.getId()) {
+      return new QueryableIndexSegment(indexIO.loadIndex(parentDir, lazy, loadFailed), dataSegment.getId()) {
         @Nullable
         @Override
         public <T> T as(Class<T> clazz)

@@ -35,6 +35,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -50,7 +51,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
   {
     TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
 
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
@@ -58,7 +59,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

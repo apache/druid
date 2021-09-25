@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +45,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
@@ -70,6 +73,7 @@ import org.junit.rules.ExpectedException;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -1057,6 +1061,62 @@ public class OverlordResourceTest
         TaskStatusResponse.class
     );
     Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
+  }
+
+  @Test
+  public void testGetLockedIntervals() throws Exception
+  {
+    final Map<String, Integer> minTaskPriority = Collections.singletonMap("ds1", 0);
+    final Map<String, List<Interval>> expectedLockedIntervals = Collections.singletonMap(
+        "ds1",
+        Arrays.asList(
+            Intervals.of("2012-01-01/2012-01-02"),
+            Intervals.of("2012-01-02/2012-01-03")
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority))
+            .andReturn(expectedLockedIntervals);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    final Response response = overlordResource.getDatasourceLockedIntervals(minTaskPriority);
+    Assert.assertEquals(200, response.getStatus());
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Map<String, List<Interval>> observedLockedIntervals = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(response.getEntity()),
+        new TypeReference<Map<String, List<Interval>>>()
+        {
+        }
+    );
+
+    Assert.assertEquals(expectedLockedIntervals, observedLockedIntervals);
+  }
+
+  @Test
+  public void testGetLockedIntervalsWithEmptyBody()
+  {
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    Response response = overlordResource.getDatasourceLockedIntervals(null);
+    Assert.assertEquals(400, response.getStatus());
+
+    response = overlordResource.getDatasourceLockedIntervals(Collections.emptyMap());
+    Assert.assertEquals(400, response.getStatus());
   }
 
   @Test

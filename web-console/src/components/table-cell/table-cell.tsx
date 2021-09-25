@@ -17,6 +17,7 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
@@ -98,7 +99,7 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
     } else if (Array.isArray(value)) {
       return renderTruncated(`[${value.join(', ')}]`);
     } else if (typeof value === 'object') {
-      return renderTruncated(JSON.stringify(value));
+      return renderTruncated(JSONBig.stringify(value));
     } else {
       return renderTruncated(String(value));
     }

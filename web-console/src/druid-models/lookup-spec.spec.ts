@@ -235,36 +235,12 @@ describe('lookup-spec', () => {
     });
 
     describe('ExtractionNamespace type JDBC', () => {
-      it('No namespace', () => {
-        expect(
-          isLookupInvalid('lookup', 'v1', '__default', {
-            type: 'cachedNamespace',
-            extractionNamespace: {
-              type: 'jdbc',
-              namespace: undefined,
-              connectorConfig: {
-                createTables: true,
-                connectURI: 'jdbc:mysql://localhost:3306/druid',
-                user: 'druid',
-                password: 'diurd',
-              },
-              table: 'some_lookup_table',
-              keyColumn: 'the_old_dim_value',
-              valueColumn: 'the_new_dim_value',
-              tsColumn: 'timestamp_column',
-              pollPeriod: 600000,
-            },
-          }),
-        ).toBe(true);
-      });
-
       it('No connectorConfig', () => {
         expect(
           isLookupInvalid('lookup', 'v1', '__default', {
             type: 'cachedNamespace',
             extractionNamespace: {
               type: 'jdbc',
-              namespace: 'some_lookup',
               connectorConfig: undefined,
               table: 'some_lookup_table',
               keyColumn: 'the_old_dim_value',
@@ -282,7 +258,6 @@ describe('lookup-spec', () => {
             type: 'cachedNamespace',
             extractionNamespace: {
               type: 'jdbc',
-              namespace: 'some_lookup',
               connectorConfig: {
                 createTables: true,
                 connectURI: 'jdbc:mysql://localhost:3306/druid',
@@ -305,7 +280,6 @@ describe('lookup-spec', () => {
             type: 'cachedNamespace',
             extractionNamespace: {
               type: 'jdbc',
-              namespace: 'some_lookup',
               connectorConfig: {
                 createTables: true,
                 connectURI: 'jdbc:mysql://localhost:3306/druid',
@@ -322,13 +296,12 @@ describe('lookup-spec', () => {
         ).toBe(true);
       });
 
-      it('No keyColumn', () => {
+      it('No valueColumn', () => {
         expect(
           isLookupInvalid('lookup', 'v1', '__default', {
             type: 'cachedNamespace',
             extractionNamespace: {
               type: 'jdbc',
-              namespace: 'some_lookup',
               connectorConfig: {
                 createTables: true,
                 connectURI: 'jdbc:mysql://localhost:3306/druid',
@@ -369,6 +342,7 @@ describe('lookup-spec', () => {
                 format: 'csv',
                 columns: ['key', 'value'],
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -386,6 +360,7 @@ describe('lookup-spec', () => {
                 format: 'csv',
                 hasHeaderRow: true,
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -403,6 +378,7 @@ describe('lookup-spec', () => {
                 format: 'tsv',
                 columns: ['key', 'value'],
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -421,6 +397,7 @@ describe('lookup-spec', () => {
                 valueFieldName: 'value',
                 keyFieldName: 'value',
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -428,13 +405,12 @@ describe('lookup-spec', () => {
     });
 
     describe('ExtractionNamespace type JDBC', () => {
-      it('No namespace', () => {
+      it('All good', () => {
         expect(
           isLookupInvalid('lookup', 'v1', '__default', {
             type: 'cachedNamespace',
             extractionNamespace: {
               type: 'jdbc',
-              namespace: 'lookup',
               connectorConfig: {
                 createTables: true,
                 connectURI: 'jdbc:mysql://localhost:3306/druid',
@@ -444,6 +420,7 @@ describe('lookup-spec', () => {
               table: 'some_lookup_table',
               keyColumn: 'the_old_dim_value',
               valueColumn: 'the_new_dim_value',
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);

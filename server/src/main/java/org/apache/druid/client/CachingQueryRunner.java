@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -47,6 +48,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 {
   private final String cacheId;
   private final SegmentDescriptor segmentDescriptor;
+  private final Interval actualDataInterval;
   private final Optional<byte[]> cacheKeyPrefix;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
@@ -59,6 +61,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       String cacheId,
       Optional<byte[]> cacheKeyPrefix,
       SegmentDescriptor segmentDescriptor,
+      Interval actualDataInterval,
       ObjectMapper mapper,
       Cache cache,
       QueryToolChest toolchest,
@@ -71,6 +74,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     this.base = base;
     this.cacheId = cacheId;
     this.segmentDescriptor = segmentDescriptor;
+    this.actualDataInterval = actualDataInterval;
     this.toolChest = toolchest;
     this.cache = cache;
     this.mapper = mapper;
@@ -90,7 +94,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     if (useCache || populateCache) {
       key = CacheUtil.computeSegmentCacheKey(
           cacheId,
-          segmentDescriptor,
+          alignToActualDataInterval(segmentDescriptor),
           Bytes.concat(cacheKeyPrefix.get(), strategy.computeCacheKey(query))
       );
     } else {
@@ -170,6 +174,16 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
         cacheConfig,
         CacheUtil.ServerType.DATA
     ) && cacheKeyPrefix.isPresent();
+  }
+
+  private SegmentDescriptor alignToActualDataInterval(SegmentDescriptor in)
+  {
+    Interval interval = in.getInterval();
+    return new SegmentDescriptor(
+        interval.overlaps(actualDataInterval) ? interval.overlap(actualDataInterval) : interval,
+        in.getVersion(),
+        in.getPartitionNumber()
+    );
   }
 
 }

@@ -74,7 +74,58 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final KillUnusedSegmentsTask task =
-        new KillUnusedSegmentsTask(null, DATA_SOURCE, Intervals.of("2019-03-01/2019-04-01"), null);
+        new KillUnusedSegmentsTask(
+            null,
+            DATA_SOURCE,
+            Intervals.of("2019-03-01/2019-04-01"),
+            null,
+            false
+        );
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> unusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
+
+    Assert.assertEquals(ImmutableList.of(newSegment(Intervals.of("2019-02-01/2019-03-01"), version)), unusedSegments);
+    Assertions.assertThat(
+        getMetadataStorageCoordinator()
+            .retrieveUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"), Segments.ONLY_VISIBLE)
+    ).containsExactlyInAnyOrder(
+        newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
+        newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
+    );
+  }
+
+
+  @Test
+  public void testKillWithMarkUnused() throws Exception
+  {
+    final String version = DateTimes.nowUtc().toString();
+    final Set<DataSegment> segments = ImmutableSet.of(
+        newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
+        newSegment(Intervals.of("2019-02-01/2019-03-01"), version),
+        newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
+        newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
+    );
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
+
+    Assert.assertEquals(segments, announced);
+
+    Assert.assertTrue(
+        getSegmentsMetadataManager().markSegmentAsUnused(
+            newSegment(Intervals.of("2019-02-01/2019-03-01"), version).getId().toString()
+        )
+    );
+
+    final KillUnusedSegmentsTask task =
+        new KillUnusedSegmentsTask(
+            null,
+            DATA_SOURCE,
+            Intervals.of("2019-03-01/2019-04-01"),
+            null,
+            true
+        );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 

@@ -33,6 +33,7 @@ import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -100,7 +101,7 @@ public class JoinFilterAnalyzer
       return preAnalysisBuilder.build();
     }
 
-    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
+    List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
     List<Filter> normalizedJoinTableClauses = new ArrayList<>();
@@ -137,18 +138,27 @@ public class JoinFilterAnalyzer
     return preAnalysisBuilder.withCorrelations(correlations).build();
   }
 
-  /**
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   *
-   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
-   */
   public static JoinFilterSplit splitFilter(
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
+    return splitFilter(joinFilterPreAnalysis, null);
+  }
+
+  /**
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param baseFilter - Filter on base table that was specified in the query itself
+   *
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
+   */
+  public static JoinFilterSplit splitFilter(
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      @Nullable Filter baseFilter
+  )
+  {
     if (joinFilterPreAnalysis.getOriginalFilter() == null || !joinFilterPreAnalysis.isEnableFilterPushDown()) {
       return new JoinFilterSplit(
-          null,
+          baseFilter,
           joinFilterPreAnalysis.getOriginalFilter(),
           ImmutableSet.of()
       );
@@ -158,6 +168,10 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs = new HashMap<>();
+
+    if (null != baseFilter) {
+      leftFilters.add(baseFilter);
+    }
 
     for (Filter baseTableFilter : joinFilterPreAnalysis.getNormalizedBaseTableClauses()) {
       if (!Filters.filterMatchesNull(baseTableFilter)) {
@@ -183,8 +197,8 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterSplit(
-        Filters.and(leftFilters),
-        Filters.and(rightFilters),
+        Filters.maybeAnd(leftFilters).orElse(null),
+        Filters.maybeAnd(rightFilters).orElse(null),
         new HashSet<>(pushDownVirtualColumnsForLhsExprs.values())
     );
   }
@@ -309,7 +323,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         false,
         filterClause,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 
@@ -329,7 +343,7 @@ public class JoinFilterAnalyzer
       Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs
   )
   {
-    Set<Filter> newFilters = new HashSet<>();
+    List<Filter> newFilters = new ArrayList<>();
     boolean retainRhs = false;
 
     for (Filter filter : orFilter.getFilters()) {
@@ -369,7 +383,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         retainRhs,
         orFilter,
-        Filters.or(newFilters)
+        Filters.maybeOr(newFilters).orElse(null)
     );
   }
 
@@ -473,7 +487,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         true,
         selectorFilter,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 

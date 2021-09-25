@@ -30,12 +30,12 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.21.0-SNAPSHOT</version>
+    <version>0.23.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <kubernetes.client.version>10.0.0</kubernetes.client.version>
+    <kubernetes.client.version>10.0.1</kubernetes.client.version>
   </properties>
 
   <dependencies>
@@ -84,6 +84,20 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <!-- Version override to address CVE-2020-28052 -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.68</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-ext-jdk15on</artifactId>
+      <version>1.68</version>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- others -->

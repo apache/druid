@@ -192,14 +192,14 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.isCombineText(),
         tuningConfig.getUseCombiner(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getBuildV9Directly(),
         tuningConfig.getNumBackgroundPersistThreads(),
         tuningConfig.isForceExtendableShardSpecs(),
         true,
         tuningConfig.getUserAllowedHadoopPrefix(),
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.isUseYarnRMJobStatusFallback()
+        tuningConfig.isUseYarnRMJobStatusFallback(),
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
     );
 
     // generate granularity

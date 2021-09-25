@@ -21,8 +21,17 @@ package org.apache.druid.segment.generator;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 // Doesn't assert behavior right now, just generates rows and prints out some distribution numbers
-public class DataGeneratorTest
+public class DataGeneratorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSequential()
@@ -537,5 +546,125 @@ public class DataGeneratorTest
         System.out.println();
       }
     }
+  }
+
+  @Test
+  public void testToList()
+  {
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
+    RowValueTracker tracker = new RowValueTracker();
+
+    schemas.add(
+        GeneratorColumnSchema.makeSequential(
+            "dimA",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            10,
+            20
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeEnumeratedSequential(
+            "dimB",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            Arrays.asList("Hello", "World", "Foo", "Bar")
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeSequential(
+            "dimC",
+            ValueType.STRING,
+            false,
+            1,
+            0.50,
+            30,
+            40
+        )
+    );
+
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
+    List<InputRow> rows = dataGenerator.toList(100);
+    Assert.assertEquals(100, rows.size());
+
+    for (InputRow row : rows) {
+      tracker.addRow(row);
+    }
+    tracker.printStuff();
+  }
+
+  @Test
+  public void testToIndex()
+  {
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
+
+    schemas.add(
+        GeneratorColumnSchema.makeSequential(
+            "dimA",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            10,
+            20
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeEnumeratedSequential(
+            "dimB",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            Arrays.asList("Hello", "World", "Foo", "Bar")
+        )
+    );
+
+    schemas.add(
+        GeneratorColumnSchema.makeSequential(
+            "dimC",
+            ValueType.STRING,
+            false,
+            1,
+            0.50,
+            30,
+            40
+        )
+    );
+
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
+
+    DimensionsSpec dimensions = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("dimA"),
+            new StringDimensionSchema("dimB"),
+            new StringDimensionSchema("dimC")
+        ), null, null
+    );
+    AggregatorFactory[] metrics = {
+        new CountAggregatorFactory("cnt")
+    };
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withQueryGranularity(Granularities.MINUTE)
+        .withDimensionsSpec(dimensions)
+        .withMetrics(metrics)
+        .withRollup(false)
+        .build();
+
+    IncrementalIndex<?> index = new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setSortFacts(false)
+        .setMaxRowCount(1_000_000)
+        .build();
+
+    dataGenerator.addToIndex(index, 100);
+    Assert.assertEquals(100, index.size());
   }
 }

@@ -112,7 +112,7 @@ public class SketchAggregator implements Aggregator
     } else if (update instanceof byte[]) {
       union.update((byte[]) update);
     } else if (update instanceof Double) {
-      union.update(((Double) update));
+      union.update((Double) update);
     } else if (update instanceof Integer || update instanceof Long) {
       union.update(((Number) update).longValue());
     } else if (update instanceof int[]) {

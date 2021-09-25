@@ -227,6 +227,18 @@ You will also need to manually update the top level html file, [unified-console.
 
 ## Building a release candidate
 
+### Update the release branch to have all commits needed
+
+The release branch should have all commits merged before you create a tag. A commit must be in the release branch if
+
+1) it is merged into the master branch before the release branch is created. In this case, the PR corresponding
+to the commit might not have the milestone tagged. The `tag-missing-milestones` script can be useful to find such PRs and
+tag them properly. See the above [Release notes](#release-notes) section for more details about the script.
+2) it is merged into the master branch after the release branch is created and tagged with the release version.
+In this case, the commit must be backported to the release branch. The `find-missing-backports` script can be used to
+find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
+must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
+
 ### Set version and make a tag
 
 Once the release branch is good for an RC, you can build a new tag with:
@@ -308,14 +320,16 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 2. From druid-website, checkout branch `asf-staging`.
 
-3. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
+3. From druid-website-src, create a release branch from `master` and run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into druid-website-src
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. Once the website PR is pushed to `asf-site`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
+4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch, such as `0.17.0-docs`. 
+   
+5. Make another PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ### Create staged Maven repo
 
@@ -512,19 +526,16 @@ $ git push origin/druid-0.17.0
 
 ### Publish release artifacts to SVN
 
-The final release artifacts are kept in the following repo (same as KEYS):
+The final release artifacts are kept in the `https://dist.apache.org/repos/dist/release/druid` repo (same as KEYS).
+
+Use `svn mv` to publish the release artifacts as below:
 
 ```bash
-$ svn checkout https://dist.apache.org/repos/dist/release/druid
+$ svn mv https://dist.apache.org/repos/dist/dev/druid/0.17.0-rc3 https://dist.apache.org/repos/dist/release/druid/0.17.0 -m 'add 0.17.0 artifacts'
 ```
 
-Create a new directory for the release and put the artifacts there.
-
-```bash
-$ svn add 0.17.0
-...
-$ svn commit -m 'add 0.17.0 artifacts'
-```
+Replace the versions of the release candidate and the release with the ones you are currently working on. This command will drop those artifacts from the dev repo but add them to the release repo.
+Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/0.17.0`.
 
 ### Publish the staged Maven repo
 Returning to the staged repo you created for the Druid PMC vote ( https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
@@ -557,14 +568,20 @@ druid_versions:
         date: 2019-08-15
 ```
 
-3. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
+3. From druid-website, checkout branch `asf-site`.
+
+4. From druid-website-src, checkout the branch you created to update the staged Druid website.
+
+5. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into druid-website-src
 * build druid-website-src into druid-website
 * stage druid-website-src and druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) and to the website repo (https://github.com/apache/druid-website). Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
+6. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the master branch.
+   
+7. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch. Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
 
 ### Draft a release on github
 

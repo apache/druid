@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
+/* eslint-disable max-classes-per-file */
+
 import * as playwright from 'playwright-chromium';
 
 import { getLabeledInput, selectSuggestibleInput, setLabeledInput } from '../../../util/playwright';
-
-/* tslint:disable max-classes-per-file */
 
 /**
  * Possible values for partition step segment granularity.
@@ -52,12 +52,16 @@ export async function readPartitionSpec(page: playwright.Page): Promise<Partitio
 
 export class HashedPartitionsSpec implements PartitionsSpec {
   public static TYPE = 'hashed';
-  private static NUM_SHARDS = 'Num shards';
+  private static readonly NUM_SHARDS = 'Num shards';
 
   readonly type: string;
 
   static async read(page: playwright.Page): Promise<HashedPartitionsSpec> {
-    const numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
+    // The shards control may not be visible in that case this is not an error, it is simply not set (null)
+    let numShards: number | null = null;
+    try {
+      numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
+    } catch {}
     return new HashedPartitionsSpec({ numShards });
   }
 
@@ -90,9 +94,9 @@ export interface HashedPartitionsSpec extends HashedPartitionsSpecProps {}
 
 export class SingleDimPartitionsSpec implements PartitionsSpec {
   public static TYPE = 'single_dim';
-  private static PARTITION_DIMENSION = 'Partition dimension';
-  private static TARGET_ROWS_PER_SEGMENT = 'Target rows per segment';
-  private static MAX_ROWS_PER_SEGMENT = 'Max rows per segment';
+  private static readonly PARTITION_DIMENSION = 'Partition dimension';
+  private static readonly TARGET_ROWS_PER_SEGMENT = 'Target rows per segment';
+  private static readonly MAX_ROWS_PER_SEGMENT = 'Max rows per segment';
 
   readonly type: string;
 

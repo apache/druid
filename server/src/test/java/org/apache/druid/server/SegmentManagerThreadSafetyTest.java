@@ -34,13 +34,15 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -56,6 +58,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,7 +84,7 @@ public class SegmentManagerThreadSafetyTest
   private IndexIO indexIO;
   private File segmentCacheDir;
   private File segmentDeepStorageDir;
-  private SegmentLoaderLocalCacheManager segmentLoader;
+  private SegmentLocalCacheManager segmentCacheManager;
   private SegmentManager segmentManager;
   private ExecutorService exec;
 
@@ -97,8 +100,7 @@ public class SegmentManagerThreadSafetyTest
     indexIO = new IndexIO(objectMapper, () -> 0);
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
-    segmentLoader = new SegmentLoaderLocalCacheManager(
-        indexIO,
+    segmentCacheManager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig()
         {
           @Override
@@ -111,7 +113,7 @@ public class SegmentManagerThreadSafetyTest
         },
         objectMapper
     );
-    segmentManager = new SegmentManager(segmentLoader);
+    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
     exec = Execs.multiThreaded(NUM_THREAD, "SegmentManagerThreadSafetyTest-%d");
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -129,14 +131,14 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
     }
     Assert.assertEquals(1, segmentPuller.numFileLoaded.size());
     Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
-    Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
+    Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
   @Test(timeout = 6000L)
@@ -154,7 +156,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, false);
+              segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
             }
             catch (SegmentLoadingException e) {
               throw new RuntimeException(e);
@@ -167,7 +169,7 @@ public class SegmentManagerThreadSafetyTest
     }
     Assert.assertEquals(11, segmentPuller.numFileLoaded.size());
     Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
-    Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
+    Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
   private DataSegment createSegment(String interval) throws IOException
@@ -222,7 +224,7 @@ public class SegmentManagerThreadSafetyTest
   private static class TestSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir, boolean lazy)
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
     {
       return new Segment()
       {

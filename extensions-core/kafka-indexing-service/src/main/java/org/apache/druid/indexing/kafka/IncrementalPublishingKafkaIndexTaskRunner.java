@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -45,7 +46,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Kafka indexing task runner supporting incremental segments publishing
  */
-public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long>
+public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
@@ -85,24 +86,24 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<Integer, Long>> getRecords(
-      RecordSupplier<Integer, Long> recordSupplier,
+  protected List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> getRecords(
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox toolbox
   ) throws Exception
   {
-    // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
-    // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
-    // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
-    List<OrderedPartitionableRecord<Integer, Long>> records = new ArrayList<>();
     try {
-      records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
+      return recordSupplier.poll(task.getIOConfig().getPollTimeout());
     }
     catch (OffsetOutOfRangeException e) {
+      //
+      // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
+      // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
+      // that has not been written yet (which is totally legitimate). So let's wait for it to show up
+      //
       log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
       possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), recordSupplier, toolbox);
+      return Collections.emptyList();
     }
-
-    return records;
   }
 
   @Override
@@ -121,7 +122,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
-      RecordSupplier<Integer, Long> recordSupplier,
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
@@ -192,7 +193,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<Integer, Long> recordSupplier,
+      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
       Set<StreamPartition<Integer>> assignment
   )
   {

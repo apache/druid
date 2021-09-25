@@ -212,7 +212,7 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setOutputKeyClass(BytesWritable.class);
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
-      dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().get().size());
+      dimSelectionJob.setNumReduceTasks(Iterators.size(config.getGranularitySpec().sortedBucketIntervals().iterator()));
       JobHelper.setupClasspath(
           JobHelper.distributedClassPath(config.getWorkingPath()),
           JobHelper.distributedClassPath(config.makeIntermediatePath()),
@@ -256,7 +256,7 @@ public class DeterminePartitionsJob implements Jobby
       FileSystem fileSystem = null;
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
-      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
@@ -447,7 +447,7 @@ public class DeterminePartitionsJob implements Jobby
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
-      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals().get()) {
+      for (final Interval bucketInterval : config.getGranularitySpec().sortedBucketIntervals()) {
         timeIndexBuilder.put(bucketInterval.getStartMillis(), idx);
         idx++;
       }

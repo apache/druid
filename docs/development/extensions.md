@@ -56,11 +56,13 @@ Core extensions are maintained by Druid committers.
 |druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-core/druid-ranger-security.md)|
 |druid-s3-extensions|Interfacing with data in AWS S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.md)|
 |druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
+|druid-aws-rds-extensions|Support for AWS token based access to AWS RDS DB Cluster.|[link](../development/extensions-core/druid-aws-rds.md)|
 |druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.md)|
 |mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.md)|
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.md)|
 |simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
 |druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|
+|druid-kubernetes-extensions|Druid cluster deployment on Kubernetes without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
 
 ## Community extensions
 
@@ -92,6 +94,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
+|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (https://prometheus.io/)|[link](./extensions-contrib/prometheus.md)|
 
 ## Promoting community extensions to core extensions
 

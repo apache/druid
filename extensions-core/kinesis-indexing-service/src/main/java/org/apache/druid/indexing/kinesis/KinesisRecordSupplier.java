@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -46,8 +46,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -61,7 +63,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -92,7 +93,7 @@ import java.util.stream.Collectors;
  * This class implements a local buffer for storing fetched Kinesis records. Fetching is done
  * in background threads.
  */
-public class KinesisRecordSupplier implements RecordSupplier<String, String>
+public class KinesisRecordSupplier implements RecordSupplier<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
@@ -105,32 +106,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
-
-  private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
-  {
-    final boolean isIOException = ex.getCause() instanceof IOException;
-    final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    final boolean isInternalError = ex.getStatusCode() == 500 || ex.getStatusCode() == 503;
-    return isIOException || isTimeout || isInternalError;
-  }
-
-  /**
-   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
-   * array itself. Does not modify position or limit of the buffer.
-   */
-  private static byte[] toByteArray(final ByteBuffer buffer)
-  {
-    if (buffer.hasArray()
-        && buffer.arrayOffset() == 0
-        && buffer.position() == 0
-        && buffer.array().length == buffer.limit()) {
-      return buffer.array();
-    } else {
-      final byte[] retVal = new byte[buffer.remaining()];
-      buffer.duplicate().get(retVal);
-      return retVal;
-    }
-  }
 
   /**
    * Catch any exception and wrap it in a {@link StreamException}
@@ -234,7 +209,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
-        OrderedPartitionableRecord<String, String> currRecord;
+        OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
 
         try {
 
@@ -267,7 +242,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
-            final List<byte[]> data;
+            final List<ByteEntity> data;
 
 
             if (deaggregate) {
@@ -282,10 +257,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               );
 
               for (Object userRecord : userRecords) {
-                data.add(toByteArray((ByteBuffer) getDataHandle.invoke(userRecord)));
+                data.add(new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord)));
               }
             } else {
-              data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+              data = Collections.singletonList(new ByteEntity(kinesisRecord.getData()));
             }
 
             currRecord = new OrderedPartitionableRecord<>(
@@ -296,14 +271,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
 
-            log.trace(
-                "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
-                currRecord.getStream(),
-                currRecord.getPartitionId(),
-                currRecord.getSequenceNumber(),
-                records.remainingCapacity(),
-                currRecord.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
-            );
+            if (log.isTraceEnabled()) {
+              log.trace(
+                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
+                  currRecord.getStream(),
+                  currRecord.getPartitionId(),
+                  currRecord.getSequenceNumber(),
+                  records.remainingCapacity(),
+                  currRecord.getData()
+                            .stream()
+                            .map(b -> StringUtils.fromUtf8(
+                                // duplicate buffer to avoid changing its position when logging
+                                b.getBuffer().duplicate())
+                            )
+                            .collect(Collectors.toList())
+              );
+            }
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
@@ -366,8 +349,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
-        catch (AmazonServiceException e) {
-          if (isServiceExceptionRecoverable(e)) {
+        catch (AmazonClientException e) {
+          if (AWSClientUtil.isClientExceptionRecoverable(e)) {
             log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
             scheduleBackgroundFetch(EXCEPTION_RETRY_DELAY_MS);
           } else {
@@ -427,7 +410,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
-  private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
+  private BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
@@ -636,14 +619,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<String, String>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String, ByteEntity>> poll(long timeout)
   {
     start();
 
     try {
       int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
 
-      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>(expectedSize);
+      List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = new ArrayList<>(expectedSize);
 
       Queues.drain(
           records,
@@ -759,6 +742,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return partitionsFetchStarted.get();
   }
 
+  @VisibleForTesting
+  public boolean isAnyFetchActive()
+  {
+    return partitionResources.values()
+                             .stream()
+                             .map(pr -> pr.currentFetch)
+                             .anyMatch(fetch -> (fetch != null && !fetch.isDone()));
+  }
+
   /**
    * Check that a {@link PartitionResource} has been assigned to this record supplier, and if so call
    * {@link PartitionResource#seek} to move it to the latest offsets. Note that this method does not restart background
@@ -812,9 +804,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                 );
                 return true;
               }
-              if (throwable instanceof AmazonServiceException) {
-                AmazonServiceException ase = (AmazonServiceException) throwable;
-                return isServiceExceptionRecoverable(ase);
+              if (throwable instanceof AmazonClientException) {
+                AmazonClientException ase = (AmazonClientException) throwable;
+                return AWSClientUtil.isClientExceptionRecoverable(ase);
               }
               return false;
             },
@@ -871,19 +863,34 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
         offsetToUse = offset;
       }
-      String shardIterator = kinesis.getShardIterator(
-          partition.getStream(),
-          partition.getPartitionId(),
-          iteratorType,
-          offsetToUse
-      ).getShardIterator();
 
-      GetRecordsResult recordsResult = kinesis.getRecords(
-          new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
-      );
+      GetRecordsResult recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
+
+      // If no more new data after offsetToUse, it means there is no lag for now.
+      // So report lag points as 0L.
+      if (recordsResult.getRecords().size() == 0) {
+        return 0L;
+      } else {
+        recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
+      }
 
       return recordsResult.getMillisBehindLatest();
     });
+  }
+
+  private GetRecordsResult getRecordsForLag(String iteratorType, String offsetToUse, StreamPartition<String> partition)
+  {
+    String shardIterator = kinesis.getShardIterator(
+            partition.getStream(),
+            partition.getPartitionId(),
+            iteratorType,
+            offsetToUse
+    ).getShardIterator();
+
+    GetRecordsResult recordsResult = kinesis.getRecords(
+            new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+    );
+    return recordsResult;
   }
 
   /**
@@ -928,7 +935,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
+    BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
 
     records.stream()
            .filter(x -> !partitions.contains(x.getStreamPartition()))

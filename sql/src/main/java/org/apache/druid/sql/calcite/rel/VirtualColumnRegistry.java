@@ -29,7 +29,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Provides facilities to create and re-use {@link VirtualColumn} definitions for dimensions, filters, and filtered
@@ -38,7 +41,7 @@ import java.util.Map;
 public class VirtualColumnRegistry
 {
   private final RowSignature baseRowSignature;
-  private final Map<String, VirtualColumn> virtualColumnsByExpression;
+  private final Map<ExpressionWrapper, VirtualColumn> virtualColumnsByExpression;
   private final Map<String, VirtualColumn> virtualColumnsByName;
   private final String virtualColumnPrefix;
   private int virtualColumnCounter;
@@ -46,7 +49,7 @@ public class VirtualColumnRegistry
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
       String virtualColumnPrefix,
-      Map<String, VirtualColumn> virtualColumnsByExpression,
+      Map<ExpressionWrapper, VirtualColumn> virtualColumnsByExpression,
       Map<String, VirtualColumn> virtualColumnsByName
   )
   {
@@ -83,7 +86,8 @@ public class VirtualColumnRegistry
       ValueType valueType
   )
   {
-    if (!virtualColumnsByExpression.containsKey(expression.getExpression())) {
+    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression.getExpression(), valueType);
+    if (!virtualColumnsByExpression.containsKey(expressionWrapper)) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
       final VirtualColumn virtualColumn = expression.toVirtualColumn(
           virtualColumnName,
@@ -91,7 +95,7 @@ public class VirtualColumnRegistry
           plannerContext.getExprMacroTable()
       );
       virtualColumnsByExpression.put(
-          expression.getExpression(),
+          expressionWrapper,
           virtualColumn
       );
       virtualColumnsByName.put(
@@ -100,7 +104,7 @@ public class VirtualColumnRegistry
       );
     }
 
-    return virtualColumnsByExpression.get(expression.getExpression());
+    return virtualColumnsByExpression.get(expressionWrapper);
   }
 
   /**
@@ -128,6 +132,13 @@ public class VirtualColumnRegistry
     return virtualColumnsByName.get(virtualColumnName);
   }
 
+  @Nullable
+  public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
+  {
+    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression, Calcites.getValueTypeForRelDataType(type));
+    return virtualColumnsByExpression.get(expressionWrapper);
+  }
+
   /**
    * Get a signature representing the base signature plus all registered virtual columns.
    */
@@ -144,5 +155,47 @@ public class VirtualColumnRegistry
     }
 
     return builder.build();
+  }
+
+  /**
+   * Given a list of column names, find any corresponding {@link VirtualColumn} with the same name
+   */
+  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
+  {
+    return allColumns.stream()
+                     .filter(this::isVirtualColumnDefined)
+                     .map(this::getVirtualColumn)
+                     .collect(Collectors.toList());
+  }
+
+  private static class ExpressionWrapper
+  {
+    private final String expression;
+    private final ValueType valueType;
+
+    public ExpressionWrapper(String expression, ValueType valueType)
+    {
+      this.expression = expression;
+      this.valueType = valueType;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ExpressionWrapper expressionWrapper = (ExpressionWrapper) o;
+      return Objects.equals(expression, expressionWrapper.expression) && valueType == expressionWrapper.valueType;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(expression, valueType);
+    }
   }
 }

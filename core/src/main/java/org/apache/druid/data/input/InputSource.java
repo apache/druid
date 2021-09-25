@@ -78,5 +78,9 @@ public interface InputSource
    * @param inputFormat        to parse data. It can be null if {@link #needsFormat()} = true
    * @param temporaryDirectory to store temp data. It will be cleaned up automatically once the task is finished.
    */
-  InputSourceReader reader(InputRowSchema inputRowSchema, @Nullable InputFormat inputFormat, File temporaryDirectory);
+  InputSourceReader reader(
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat,
+      File temporaryDirectory
+  );
 }

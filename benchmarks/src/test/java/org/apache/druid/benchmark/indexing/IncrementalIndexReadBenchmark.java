@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.indexing;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -43,7 +42,9 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -57,6 +58,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -82,6 +84,9 @@ public class IncrementalIndexReadBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
+  @Param({"onheap", "offheap"})
+  private String indexType;
+
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -89,8 +94,8 @@ public class IncrementalIndexReadBenchmark
     NullHandling.initializeForTests();
   }
 
-  private IncrementalIndex incIndex;
-
+  private AppendableIndexSpec appendableIndexSpec;
+  private IncrementalIndex<?> incIndex;
   private GeneratorSchemaInfo schemaInfo;
 
   @Setup
@@ -102,6 +107,10 @@ public class IncrementalIndexReadBenchmark
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
+    // Creates an AppendableIndexSpec that corresponds to the indexType parametrization.
+    // It is used in {@code makeIncIndex()} to instanciate an incremental-index of the specified type.
+    appendableIndexSpec = IncrementalIndexCreator.parseIndexType(indexType);
+
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
@@ -110,20 +119,20 @@ public class IncrementalIndexReadBenchmark
     );
 
     incIndex = makeIncIndex();
-
-    for (int j = 0; j < rowsPerSegment; j++) {
-      InputRow row = gen.nextRow();
-      if (j % 10000 == 0) {
-        log.info(j + " rows generated.");
-      }
-      incIndex.add(row);
-    }
-
+    gen.addToIndex(incIndex, rowsPerSegment);
   }
 
-  private IncrementalIndex makeIncIndex()
+  @TearDown
+  public void tearDown()
   {
-    return new IncrementalIndex.Builder()
+    if (incIndex != null) {
+      incIndex.close();
+    }
+  }
+
+  private IncrementalIndex<?> makeIncIndex()
+  {
+    return appendableIndexSpec.builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(schemaInfo.getAggsArray())
@@ -131,7 +140,7 @@ public class IncrementalIndexReadBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build();
   }
 
   @Benchmark

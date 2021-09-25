@@ -42,11 +42,11 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -60,7 +60,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class VectorGroupByEngine
@@ -76,18 +75,18 @@ public class VectorGroupByEngine
       @Nullable final Filter filter
   )
   {
-    Function<String, ColumnCapabilities> capabilitiesFunction = name ->
-        query.getVirtualColumns().getColumnCapabilitiesWithFallback(adapter, name);
+    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
 
-    return canVectorizeDimensions(capabilitiesFunction, query.getDimensions())
-           && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
-           && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+    return adapter.canVectorize(filter, query.getVirtualColumns(), false)
+           && canVectorizeDimensions(inspector, query.getDimensions())
            && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-           && adapter.canVectorize(filter, query.getVirtualColumns(), false);
+           && query.getAggregatorSpecs()
+                   .stream()
+                   .allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector));
   }
 
   public static boolean canVectorizeDimensions(
-      final Function<String, ColumnCapabilities> capabilitiesFunction,
+      final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )
   {
@@ -95,6 +94,10 @@ public class VectorGroupByEngine
         .stream()
         .allMatch(
             dimension -> {
+              if (!dimension.canVectorize()) {
+                return false;
+              }
+
               if (dimension.mustDecorate()) {
                 // group by on multi value dimensions are not currently supported
                 // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
@@ -103,17 +106,12 @@ public class VectorGroupByEngine
               }
 
               // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
+              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
               // null here currently means the column does not exist, nil columns can be vectorized
               if (columnCapabilities == null) {
                 return true;
               }
-              // strings must be single valued, dictionary encoded, and have unique dictionary entries
-              if (ValueType.STRING.equals(columnCapabilities.getType())) {
-                return columnCapabilities.hasMultipleValues().isFalse() &&
-                       columnCapabilities.isDictionaryEncoded().isTrue() &&
-                       columnCapabilities.areDictionaryValuesUnique().isTrue();
-              }
+              // must be single valued
               return columnCapabilities.hasMultipleValues().isFalse();
             });
   }
@@ -175,7 +173,7 @@ public class VectorGroupByEngine
               final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
               final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
                   dimensionSpec ->
-                      DimensionHandlerUtils.makeVectorProcessor(
+                      ColumnProcessors.makeVectorProcessor(
                           dimensionSpec,
                           GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory

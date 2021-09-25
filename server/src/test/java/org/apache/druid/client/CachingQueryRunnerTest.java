@@ -413,6 +413,7 @@ public class CachingQueryRunnerTest
         CACHE_ID,
         Optional.ofNullable(cacheKeyPrefix),
         SEGMENT_DESCRIPTOR,
+        SEGMENT_DESCRIPTOR.getInterval(),
         objectMapper,
         cache,
         toolchest,

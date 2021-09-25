@@ -41,6 +41,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean skipBytesInMemoryOverheadCheck;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -64,6 +65,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
+      @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @Nullable Integer maxRowsPerSegment,
       @Nullable Long maxTotalRows,
       @Nullable Period intermediatePersistPeriod,
@@ -71,8 +73,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Integer maxPendingPersists,
       @Nullable IndexSpec indexSpec,
       @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @Nullable Boolean reportParseExceptions,
       @Nullable Long handoffConditionTimeout,
       @Nullable Boolean resetOffsetAutomatically,
@@ -93,6 +93,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
+                                          DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -155,6 +157,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return maxBytesInMemory;
   }
 
+  @JsonProperty
+  @Override
+  public boolean isSkipBytesInMemoryOverheadCheck()
+  {
+    return skipBytesInMemoryOverheadCheck;
+  }
+
   @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
@@ -210,16 +219,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
-  }
-
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public boolean getBuildV9Directly()
-  {
-    return true;
   }
 
   @Override
@@ -295,6 +294,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
            maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
+           skipBytesInMemoryOverheadCheck == that.skipBytesInMemoryOverheadCheck &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -319,6 +319,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         partitionsSpec,
         intermediatePersistPeriod,
         basePersistDirectory,

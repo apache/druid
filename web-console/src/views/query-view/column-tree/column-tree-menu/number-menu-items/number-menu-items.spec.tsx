@@ -28,7 +28,7 @@ describe('number menu', () => {
       <NumberMenuItems
         schema="schema"
         table="table"
-        columnName={'added'}
+        columnName="added"
         parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
@@ -43,7 +43,7 @@ describe('number menu', () => {
       <NumberMenuItems
         schema="schema"
         table="table"
-        columnName={'added'}
+        columnName="added"
         parsedQuery={SqlQuery.parse(`SELECT added, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />

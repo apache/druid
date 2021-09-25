@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -202,17 +203,7 @@ public class HashVectorGrouper implements VectorGrouper
       tableStart = buffer.capacity() - bucketSize * (maxNumBuckets - numBuckets);
     }
 
-    final ByteBuffer tableBuffer = buffer.duplicate();
-    tableBuffer.position(0);
-    tableBuffer.limit(MemoryOpenHashTable.memoryNeeded(numBuckets, bucketSize));
-
-    this.hashTable = new MemoryOpenHashTable(
-        WritableMemory.wrap(tableBuffer.slice(), ByteOrder.nativeOrder()),
-        numBuckets,
-        Math.max(1, Math.min(bufferGrouperMaxSize, (int) (numBuckets * maxLoadFactor))),
-        keySize,
-        aggregators.spaceNeeded()
-    );
+    this.hashTable = createTable(buffer, tableStart, numBuckets);
   }
 
   @Override
@@ -268,6 +259,27 @@ public class HashVectorGrouper implements VectorGrouper
     aggregators.close();
   }
 
+  @VisibleForTesting
+  public int getTableStart()
+  {
+    return tableStart;
+  }
+
+  private MemoryOpenHashTable createTable(ByteBuffer buffer, int tableStart, int numBuckets)
+  {
+    final ByteBuffer tableBuffer = buffer.duplicate();
+    tableBuffer.position(tableStart);
+    assert tableStart + MemoryOpenHashTable.memoryNeeded(numBuckets, bucketSize) <= buffer.capacity();
+    tableBuffer.limit(tableStart + MemoryOpenHashTable.memoryNeeded(numBuckets, bucketSize));
+
+    return new MemoryOpenHashTable(
+        WritableMemory.wrap(tableBuffer.slice(), ByteOrder.nativeOrder()),
+        numBuckets,
+        Math.max(1, Math.min(bufferGrouperMaxSize, (int) (numBuckets * maxLoadFactor))),
+        keySize,
+        aggregators.spaceNeeded()
+    );
+  }
 
   /**
    * Initializes the given bucket with the given key and fresh, empty aggregation state. Must only be called if
@@ -307,17 +319,7 @@ public class HashVectorGrouper implements VectorGrouper
     final int newNumBuckets = nextTableNumBuckets();
     final int newTableStart = nextTableStart();
 
-    final ByteBuffer newTableBuffer = buffer.duplicate();
-    newTableBuffer.position(newTableStart);
-    newTableBuffer.limit(newTableStart + MemoryOpenHashTable.memoryNeeded(newNumBuckets, bucketSize));
-
-    final MemoryOpenHashTable newHashTable = new MemoryOpenHashTable(
-        WritableMemory.wrap(newTableBuffer.slice(), ByteOrder.nativeOrder()),
-        newNumBuckets,
-        maxSizeForNumBuckets(newNumBuckets, maxLoadFactor, bufferGrouperMaxSize),
-        keySize,
-        aggregators.spaceNeeded()
-    );
+    final MemoryOpenHashTable newHashTable = createTable(buffer, newTableStart, newNumBuckets);
 
     hashTable.copyTo(newHashTable, new HashVectorGrouperBucketCopyHandler(aggregators, hashTable.bucketValueOffset()));
     hashTable = newHashTable;
@@ -380,15 +382,6 @@ public class HashVectorGrouper implements VectorGrouper
     }
 
     return nextTableStart;
-  }
-
-  /**
-   * Compute the maximum number of elements (size) for a given number of buckets. When the table hits this size,
-   * we must either grow it or return a table-full error.
-   */
-  private static int maxSizeForNumBuckets(final int numBuckets, final double maxLoadFactor, final int configuredMaxSize)
-  {
-    return Math.max(1, Math.min(configuredMaxSize, (int) (numBuckets * maxLoadFactor)));
   }
 
   /**

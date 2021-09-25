@@ -59,6 +59,7 @@ getConfPath() {
     coordinator | overlord) echo $cluster_conf_base/master/coordinator-overlord ;;
     broker) echo $cluster_conf_base/query/broker ;;
     router) echo $cluster_conf_base/query/router ;;
+    *) echo $cluster_conf_base/misc/$1 ;;
     esac
 }
 COMMON_CONF_DIR=$(getConfPath _common)

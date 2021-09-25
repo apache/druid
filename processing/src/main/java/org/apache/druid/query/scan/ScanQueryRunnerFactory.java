@@ -35,9 +35,11 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
@@ -53,7 +55,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
@@ -82,7 +83,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
-      final ExecutorService queryExecutor,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
@@ -168,10 +169,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .max(Comparator.comparing(Integer::valueOf))
                                          .get();
 
-          int segmentPartitionLimit = query.getMaxSegmentPartitionsOrderedInMemory() == null
+          int maxSegmentPartitionsOrderedInMemory = query.getMaxSegmentPartitionsOrderedInMemory() == null
                                       ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
                                       : query.getMaxSegmentPartitionsOrderedInMemory();
-          if (maxNumPartitionsInSegment <= segmentPartitionLimit) {
+          if (maxNumPartitionsInSegment <= maxSegmentPartitionsOrderedInMemory) {
             // Use n-way merge strategy
 
             // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
@@ -188,14 +189,15 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
-          throw new UOE(
-              "Time ordering for queries of %,d partitions per segment and a row limit of %,d is not supported."
-              + "  Try reducing the scope of the query to scan fewer partitions than the configurable limit of"
-              + " %,d partitions or lower the row limit below %,d.",
+          throw ResourceLimitExceededException.withMessage(
+              "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
+              + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
+              + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
+              + "(currently %,d) above the number of segments you have per time chunk.",
               maxNumPartitionsInSegment,
               query.getScanRowsLimit(),
-              scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory(),
-              scanQueryConfig.getMaxRowsQueuedForOrdering()
+              maxRowsQueuedForOrdering,
+              maxSegmentPartitionsOrderedInMemory
           );
         }
       }

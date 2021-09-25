@@ -43,7 +43,7 @@ public interface InputEntity
 {
   Logger LOG = new Logger(InputEntity.class);
 
-  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
+  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KiB
   int DEFAULT_MAX_NUM_FETCH_TRIES = 3; // 3 tries including the initial try
 
   /**
@@ -65,6 +65,9 @@ public interface InputEntity
   /**
    * Opens an {@link InputStream} on the input entity directly.
    * This is the basic way to read the given entity.
+   *
+   * The behavior of this method is only defined fort the first call to open().
+   * The behavior of subsequent calls is undefined and may vary between implementations.
    *
    * @see #fetch
    */

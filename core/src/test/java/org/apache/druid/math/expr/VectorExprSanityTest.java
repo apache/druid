@@ -70,16 +70,31 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBinaryOperators()
+  public void testBinaryMathOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent"};
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null"};
     final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
     final String[][] templateInputs = makeTemplateArgs(columns, columns2);
     final String[] templates =
         Arrays.stream(templateInputs)
               .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
               .toArray(String[]::new);
-    final String[] args = new String[]{"+", "-", "*", "/", "^", "%", ">", ">=", "<", "<=", "==", "!="};
+    final String[] args = new String[]{"+", "-", "*", "/", "^", "%"};
+
+    testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testBinaryComparisonOperators()
+  {
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "nonexistent", "null"};
+    final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "null"};
+    final String[][] templateInputs = makeTemplateArgs(columns, columns2);
+    final String[] templates =
+        Arrays.stream(templateInputs)
+              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
+              .toArray(String[]::new);
+    final String[] args = new String[]{">", ">=", "<", "<=", "==", "!="};
 
     testFunctions(types, templates, args);
   }
@@ -87,7 +102,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryOperatorTrees()
   {
-    final String[] columns = new String[]{"d1", "l1", "1", "1.0", "nonexistent"};
+    final String[] columns = new String[]{"d1", "l1", "1", "1.0", "nonexistent", "null"};
     final String[] columns2 = new String[]{"d2", "l2", "2", "2.0"};
     final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns2);
     final String[] templates =
@@ -103,7 +118,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   public void testUnivariateFunctions()
   {
     final String[] functions = new String[]{"parse_long"};
-    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)"};
+    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)", "%s(null)"};
     testFunctions(types, templates, functions);
   }
 
@@ -137,9 +152,12 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "tanh",
         "toDegrees",
         "toRadians",
-        "ulp"
+        "ulp",
+        "bitwiseComplement",
+        "bitwiseConvertDoubleToLongBits",
+        "bitwiseConvertLongBitsToDouble"
     };
-    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())"};
+    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)"};
     testFunctions(types, templates, functions);
   }
 
@@ -156,7 +174,12 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "min",
         "nextAfter",
         "scalb",
-        "pow"
+        "pow",
+        "bitwiseAnd",
+        "bitwiseOr",
+        "bitwiseXor",
+        "bitwiseShiftLeft",
+        "bitwiseShiftRight"
     };
     final String[] templates = new String[]{
         "%s(d1, d2)",
@@ -177,6 +200,15 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     final String[][] args = makeTemplateArgs(columns, castTo);
     final String[] templates = new String[]{"cast(%s, %s)"};
     testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testStringFns()
+  {
+    testExpression("s1 + s2", types);
+    testExpression("s1 + '-' + s2", types);
+    testExpression("concat(s1, s2)", types);
+    testExpression("concat(s1,'-',s2,'-',l1,'-',d1)", types);
   }
 
   static void testFunctions(Map<String, ExprType> types, String[] templates, String[] args)
@@ -222,10 +254,14 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
     ExprType outputType = parsed.getOutputType(bindings.rhs);
     ExprEvalVector<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
-    Assert.assertEquals(outputType, vectorEval.getType());
+    // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
+    if (outputType != null) {
+      Assert.assertEquals(outputType, vectorEval.getType());
+    }
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
-      if (!eval.isNumericNull()) {
+      // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
+      if (outputType != null && !eval.isNumericNull()) {
         Assert.assertEquals(eval.type(), outputType);
       }
       Assert.assertEquals(
@@ -379,29 +415,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
                  .toArray(String[][]::new);
   }
 
-  static class SettableObjectBinding implements Expr.ObjectBinding
-  {
-    private final Map<String, Object> bindings;
-
-    SettableObjectBinding()
-    {
-      this.bindings = new HashMap<>();
-    }
-
-    @Nullable
-    @Override
-    public Object get(String name)
-    {
-      return bindings.get(name);
-    }
-
-    public SettableObjectBinding withBinding(String name, @Nullable Object value)
-    {
-      bindings.put(name, value);
-      return this;
-    }
-  }
-
   static class SettableVectorInputBinding implements Expr.VectorInputBinding
   {
     private final Map<String, boolean[]> nulls;
@@ -411,6 +424,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     private final Map<String, ExprType> types;
 
     private final int vectorSize;
+
+    private int id = 0;
 
     SettableVectorInputBinding(int vectorSize)
     {
@@ -503,6 +518,13 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     public int getCurrentVectorSize()
     {
       return vectorSize;
+    }
+
+    @Override
+    public int getCurrentVectorId()
+    {
+      // never cache, this is just for tests anyway
+      return id++;
     }
   }
 }

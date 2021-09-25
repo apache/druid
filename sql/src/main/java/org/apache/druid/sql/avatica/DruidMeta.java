@@ -45,9 +45,11 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -62,7 +64,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DruidMeta extends MetaImpl
 {
-  private static final Logger log = new Logger(DruidMeta.class);
+  public static <T extends Throwable> T logFailure(T error, String message, Object... format)
+  {
+    LOG.error(message, format);
+    return error;
+  }
+
+  public static <T extends Throwable> T logFailure(T error)
+  {
+    LOG.error(error, error.getMessage());
+    return error;
+  }
+
+  private static final Logger LOG = new Logger(DruidMeta.class);
 
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final ScheduledExecutorService exec;
@@ -104,9 +118,13 @@ public class DruidMeta extends MetaImpl
   {
     // Build connection context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    for (Map.Entry<String, String> entry : info.entrySet()) {
-      context.put(entry);
+    if (info != null) {
+      for (Map.Entry<String, String> entry : info.entrySet()) {
+        context.put(entry);
+      }
     }
+    // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
+    context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
     openDruidConnection(ch.id, context.build());
   }
 
@@ -148,14 +166,19 @@ public class DruidMeta extends MetaImpl
       druidStatement = getDruidStatement(statement);
     }
     catch (NoSuchStatementException e) {
-      throw new IllegalStateException(e);
+      throw logFailure(new IllegalStateException(e));
     }
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
-      throw new ForbiddenException("Authentication failed.");
+      throw logFailure(
+          new ForbiddenException("Authentication failed."),
+          "Authentication failed for statement[%s]",
+          druidStatement.getStatementId()
+      );
     }
     statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
+    LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
     return statement;
   }
 
@@ -186,7 +209,11 @@ public class DruidMeta extends MetaImpl
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
-      throw new ForbiddenException("Authentication failed.");
+      throw logFailure(
+          new ForbiddenException("Authentication failed."),
+          "Authentication failed for statement[%s]",
+          druidStatement.getStatementId()
+      );
     }
     druidStatement.prepare(sql, maxRowCount, authenticationResult);
     final Frame firstFrame = druidStatement.execute(Collections.emptyList())
@@ -195,6 +222,7 @@ public class DruidMeta extends MetaImpl
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
     final Signature signature = druidStatement.getSignature();
+    LOG.debug("Successfully prepared statement[%s] and started execution", druidStatement.getStatementId());
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -235,7 +263,9 @@ public class DruidMeta extends MetaImpl
       final int fetchMaxRowCount
   ) throws NoSuchStatementException, MissingResultsException
   {
-    return getDruidStatement(statement).nextFrame(offset, getEffectiveMaxRowsPerFrame(fetchMaxRowCount));
+    final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
+    LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
+    return getDruidStatement(statement).nextFrame(offset, maxRows);
   }
 
   @Deprecated
@@ -265,6 +295,7 @@ public class DruidMeta extends MetaImpl
                                            );
 
     final Signature signature = druidStatement.getSignature();
+    LOG.debug("Successfully started execution of statement[%s]", druidStatement.getStatementId());
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -315,7 +346,7 @@ public class DruidMeta extends MetaImpl
     final boolean isDone = druidStatement.isDone();
     final long currentOffset = druidStatement.getCurrentOffset();
     if (currentOffset != offset) {
-      throw new ISE("Requested offset[%,d] does not match currentOffset[%,d]", offset, currentOffset);
+      throw logFailure(new ISE("Requested offset[%,d] does not match currentOffset[%,d]", offset, currentOffset));
     }
     return !isDone;
   }
@@ -514,15 +545,23 @@ public class DruidMeta extends MetaImpl
     }
   }
 
+  @Nullable
   private AuthenticationResult authenticateConnection(final DruidConnection connection)
   {
     Map<String, Object> context = connection.context();
     for (Authenticator authenticator : authenticators) {
+      LOG.debug("Attempting authentication with authenticator[%s]", authenticator.getClass());
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
       if (authenticationResult != null) {
+        LOG.debug(
+            "Authenticated identity[%s] for connection[%s]",
+            authenticationResult.getIdentity(),
+            connection.getConnectionId()
+        );
         return authenticationResult;
       }
     }
+    LOG.debug("No successful authentication");
     return null;
   }
 
@@ -546,7 +585,7 @@ public class DruidMeta extends MetaImpl
       if (connectionCount.get() > config.getMaxConnections()) {
         // We aren't going to make a connection after all.
         connectionCount.decrementAndGet();
-        throw new ISE("Too many connections, limit is[%,d]", config.getMaxConnections());
+        throw logFailure(new ISE("Too many connections, limit is[%,d]", config.getMaxConnections()));
       }
     }
 
@@ -558,10 +597,10 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw new ISE("Connection[%s] already open.", connectionId);
+      throw logFailure(new ISE("Connection[%s] already open.", connectionId));
     }
 
-    log.debug("Connection[%s] opened.", connectionId);
+    LOG.debug("Connection[%s] opened.", connectionId);
 
     // Call getDruidConnection to start the timeout timer.
     return getDruidConnection(connectionId);
@@ -582,13 +621,13 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = connections.get(connectionId);
 
     if (connection == null) {
-      throw new NoSuchConnectionException(connectionId);
+      throw logFailure(new NoSuchConnectionException(connectionId));
     }
 
     return connection.sync(
         exec.schedule(
             () -> {
-              log.debug("Connection[%s] timed out.", connectionId);
+              LOG.debug("Connection[%s] timed out.", connectionId);
               closeConnection(new ConnectionHandle(connectionId));
             },
             new Interval(DateTimes.nowUtc(), config.getConnectionIdleTimeout()).toDurationMillis(),
@@ -603,7 +642,7 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = getDruidConnection(statement.connectionId);
     final DruidStatement druidStatement = connection.getStatement(statement.id);
     if (druidStatement == null) {
-      throw new NoSuchStatementException(statement);
+      throw logFailure(new NoSuchStatementException(statement));
     }
     return druidStatement;
   }
@@ -615,29 +654,52 @@ public class DruidMeta extends MetaImpl
       final ExecuteResult result = prepareAndExecute(statement, sql, -1, -1, null);
       final MetaResultSet metaResultSet = Iterables.getOnlyElement(result.resultSets);
       if (!metaResultSet.firstFrame.done) {
-        throw new ISE("Expected all results to be in a single frame!");
+        throw logFailure(new ISE("Expected all results to be in a single frame!"));
       }
       return metaResultSet;
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw logFailure(new RuntimeException(e));
     }
     finally {
       closeStatement(statement);
     }
   }
 
+  /**
+   * Determine JDBC 'frame' size, that is the number of results which will be returned to a single
+   * {@link java.sql.ResultSet}. This value corresponds to {@link java.sql.Statement#setFetchSize(int)} (which is a user
+   * hint, we don't have to honor it), and this method modifies it, ensuring the actual chosen value falls within
+   * {@link AvaticaServerConfig#minRowsPerFrame} and {@link AvaticaServerConfig#maxRowsPerFrame}.
+   *
+   * A value of -1 supplied as input indicates that the client has no preference for fetch size, and can handle
+   * unlimited results (at our discretion). Similarly, a value of -1 for {@link AvaticaServerConfig#maxRowsPerFrame}
+   * also indicates that there is no upper limit on fetch size on the server side.
+   *
+   * {@link AvaticaServerConfig#minRowsPerFrame} must be configured to a value greater than 0, because it will be
+   * checked against if any additional frames are required (which means one of the input or maximum was set to a value
+   * other than -1).
+   */
   private int getEffectiveMaxRowsPerFrame(int clientMaxRowsPerFrame)
   {
     // no configured row limit, use the client provided limit
     if (config.getMaxRowsPerFrame() < 0) {
-      return clientMaxRowsPerFrame;
+      return adjustForMinumumRowsPerFrame(clientMaxRowsPerFrame);
     }
     // client provided no row limit, use the configured row limit
     if (clientMaxRowsPerFrame < 0) {
-      return config.getMaxRowsPerFrame();
+      return adjustForMinumumRowsPerFrame(config.getMaxRowsPerFrame());
     }
-    return Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame());
+    return adjustForMinumumRowsPerFrame(Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame()));
+  }
+
+  /**
+   * coerce fetch size to be, at minimum, {@link AvaticaServerConfig#minRowsPerFrame}
+   */
+  private int adjustForMinumumRowsPerFrame(int rowsPerFrame)
+  {
+    final int adjustedRowsPerFrame = Math.max(config.getMinRowsPerFrame(), rowsPerFrame);
+    return adjustedRowsPerFrame;
   }
 
   private static String withEscapeClause(String toEscape)

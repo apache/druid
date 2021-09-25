@@ -22,17 +22,21 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -40,6 +44,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.NumberedPartitionChunk;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTime;
@@ -51,12 +57,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +83,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
   // compact.
   private final Map<String, CompactibleTimelineObjectHolderCursor> timelineIterators;
+  // This is needed for datasource that has segmentGranularity configured
+  // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
+  // can belong to multiple intervals in the timeline. We keep track of the compacted intervals between each
+  // run of the compaction job and skip any interval that was already previously compacted.
+  private final Map<String, Set<Interval>> intervalCompactedForDatasource = new HashMap<>();
 
   private final PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
       (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
@@ -93,12 +106,58 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
-
+      Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
+        VersionedIntervalTimeline<String, DataSegment> originalTimeline = null;
+        if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+          String temporaryVersion = DateTimes.nowUtc().toString();
+          Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
+          configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
+          // Create a new timeline to hold segments in the new configured segment granularity
+          VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+          Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
+          for (DataSegment segment : segments) {
+            // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
+            // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
+            // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
+            // of 2020-01/2020-02 and 2020-02/2020-03.
+            for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
+              intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+            }
+          }
+          for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
+            Interval interval = partitionsPerInterval.getKey();
+            int partitionNum = 0;
+            Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
+            int partitions = segmentSet.size();
+            for (DataSegment segment : segmentSet) {
+              DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
+              timelineWithConfiguredSegmentGranularity.add(
+                  interval,
+                  temporaryVersion,
+                  NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
+              );
+              partitionNum += 1;
+            }
+          }
+          // PartitionHolder can only holds chunks of one partition space
+          // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
+          // partitions of the original timeline (when the new segmentGranularity is larger than the original
+          // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
+          // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
+          // there is no duplicate partitionNum across all segments of each new Interval.
+          // Similarly, segment versions may be mixed in the same time chunk based on new segment granularity
+          // Hence we create the new timeline with a temporary version, setting the fake version to all be the same
+          // for the same new time bucket.
+          // We need to save and store the originalTimeline so that we can use it
+          // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
+          originalTimeline = timeline;
+          timeline = timelineWithConfiguredSegmentGranularity;
+        }
         final List<Interval> searchIntervals =
-            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
+            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
         }
       }
     });
@@ -187,10 +246,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
   {
     private final List<TimelineObjectHolder<String, DataSegment>> holders;
+    @Nullable
+    private final VersionedIntervalTimeline<String, DataSegment> originalTimeline;
 
     CompactibleTimelineObjectHolderCursor(
         VersionedIntervalTimeline<String, DataSegment> timeline,
-        List<Interval> totalIntervalsToSearch
+        List<Interval> totalIntervalsToSearch,
+        // originalTimeline can be nullable if timeline was not modified
+        @Nullable VersionedIntervalTimeline<String, DataSegment> originalTimeline
     )
     {
       this.holders = totalIntervalsToSearch
@@ -201,6 +264,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               .filter(holder -> isCompactibleHolder(interval, holder))
           )
           .collect(Collectors.toList());
+      this.originalTimeline = originalTimeline;
     }
 
     private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
@@ -232,9 +296,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return Streams.sequentialStreamFrom(holders.remove(holders.size() - 1).getObject())
-                    .map(PartitionChunk::getObject)
-                    .collect(Collectors.toList());
+      TimelineObjectHolder<String, DataSegment> timelineObjectHolder = holders.remove(holders.size() - 1);
+      List<DataSegment> candidates = Streams.sequentialStreamFrom(timelineObjectHolder.getObject())
+                                            .map(PartitionChunk::getObject)
+                                            .collect(Collectors.toList());
+      if (originalTimeline != null) {
+        Interval umbrellaInterval = JodaUtils.umbrellaInterval(candidates.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
+        return Lists.newArrayList(originalTimeline.findNonOvershadowedObjectsInInterval(umbrellaInterval, Partitions.ONLY_COMPLETE));
+      }
+      return candidates;
     }
   }
 
@@ -257,10 +327,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
   }
 
-  private boolean needsCompaction(ClientCompactionTaskQueryTuningConfig tuningConfig, SegmentsToCompact candidates)
+  private boolean needsCompaction(DataSourceCompactionConfig config, SegmentsToCompact candidates)
   {
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
-
+    final ClientCompactionTaskQueryTuningConfig tuningConfig =
+        ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment());
     final PartitionsSpec partitionsSpecFromConfig = findPartitinosSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
@@ -294,7 +365,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     } else {
       configuredIndexSpec = tuningConfig.getIndexSpec();
     }
-    boolean needsCompaction = false;
     if (!Objects.equals(partitionsSpecFromConfig, segmentPartitionsSpec)) {
       log.info(
           "Configured partitionsSpec[%s] is differenet from "
@@ -302,7 +372,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           partitionsSpecFromConfig,
           segmentPartitionsSpec
       );
-      needsCompaction = true;
+      return true;
     }
     // segmentIndexSpec cannot be null.
     if (!segmentIndexSpec.equals(configuredIndexSpec)) {
@@ -311,10 +381,39 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           configuredIndexSpec,
           segmentIndexSpec
       );
-      needsCompaction = true;
+      return true;
     }
 
-    return needsCompaction;
+    if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+      // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
+      final Granularity existingSegmentGranularity = lastCompactionState.getGranularitySpec() != null ?
+                                                     objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
+                                                     null;
+      if (existingSegmentGranularity == null) {
+        // Candidate segments were all compacted without segment granularity set.
+        // We need to check if all segments have the same segment granularity as the configured segment granularity.
+        boolean needsCompaction = candidates.segments.stream()
+                                             .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
+        if (needsCompaction) {
+          log.info(
+              "Segments were previously compacted but without segmentGranularity in auto compaction."
+              + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
+              config.getGranularitySpec().getSegmentGranularity()
+          );
+          return true;
+        }
+
+      } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
+        log.info(
+            "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
+            config.getGranularitySpec().getSegmentGranularity(),
+            existingSegmentGranularity
+        );
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -334,16 +433,25 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
 
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
-      final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-
+      List<DataSegment> segments = compactibleTimelineObjectHolderCursor.next();
+      final SegmentsToCompact candidates = new SegmentsToCompact(segments);
       if (!candidates.isEmpty()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
         final boolean needsCompaction = needsCompaction(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            config,
             candidates
         );
 
         if (isCompactibleSize && needsCompaction) {
+          if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+            Interval interval = candidates.getUmbrellaInterval();
+            Set<Interval> intervalsCompacted = intervalCompactedForDatasource.computeIfAbsent(dataSourceName, k -> new HashSet<>());
+            // Skip this candidates if we have compacted the interval already
+            if (intervalsCompacted.contains(interval)) {
+              continue;
+            }
+            intervalsCompacted.add(interval);
+          }
           return candidates;
         } else {
           if (!needsCompaction) {
@@ -396,6 +504,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private static List<Interval> findInitialSearchInterval(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset,
+      Granularity configuredSegmentGranularity,
       @Nullable List<Interval> skipIntervals
   )
   {
@@ -407,6 +516,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final List<Interval> fullSkipIntervals = sortAndAddSkipIntervalFromLatest(
         last.getInterval().getEnd(),
         skipOffset,
+        configuredSegmentGranularity,
         skipIntervals
     );
 
@@ -447,19 +557,27 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   static List<Interval> sortAndAddSkipIntervalFromLatest(
       DateTime latest,
       Period skipOffset,
+      Granularity configuredSegmentGranularity,
       @Nullable List<Interval> skipIntervals
   )
   {
     final List<Interval> nonNullSkipIntervals = skipIntervals == null
                                                 ? new ArrayList<>(1)
                                                 : new ArrayList<>(skipIntervals.size());
+    final Interval skipFromLatest;
+    if (configuredSegmentGranularity != null) {
+      DateTime skipFromLastest = new DateTime(latest, latest.getZone()).minus(skipOffset);
+      DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
+      skipFromLatest = new Interval(skipOffsetBucketToSegmentGranularity, latest);
+    } else {
+      skipFromLatest = new Interval(skipOffset, latest);
+    }
 
     if (skipIntervals != null) {
       final List<Interval> sortedSkipIntervals = new ArrayList<>(skipIntervals);
       sortedSkipIntervals.sort(Comparators.intervalsByStartThenEnd());
 
       final List<Interval> overlapIntervals = new ArrayList<>();
-      final Interval skipFromLatest = new Interval(skipOffset, latest);
 
       for (Interval interval : sortedSkipIntervals) {
         if (interval.overlaps(skipFromLatest)) {
@@ -476,7 +594,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         nonNullSkipIntervals.add(skipFromLatest);
       }
     } else {
-      final Interval skipFromLatest = new Interval(skipOffset, latest);
       nonNullSkipIntervals.add(skipFromLatest);
     }
 
@@ -577,6 +694,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private long getNumberOfSegments()
     {
       return segments.size();
+    }
+
+    private Interval getUmbrellaInterval()
+    {
+      return JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
     }
 
     private long getNumberOfIntervals()

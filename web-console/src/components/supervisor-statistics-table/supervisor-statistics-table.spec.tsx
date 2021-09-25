@@ -36,7 +36,7 @@ jest.mock('../../hooks', () => {
 
 describe('SupervisorStatisticsTable', () => {
   function makeSupervisorStatisticsTable() {
-    return <SupervisorStatisticsTable supervisorId="sup-id" downloadFilename={'test'} />;
+    return <SupervisorStatisticsTable supervisorId="sup-id" downloadFilename="test" />;
   }
 
   it('matches snapshot on init', () => {

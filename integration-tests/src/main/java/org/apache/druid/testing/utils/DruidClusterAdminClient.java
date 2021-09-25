@@ -21,11 +21,14 @@ package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.core.DockerClientBuilder;
+import com.github.dockerjava.core.command.ExecStartResultCallback;
 import com.github.dockerjava.netty.NettyDockerCmdExecFactory;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -35,10 +38,14 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -152,12 +159,78 @@ public class DruidClusterAdminClient
     waitUntilInstanceReady(config.getRouterUrl());
   }
 
+  public Pair<String, String> runCommandInCoordinatorContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(COORDINATOR_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInCoordinatorTwoContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(COORDINATOR_TWO_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInHistoricalContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(HISTORICAL_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInOverlordContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(OVERLORD_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInOverlordTwoContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(OVERLORD_TWO_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInBrokerContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(BROKER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInRouterContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(ROUTER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  public Pair<String, String> runCommandInMiddleManagerContainer(String... cmd) throws Exception
+  {
+    return runCommandInDockerContainer(MIDDLEMANAGER_DOCKER_CONTAINER_NAME, cmd);
+  }
+
+  private Pair<String, String> runCommandInDockerContainer(String serviceName, String... cmd) throws Exception
+  {
+    DockerClient dockerClient = DockerClientBuilder.getInstance()
+                                                   .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
+                                                                                 .withConnectTimeout(10 * 1000))
+                                                   .build();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+    ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(findDockerContainer(dockerClient, serviceName))
+                                                              .withAttachStderr(true)
+                                                              .withAttachStdout(true)
+                                                              .withCmd(cmd)
+                                                              .exec();
+    dockerClient.execStartCmd(execCreateCmdResponse.getId())
+                .exec(new ExecStartResultCallback(stdout, stderr))
+                .awaitCompletion();
+
+    return new Pair<>(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
+  }
+
   private void restartDockerContainer(String serviceName)
   {
     DockerClient dockerClient = DockerClientBuilder.getInstance()
                                                    .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
                                                                                  .withConnectTimeout(10 * 1000))
                                                    .build();
+    dockerClient.restartContainerCmd(findDockerContainer(dockerClient, serviceName)).exec();
+  }
+
+  private String findDockerContainer(DockerClient dockerClient, String serviceName)
+  {
+
     List<Container> containers = dockerClient.listContainersCmd().exec();
     Optional<String> containerName = containers.stream()
                                                .filter(container -> Arrays.asList(container.getNames()).contains(serviceName))
@@ -168,7 +241,7 @@ public class DruidClusterAdminClient
       LOG.error("Cannot find docker container for " + serviceName);
       throw new ISE("Cannot find docker container for " + serviceName);
     }
-    dockerClient.restartContainerCmd(containerName.get()).exec();
+    return containerName.get();
   }
 
   private void waitUntilInstanceReady(final String host)
@@ -185,7 +258,27 @@ public class DruidClusterAdminClient
             return response.getStatus().equals(HttpResponseStatus.OK);
           }
           catch (Throwable e) {
-            LOG.error(e, "");
+            //
+            // supress stack trace logging for some specific exceptions
+            // to reduce excessive stack trace messages when waiting druid nodes to start up
+            //
+            if (e.getCause() instanceof ChannelException) {
+              Throwable channelException = e.getCause();
+
+              if (channelException.getCause() instanceof ClosedChannelException) {
+                LOG.error("Channel Closed");
+              } else if ("Channel disconnected".equals(channelException.getMessage())) {
+                // log message only
+                LOG.error("Channel disconnected");
+              } else {
+                // log stack trace for unknown exception
+                LOG.error(e, "");
+              }
+            } else {
+              // log stack trace for unknown exception
+              LOG.error(e, "");
+            }
+
             return false;
           }
         },

@@ -126,7 +126,9 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 ### `doubleMean` aggregator
 
-Computes and returns arithmetic mean of a column values as 64 bit float value. This is a query time aggregator only and should not be used during indexing.
+Computes and returns the arithmetic mean of a column's values as a 64-bit floating point value. `doubleMean` is a query time aggregator only. It is not available for indexing.
+
+To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator](../development/extensions-core/datasketches-quantiles.md#aggregator) from the DataSketches extension.
 
 ```json
 { "type" : "doubleMean", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -395,7 +397,7 @@ The [Approximate Histogram](../development/extensions-core/approximate-histogram
 
 The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
 
-A [study published by the DataSketches team](https://datasketches.apache.org/docs/Quantiles/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
+A [study published by the DataSketches team](https://datasketches.apache.org/docs/QuantilesStudies/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
 
 - The algorithm's quantile calculations can fail to provide results for a large range of rank values (all ranks less than 0.89 in the example used in the study), returning all zeroes instead.
 - The algorithm can completely fail to record spikes in the tail ends of the distribution
@@ -422,7 +424,7 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
     "type" : "selector",
     "dimension" : <dimension>,
     "value" : <dimension value>
-  }
+  },
   "aggregator" : <aggregation>
 }
 ```

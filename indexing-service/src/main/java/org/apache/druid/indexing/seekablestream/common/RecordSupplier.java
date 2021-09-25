@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.annotations.Beta;
+import org.apache.druid.data.input.impl.ByteEntity;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -36,7 +37,7 @@ import java.util.Set;
  * @param <SequenceOffsetType> Sequence Number Type
  */
 @Beta
-public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Closeable
+public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> extends Closeable
 {
   /**
    * assigns the given partitions to this RecordSupplier
@@ -82,7 +83,7 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Clo
    * @return record
    */
   @NotNull
-  List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> poll(long timeout);
+  List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> poll(long timeout);
 
   /**
    * get the latest sequence number in stream

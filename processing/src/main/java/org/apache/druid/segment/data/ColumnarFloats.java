@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
 import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorSelectorUtils;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -154,7 +155,7 @@ public interface ColumnarFloats extends Closeable
     {
       private final float[] floatVector;
 
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
 
       private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
       private int offsetMark = -1;

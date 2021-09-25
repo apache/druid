@@ -21,19 +21,31 @@ package org.apache.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BasicAuthorizerRole
 {
+  private static final Logger log = new Logger(BasicAuthorizerRole.class);
+
   private final String name;
   private final List<BasicAuthorizerPermission> permissions;
 
   @JsonCreator
   public BasicAuthorizerRole(
       @JsonProperty("name") String name,
-      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
+      @JsonProperty("permissions") @JsonDeserialize(using = PermissionsDeserializer.class) List<BasicAuthorizerPermission> permissions
   )
   {
     this.name = name;
@@ -77,5 +89,36 @@ public class BasicAuthorizerRole
     int result = getName() != null ? getName().hashCode() : 0;
     result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
     return result;
+  }
+
+
+  static class PermissionsDeserializer extends JsonDeserializer<List<BasicAuthorizerPermission>>
+  {
+    @Override
+    public List<BasicAuthorizerPermission> deserialize(
+        JsonParser jsonParser,
+        DeserializationContext deserializationContext
+    ) throws IOException
+    {
+      List<BasicAuthorizerPermission> permissions = new ArrayList<>();
+      // sanity check
+      ObjectCodec codec = jsonParser.getCodec();
+      JsonNode hopefullyAnArray = codec.readTree(jsonParser);
+      if (!hopefullyAnArray.isArray()) {
+        throw new RE("Failed to deserialize authorizer role list");
+      }
+
+      for (JsonNode node : hopefullyAnArray) {
+        try {
+          permissions.add(codec.treeToValue(node, BasicAuthorizerPermission.class));
+        }
+        catch (JsonProcessingException e) {
+          // ignore unparseable, it might be resource types we don't know about
+          log.warn(e, "Failed to deserialize authorizer role, ignoring: %s", node.toPrettyString());
+        }
+      }
+
+      return permissions;
+    }
   }
 }

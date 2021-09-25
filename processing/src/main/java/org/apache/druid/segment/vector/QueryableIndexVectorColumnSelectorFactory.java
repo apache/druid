@@ -71,7 +71,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public VectorSizeInspector getVectorSizeInspector()
+  public ReadableVectorInspector getReadableVectorInspector()
   {
     return offset;
   }
@@ -267,7 +267,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   {
     if (virtualColumns.exists(columnName)) {
       return virtualColumns.getColumnCapabilities(
-          baseColumnName -> QueryableIndexStorageAdapter.getColumnCapabilities(index, baseColumnName),
+          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
           columnName
       );
     }

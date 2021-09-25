@@ -35,6 +35,7 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -114,10 +115,17 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
+import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
+import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
+import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
+import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -159,10 +167,9 @@ public class CalciteTests
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
+  public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
-  public static final String SYSTEM_SCHEMA_NAME = "sys";
-  public static final String LOOKUP_SCHEMA_NAME = "lookup";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -175,7 +182,9 @@ public class CalciteTests
           return Access.OK;
         }
 
-        if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+        if (ResourceType.DATASOURCE.equals(resource.getType()) && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+          return new Access(false);
+        } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
           return new Access(false);
         } else {
           return Access.OK;
@@ -359,6 +368,15 @@ public class CalciteTests
       )
       .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
       .withRollup(false)
+      .build();
+
+  private static final List<String> USER_VISIT_DIMS = ImmutableList.of("user", "country", "city");
+  private static final IncrementalIndexSchema INDEX_SCHEMA_USER_VISIT = new IncrementalIndexSchema.Builder()
+      .withMetrics(
+          new CountAggregatorFactory("cnt")
+      )
+      .withRollup(false)
+      .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
       .build();
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
@@ -601,7 +619,8 @@ public class CalciteTests
 
 
   public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
-      createRow("2000-01-01", "forbidden", "abcd", 9999.0)
+      createRow("2000-01-01", "forbidden", "abcd", 9999.0),
+      createRow("2000-01-02", "forbidden", "a", 1234.0)
   );
 
   // Hi, I'm Troy McClure. You may remember these rows from such benchmarks generator schemas as basic and expression
@@ -640,6 +659,33 @@ public class CalciteTests
               .build(),
           PARSER_LOTS_OF_COLUMNS
       )
+  );
+
+  private static List<InputRow> USER_VISIT_ROWS = ImmutableList.of(
+      toRow(
+          "2021-01-01T01:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "A")
+      ),
+      toRow(
+          "2021-01-01T02:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "B")
+      ),
+      toRow("2021-01-01T03:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
+      toRow("2021-01-01T04:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "alice", "country", "India", "city", "Y")),
+      toRow(
+          "2021-01-02T01:00:00Z",
+          USER_VISIT_DIMS,
+          ImmutableMap.of("user", "alice", "country", "canada", "city", "A")
+      ),
+      toRow("2021-01-02T02:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
+      toRow("2021-01-02T03:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "canada", "city", "B")),
+      toRow("2021-01-02T04:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bar", "country", "canada", "city", "B")),
+      toRow("2021-01-02T05:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "alice", "country", "India", "city", "X")),
+      toRow("2021-01-02T06:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "bob", "country", "India", "city", "X")),
+      toRow("2021-01-02T07:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "India", "city", "X")),
+      toRow("2021-01-03T01:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "USA", "city", "M"))
   );
 
   private static final InlineDataSource JOINABLE_BACKING_DATA = InlineDataSource.fromIterable(
@@ -740,7 +786,8 @@ public class CalciteTests
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger()
+        new NoopRequestLogger(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 
@@ -851,6 +898,14 @@ public class CalciteTests
         .rows(RAW_ROWS1_X)
         .buildMMappedIndex();
 
+    final QueryableIndex userVisitIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "8"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(USER_VISIT_ROWS)
+        .buildMMappedIndex();
+
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
@@ -938,7 +993,21 @@ public class CalciteTests
                    .size(0)
                    .build(),
         indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(USERVISITDATASOURCE)
+                   .interval(userVisitIndex.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        userVisitIndex
     );
+  }
+
+  private static MapBasedInputRow toRow(String time, List<String> dimensions, Map<String, Object> event)
+  {
+    return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), dimensions, event);
   }
 
   public static ExprMacroTable createExprMacroTable()
@@ -1056,7 +1125,7 @@ public class CalciteTests
     );
   }
 
-  public static SchemaPlus createMockRootSchema(
+  public static DruidSchemaCatalog createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -1067,18 +1136,31 @@ public class CalciteTests
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    InformationSchema informationSchema =
-        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    Set<NamedSchema> namedSchemas = ImmutableSet.of(
+        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+        new NamedSystemSchema(systemSchema),
+        new NamedLookupSchema(lookupSchema)
+    );
+    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
+        rootSchema,
+        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
+    );
+    InformationSchema informationSchema =
+        new InformationSchema(
+            catalog,
+            authorizerMapper
+        );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
-    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
-    return rootSchema;
+    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
+    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
+
+    return catalog;
   }
 
-  public static SchemaPlus createMockRootSchema(
+  public static DruidSchemaCatalog createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -1089,15 +1171,32 @@ public class CalciteTests
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    InformationSchema informationSchema =
-        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    ViewSchema viewSchema = new ViewSchema(viewManager);
+
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    Set<NamedSchema> namedSchemas = ImmutableSet.of(
+        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
+        new NamedSystemSchema(systemSchema),
+        new NamedLookupSchema(lookupSchema),
+        new NamedViewSchema(viewSchema)
+    );
+    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
+        rootSchema,
+        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
+    );
+    InformationSchema informationSchema =
+        new InformationSchema(
+            catalog,
+            authorizerMapper
+        );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
-    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
-    return rootSchema;
+    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
+    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
+    rootSchema.add(NamedViewSchema.NAME, viewSchema);
+    return catalog;
   }
 
   /**
@@ -1144,7 +1243,6 @@ public class CalciteTests
         },
         createDefaultJoinableFactory(),
         plannerConfig,
-        viewManager,
         TEST_AUTHENTICATOR_ESCALATOR
     );
 

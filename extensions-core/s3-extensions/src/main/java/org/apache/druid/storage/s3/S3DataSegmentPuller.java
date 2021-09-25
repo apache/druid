@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
@@ -28,6 +29,7 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -243,25 +245,7 @@ public class S3DataSegmentPuller implements URIDataPuller
   @Override
   public Predicate<Throwable> shouldRetryPredicate()
   {
-    // Yay! smart retries!
-    return new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable e)
-      {
-        if (e == null) {
-          return false;
-        }
-        if (e instanceof AmazonServiceException) {
-          return S3Utils.isServiceExceptionRecoverable((AmazonServiceException) e);
-        }
-        if (S3Utils.S3RETRY.apply(e)) {
-          return true;
-        }
-        // Look all the way down the cause chain, just in case something wraps it deep.
-        return apply(e.getCause());
-      }
-    };
+    return S3Utils.S3RETRY;
   }
 
   /**
@@ -282,8 +266,8 @@ public class S3DataSegmentPuller implements URIDataPuller
           S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
       return StringUtils.format("%d", objectSummary.getLastModified().getTime());
     }
-    catch (AmazonServiceException e) {
-      if (S3Utils.isServiceExceptionRecoverable(e)) {
+    catch (AmazonClientException e) {
+      if (AWSClientUtil.isClientExceptionRecoverable(e)) {
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
         throw new IOE(e, "Could not fetch last modified timestamp from URI [%s]", uri);
       } else {

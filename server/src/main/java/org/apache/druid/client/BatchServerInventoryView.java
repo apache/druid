@@ -124,7 +124,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
               Pair<DruidServerMetadata, DataSegment> input
           )
           {
-            return input.rhs;
+            return DataSegmentInterner.intern(input.rhs);
           }
         }
     ));
