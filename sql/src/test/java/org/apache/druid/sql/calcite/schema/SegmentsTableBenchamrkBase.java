@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -192,7 +191,8 @@ public abstract class SegmentsTableBenchamrkBase
         availableSegments,
         CalciteTests.TEST_AUTHORIZER_MAPPER
     );
-    final SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
+        plannerConfig,
         druidSchema,
         systemSchema,
         CalciteTests.TEST_AUTHORIZER_MAPPER

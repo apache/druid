@@ -68,6 +68,9 @@ public class PlannerConfig
   private boolean computeInnerJoinCostAsFilter = true;
 
   @JsonProperty
+  private boolean authorizeSystemTablesDirectly = false;
+
+  @JsonProperty
   private boolean forceHashBasedMergeForSegmentsTable = false;
 
   public long getMetadataSegmentPollPeriod()
@@ -132,6 +135,11 @@ public class PlannerConfig
     return computeInnerJoinCostAsFilter;
   }
 
+  public boolean isAuthorizeSystemTablesDirectly()
+  {
+    return authorizeSystemTablesDirectly;
+  }
+
   public boolean isForceHashBasedMergeForSegmentsTable()
   {
     return forceHashBasedMergeForSegmentsTable;
@@ -161,17 +169,18 @@ public class PlannerConfig
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
+    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
+        context,
+        CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
-        context,
-        CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER,
-        computeInnerJoinCostAsFilter
-    );
+    newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     newConfig.forceHashBasedMergeForSegmentsTable = isForceHashBasedMergeForSegmentsTable();
     return newConfig;
   }

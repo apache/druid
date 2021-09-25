@@ -125,6 +125,7 @@ JVM
 JVMs
 Joda
 JsonProperty
+Jupyter
 KMS
 Kerberized
 Kerberos
@@ -140,6 +141,7 @@ Long.MIN_VALUE
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
@@ -178,6 +180,7 @@ SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
+SYSTEM_TABLE
 TCP
 TGT
 TLS
@@ -680,6 +683,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
@@ -838,8 +842,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec

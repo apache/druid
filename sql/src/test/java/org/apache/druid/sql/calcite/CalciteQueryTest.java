@@ -18254,6 +18254,50 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  public void testLeftJoinWithNotNullFilter(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT s.dim1, t.dim1\n"
+        + "FROM foo as s\n"
+        + "LEFT JOIN foo as t "
+        + "ON s.dim1 = t.dim1 "
+        + "and s.dim1 IS NOT NULL\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(newScanQueryBuilder()
+                            .dataSource(CalciteTests.DATASOURCE1)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .columns(ImmutableList.of("dim1"))
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.dim1")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "j0.dim1")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", ""},
+            new Object[]{"10.1", "10.1"},
+            new Object[]{"2", "2"},
+            new Object[]{"1", "1"},
+            new Object[]{"def", "def"},
+            new Object[]{"abc", "abc"}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext) throws Exception
   {
     // Cannot vectorize due to 'concat' expression.
@@ -18816,6 +18860,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, 2, 1)",
         Collections.emptyList(),
         Collections.emptyList()
+    );
+  }
+
+  @Test
+  public void testCommonVirtualExpressionWithDifferentValueType() throws Exception
+  {
+    testQuery(
+        "select\n"
+        + " dim1,\n"
+        + " sum(cast(0 as bigint)) as s1,\n"
+        + " sum(cast(0 as double)) as s2\n"
+        + "from druid.foo\n"
+        + "where dim1 = 'none'\n"
+        + "group by dim1\n"
+        + "limit 1",
+        ImmutableList.of(new TopNQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .filters(selector("dim1", "none", null))
+                             .granularity(Granularities.ALL)
+                             .virtualColumns(
+                                 expressionVirtualColumn(
+                                     "v0",
+                                     "'none'",
+                                     ValueType.STRING
+                                 )
+                             )
+                             .dimension(
+                                 new DefaultDimensionSpec("v0", "d0")
+                             )
+                             .aggregators(
+                                 aggregators(
+                                     new LongSumAggregatorFactory("a0", null, "0", ExprMacroTable.nil()),
+                                     new DoubleSumAggregatorFactory("a1", null, "0", ExprMacroTable.nil())
+                                 ))
+                             .context(QUERY_CONTEXT_DEFAULT)
+                             .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                             .threshold(1)
+                             .build()),
+        ImmutableList.of()
     );
   }
 }

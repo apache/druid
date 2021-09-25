@@ -23,10 +23,7 @@ import classNames from 'classnames';
 import React, { useRef } from 'react';
 
 import { JSON_STRING_FORMATTER } from '../../utils';
-import {
-  FormattedInputGroup,
-  FormattedInputGroupProps,
-} from '../formatted-input-group/formatted-input-group';
+import { FormattedInput, FormattedInputProps } from '../formatted-input/formatted-input';
 
 export interface SuggestionGroup {
   group: string;
@@ -35,7 +32,7 @@ export interface SuggestionGroup {
 
 export type Suggestion = undefined | string | SuggestionGroup;
 
-export interface SuggestibleInputProps extends Omit<FormattedInputGroupProps, 'formatter'> {
+export interface SuggestibleInputProps extends Omit<FormattedInputProps, 'formatter'> {
   onFinalize?: () => void;
   suggestions?: Suggestion[];
 }
@@ -60,7 +57,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   }
 
   return (
-    <FormattedInputGroup
+    <FormattedInput
       className={classNames('suggestible-input', className)}
       formatter={JSON_STRING_FORMATTER}
       value={value}

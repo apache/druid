@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -81,6 +80,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -100,6 +100,7 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,6 +108,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -172,6 +174,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public DateTimeZone getSqlTimeZone()
     {
       return DateTimes.inferTzFromString("America/Los_Angeles");
+    }
+  };
+
+  public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_SYS_TABLES = new PlannerConfig()
+  {
+    @Override
+    public boolean isAuthorizeSystemTablesDirectly()
+    {
+      return true;
     }
   };
 
@@ -762,6 +773,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
     assertResultsEquals(sql, expectedResults, results);
 
+    verifyQueries(sql, expectedQueries);
+  }
+
+  private void verifyQueries(
+      final String sql,
+      @Nullable final List<Query> expectedQueries
+  )
+  {
     if (expectedQueries != null) {
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
 
@@ -788,6 +807,74 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           expectedResults.get(i),
           results.get(i)
       );
+    }
+  }
+
+  public void testQueryThrows(
+      final String sql,
+      final Map<String, Object> queryContext,
+      final List<Query> expectedQueries,
+      final Consumer<ExpectedException> expectedExceptionInitializer
+  ) throws Exception
+  {
+    testQueryThrows(
+        PLANNER_CONFIG_DEFAULT,
+        queryContext,
+        DEFAULT_PARAMETERS,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        expectedQueries,
+        expectedExceptionInitializer
+    );
+  }
+
+  public void testQueryThrows(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
+      final String sql,
+      final AuthenticationResult authenticationResult,
+      final List<Query> expectedQueries,
+      final Consumer<ExpectedException> expectedExceptionInitializer
+  ) throws Exception
+  {
+    log.info("SQL: %s", sql);
+
+    final List<String> vectorizeValues = new ArrayList<>();
+
+    vectorizeValues.add("false");
+
+    if (!skipVectorize) {
+      vectorizeValues.add("force");
+    }
+
+    for (final String vectorize : vectorizeValues) {
+      queryLogHook.clearRecordedQueries();
+
+      final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
+      theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
+      theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
+
+      if (!"false".equals(vectorize)) {
+        theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
+      }
+
+      final List<Query> theQueries = new ArrayList<>();
+      for (Query query : expectedQueries) {
+        theQueries.add(recursivelyOverrideContext(query, theQueryContext));
+      }
+
+      if (cannotVectorize && "force".equals(vectorize)) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage("Cannot vectorize");
+      } else {
+        expectedExceptionInitializer.accept(expectedException);
+      }
+
+      // this should validate expectedException
+      getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
+
+      verifyQueries(sql, theQueries);
     }
   }
 
@@ -820,7 +907,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     final InProcessViewManager viewManager =
         new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+    DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
         plannerConfig,

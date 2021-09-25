@@ -24,7 +24,7 @@ title: "Dropwizard metrics emitter"
 
 # Dropwizard Emitter
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` extension.
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` in the extensions load list.
 
 ## Introduction
 

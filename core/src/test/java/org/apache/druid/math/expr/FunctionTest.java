@@ -746,6 +746,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseComplement('1')", null);
     assertExpr("bitwiseComplement(null)", null);
 
+    // data truncation
+    try {
+      assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null);
+      Assert.fail("Did not throw IllegalArgumentException");
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertEquals("Possible data truncation, param [461168601842738800000000000000.000000] is out of long value range", e.getMessage());
+    }
+
     // doubles are cast
     assertExpr("bitwiseOr(2.345, 1)", 3L);
     assertExpr("bitwiseOr(2, 1.3)", 3L);
@@ -783,7 +792,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat(nonexistent, 10)", null);
   }
 
-
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
@@ -792,7 +800,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
-
 
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());

@@ -26,14 +26,15 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -71,11 +72,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Mock
   private AuthorizerMapper authorizerMapper;
   @Mock
-  private SchemaPlus rootSchema;
+  private DruidSchemaCatalog rootSchema;
 
   private Set<SqlAggregator> aggregators;
   private Set<SqlOperatorConversion> operatorConversions;
-  private Set<NamedSchema> calciteSchemas;
 
   private CalcitePlannerModule target;
   private Injector injector;
@@ -87,8 +87,9 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
     EasyMock.expect(druidSchema2.getSchemaName()).andStubReturn(SCHEMA_2);
+    EasyMock.expect(druidSchema1.getSchemaResourceType(EasyMock.anyString())).andStubReturn(ResourceType.DATASOURCE);
+    EasyMock.expect(druidSchema2.getSchemaResourceType(EasyMock.anyString())).andStubReturn("test");
     EasyMock.replay(druidSchema1, druidSchema2);
-    calciteSchemas = ImmutableSet.of(druidSchema1, druidSchema2);
     aggregators = ImmutableSet.of();
     operatorConversions = ImmutableSet.of();
     target = new CalcitePlannerModule();
@@ -97,14 +98,13 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         binder -> {
           binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(Key.get(new TypeLiteral<Set<NamedSchema>>(){})).toInstance(calciteSchemas);
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
           binder.bind(ExprMacroTable.class).toInstance(macroTable);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>(){})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>(){})).toInstance(operatorConversions);
-          binder.bind(SchemaPlus.class).toInstance(rootSchema);
+          binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
         },
         target
     );

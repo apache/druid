@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.22.0-SNAPSHOT</version>
+    <version>0.23.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -170,6 +170,7 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
+        <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
@@ -1492,7 +1493,6 @@
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
                 <version>6.0.3</version>
-                <inherited>false</inherited>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1504,9 +1504,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
                     </execution>
                 </executions>

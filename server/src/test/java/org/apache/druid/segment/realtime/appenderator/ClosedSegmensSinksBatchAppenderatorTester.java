@@ -62,7 +62,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class BatchAppenderatorTester implements AutoCloseable
+public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
@@ -75,14 +75,14 @@ public class BatchAppenderatorTester implements AutoCloseable
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory
   )
   {
     this(maxRowsInMemory, -1, null, false);
   }
 
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory,
       final boolean enablePushFailure
   )
@@ -90,7 +90,7 @@ public class BatchAppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, -1, null, enablePushFailure);
   }
 
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final boolean enablePushFailure
@@ -99,7 +99,7 @@ public class BatchAppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
   }
 
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -112,12 +112,11 @@ public class BatchAppenderatorTester implements AutoCloseable
         basePersistDirectory,
         enablePushFailure,
         new SimpleRowIngestionMeters(),
-        false,
         false
     );
   }
 
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       @Nullable final File basePersistDirectory,
@@ -126,18 +125,17 @@ public class BatchAppenderatorTester implements AutoCloseable
   )
   {
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters,
-         false, false
+         false
     );
   }
   
-  public BatchAppenderatorTester(
+  public ClosedSegmensSinksBatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       @Nullable final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck,
-      final boolean useLegacyBatchProcessing
+      final boolean skipBytesInMemoryOverheadCheck
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -248,8 +246,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        useLegacyBatchProcessing
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
     );
   }
 
@@ -302,7 +299,7 @@ public class BatchAppenderatorTester implements AutoCloseable
   }
 
 
-  private static class TestIndexTuningConfig implements AppenderatorConfig
+  static class TestIndexTuningConfig implements AppenderatorConfig
   {
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;

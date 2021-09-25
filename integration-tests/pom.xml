@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.22.0-SNAPSHOT</version>
+        <version>0.23.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -219,6 +219,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-testing-tools</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>simple-client-sslcontext</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -313,6 +319,11 @@
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-api</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
             <version>3.2.0</version>
         </dependency>
         <dependency>
