@@ -222,6 +222,7 @@ public class PlannerConfig
            && metadataSegmentPollPeriod == that.metadataSegmentPollPeriod
            && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
            && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
+           && authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly
            && forceHashBasedMergeForSegmentsTable == that.forceHashBasedMergeForSegmentsTable
            && serializeComplexValues == that.serializeComplexValues
            && Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod)
@@ -243,6 +244,7 @@ public class PlannerConfig
         metadataSegmentPollPeriod,
         useGroupingSetForExactDistinct,
         computeInnerJoinCostAsFilter,
+        authorizeSystemTablesDirectly,
         forceHashBasedMergeForSegmentsTable,
         serializeComplexValues
     );
@@ -263,7 +265,8 @@ public class PlannerConfig
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", useGroupingSetForExactDistinct=" + useGroupingSetForExactDistinct +
            ", computeInnerJoinCostAsFilter=" + computeInnerJoinCostAsFilter +
-           ", forceHashBasedMerge=" + forceHashBasedMergeForSegmentsTable +
+           ", authorizeSystemTablesDirectly=" + authorizeSystemTablesDirectly +
+           ", forceHashBasedMergeForSegmentsTable=" + forceHashBasedMergeForSegmentsTable +
            ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }
