@@ -20,7 +20,9 @@
 package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
@@ -74,17 +76,20 @@ public abstract class AbstractIndexerTest
   protected void unloadAndKillData(final String dataSource)
   {
     // Get all failed task logs
-    List<TaskResponseObject> allTasks = indexer.getCompleteTasksForDataSource(dataSource);
+    List<TaskResponseObject> allTasks = ImmutableList.<TaskResponseObject>builder()
+        .addAll(indexer.getCompleteTasksForDataSource(dataSource))
+        .addAll(indexer.getUncompletedTasksForDataSource(dataSource))
+        .build();
     for (TaskResponseObject task : allTasks) {
-      if (task.getStatus().isFailure()) {
-        LOG.info("------- START Found failed task logging for taskId=" + task.getId() + " -------");
-        LOG.info("Start failed task log:");
+      if (!task.getStatus().isSuccess()) {
+        LOG.info("------- START Found task logging for taskId=" + task.getId() + " with status=" + task.getStatus() + "-------");
+        LOG.info("Start task log:");
         LOG.info(indexer.getTaskLog(task.getId()));
-        LOG.info("End failed task log.");
-        LOG.info("Start failed task errorMsg:");
+        LOG.info("End task log.");
+        LOG.info("Start task errorMsg:");
         LOG.info(indexer.getTaskErrorMessage(task.getId()));
-        LOG.info("End failed task errorMsg.");
-        LOG.info("------- END Found failed task logging for taskId=" + task.getId() + " -------");
+        LOG.info("End task errorMsg.");
+        LOG.info("------- END Found task logging for taskId=" + task.getId() + " with status=" + task.getStatus() + "-------");
       }
     }
 
