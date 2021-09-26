@@ -19,8 +19,10 @@
 -->
 
 <Configuration status="WARN">
-  <!-- to change log directory, set DRUID_LOG_DIR environment variable to your directory before launching Druid -->
-  <property name="druid.log.path" value="log" />
+  <Properties>
+    <!-- to change log directory, set DRUID_LOG_DIR environment variable to your directory before launching Druid -->
+    <Property name="druid.log.path" value="log" />
+  </Properties>
 
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
