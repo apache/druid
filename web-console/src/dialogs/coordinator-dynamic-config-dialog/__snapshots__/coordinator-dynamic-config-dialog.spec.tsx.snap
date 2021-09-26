@@ -5,6 +5,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
   className="coordinator-dynamic-config-dialog"
   onClose={[Function]}
   onSave={[Function]}
+  saveDisabled={false}
   title="Coordinator dynamic config"
 >
   <p>
@@ -166,6 +167,14 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           </React.Fragment>,
           "name": "decommissioningMaxPercentOfMaxSegmentsToMove",
           "type": "number",
+        },
+        Object {
+          "defaultValue": false,
+          "info": <React.Fragment>
+            Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed up segment balancing process, especially if there are huge number of segments in the cluster or if there are too many segments to move.
+          </React.Fragment>,
+          "name": "useBatchedSegmentSampler",
+          "type": "boolean",
         },
         Object {
           "defaultValue": 100,

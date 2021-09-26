@@ -126,7 +126,8 @@ public class GrouperBufferComparatorUtils
       List<DimensionSpec> dimensions,
       Grouper.BufferComparator[] dimComparators,
       boolean includeTimestamp,
-      boolean sortByDimsFirst
+      boolean sortByDimsFirst,
+      int keySize
   )
   {
     int dimCount = dimensions.size();
@@ -148,7 +149,8 @@ public class GrouperBufferComparatorUtils
         if (aggIndex >= 0) {
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
           final ValueType valueType = aggregatorFactories[aggIndex].getType();
-          final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
+          // Aggregators start after dimensions
+          final int aggOffset = keySize + aggregatorOffsets[aggIndex];
 
           aggCount++;
 
@@ -156,10 +158,12 @@ public class GrouperBufferComparatorUtils
             throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
           }
 
-          comparators.add(makeNullHandlingBufferComparatorForNumericData(
-              aggOffset,
-              makeNumericBufferComparator(valueType, aggOffset, true, stringComparator)
-          ));
+          comparators.add(
+              makeNullHandlingBufferComparatorForNumericData(
+                  aggOffset,
+                  makeNumericBufferComparator(valueType, aggOffset, true, stringComparator)
+              )
+          );
           needsReverses.add(needsReverse);
         }
       }

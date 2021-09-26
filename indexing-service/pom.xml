@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.22.0-SNAPSHOT</version>
+        <version>0.23.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -61,11 +61,6 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-hll</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>4.2</version>
         </dependency>
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
@@ -138,6 +133,10 @@
             <artifactId>zookeeper</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper-jute</artifactId>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
         </dependency>
@@ -160,11 +159,6 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-common</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -197,7 +191,7 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil</artifactId>
+            <artifactId>fastutil-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -228,7 +222,11 @@
             <artifactId>jackson-core-asl</artifactId>
             <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>

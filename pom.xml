@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.22.0-SNAPSHOT</version>
+    <version>0.23.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -87,37 +87,33 @@
         <datasketches.memory.version>1.3.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
+        <errorprone.version>2.8.0</errorprone.version>
+        <fastutil.version>8.5.4</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.40.v20210413</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <jackson.version>2.10.2</jackson.version>
-        <jackson.databind.version>2.10.5.1</jackson.databind.version>
+        <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <mysql.version>5.1.48</mysql.version>
+        <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <resilience4j.version>1.3.1</resilience4j.version>
-        <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.63.Final</netty4.version>
-        <node.version>v10.24.0</node.version>
-        <npm.version>6.14.11</npm.version>
         <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
+        <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
         <mockito.version>3.8.0</mockito.version>
         <powermock.version>2.0.9</powermock.version>
-        <aws.sdk.version>1.11.884</aws.sdk.version>
+        <aws.sdk.version>1.12.37</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
-        <jacoco.version>0.8.6</jacoco.version>
-        <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
-             If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
-             see http://curator.apache.org/zk-compatibility.html -->
+        <jacoco.version>0.8.7</jacoco.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.4.14</zookeeper.version>
+        <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
@@ -174,6 +170,7 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
+        <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
@@ -228,7 +225,7 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.6</version>
+                <version>2.11.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
@@ -316,10 +313,19 @@
                         <artifactId>netty</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-transport-native-epoll</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-annotations</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper-jute</artifactId>
+                <version>${zookeeper.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -349,11 +355,6 @@
                 </exclusions>
             </dependency>
             <dependency>
-              <!--
-                ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
-                ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
-                ~ upgrading to a newer curator version.
-              -->
               <groupId>org.apache.curator</groupId>
               <artifactId>curator-x-discovery</artifactId>
               <version>${apache.curator.version}</version>
@@ -421,7 +422,7 @@
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
-                <version>2.3.2</version>
+                <version>${errorprone.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -436,7 +437,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.19</version>
+                <version>1.21</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -449,53 +450,11 @@
                 <version>1.3.3-1</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.databind.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-guava</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-joda</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <!--
-                  ~ This is a transitive dependency of com.amazonaws:aws-java-sdk-core. Override the version here so
-                  ~ that it is the same as the other jackson dependencies.
-                  -->
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-cbor</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-smile</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                <artifactId>jackson-jaxrs-json-provider</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                <artifactId>jackson-jaxrs-smile-provider</artifactId>
-                <version>${jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -650,59 +609,10 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty-buffer</artifactId>
+                <artifactId>netty-bom</artifactId>
                 <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-common</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-codec-dns</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-codec-http</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-codec-socks</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-handler</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-handler-proxy</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-resolver</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-resolver-dns</artifactId>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-transport-native-epoll</artifactId>
-                <classifier>linux-x86_64</classifier>
-                <version>${netty4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-transport-native-unix-common</artifactId>
-                <version>${netty4.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -899,7 +809,17 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>8.2.3</version>
+                <version>${fastutil.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-core</artifactId>
+                <version>${fastutil.version}</version>
+            </dependency>
+             <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-extra</artifactId>
+                <version>${fastutil.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.opencsv</groupId>
@@ -1054,7 +974,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.12</version>
+                <version>4.13.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1197,21 +1117,6 @@
                     <exclusion>
                         <groupId>org.apache.httpcomponents</groupId>
                         <artifactId>httpclient</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.module</groupId>
-                <artifactId>jackson-module-guice</artifactId>
-                <version>${jackson.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -1482,7 +1387,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1588,7 +1493,6 @@
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
                 <version>6.0.3</version>
-                <inherited>false</inherited>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1600,9 +1504,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
                     </execution>
                 </executions>
@@ -1678,7 +1579,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1768,17 +1669,20 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
+          </profile>
+          <profile>
             <id>strict</id>
+            <activation>
+              <property>
+                <name>strictCompile</name>
+              </property>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
-                            <compilerId>javac-with-errorprone</compilerId>
-                            <forceJavacCompilerUse>true</forceJavacCompilerUse>
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
@@ -1786,56 +1690,78 @@
                             <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
-                                <arg>-XepDisableWarningsInGeneratedCode</arg>
-
-                                <arg>-Xep:ClassCanBeStatic:ERROR</arg>
-                                <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
-                                <arg>-Xep:MissingOverride:ERROR</arg>
-                                <arg>-Xep:DefaultCharset:ERROR</arg>
-                                <arg>-Xep:QualifierOrScopeOnInjectMethod:ERROR</arg>
-
-                                <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
-                                <arg>-Xep:AutoFactoryAtInject</arg>
-                                <arg>-Xep:ClassName</arg>
-                                <arg>-Xep:ComparisonContractViolated</arg>
-                                <arg>-Xep:DepAnn</arg>
-                                <arg>-Xep:DivZero</arg>
-                                <arg>-Xep:EmptyIf</arg>
-                                <arg>-Xep:InjectInvalidTargetingOnScopingAnnotation</arg>
-                                <arg>-Xep:InjectMoreThanOneQualifier</arg>
-                                <arg>-Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass</arg>
-                                <arg>-Xep:InjectScopeOrQualifierAnnotationRetention</arg>
-                                <arg>-Xep:InjectedConstructorAnnotations</arg>
-                                <arg>-Xep:InsecureCryptoUsage</arg>
-                                <arg>-Xep:JMockTestWithoutRunWithOrRuleAnnotation</arg>
-                                <arg>-Xep:JavaxInjectOnFinalField</arg>
-                                <arg>-Xep:LockMethodChecker</arg>
-                                <arg>-Xep:LongLiteralLowerCaseSuffix</arg>
-                                <arg>-Xep:NoAllocation</arg>
-                                <arg>-Xep:NonRuntimeAnnotation</arg>
-                                <arg>-Xep:NumericEquality</arg>
-                                <arg>-Xep:ParameterPackage</arg>
-                                <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
-                                <arg>-Xep:UnlockMethod</arg>
-                            </compilerArgs>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:DivZero -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JMockTestWithoutRunWithOrRuleAnnotation -Xep:JavaxInjectOnFinalField -Xep:LockMethodChecker -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:UnlockMethod</arg>
+                              </compilerArgs>
+                              <annotationProcessorPaths>
+                                <path>
+                                  <groupId>com.google.errorprone</groupId>
+                                  <artifactId>error_prone_core</artifactId>
+                                  <version>${errorprone.version}</version>
+                                </path>
+                              </annotationProcessorPaths>
                         </configuration>
-                        <dependencies>
-                            <dependency>
-                                <groupId>org.codehaus.plexus</groupId>
-                                <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                <version>2.8.5</version>
-                            </dependency>
-                            <!-- override plexus-compiler-javac-errorprone's dependency on
-                                 Error Prone with the latest version -->
-                            <dependency>
-                                <groupId>com.google.errorprone</groupId>
-                                <artifactId>error_prone_core</artifactId>
-                                <version>2.3.2</version>
-                            </dependency>
-                        </dependencies>
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+          <id>strict-java-15+</id>
+          <activation>
+            <jdk>[15,)</jdk>
+            <property>
+              <name>strictCompile</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                  <release>${java.version}</release>
+                  <compilerArgs combine.children="append">
+                    <!-- Error Prone requires exemptions for Java 16, see https://errorprone.info/docs/installation#jdk-16 -->
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                  </compilerArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
+        </profile>
+        <!-- using github.com/google/error-prone-javac is required when running on JDK 8
+             see https://errorprone.info/docs/installation#jdk-8 -->
+        <profile>
+          <id>strict-java-8</id>
+          <activation>
+            <jdk>1.8</jdk>
+            <property>
+              <name>strictCompile</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                  <fork>true</fork>
+                  <compilerArgs combine.children="append">
+                    <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/9+181-r4173-1/javac-9+181-r4173-1.jar</arg>
+                  </compilerArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
         </profile>
         <profile>
             <id>parallel-test</id>
@@ -1968,6 +1894,7 @@
                                 <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
+                                <exclude>.github/dependabot.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>

@@ -170,7 +170,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
             .andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
             .anyTimes();
     EasyMock.expect(taskInfoProvider.getTaskStatus(TEST_ID))
-            .andReturn(Optional.of(TaskStatus.failure(TEST_ID)))
+            .andReturn(Optional.of(TaskStatus.failure(TEST_ID, "Dummy task status failure err message")))
             .anyTimes();
     replayAll();
 

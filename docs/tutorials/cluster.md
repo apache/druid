@@ -51,7 +51,7 @@ In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](htt
 This hardware offers:
 
 - 8 vCPUs
-- 31 GB RAM
+- 32 GiB RAM
 
 Example Master server configurations that have been sized for this hardware can be found under `conf/druid/cluster/master`.
 
@@ -65,7 +65,7 @@ In this example, we will be deploying the equivalent of two AWS [i3.4xlarge](htt
 This hardware offers:
 
 - 16 vCPUs
-- 122 GB RAM
+- 122 GiB RAM
 - 2 * 1.9TB SSD storage
 
 Example Data server configurations that have been sized for this hardware can be found under `conf/druid/cluster/data`.
@@ -80,7 +80,7 @@ In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](htt
 This hardware offers:
 
 - 8 vCPUs
-- 31 GB RAM
+- 32 GiB RAM
 
 You can consider co-locating any open source UIs or query libraries on the same server that the Broker is running on.
 
@@ -322,12 +322,12 @@ You can copy your existing `coordinator-overlord` configs from the single-server
 
 #### Data
 
-Suppose we are migrating from a single-server deployment that had 32 CPU and 256GB RAM. In the old deployment, the following configurations for Historicals and MiddleManagers were applied:
+Suppose we are migrating from a single-server deployment that had 32 CPU and 256GiB RAM. In the old deployment, the following configurations for Historicals and MiddleManagers were applied:
 
 Historical (Single-server)
 
 ```
-druid.processing.buffer.sizeBytes=500000000
+druid.processing.buffer.sizeBytes=500MiB
 druid.processing.numMergeBuffers=8
 druid.processing.numThreads=31
 ```
@@ -337,11 +337,11 @@ MiddleManager (Single-server)
 ```
 druid.worker.capacity=8
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 
-In the clustered deployment, we can choose a split factor (2 in this example), and deploy 2 Data servers with 16CPU and 128GB RAM each. The areas to scale are the following:
+In the clustered deployment, we can choose a split factor (2 in this example), and deploy 2 Data servers with 16CPU and 128GiB RAM each. The areas to scale are the following:
 
 Historical
 
@@ -361,9 +361,9 @@ The resulting configs after the split:
 New Historical (on 2 Data servers)
 
 ```
- druid.processing.buffer.sizeBytes=500000000
- druid.processing.numMergeBuffers=8
- druid.processing.numThreads=31
+druid.processing.buffer.sizeBytes=500MiB
+druid.processing.numMergeBuffers=8
+druid.processing.numThreads=31
 ```
 
 New MiddleManager (on 2 Data servers)
@@ -371,7 +371,7 @@ New MiddleManager (on 2 Data servers)
 ```
 druid.worker.capacity=4
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 

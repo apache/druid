@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -64,7 +65,6 @@ import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSome
 
 public class AvroStreamInputFormatTest
 {
-
   private static final String EVENT_TYPE = "eventType";
   private static final String ID = "id";
   private static final String SOME_OTHER_ID = "someOtherId";
@@ -109,6 +109,9 @@ public class AvroStreamInputFormatTest
     for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
   }
 
   @Test
@@ -118,7 +121,26 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
+    );
+    NestedInputFormat inputFormat2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(inputFormat),
+        NestedInputFormat.class
+    );
+
+    Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
+  public void testSerdeNonDefault() throws IOException
+  {
+    Repository repository = new Avro1124RESTRepositoryClientWrapper("http://github.io");
+    AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
+        flattenSpec,
+        new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        true,
+        true
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(inputFormat),
@@ -133,7 +155,8 @@ public class AvroStreamInputFormatTest
   {
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
-        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null),
+        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null, null),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
@@ -150,6 +173,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
@@ -193,6 +217,7 @@ public class AvroStreamInputFormatTest
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         new SchemaRepoBasedAvroBytesDecoder<>(new Avro1124SubjectAndIdConverter(TOPIC), repository),
+        false,
         false
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(

@@ -18,7 +18,13 @@
 
 import { sane } from 'druid-query-toolkit/build/test-utils';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
+import {
+  DruidError,
+  getDruidErrorMessage,
+  parseHtmlError,
+  parseQueryPlan,
+  trimSemicolon,
+} from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -94,6 +100,45 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for bad double quotes 1', () => {
+      const sql = sane`
+        SELECT * FROM “wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201c" (8220), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 2', () => {
+      const sql = sane`
+        SELECT * FROM ”wikipedia”
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 6, column 60.  Encountered: "\\u201d" (8221), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia"
+      `);
+    });
+
+    it('works for bad double quotes 3', () => {
+      const sql = sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = ‘lol‘
+      `;
+      const suggestion = DruidError.getSuggestion(
+        'Lexical error at line 1, column 45. Encountered: "\\u2018" (8216), after : ""',
+      );
+      expect(suggestion!.label).toEqual(`Replace fancy quotes with ASCII quotes`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT * FROM "wikipedia" WHERE "channel" = 'lol'
+      `);
+    });
+
     it('works for incorrectly quoted literal', () => {
       const sql = sane`
         SELECT *
@@ -111,12 +156,57 @@ describe('DruidQuery', () => {
       `);
     });
 
+    it('works for incorrectly quoted AS alias', () => {
+      const sql = sane`
+        SELECT
+          channel,
+          COUNT(*) AS 'Count'
+        FROM wikipedia
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `;
+      const suggestion = DruidError.getSuggestion(
+        `Encountered "\\'Count\\'" at line 3, column 15...`,
+      );
+      expect(suggestion!.label).toEqual(`Replace 'Count' with "Count"`);
+      expect(suggestion!.fn(sql)).toEqual(sane`
+        SELECT
+          channel,
+          COUNT(*) AS "Count"
+        FROM wikipedia
+        GROUP BY 1
+        ORDER BY 2 DESC
+      `);
+    });
+
     it('removes comma (,) before FROM', () => {
       const suggestion = DruidError.getSuggestion(
         `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
       expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
+        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
+      );
+    });
+
+    it('removes comma (,) before ORDER', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ", ORDER" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove , before ORDER`);
+      expect(
+        suggestion!.fn(
+          `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1, ORDER BY 1`,
+        ),
+      ).toEqual(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`);
+    });
+
+    it('removes trailing semicolon (;)', () => {
+      const suggestion = DruidError.getSuggestion(
+        `Encountered ";" at line 1, column 14. Was expecting one of: "ABS" ...`,
+      );
+      expect(suggestion!.label).toEqual(`Remove trailing ;`);
+      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
     });
@@ -140,6 +230,14 @@ describe('DruidQuery', () => {
 
     it('parseQueryPlan', () => {
       expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
+    });
+  });
+
+  describe('.trimSemicolon', () => {
+    it('works', () => {
+      expect(trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
+      expect(trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
+      expect(trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
     });
   });
 });

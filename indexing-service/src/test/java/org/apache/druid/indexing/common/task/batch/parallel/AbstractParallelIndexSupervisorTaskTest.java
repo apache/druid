@@ -26,7 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
+import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -49,7 +49,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -66,6 +66,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -94,6 +95,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CompressionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -175,7 +177,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
-          null,
+          5,
           null,
           null
       );
@@ -229,7 +231,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner();
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalIndexingServiceClient(objectMapper, taskRunner);
-    intermediaryDataManager = new IntermediaryDataManager(
+    intermediaryDataManager = new LocalIntermediaryDataManager(
         new WorkerConfig(),
         new TaskConfig(
             null,
@@ -242,7 +244,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             null,
             ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
         ),
         null
     );
@@ -309,7 +312,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     return coordinatorClient;
   }
 
-  private static class TaskContainer
+  protected static class TaskContainer
   {
     private final Task task;
     @MonotonicNonNull
@@ -320,6 +323,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     private TaskContainer(Task task)
     {
       this.task = task;
+    }
+
+    public Task getTask()
+    {
+      return task;
     }
 
     private void setStatusFuture(Future<TaskStatus> statusFuture)
@@ -418,6 +426,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
+    private TaskContainer getTaskContainer(String taskId)
+    {
+      return tasks.get(taskId);
+    }
+
     private Future<TaskStatus> runTask(Task task)
     {
       final TaskContainer taskContainer = new TaskContainer(task);
@@ -443,7 +456,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               if (task.isReady(toolbox.getTaskActionClient())) {
                 return task.run(toolbox);
               } else {
-                getTaskStorage().setStatus(TaskStatus.failure(task.getId()));
+                getTaskStorage().setStatus(TaskStatus.failure(task.getId(), "Dummy task status failure for testing"));
                 throw new ISE("task[%s] is not ready", task.getId());
               }
             }
@@ -528,6 +541,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return taskRunner.run(injectIfNeeded(task));
     }
 
+    public TaskContainer getTaskContainer(String taskId)
+    {
+      return taskRunner.getTaskContainer(taskId);
+    }
+
     public TaskStatus runAndWait(Task task)
     {
       return taskRunner.runAndWait(injectIfNeeded(task));
@@ -598,7 +616,20 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
-    final TaskConfig taskConfig = new TaskConfig(null, null, null, null, null, false, null, null, null, false, false);
+    final TaskConfig taskConfig = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+    );
 
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -614,7 +645,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(CoordinatorClient.class, coordinatorClient)
-            .addValue(SegmentLoaderFactory.class, new SegmentLoaderFactory(indexIO, objectMapper))
+            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
             .addValue(TaskConfig.class, taskConfig)
     );
@@ -633,7 +664,20 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
     return new TaskToolbox(
-        new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
         null,
@@ -701,7 +745,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  static class LocalShuffleClient implements ShuffleClient
+  static class LocalShuffleClient implements ShuffleClient<GenericPartitionLocation>
   {
     private final IntermediaryDataManager intermediaryDataManager;
 
@@ -711,27 +755,37 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        GenericPartitionLocation location
     ) throws IOException
     {
-      final File zippedFile = intermediaryDataManager.findPartitionFile(
+      final java.util.Optional<ByteSource> zippedFile = intermediaryDataManager.findPartitionFile(
           supervisorTaskId,
           location.getSubTaskId(),
           location.getInterval(),
           location.getBucketId()
       );
-      if (zippedFile == null) {
+      if (!zippedFile.isPresent()) {
         throw new ISE("Can't find segment file for location[%s] at path[%s]", location);
       }
       final File fetchedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
       FileUtils.writeAtomically(
           fetchedFile,
-          out -> Files.asByteSource(zippedFile).copyTo(out)
+          out -> zippedFile.get().copyTo(out)
       );
-      return fetchedFile;
+      final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
+      try {
+        org.apache.commons.io.FileUtils.forceMkdir(unzippedDir);
+        CompressionUtils.unzip(fetchedFile, unzippedDir);
+      }
+      finally {
+        if (!fetchedFile.delete()) {
+          LOG.warn("Failed to delete temp file[%s]", zippedFile);
+        }
+      }
+      return unzippedDir;
     }
   }
 

@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,8 +38,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -81,14 +79,14 @@ public class ShuffleResource
   )
   {
     final Interval interval = new Interval(DateTimes.of(startTime), DateTimes.of(endTime));
-    final File partitionFile = intermediaryDataManager.findPartitionFile(
+    final Optional<ByteSource> partitionFile = intermediaryDataManager.findPartitionFile(
         supervisorTaskId,
         subTaskId,
         interval,
         bucketId
     );
 
-    if (partitionFile == null) {
+    if (!partitionFile.isPresent()) {
       final String errorMessage = StringUtils.format(
           "Can't find the partition for supervisorTask[%s], subTask[%s], interval[%s], and bucketId[%s]",
           supervisorTaskId,
@@ -98,14 +96,19 @@ public class ShuffleResource
       );
       return Response.status(Status.NOT_FOUND).entity(errorMessage).build();
     } else {
-      shuffleMetrics.ifPresent(metrics -> metrics.shuffleRequested(supervisorTaskId, partitionFile.length()));
-      return Response.ok(
-          (StreamingOutput) output -> {
-            try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {
-              ByteStreams.copy(fileInputStream, output);
-            }
-          }
-      ).build();
+      try {
+        long size = partitionFile.get().size();
+        shuffleMetrics.ifPresent(metrics -> metrics.shuffleRequested(supervisorTaskId, size));
+      }
+      catch (IOException ioException) {
+        log.error("Failed to get length of file for supervisorTask[%s], subTask[%s], interval[%s], and bucketId[%s]",
+                  supervisorTaskId,
+                  subTaskId,
+                  interval,
+                  bucketId
+        );
+      }
+      return Response.ok((StreamingOutput) output -> partitionFile.get().copyTo(output)).build();
     }
   }
 

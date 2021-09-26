@@ -79,7 +79,7 @@ public class KillSupervisors implements CoordinatorDuty
                 supervisorRemoved
             )
         );
-        log.info("Finished running KillSupervisors duty. Removed %,d supervisor", supervisorRemoved);
+        log.info("Finished running KillSupervisors duty. Removed %,d supervisor specs", supervisorRemoved);
       }
       catch (Exception e) {
         log.error(e, "Failed to kill terminated supervisor metadata");

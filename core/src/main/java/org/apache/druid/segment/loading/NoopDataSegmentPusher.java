@@ -51,6 +51,12 @@ public class NoopDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public DataSegment pushToPath(File file, DataSegment segment, String storageDirSuffix)
+  {
+    return segment;
+  }
+
+  @Override
   public Map<String, Object> makeLoadSpec(URI uri)
   {
     return ImmutableMap.of();

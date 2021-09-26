@@ -135,6 +135,16 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval);
 
   /**
+   * Mark as unused segments which include ONLY data within the given interval.
+   *
+   * @param dataSource The data source the segments belong to
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
+   *
+   * @return number of segments marked unused
+   */
+  int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
+
+  /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
    * with identifiers already in the metadata storage will not be added).
    *

@@ -43,7 +43,7 @@ public class ArrayLengthOperatorConversion implements SqlOperatorConversion
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.INTEGER)
+      .returnTypeCascadeNullable(SqlTypeName.INTEGER)
       .build();
 
   @Override

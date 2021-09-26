@@ -26,6 +26,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2012-4449</cve>
     <cve>CVE-2017-3162</cve>
+    <cve>CVE-2018-8009</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
@@ -56,6 +57,19 @@
     <cve>CVE-2020-12689</cve>
     <cve>CVE-2020-12690</cve>
     <cve>CVE-2020-12691</cve>
+  </suppress>
+  <suppress>
+    <!--
+      ~ CVE-2021-27568:
+      ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
+      ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
+      ~ jobs which can only be run by admin type users.
+      -->
+    <notes><![CDATA[
+   file name: json-smart-2.3.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
+    <cve>CVE-2021-27568</cve>
   </suppress>
 
 
@@ -252,6 +266,7 @@
   <suppress>
     <!--
       ~ TODO: Fix when Apache Ranger 2.1 is released
+      - transitive dep from apache-ranger, upgrading to 2.1.0 adds other CVEs, staying at ranger 2.0.0 for now
       -->
     <notes><![CDATA[
     file name: kafka-clients-2.0.0.jar
@@ -309,11 +324,11 @@
      <cve>CVE-2020-9492</cve>
   </suppress>
   <suppress>
-    <!-- We don't use scala compilation daemon. -->
+    <!-- The CVE is not applicable to kafka-clients. -->
     <notes><![CDATA[
-     file name: kafka-clients-2.7.0.jar
+     file name: kafka-clients-2.8.0.jar
      ]]></notes>
-    <cve>CVE-2017-15288</cve>
+    <cve>CVE-2021-26291</cve>
   </suppress>
   <suppress until="2021-05-30">
     <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
@@ -342,13 +357,44 @@
   </suppress>
 
   <suppress>
-     <notes><![CDATA[
+    <!-- Transitive dependency from apache-ranger, latest ranger version 2.1.0 still uses solr 7.7.1-->
+    <notes><![CDATA[
      file name: solr-solrj-7.7.1.jar
      ]]></notes>
-     <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
-     <cve>CVE-2020-13957</cve>
-     <cve>CVE-2019-17558</cve>
-     <cve>CVE-2019-0193</cve>
-     <cve>CVE-2020-13941</cve>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
+    <cve>CVE-2020-13957</cve>
+    <cve>CVE-2019-17558</cve>
+    <cve>CVE-2019-0193</cve>
+    <cve>CVE-2020-13941</cve>
+    <cve>CVE-2021-29943</cve>
+    <cve>CVE-2021-27905</cve>
+    <cve>CVE-2021-29262</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: jdom2-2.0.6.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jdom/jdom2@2.0.6$</packageUrl>
+    <cve>CVE-2021-33813</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Upgrading to libthrift-0.14.2 adds many tomcat CVEs, suppress and stay at 0.13.0 for now-->
+    <notes><![CDATA[
+     file name: libthrift-0.13.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <!--
+    the scanner misattributes this to Apache DataSketches
+    the actual vulnerability affects some collaboration tool called Sketch, and impacts some 'library feeds' feature
+    which seems to relate to how the tool handles sharing designs or something, so we are doing a blanket ignore
+    because it seems nearly impossible for us to be affected by this
+     -->
+    <cve>CVE-2021-40531</cve>
   </suppress>
 </suppressions>

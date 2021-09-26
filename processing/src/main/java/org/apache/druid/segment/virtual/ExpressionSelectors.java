@@ -184,10 +184,10 @@ public class ExpressionSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
+    if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
       if (plan.getSingleInputType() == ValueType.STRING) {
-        return new SingleStringInputDimensionSelector(
+        return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );

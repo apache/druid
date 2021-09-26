@@ -32,6 +32,7 @@ import java.util.Objects;
 /**
  * Base type for all single argument operators, with a single {@link Expr} child for the operand.
  */
+@SuppressWarnings("ClassName")
 abstract class UnaryExpr implements Expr
 {
   final String op;
@@ -102,6 +103,7 @@ abstract class UnaryExpr implements Expr
   }
 }
 
+@SuppressWarnings("ClassName")
 class UnaryMinusExpr extends UnaryExpr
 {
   UnaryMinusExpr(String op, Expr expr)
@@ -144,6 +146,7 @@ class UnaryMinusExpr extends UnaryExpr
   }
 }
 
+@SuppressWarnings("ClassName")
 class UnaryNotExpr extends UnaryExpr
 {
   UnaryNotExpr(String op, Expr expr)
