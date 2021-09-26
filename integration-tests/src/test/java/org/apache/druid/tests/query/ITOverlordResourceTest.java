@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.junit.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -131,8 +131,8 @@ public class ITOverlordResourceTest
       // OverlordResourceTestClient turns all non-200 response into ISE exception
       // So we catch ISE and check if the message in this exception matches expected message
       Assert.assertTrue(
-          "Unexpected exception. Message does not match expected. " + e.getMessage(),
-          e.getMessage().endsWith("[404 Not Found Cannot find any " + type + " with id: [not_exist_id]]")
+          e.getMessage().endsWith("[404 Not Found Cannot find any " + type + " with id: [not_exist_id]]"),
+          "Unexpected exception. Message does not match expected. " + e.getMessage()
       );
       return;
     }
