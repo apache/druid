@@ -42,7 +42,7 @@ if [ -z "$JAVA_BIN" ]; then
   exit 1
 fi
 
-LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
+LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/log}"
 # Remove possible ending slash
 if [[ $LOG_DIR == */ ]];
 then
@@ -50,11 +50,9 @@ then
 fi
 if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
 
-echo
-echo "Using working directory: $WHEREAMI/.."
-echo "Logging to file[$LOG_DIR/$1.log] if you have made no changes to log4j2.xml"
+echo "Running [$1], logging to [$LOG_DIR/$1.log] if no changes made to log4j2.xml"
 
 cd "$WHEREAMI/.."
-exec "$JAVA_BIN"/java -Ddruid.node.type=$1 -Ddruid.log.path=$LOG_DIR `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
+exec "$JAVA_BIN"/java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
   -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
   `cat "$CONFDIR"/$WHATAMI/main.config | xargs`

@@ -74,7 +74,7 @@ case $command in
     nodeType_PID=$!
     echo $nodeType_PID > $pid
     echo "Started $nodeType node, pid: $nodeType_PID"
-    echo "Logging to default file[$LOG_DIR/$nodeType.log] if you have made no changes to log4j2.xml"
+    echo "Logging to default file[$LOG_DIR/$nodeType.log] if no changes made to log4j2.xml"
     ;;
 
   (stop)
