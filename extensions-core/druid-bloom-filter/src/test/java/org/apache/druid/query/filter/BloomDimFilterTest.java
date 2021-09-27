@@ -44,6 +44,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -379,7 +380,7 @@ public class BloomDimFilterTest extends BaseFilterTest
     Assert.assertFalse(druidFilter.testString("not_match"));
   }
 
-
+  @Ignore
   @Test
   public void testFloatHiveCompat() throws IOException
   {
