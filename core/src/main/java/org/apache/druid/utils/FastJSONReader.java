@@ -19,6 +19,8 @@
 
 package org.apache.druid.utils;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 import javax.annotation.Nullable;
 
 // For fast scalar value extraction, FastJSONReader doesn't support the full specification of types other than String.
@@ -195,11 +197,13 @@ public class FastJSONReader
     pos++; // skip the opening quote
 
     int begin_index = pos;
+    boolean need_escape = false;
 
     for (; pos < json.length(); pos++) {
       char c = json.charAt(pos);
       if (c == '\\') {
         pos = Math.min(pos + 1, json.length() - 1);
+        need_escape = true;
         continue;
       } else if (c == '"') {
         if (needResult) {
@@ -207,7 +211,13 @@ public class FastJSONReader
             pos++;
             return "";
           } else {
-            return json.substring(begin_index, pos++); // skip the closing quote
+            String val = json.substring(begin_index, pos);
+            pos++; // skip the closing quote
+            if (need_escape) {
+              return StringEscapeUtils.unescapeJava(val);
+            } else {
+              return val;
+            }
           }
         } else {
           pos++;
