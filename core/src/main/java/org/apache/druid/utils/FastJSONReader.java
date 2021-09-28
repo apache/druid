@@ -197,13 +197,13 @@ public class FastJSONReader
     pos++; // skip the opening quote
 
     int begin_index = pos;
-    boolean need_escape = false;
+    boolean need_unescape = false;
 
     for (; pos < json.length(); pos++) {
       char c = json.charAt(pos);
       if (c == '\\') {
         pos = Math.min(pos + 1, json.length() - 1);
-        need_escape = true;
+        need_unescape = true;
         continue;
       } else if (c == '"') {
         if (needResult) {
@@ -213,7 +213,7 @@ public class FastJSONReader
           } else {
             String val = json.substring(begin_index, pos);
             pos++; // skip the closing quote
-            if (need_escape) {
+            if (need_unescape) {
               return StringEscapeUtils.unescapeJava(val);
             } else {
               return val;
