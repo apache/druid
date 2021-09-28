@@ -199,4 +199,6 @@ COPY druid_config(name,payload) FROM '/tmp/csv/druid_config.csv' DELIMITER ',' C
 COPY druid_dataSource(dataSource,created_date,commit_metadata_payload,commit_metadata_sha1) FROM '/tmp/csv/druid_dataSource.csv' DELIMITER ',' CSV;
 
 COPY druid_supervisors(id,spec_id,created_date,payload) FROM '/tmp/csv/druid_supervisors.csv' DELIMITER ',' CSV;
+
+SELECT SETVAL('druid_supervisors_id_seq', (SELECT MAX(id) FROM druid_supervisors), true);
 ```
