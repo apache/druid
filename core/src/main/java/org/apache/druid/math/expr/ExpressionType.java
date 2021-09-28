@@ -125,9 +125,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
           case STRING:
             return STRING_ARRAY;
         }
-        throw new ISE("Unsupported array type[%s]", valueType);
+        return ExpressionTypeFactory.getInstance().ofArray(fromColumnTypeStrict(valueType.getElementType()));
       case COMPLEX:
-        return new ExpressionType(ExprType.COMPLEX, valueType.getComplexTypeName(), null);
+        return ExpressionTypeFactory.getInstance().ofComplex(valueType.getComplexTypeName());
       default:
         throw new ISE("Unsupported value type[%s]", valueType);
     }
@@ -163,9 +163,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
           case STRING:
             return STRING_ARRAY;
         }
-        return null;
+        return ExpressionTypeFactory.getInstance().ofArray(fromColumnType(valueType.getElementType()));
       case COMPLEX:
-        return new ExpressionType(ExprType.COMPLEX, valueType.getComplexTypeName(), null);
+        return ExpressionTypeFactory.getInstance().ofComplex(valueType.getComplexTypeName());
       default:
         return null;
     }

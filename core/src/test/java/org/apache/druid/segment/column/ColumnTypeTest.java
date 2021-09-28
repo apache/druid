@@ -24,10 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
+
 public class ColumnTypeTest
 {
+  public static final ColumnType SOME_COMPLEX = new ColumnType(ValueType.COMPLEX, "foo", null);
   private static final ObjectMapper MAPPER = new ObjectMapper();
-  private static final ColumnType SOME_COMPLEX = new ColumnType(ValueType.COMPLEX, "foo", null);
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -90,5 +92,68 @@ public class ColumnTypeTest
 
     ColumnType whatHaveIdone = new ColumnType(ValueType.ARRAY, null, new ColumnType(ValueType.ARRAY, null, SOME_COMPLEX));
     Assert.assertEquals(whatHaveIdone, MAPPER.readValue("{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"ARRAY\", \"elementType\":{\"type\":\"COMPLEX\", \"complexTypeName\":\"foo\"}}}", ColumnType.class));
+  }
+
+  @Test
+  public void testFactoryFromOtherTypeSignatures()
+  {
+    Assert.assertEquals(ColumnType.LONG, ColumnTypeFactory.ofType(new SomeOtherTypeSignature(ValueType.LONG, null, null)));
+    Assert.assertEquals(ColumnType.LONG, ColumnTypeFactory.ofValueType(ValueType.LONG));
+    Assert.assertEquals(ColumnType.FLOAT, ColumnTypeFactory.ofType(new SomeOtherTypeSignature(ValueType.FLOAT, null, null)));
+    Assert.assertEquals(ColumnType.FLOAT, ColumnTypeFactory.ofValueType(ValueType.FLOAT));
+    Assert.assertEquals(ColumnType.DOUBLE, ColumnTypeFactory.ofType(new SomeOtherTypeSignature(ValueType.DOUBLE, null, null)));
+    Assert.assertEquals(ColumnType.DOUBLE, ColumnTypeFactory.ofValueType(ValueType.DOUBLE));
+    Assert.assertEquals(ColumnType.STRING, ColumnTypeFactory.ofType(new SomeOtherTypeSignature(ValueType.STRING, null, null)));
+    Assert.assertEquals(ColumnType.STRING, ColumnTypeFactory.ofValueType(ValueType.STRING));
+    Assert.assertEquals(
+        ColumnType.LONG_ARRAY,
+        ColumnTypeFactory.ofType(
+            new SomeOtherTypeSignature(
+                ValueType.ARRAY,
+                null,
+                new SomeOtherTypeSignature(ValueType.LONG, null, null)
+            )
+        )
+    );
+    Assert.assertEquals(
+        ColumnType.DOUBLE_ARRAY,
+        ColumnTypeFactory.ofType(
+            new SomeOtherTypeSignature(
+                ValueType.ARRAY,
+                null,
+                new SomeOtherTypeSignature(ValueType.DOUBLE, null, null)
+            )
+        )
+    );
+    Assert.assertEquals(
+        ColumnType.STRING_ARRAY,
+        ColumnTypeFactory.ofType(
+            new SomeOtherTypeSignature(
+                ValueType.ARRAY,
+                null,
+                new SomeOtherTypeSignature(ValueType.STRING, null, null)
+            )
+        )
+    );
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, ColumnTypeFactory.ofType(new SomeOtherTypeSignature(ValueType.COMPLEX, null, null)));
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, ColumnTypeFactory.ofValueType(ValueType.COMPLEX));
+    Assert.assertEquals(
+        SOME_COMPLEX,
+        ColumnTypeFactory.ofType(
+            new SomeOtherTypeSignature(ValueType.COMPLEX, SOME_COMPLEX.getComplexTypeName(), null)
+        )
+    );
+  }
+
+  static class SomeOtherTypeSignature extends BaseTypeSignature<ValueType>
+  {
+    public SomeOtherTypeSignature(
+        ValueType valueType,
+        @Nullable String complexTypeName,
+        @Nullable TypeSignature<ValueType> elementType
+    )
+    {
+      super(valueType, complexTypeName, elementType);
+    }
   }
 }
