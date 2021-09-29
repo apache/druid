@@ -554,6 +554,13 @@ public class JettyTest extends BaseJettyTest
     Assert.assertTrue(endpointIdentificationAlgorithm == null || endpointIdentificationAlgorithm.isEmpty());
   }
 
+  @Test
+  public void testJettyErrorHandlerWithFilter()
+  {
+    // Response filter is disabled by default hence we show servlet information
+    Assert.assertTrue(server.getErrorHandler().isShowServlet());
+  }
+
   private void waitForJettyServerModuleActiveConnectionsZero(JettyServerModule jsm) throws InterruptedException
   {
     // it can take a bit to close the connection, so maybe sleep for a while and hope it closes

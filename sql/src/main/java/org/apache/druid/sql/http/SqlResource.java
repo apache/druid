@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,6 +40,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -77,19 +79,22 @@ public class SqlResource
   private final AuthorizerMapper authorizerMapper;
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
+  private final ServerConfig serverConfig;
 
   @Inject
   public SqlResource(
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
       SqlLifecycleFactory sqlLifecycleFactory,
-      SqlLifecycleManager sqlLifecycleManager
+      SqlLifecycleManager sqlLifecycleManager,
+      ServerConfig serverConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.serverConfig = serverConfig;
   }
 
   @POST
@@ -186,7 +191,7 @@ public class SqlResource
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-      throw e; // let ForbiddenExceptionMapper handle this
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
@@ -230,11 +235,15 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
-  private Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+  private Response buildNonOkResponse(int status, SanitizableException e) throws JsonProcessingException
   {
     return Response.status(status)
                    .type(MediaType.APPLICATION_JSON_TYPE)
-                   .entity(jsonMapper.writeValueAsBytes(e))
+                   .entity(
+                       jsonMapper.writeValueAsBytes(
+                           serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
+                       )
+                   )
                    .build();
   }
 
