@@ -631,6 +631,37 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
+### API Error Response
+
+Druid API responses can be configured to hide internal information (such as Druid class name, stack trace, thread name, servlet name, code, line/column number, and host/ip). 
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.showDetailedJettyErrors`|When set to true, any error resulted from the Jetty layer / Jetty filter will have `servlet`, `message`, `url`, `status` and (if exist) `cause` fields in the JSON response. When set to false, the JSON response will only contains `message`, `url`, and `status`. Note that the value of the fields remain unchanged.|true|
+|`druid.server.http.errorResponseTransformStrategy.strategy`|Error response transform strategy to use to transform error response produced within Druid services.|`none`|
+
+##### Error response transform strategy
+
+Error response transform strategy can be use to transform error response produced within Druid services.
+Currently, when error response transform strategy is used (not `none`), the error responses from the following Druid services will be transformed:
+ - Any query API that failed in the router service. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
+ - Any SQL qeury API (`/druid/v2/sql/` POST) that failed. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
+
+###### No error response transform strategy
+
+In this mode, error response produced within Druid services are left unchanged and returned to the API client as is. 
+This is the default Druid error response mode. Enable this strategy explicitly by setting druid.server.http.errorResponseTransformStrategy.strategy to none.
+
+###### Allowed regular expression error response transform strategy
+
+In this mode, the error response produced within Druid services will be validated against a list of regular expressions. 
+The error message of the response will only be returned if it matches any of the regular expressions configured.
+This strategy can be enabled by setting druid.server.http.errorResponseTransformStrategy.strategy=allowedRegex.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.errorResponseTransformStrategy.allowedRegex`|The list of regular expressions used to check against the error message. If the error message match any of the regular expressions, then it will be included in the response unchanged. If the error message does not match any of the regular expressions then the error message will either be null or replaced with a default message depedning on the type of underlying Exception. |`[]`|
+
 ### Overlord Discovery
 
 This config is used to find the [Overlord](../design/overlord.md) using Curator service discovery. Only required if you are actually running an Overlord.
