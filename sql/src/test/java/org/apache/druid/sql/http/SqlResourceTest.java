@@ -30,6 +30,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -121,6 +123,7 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -236,34 +239,36 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
-    resource = new SqlResource(
-        JSON_MAPPER,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        new SqlLifecycleFactory(
+    sqlLifecycleFactory = new SqlLifecycleFactory(
+        plannerFactory,
+        emitter,
+        testRequestLogger,
+        scheduler
+    )
+    {
+      @Override
+      public SqlLifecycle factorize()
+      {
+        return new TestSqlLifecycle(
             plannerFactory,
             emitter,
             testRequestLogger,
-            scheduler
-        )
-        {
-          @Override
-          public SqlLifecycle factorize()
-          {
-            return new TestSqlLifecycle(
-                plannerFactory,
-                emitter,
-                testRequestLogger,
-                scheduler,
-                System.currentTimeMillis(),
-                System.nanoTime(),
-                validateAndAuthorizeLatchSupplier,
-                planLatchSupplier,
-                executeLatchSupplier,
-                sequenceMapFnSupplier
-            );
-          }
-        },
-        lifecycleManager
+            scheduler,
+            System.currentTimeMillis(),
+            System.nanoTime(),
+            validateAndAuthorizeLatchSupplier,
+            planLatchSupplier,
+            executeLatchSupplier,
+            sequenceMapFnSupplier
+        );
+      }
+    };
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig()
     );
   }
 
@@ -965,6 +970,44 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testUnsupportedQueryThrowsExceptionWithFilterResponse() throws Exception
+  {
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig() {
+          @Override
+          public boolean isShowDetailedJettyErrors()
+          {
+            return true;
+          }
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
+          }
+        }
+    );
+
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertNull(exception.getMessage());
+    Assert.assertNull(exception.getHost());
+    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertNull(exception.getErrorClass());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 

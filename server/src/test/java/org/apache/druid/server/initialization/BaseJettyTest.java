@@ -76,7 +76,7 @@ public abstract class BaseJettyTest
   protected int port = -1;
   protected int tlsPort = -1;
 
-  public static void setProperties()
+  protected void setProperties()
   {
     System.setProperty("druid.server.http.numThreads", "20");
     System.setProperty("druid.server.http.maxIdleTime", "PT1S");
