@@ -137,6 +137,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private readonly queryManager: QueryManager<QueryWithContext, QueryResult>;
 
   private readonly queryInputRef: RefObject<QueryInput>;
+  // private id = 0;
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
@@ -197,10 +198,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
     });
 
-    const generateQueryId = (): string => {
-      return `'${uuidv4()}'`;
-    };
-
     this.queryManager = new QueryManager({
       processQuery: async (
         queryWithContext: QueryWithContext,
@@ -212,7 +209,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         const query = isSql ? queryString : Hjson.parse(queryString);
 
-        const queryId = generateQueryId();
+        const queryId = uuidv4();
 
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
@@ -229,15 +226,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           }
         }
 
-        cancelToken.promise
+        void cancelToken.promise
           .then(() => {
-            Api.instance.delete(`/druid/v2/${isSql ? '/sql' : ''}/${queryId}`).catch(e => {
-              throw new DruidError(e);
-            });
+            return Api.instance.delete(`/druid/v2${isSql ? '/sql' : ''}/${queryId}`);
           })
-          .catch(e => {
-            throw new DruidError(e);
-          });
+          .catch(() => {});
 
         try {
           return await queryRunner.runQuery({
