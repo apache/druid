@@ -289,7 +289,7 @@ public class ColumnProcessors
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:
-        throw new ISE("Unsupported type[%s]", effectiveType);
+        throw new ISE("Unsupported type[%s]", effectiveType.asTypeString());
     }
   }
 
