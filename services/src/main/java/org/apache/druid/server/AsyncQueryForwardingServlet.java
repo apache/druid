@@ -130,7 +130,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final AuthenticatorMapper authenticatorMapper;
   private final ProtobufTranslation protobufTranslation;
 
-  private final boolean routeSqlQueries;
+  private final boolean routeSqlByStrategy;
 
   private HttpClient broadcastClient;
 
@@ -160,7 +160,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.queryMetricsFactory = queryMetricsFactory;
     this.authenticatorMapper = authenticatorMapper;
     this.protobufTranslation = new ProtobufTranslationImpl();
-    this.routeSqlQueries = Boolean.parseBoolean(
+    this.routeSqlByStrategy = Boolean.parseBoolean(
         properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
   }
@@ -259,7 +259,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         handleException(response, objectMapper, e);
         return;
       }
-    } else if (routeSqlQueries && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
+    } else if (routeSqlByStrategy && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
         SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
         request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
