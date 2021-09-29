@@ -976,7 +976,8 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testErrorResponseReturnSameQueryIdWhenSetInContext() throws Exception {
+  public void testErrorResponseReturnSameQueryIdWhenSetInContext() throws Exception
+  {
     String queryId = "id123";
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
@@ -986,22 +987,24 @@ public class SqlResourceTest extends CalciteTestBase
     EasyMock.replay(badQuery);
     final Response response = resource.doPost(badQuery, req);
     Assert.assertNotEquals(200, response.getStatus());
-    final MultivaluedMap<String, Object>  headers = response.getMetadata();
+    final MultivaluedMap<String, Object> headers = response.getMetadata();
     Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
     Assert.assertEquals(queryId, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0));
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext() throws Exception {
+  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext() throws Exception
+  {
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
     EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
     EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
     EasyMock.replay(badQuery);
     final Response response = resource.doPost(badQuery, req);
     Assert.assertNotEquals(200, response.getStatus());
-    final MultivaluedMap<String, Object>  headers = response.getMetadata();
+    final MultivaluedMap<String, Object> headers = response.getMetadata();
     Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
     Assert.assertFalse(Strings.isNullOrEmpty(headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0).toString()));
