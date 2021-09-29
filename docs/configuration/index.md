@@ -633,7 +633,7 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 
 ### API Error Response
 
-Druid API responses can be configured to hide internal information (such as Druid class name, stack trace, thread name, servlet name, code, line/column number, and host/ip). 
+Druid API error responses can be configured to hide internal information (such as Druid class name, stack trace, thread name, servlet name, code, line/column number, and host/ip). 
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -643,7 +643,7 @@ Druid API responses can be configured to hide internal information (such as Drui
 ##### Error response transform strategy
 
 Error response transform strategy can be use to transform error response produced within Druid services.
-Currently, when error response transform strategy is used (not `none`), the error responses from the following Druid services will be transformed:
+Currently, when error response transform strategy is used (not `none`), the error responses from the following Druid services will be transformed as follow:
  - Any query API that failed in the router service. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
  - Any SQL qeury API (`/druid/v2/sql/` POST) that failed. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
 
@@ -655,7 +655,7 @@ This is the default Druid error response mode. Enable this strategy explicitly b
 ###### Allowed regular expression error response transform strategy
 
 In this mode, the error response produced within Druid services will be validated against a list of regular expressions. 
-The error message of the response will only be returned if it matches any of the regular expressions configured.
+The error message of the response will only be returned to the client if it matches any of the regular expressions configured.
 This strategy can be enabled by setting druid.server.http.errorResponseTransformStrategy.strategy=allowedRegex.
 
 |Property|Description|Default|
