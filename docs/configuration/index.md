@@ -631,36 +631,47 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
-### API Error Response
+### API error response
 
-Druid API error responses can be configured to hide internal information (such as Druid class name, stack trace, thread name, servlet name, code, line/column number, and host/ip). 
+You can configure Druid API error responses to hide internal information like the Druid class name, stack trace, thread name, servlet name, code, line/column number, host, or IP address.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.showDetailedJettyErrors`|When set to true, any error resulted from the Jetty layer / Jetty filter will have `servlet`, `message`, `url`, `status` and (if exist) `cause` fields in the JSON response. When set to false, the JSON response will only contains `message`, `url`, and `status`. Note that the value of the fields remain unchanged.|true|
-|`druid.server.http.errorResponseTransformStrategy.strategy`|Error response transform strategy to use to transform error response produced within Druid services.|`none`|
+|`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes `servlet`, `message`, `url`, `status`, and `cause`, if it exists, fields in the JSON response. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
+|`druid.server.http.errorResponseTransformStrategy.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
 
 ##### Error response transform strategy
 
-Error response transform strategy can be use to transform error response produced within Druid services.
-Currently, when error response transform strategy is used (not `none`), the error responses from the following Druid services will be transformed as follow:
- - Any query API that failed in the router service. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
- - Any SQL qeury API (`/druid/v2/sql/` POST) that failed. The fields `errorClass` and `host` will always be null while the field `errorMessage` will be transformed based on the set strategy.
+You can use an error response transform strategy to transform error responses from within Druid services to hide internal information.
+When you specify an error response transform strategy other than `none`, Druid transforms the error responses from Druid services as follows:
+ - For any query API that fails in the Router service, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
+ - For Any SQL query API, for example `POST /druid/v2/sql/...` that fails, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
 
 ###### No error response transform strategy
 
-In this mode, error response produced within Druid services are left unchanged and returned to the API client as is. 
-This is the default Druid error response mode. Enable this strategy explicitly by setting druid.server.http.errorResponseTransformStrategy.strategy to none.
+In this mode, Druid leaves error responses from underlying services unchanged and returns the unchanged errors to the API client.
+This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to "none".
 
 ###### Allowed regular expression error response transform strategy
 
-In this mode, the error response produced within Druid services will be validated against a list of regular expressions. 
-The error message of the response will only be returned to the client if it matches any of the regular expressions configured.
-This strategy can be enabled by setting druid.server.http.errorResponseTransformStrategy.strategy=allowedRegex.
+In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to `allowedRegex`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.errorResponseTransformStrategy.allowedRegex`|The list of regular expressions used to check against the error message. If the error message match any of the regular expressions, then it will be included in the response unchanged. If the error message does not match any of the regular expressions then the error message will either be null or replaced with a default message depedning on the type of underlying Exception. |`[]`|
+|`druid.server.http.errorResponseTransformStrategy.allowedRegex`|The list of regular expressions Druid uses to validate error messages. If the error message matches any of the regular expressions, then Druid includes it in the response unchanged. If the error message does not match any of the regular expressions, Druid replaces the error message with null or with a default message depending on the type of underlying Exception. |`[]`|
+
+For example, if the original query error response is:
+```
+{"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":"org.apache.calcite.tools.ValidationException","host":null}
+```
+if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[]` then the query error response will be transformed to
+```
+{"error":"Plan validation failed","errorMessage":null,"errorClass":null,"host":null}
+``` 
+however if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[".*CalciteContextException.*]` then the query error response will be transformed to
+```
+{"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
+``` 
 
 ### Overlord Discovery
 
