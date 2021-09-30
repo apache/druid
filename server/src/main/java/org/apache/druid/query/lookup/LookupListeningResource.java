@@ -110,7 +110,7 @@ class LookupListeningResource extends ListenerResource
           @Override
           public Object get(String id)
           {
-            return manager.get(id);
+            return manager.get(id).orElse(null);
           }
 
           @Override

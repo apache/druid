@@ -26,6 +26,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2012-4449</cve>
     <cve>CVE-2017-3162</cve>
+    <cve>CVE-2018-8009</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
@@ -329,13 +330,6 @@
      ]]></notes>
     <cve>CVE-2021-26291</cve>
   </suppress>
-  <suppress until="2021-05-30">
-    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
-    <notes><![CDATA[
-     This vulnerability should be fixed soon and the suppression should be removed.
-     ]]></notes>
-    <cve>CVE-2020-13949</cve>
-  </suppress>
 
   <suppress>
     <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
@@ -386,5 +380,22 @@
      ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
     <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <!-- hive-storage-api has the thrift vulnerability too -->
+    <notes><![CDATA[
+     file name: hive-storage-api-2.8.1.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <!--
+    the scanner misattributes this to Apache DataSketches
+    the actual vulnerability affects some collaboration tool called Sketch, and impacts some 'library feeds' feature
+    which seems to relate to how the tool handles sharing designs or something, so we are doing a blanket ignore
+    because it seems nearly impossible for us to be affected by this
+     -->
+    <cve>CVE-2021-40531</cve>
   </suppress>
 </suppressions>

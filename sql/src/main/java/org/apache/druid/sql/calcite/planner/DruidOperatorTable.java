@@ -238,6 +238,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.Slice())
                    .add(new MultiValueStringOperatorConversions.MultiStringToString())
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
+                   .add(new MultiValueStringOperatorConversions.FilterOnly())
+                   .add(new MultiValueStringOperatorConversions.FilterNone())
                    .build();
 
   private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =

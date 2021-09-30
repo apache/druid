@@ -613,6 +613,8 @@ All 'array' references in the multi-value string function documentation can refe
 |Function|Notes|
 |--------|-----|
 | `ARRAY[expr1,expr ...]` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `MV_FILTER_ONLY(expr, arr)` | filters multi-value `expr` to include only values contained in array `arr` |
+| `MV_FILTER_NONE(expr, arr)` | filters multi-value `expr` to include no values contained in array `arr` |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
@@ -849,7 +851,6 @@ include:
 
 - [Inline datasources](datasource.md#inline).
 - [Spatial filters](../development/geo.md).
-- [Query cancellation](querying.md#query-cancellation).
 - [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
@@ -860,8 +861,15 @@ the SQL planner.
 
 ### HTTP POST
 
-You can make Druid SQL queries using HTTP via POST to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+To use the SQL API to make Druid SQL queries, POST your query to the following endpoint on either the Router or Broker:
+```
+POST https://ROUTER:8888/druid/v2/sql/`. 
+```  
+
+Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```
 
 ##### Request
       
@@ -879,7 +887,7 @@ You can use _curl_ to send SQL queries from the command-line:
 $ cat query.json
 {"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
-$ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
+$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
 [{"TheCount":24433}]
 ```
 
@@ -955,6 +963,38 @@ formats, since truncated responses will be invalid JSON. For the line-oriented f
 trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
 through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
 delivered due to an error.
+
+### HTTP DELETE
+You can use the HTTP `DELETE` method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
+
+Druid SQL's HTTP DELETE method uses the following syntax:
+```
+DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
+```
+
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
+
+For example if you issue the following query:
+```bash
+curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
+--header 'Content-Type: application/json' \
+--data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
+"context" : {"sqlQueryId" : "myQuery01"}}'
+```
+You can cancel the query using the query id `myQuery01` as follows:
+```bash
+curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
+```
+
+Cancellation requests require READ permission on all resources used in the sql query. 
+
+Druid returns an HTTP 202 response for successful deletion requests.
+
+Druid returns an HTTP 404 response in the following cases:
+  - `sqlQueryId` is incorrect.
+  - The query completes before your cancellation request is processed.
+  
+Druid returns an HTTP 403 response for authorization failure.
 
 ### JDBC
 
@@ -1064,7 +1104,9 @@ INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
 > Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
@@ -1118,6 +1160,14 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
 
+For example, this query returns [data type](#data-types) information for columns in the `foo` table:
+
+```sql
+SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE"
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_NAME" = 'foo'
+```
+
 ### SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
@@ -1167,6 +1217,26 @@ SELECT
 FROM sys.segments
 GROUP BY 1
 ORDER BY 2 DESC
+```
+
+This query goes a step further and shows the overall profile of available, non-realtime segments across buckets of 1 million rows each for the `foo` datasource:
+
+```sql
+SELECT ABS("num_rows" /  1000000) as "bucket",
+  COUNT(*) as segments,
+  SUM("size") / 1048576 as totalSizeMiB,
+  MIN("size") / 1048576 as minSizeMiB,
+  AVG("size") / 1048576 as averageSizeMiB,
+  MAX("size") / 1048576 as maxSizeMiB,
+  SUM("num_rows") as totalRows,
+  MIN("num_rows") as minRows,
+  AVG("num_rows") as averageRows,
+  MAX("num_rows") as maxRows,
+  (AVG("size") / AVG("num_rows"))  as avgRowSizeB
+FROM sys.segments
+WHERE is_available = 1 AND is_realtime = 0 AND "datasource" = `foo`
+GROUP BY 1
+ORDER BY 1
 ```
 
 If you want to retrieve segment that was compacted (ANY compaction):

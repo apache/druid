@@ -56,7 +56,8 @@ public class TaskReportSerdeTest
                 "number", 1234
             ),
             "an error message",
-            true
+            true,
+            1000L
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);

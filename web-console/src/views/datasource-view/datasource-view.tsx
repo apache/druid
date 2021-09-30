@@ -162,6 +162,7 @@ interface DatasourceQueryResultRow {
   readonly day_aligned_segments: NumberLike;
   readonly month_aligned_segments: NumberLike;
   readonly year_aligned_segments: NumberLike;
+  readonly all_granularity_segments: NumberLike;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
   readonly min_segment_rows: NumberLike;
@@ -182,6 +183,7 @@ function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryR
     day_aligned_segments: 0,
     month_aligned_segments: 0,
     year_aligned_segments: 0,
+    all_granularity_segments: 0,
     total_data_size: 0,
     replicated_size: 0,
     min_segment_rows: 0,
@@ -193,14 +195,14 @@ function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryR
 }
 
 function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
-  return (
-    Number(Boolean(row.num_segments)) +
-    Number(Boolean(row.minute_aligned_segments)) +
-    Number(Boolean(row.hour_aligned_segments)) +
-    Number(Boolean(row.day_aligned_segments)) +
-    Number(Boolean(row.month_aligned_segments)) +
-    Number(Boolean(row.year_aligned_segments))
-  );
+  if (row.all_granularity_segments) return 7;
+  if (row.year_aligned_segments) return 6;
+  if (row.month_aligned_segments) return 5;
+  if (row.day_aligned_segments) return 4;
+  if (row.hour_aligned_segments) return 3;
+  if (row.minute_aligned_segments) return 2;
+  if (row.num_segments) return 1;
+  return 0;
 }
 
 interface Datasource extends DatasourceQueryResultRow {
@@ -297,6 +299,7 @@ export class DatasourcesView extends React.PureComponent<
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
         ],
         hiddenColumns.exists('Total rows') &&
           `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
@@ -394,6 +397,7 @@ ORDER BY 1`;
                 day_aligned_segments: -1,
                 month_aligned_segments: -1,
                 year_aligned_segments: -1,
+                all_granularity_segments: -1,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
                 min_segment_rows: -1,
@@ -1148,26 +1152,33 @@ ORDER BY 1`;
                   day_aligned_segments,
                   month_aligned_segments,
                   year_aligned_segments,
+                  all_granularity_segments,
                 } = original as Datasource;
                 const segmentGranularities: string[] = [];
                 if (!num_segments || isNumberLikeNaN(year_aligned_segments)) return '-';
-                if (num_segments !== minute_aligned_segments) {
-                  segmentGranularities.push('Sub minute');
+                if (all_granularity_segments) {
+                  segmentGranularities.push('All');
                 }
-                if (minute_aligned_segments !== hour_aligned_segments) {
-                  segmentGranularities.push('Minute');
-                }
-                if (hour_aligned_segments !== day_aligned_segments) {
-                  segmentGranularities.push('Hour');
-                }
-                if (day_aligned_segments !== month_aligned_segments) {
-                  segmentGranularities.push('Day');
+                if (year_aligned_segments) {
+                  segmentGranularities.push('Year');
                 }
                 if (month_aligned_segments !== year_aligned_segments) {
                   segmentGranularities.push('Month');
                 }
-                if (year_aligned_segments) {
-                  segmentGranularities.push('Year');
+                if (day_aligned_segments !== month_aligned_segments) {
+                  segmentGranularities.push('Day');
+                }
+                if (hour_aligned_segments !== day_aligned_segments) {
+                  segmentGranularities.push('Hour');
+                }
+                if (minute_aligned_segments !== hour_aligned_segments) {
+                  segmentGranularities.push('Minute');
+                }
+                if (
+                  Number(num_segments) - Number(all_granularity_segments) !==
+                  Number(minute_aligned_segments)
+                ) {
+                  segmentGranularities.push('Sub minute');
                 }
                 return segmentGranularities.join(', ');
               },
