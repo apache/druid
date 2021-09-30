@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,7 +32,7 @@ import java.util.Map;
 public class BrokerInternalQueryConfig
 {
   @JsonProperty
-  private Map<String, Object> context;
+  private Map<String, Object> context = new HashMap<>();
 
   public Map<String, Object> getContext()
   {

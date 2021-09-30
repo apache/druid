@@ -19,13 +19,32 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import org.apache.druid.guice.ConfigModule;
+import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.PropertiesModule;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
 public class BrokerInternalQueryConfigTest
 {
@@ -44,7 +63,7 @@ public class BrokerInternalQueryConfigTest
         BrokerInternalQueryConfig.class
     );
 
-    Assert.assertNull(config.getContext());
+    Assert.assertEquals(ImmutableMap.of(), config.getContext());
 
     //non-defaults
     json = "{ \"context\": {\"priority\": 5}}";
@@ -59,6 +78,51 @@ public class BrokerInternalQueryConfigTest
     Map<String, Object> expected = new HashMap<>();
     expected.put("priority", 5);
     Assert.assertEquals(expected, config.getContext());
+  }
 
+  /**
+   * Malformatted configuration will trigger an exception and fail to startup the service
+   *
+   * @throws Exception
+   */
+  @Test(expected = JsonEOFException.class)
+  public void testMalfomattedContext() throws Exception
+  {
+    String malformedJson = "{\"priority: 5}";
+    MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(malformedJson, BrokerInternalQueryConfig.class)
+        ),
+        BrokerInternalQueryConfig.class
+    );
+  }
+
+  /**
+   * Test the behavior if the operator does not specify anything for druid.broker.internal.query.config.context in runtime.properties
+   */
+  @Test
+  public void testDefaultBehavior()
+  {
+    Injector injector = Guice.createInjector(
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.install(new ConfigModule());
+            binder.install(new DruidGuiceExtensions());
+            JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", BrokerInternalQueryConfig.class);
+          }
+
+          @Provides
+          @LazySingleton
+          public ObjectMapper jsonMapper()
+          {
+            return new DefaultObjectMapper();
+          }
+        }
+    );
+    BrokerInternalQueryConfig config = injector.getInstance(BrokerInternalQueryConfig.class);
+    Assert.assertEquals(ImmutableMap.of(), config.getContext());
   }
 }

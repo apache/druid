@@ -865,7 +865,7 @@ public class DruidSchema extends AbstractSchema
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
-        context == null ? ImmutableMap.of() : context,
+        context,
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         false
