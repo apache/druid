@@ -668,7 +668,7 @@ if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[]
 ```
 {"error":"Plan validation failed","errorMessage":null,"errorClass":null,"host":null}
 ``` 
-however if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[".*CalciteContextException.*]` then the query error response will be transformed to
+however if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[".*CalciteContextException.*"]` then the query error response will be transformed to
 ```
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ``` 
