@@ -871,13 +871,13 @@ Submit your query as the value of a "query" field in the JSON object within the 
 {"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
 ```
 
-##### Request
+##### Request body
       
 |Property|Description|Default|
 |--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header. See [Responses] for details.|`false`|
+|`header`|Whether or not to include a header. See [Responses](#responses) for details.|`false`|
 |`context`|JSON object containing [connection context parameters](#connection-context).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](#data-types) for a list of supported SQL types.|`[]` (empty)|
 
@@ -952,6 +952,8 @@ You can additionally request a header by setting "header" to true in your reques
 In this case, the first result returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
 will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
 keys are column names, and the values are null.
+If you specified `sqlQueryId` in the [connection context parameters](#connection-context),
+the SQL query identifier will be returned in the header labeled `X-Druid-SQL-Query-Id`.
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
