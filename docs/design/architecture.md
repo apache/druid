@@ -35,7 +35,7 @@ The following diagram shows the services that make up the Druid architecture, ho
 
 The following sections describe the components of this architecture. 
 
-## Druid Services
+## Druid services
 
 Druid has several types of services:
 
