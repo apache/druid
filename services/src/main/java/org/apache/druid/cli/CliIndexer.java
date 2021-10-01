@@ -130,6 +130,7 @@ public class CliIndexer extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
+            CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);
 
             binder.bind(TaskReportFileWriter.class).toInstance(new MultipleFileTaskReportFileWriter());

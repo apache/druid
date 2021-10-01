@@ -184,7 +184,7 @@ public class ArraySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (SqlTypeUtil.isArray(type)) {
-        throw new ISE("Cannot ARRAY_AGG on array inputs %s", type);
+        throw new ISE("Cannot use ARRAY_AGG on array inputs %s", type);
       }
       return Calcites.createSqlArrayTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),
@@ -209,7 +209,7 @@ public class ArraySqlAggregator implements SqlAggregator
           OperandTypes.or(
             OperandTypes.ANY,
             OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("'%s'(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.LITERAL),
+                OperandTypes.sequence(StringUtils.format("'%s'(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
                 OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
             )
           ),

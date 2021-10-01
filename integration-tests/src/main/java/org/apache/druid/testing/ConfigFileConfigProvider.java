@@ -70,6 +70,9 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String cloudBucket;
   private String cloudPath;
   private String cloudRegion;
+  private String s3AssumeRoleWithExternalId;
+  private String s3AssumeRoleExternalId;
+  private String s3AssumeRoleWithoutExternalId;
   private String hadoopGcsCredentialsPath;
   private String azureKey;
   private String streamEndpoint;
@@ -232,6 +235,10 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     cloudBucket = props.get("cloud_bucket");
     cloudPath = props.get("cloud_path");
     cloudRegion = props.get("cloud_region");
+    s3AssumeRoleWithExternalId = props.get("s3_assume_role_with_external_id");
+    s3AssumeRoleExternalId = props.get("s3_assume_role_external_id");
+    s3AssumeRoleWithoutExternalId = props.get("s3_assume_role_without_external_id");
+
     hadoopGcsCredentialsPath = props.get("hadoopGcsCredentialsPath");
     azureKey = props.get("azureKey");
     streamEndpoint = props.get("stream_endpoint");
@@ -481,6 +488,24 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getCloudRegion()
       {
         return cloudRegion;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithExternalId()
+      {
+        return s3AssumeRoleWithExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleExternalId()
+      {
+        return s3AssumeRoleExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithoutExternalId()
+      {
+        return s3AssumeRoleWithoutExternalId;
       }
 
       @Override

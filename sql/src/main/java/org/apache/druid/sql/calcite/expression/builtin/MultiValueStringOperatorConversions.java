@@ -19,6 +19,9 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
@@ -26,8 +29,20 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.expression.ExprUtils;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Array functions which return an array, but are used in a multi-valued string dimension context instead will output
@@ -287,6 +302,126 @@ public class MultiValueStringOperatorConversions
     public Overlap()
     {
       super(new ArrayOverlapOperatorConversion(), "MV_OVERLAP");
+    }
+  }
+
+  private abstract static class ListFilter implements SqlOperatorConversion
+  {
+    abstract boolean isAllowList();
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      Expr expr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      // the right expression must be a literal array for this to work, since we need the values of the column
+      if (!expr.isLiteral()) {
+        return null;
+      }
+      String[] lit = expr.eval(ExprUtils.nilBindings()).asStringArray();
+      if (lit == null || lit.length == 0) {
+        return null;
+      }
+
+      final StringBuilder builder;
+      if (isAllowList()) {
+        builder = new StringBuilder("filter((x) -> array_contains(");
+      } else {
+        builder = new StringBuilder("filter((x) -> !array_contains(");
+      }
+
+      builder.append(druidExpressions.get(1).getExpression())
+             .append(", x), ")
+             .append(druidExpressions.get(0).getExpression())
+             .append(")");
+
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        return DruidExpression.forVirtualColumn(
+            builder.toString(),
+            (name, outputType, macroTable) -> new ListFilteredVirtualColumn(
+                name,
+                druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                ImmutableSet.copyOf(lit),
+                isAllowList()
+            )
+        );
+      }
+
+      return DruidExpression.fromExpression(builder.toString());
+    }
+  }
+
+  public static class FilterOnly extends ListFilter
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_ONLY")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(string,array)",
+                OperandTypes.family(SqlTypeFamily.STRING),
+                OperandTypes.family(SqlTypeFamily.ARRAY)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+
+    @Override
+    boolean isAllowList()
+    {
+      return true;
+    }
+  }
+
+  public static class FilterNone extends ListFilter
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_NONE")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(string,array)",
+                OperandTypes.family(SqlTypeFamily.STRING),
+                OperandTypes.family(SqlTypeFamily.ARRAY)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+
+    @Override
+    boolean isAllowList()
+    {
+      return false;
     }
   }
 

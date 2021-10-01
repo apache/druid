@@ -210,21 +210,6 @@ public class CostBalancerStrategy implements BalancerStrategy
     return totalCost;
   }
 
-
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(
-      final List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources,
-      double percentOfSegmentsToConsider
-  )
-  {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
-        serverHolders,
-        broadcastDatasources,
-        percentOfSegmentsToConsider
-    );
-  }
-
   /**
    * Pick segment to move who is only located on a single Guild.
    *

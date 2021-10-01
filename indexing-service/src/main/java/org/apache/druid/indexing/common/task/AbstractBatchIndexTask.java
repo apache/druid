@@ -94,6 +94,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
 
   protected boolean segmentAvailabilityConfirmationCompleted = false;
+  protected long segmentAvailabilityWaitTimeMs = 0L;
 
   @GuardedBy("this")
   private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
@@ -142,7 +143,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     synchronized (this) {
       if (stopped) {
-        return TaskStatus.failure(getId());
+        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
+        return TaskStatus.failure(getId(), errMsg);
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,
@@ -613,6 +615,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       return false;
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
+    final long start = System.nanoTime();
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
@@ -636,12 +639,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             }
         );
       }
-      return doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+      segmentAvailabilityConfirmationCompleted = doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+      return segmentAvailabilityConfirmationCompleted;
     }
     catch (InterruptedException e) {
       log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
       Thread.currentThread().interrupt();
       return false;
+    }
+    finally {
+      segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
     }
   }
 

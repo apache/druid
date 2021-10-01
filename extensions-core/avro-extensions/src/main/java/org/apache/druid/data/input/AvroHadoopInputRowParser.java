@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
@@ -74,9 +75,54 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
     return fromPigAvroStorage;
   }
 
+  @JsonProperty
+  public Boolean getBinaryAsString()
+  {
+    return binaryAsString;
+  }
+
+  @JsonProperty
+  public Boolean isExtractUnionsByType()
+  {
+    return extractUnionsByType;
+  }
+
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
     return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage, binaryAsString, extractUnionsByType);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AvroHadoopInputRowParser that = (AvroHadoopInputRowParser) o;
+    return fromPigAvroStorage == that.fromPigAvroStorage
+           && binaryAsString == that.binaryAsString
+           && extractUnionsByType == that.extractUnionsByType
+           && Objects.equals(parseSpec, that.parseSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(parseSpec, fromPigAvroStorage, binaryAsString, extractUnionsByType);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AvroHadoopInputRowParser{" +
+           "parseSpec=" + parseSpec +
+           ", fromPigAvroStorage=" + fromPigAvroStorage +
+           ", binaryAsString=" + binaryAsString +
+           ", extractUnionsByType=" + extractUnionsByType +
+           '}';
   }
 }

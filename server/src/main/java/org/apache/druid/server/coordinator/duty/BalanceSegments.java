@@ -36,6 +36,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -55,6 +56,8 @@ public class BalanceSegments implements CoordinatorDuty
 
   protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
+
+  private static final int DEFAULT_RESERVOIR_SIZE = 1;
 
   public BalanceSegments(DruidCoordinator coordinator)
   {
@@ -231,31 +234,48 @@ public class BalanceSegments implements CoordinatorDuty
       boolean balanceGuildViolatorsOnly
   )
   {
+    if (maxSegmentsToMove <= 0) {
+      return new Pair<>(0, 0);
+    }
+
     final BalancerStrategy strategy = params.getBalancerStrategy();
     final int maxIterations = 2 * maxSegmentsToMove;
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     int moved = 0, unmoved = 0;
 
+    Iterator<BalancerSegmentHolder> segmentsToMove;
+    if (!balanceGuildViolatorsOnly) {
+      segmentsToMove = strategy.pickSegmentsToMove(
+          toMoveFrom,
+          params.getBroadcastDatasources(),
+          params.getCoordinatorDynamicConfig().useBatchedSegmentSampler() ? maxSegmentsToMove : DEFAULT_RESERVOIR_SIZE,
+          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
+      );
+    } else {
+      segmentsToMove = null;
+    }
+
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMoveHolder;
       if (!balanceGuildViolatorsOnly) {
-        segmentToMoveHolder = strategy.pickSegmentToMove(
-            toMoveFrom,
-            params.getBroadcastDatasources(),
-            params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
-        );
+        if (segmentsToMove != null && !segmentsToMove.hasNext()) {
+          log.info("All servers to move segments from are empty, ending run.");
+          break;
+        }
+        segmentToMoveHolder = segmentsToMove.next();
       } else {
         segmentToMoveHolder = strategy.pickGuildReplicationViolatingSegmentToMove(
             toMoveFrom,
             params.getBroadcastDatasources(),
             params
         );
+        if (segmentToMoveHolder == null) {
+          log.info("All servers to move segments from are empty, ending run.");
+          break;
+        }
       }
-      if (segmentToMoveHolder == null) {
-        log.info("All servers to move segments from are empty, ending run.");
-        break;
-      }
+
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadataManager, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
       // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such

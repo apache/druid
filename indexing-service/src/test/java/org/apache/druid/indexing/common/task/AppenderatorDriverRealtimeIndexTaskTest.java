@@ -52,7 +52,7 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -1519,7 +1519,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         null,
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -1591,7 +1592,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         DirectQueryProcessingPool.INSTANCE, // queryExecutorService
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
+        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),

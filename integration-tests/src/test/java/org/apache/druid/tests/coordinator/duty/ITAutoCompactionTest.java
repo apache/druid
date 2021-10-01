@@ -112,7 +112,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          14312,
+          14370,
           0,
           0,
           2,
@@ -130,7 +130,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22481,
+          22568,
           0,
           0,
           3,
@@ -210,7 +210,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
-
+      // Auto compaction stats should be deleted as compacation config was deleted
+      Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -234,18 +235,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
       checkCompactionIntervals(intervalsBeforeCompaction);
-      getAndAssertCompactionStatus(
-          fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0);
+      Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
       updateCompactionTaskSlot(1, 1);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
@@ -256,8 +246,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14312,
-          14311,
+          14370,
+          14369,
           0,
           2,
           2,
@@ -265,7 +255,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           1,
           1,
           0);
-      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14312");
+      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14370");
       // Run compaction again to compact the remaining day
       // Remaining day compacted (1 new segment). Now both days compacted (2 total)
       forceTriggerAutoCompaction(2);
@@ -276,7 +266,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22481,
+          22568,
           0,
           0,
           3,

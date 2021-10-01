@@ -107,6 +107,13 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
     return null;
   }
 
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    return null;
+  }
+
   @Override
   public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
   {

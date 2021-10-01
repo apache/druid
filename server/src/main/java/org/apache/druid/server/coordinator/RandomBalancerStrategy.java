@@ -53,20 +53,6 @@ public class RandomBalancerStrategy implements BalancerStrategy
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(
-      List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources,
-      double percentOfSegmentsToConsider
-  )
-  {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
-        serverHolders,
-        broadcastDatasources,
-        percentOfSegmentsToConsider
-    );
-  }
-
   /**
    * Pick segment to move who is only located on a single guild.
    *

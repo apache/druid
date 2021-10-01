@@ -62,7 +62,7 @@ public class Appenderators
       ParseExceptionHandler parseExceptionHandler
   )
   {
-    return new AppenderatorImpl(
+    return new StreamAppenderator(
         id,
         schema,
         config,
@@ -88,8 +88,7 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler,
-        true
+        parseExceptionHandler
     );
   }
 
@@ -103,8 +102,71 @@ public class Appenderators
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    // Use newest, slated to be the permanent batch appenderator but for now keeping it as a non-default
+    // option due to risk mitigation...will become default and the two other appenderators eliminated when
+    // stability is proven...
+    return new BatchAppenderator(
+        id,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  public static Appenderator createOpenSegmentsOffline(
+      String id,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    // fallback to original code known to be working, this is just a fallback option in case new
+    // batch appenderator has some early bugs but we will remove this fallback as soon as
+    // we determine that batch appenderator code is stable
+    return new AppenderatorImpl(
+        id,
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        new NoopDataSegmentAnnouncer(),
+        null,
+        indexIO,
+        indexMerger,
+        null,
+        rowIngestionMeters,
+        parseExceptionHandler,
+        true
+    );
+  }
+
+  public static Appenderator createClosedSegmentsOffline(
+      String id,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return new AppenderatorImpl(
@@ -121,7 +183,7 @@ public class Appenderators
         null,
         rowIngestionMeters,
         parseExceptionHandler,
-        batchMemoryMappedIndex // This is a task config (default false) to fallback to "old" code in case of bug with the new memory optimization code
+        false
     );
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -343,14 +344,11 @@ public class ForkingTaskRunner
                           jsonMapper.writeValue(taskFile, task);
                         }
 
-                        LOGGER.info("Running command: %s", getMaskedCommand(startupLoggingConfig.getMaskProperties(), command));
-                        taskWorkItem.processHolder = new ProcessHolder(
-                          new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
-                          logFile,
-                          taskLocation.getHost(),
-                          taskLocation.getPort(),
-                          taskLocation.getTlsPort()
+                        LOGGER.info(
+                            "Running command: %s",
+                            getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
                         );
+                        taskWorkItem.processHolder = runTaskProcess(command, logFile, taskLocation);
 
                         processHolder = taskWorkItem.processHolder;
                         processHolder.registerWithCloser(closer);
@@ -364,38 +362,23 @@ public class ForkingTaskRunner
                       );
 
                       LOGGER.info("Logging task %s output to: %s", task.getId(), logFile);
-                      boolean runFailed = true;
-
-                      final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
-
-                      // This will block for a while. So we append the thread information with more details
-                      final String priorThreadName = Thread.currentThread().getName();
-                      Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
-
-                      try (final OutputStream toLogfile = logSink.openStream()) {
-                        ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
-                        final int statusCode = processHolder.process.waitFor();
-                        LOGGER.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-                        if (statusCode == 0) {
-                          runFailed = false;
-                        }
-                      }
-                      finally {
-                        Thread.currentThread().setName(priorThreadName);
-                        // Upload task logs
-                        taskLogPusher.pushTaskLog(task.getId(), logFile);
-                        if (reportsFile.exists()) {
-                          taskLogPusher.pushTaskReports(task.getId(), reportsFile);
-                        }
-                      }
-
-                      TaskStatus status;
-                      if (!runFailed) {
+                      final int exitCode = waitForTaskProcessToComplete(task, processHolder, logFile, reportsFile);
+                      final TaskStatus status;
+                      if (exitCode == 0) {
+                        LOGGER.info("Process exited successfully for task: %s", task.getId());
                         // Process exited successfully
                         status = jsonMapper.readValue(statusFile, TaskStatus.class);
                       } else {
+                        LOGGER.error("Process exited with code[%d] for task: %s", exitCode, task.getId());
                         // Process exited unsuccessfully
-                        status = TaskStatus.failure(task.getId());
+                        status = TaskStatus.failure(
+                            task.getId(),
+                            StringUtils.format(
+                                "Task execution process exited unsuccessfully with code[%s]. "
+                                + "See middleManager logs for more details.",
+                                exitCode
+                            )
+                        );
                       }
 
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
@@ -417,7 +400,7 @@ public class ForkingTaskRunner
                       synchronized (tasks) {
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
                         if (taskWorkItem != null && taskWorkItem.processHolder != null) {
-                          taskWorkItem.processHolder.process.destroy();
+                          taskWorkItem.processHolder.shutdown();
                         }
                         if (!stopping) {
                           saveRunningTasks();
@@ -455,6 +438,42 @@ public class ForkingTaskRunner
       );
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
+    }
+  }
+
+  @VisibleForTesting
+  ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+  {
+    return new ProcessHolder(
+        new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
+        logFile,
+        taskLocation.getHost(),
+        taskLocation.getPort(),
+        taskLocation.getTlsPort()
+    );
+  }
+
+  @VisibleForTesting
+  int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      throws IOException, InterruptedException
+  {
+    final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+    // This will block for a while. So we append the thread information with more details
+    final String priorThreadName = Thread.currentThread().getName();
+    Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+
+    try (final OutputStream toLogfile = logSink.openStream()) {
+      ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+      return processHolder.process.waitFor();
+    }
+    finally {
+      Thread.currentThread().setName(priorThreadName);
+      // Upload task logs
+      taskLogPusher.pushTaskLog(task.getId(), logFile);
+      if (reportsFile.exists()) {
+        taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+      }
     }
   }
 
@@ -726,7 +745,8 @@ public class ForkingTaskRunner
     }
   }
 
-  private static class ProcessHolder
+  @VisibleForTesting
+  static class ProcessHolder
   {
     private final Process process;
     private final File logFile;
@@ -743,10 +763,17 @@ public class ForkingTaskRunner
       this.tlsPort = tlsPort;
     }
 
-    private void registerWithCloser(Closer closer)
+    @VisibleForTesting
+    void registerWithCloser(Closer closer)
     {
       closer.register(process.getInputStream());
       closer.register(process.getOutputStream());
+    }
+
+    @VisibleForTesting
+    void shutdown()
+    {
+      process.destroy();
     }
   }
 }
