@@ -51,15 +51,20 @@ export class QueryOverview {
 
     await this.page.waitForSelector('div.query-input textarea');
     const input = await this.page.$('div.query-input textarea');
+
     await setInput(input!, query);
+
+    this.page.on('request', request => console.log('>>', request.method(), request.url()));
+    this.page.on('response', response => console.log('<<', response.status(), response.url()));
 
     await Promise.all([
       this.page.waitForRequest(
         request => request.url().includes('druid/v2') && request.method() === 'POST',
       ),
       clickButton(this.page, 'Run'),
-      await this.page.waitForSelector('.cancel-label'),
     ]);
+
+    await this.page.waitForSelector('.cancel-label');
 
     const [resp] = await Promise.all([
       this.page.waitForResponse(
@@ -67,6 +72,14 @@ export class QueryOverview {
       ),
 
       clickText(this.page, 'Cancel query'),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'POST',
+      ),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'DELETE',
+      ),
     ]);
 
     return resp.status();

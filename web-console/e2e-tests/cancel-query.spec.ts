@@ -53,7 +53,7 @@ describe('Cancel query', () => {
 
 async function validateCancelQuery(page: playwright.Page) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = 'SELECT sleep(20)';
+  const query = 'SELECT sleep(40)';
   const results = await queryOverview.cancelQuery(query);
   expect(results).toBeDefined();
   expect(results).toBeGreaterThan(0);
