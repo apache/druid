@@ -31,20 +31,13 @@ import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PropertiesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Properties;
 
 public class BrokerInternalQueryConfigTest
 {

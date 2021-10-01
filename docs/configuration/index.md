@@ -1745,6 +1745,10 @@ See [general query configuration](#general-query-configuration).
 The Broker generates queries internally. This configuration section describes how an operator can augment the configuration
 of these queries.
 
+As of now the only supported augmentation is overriding the default query context. This allows an operator the flexibility
+to adjust it as they see fit. A common use of this configuration is to override the query priority of the cluster generated
+queries in order to avoid running as a default priority of 0.
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
