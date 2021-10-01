@@ -73,6 +73,7 @@ import java.util.stream.Collectors;
 @Path("/druid/v2/sql/")
 public class SqlResource
 {
+  public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
   private static final Logger log = new Logger(SqlResource.class);
 
   private final ObjectMapper jsonMapper;
@@ -164,7 +165,7 @@ public class SqlResource
                   }
                 }
             )
-            .header("X-Druid-SQL-Query-Id", sqlQueryId)
+            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
             .build();
       }
       catch (Throwable e) {
@@ -175,19 +176,19 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
-      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
+      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap, sqlQueryId);
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
-      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
+      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported, sqlQueryId);
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
-      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
+      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout, sqlQueryId);
     }
     catch (SqlPlanningException | ResourceLimitExceededException e) {
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, e, sqlQueryId);
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
@@ -207,7 +208,8 @@ public class SqlResource
 
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
+          QueryInterruptedException.wrapIfNeeded(exceptionToReport),
+          sqlQueryId
       );
     }
     finally {
@@ -235,7 +237,7 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
-  private Response buildNonOkResponse(int status, SanitizableException e) throws JsonProcessingException
+  private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId) throws JsonProcessingException
   {
     return Response.status(status)
                    .type(MediaType.APPLICATION_JSON_TYPE)
@@ -244,6 +246,7 @@ public class SqlResource
                            serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
                        )
                    )
+                   .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
                    .build();
   }
 

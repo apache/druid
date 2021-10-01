@@ -445,12 +445,14 @@ public abstract class AbstractAuthConfigurationTest
   public void test_avaticaQuery_broker()
   {
     testAvaticaQuery(getBrokerAvacticaUrl());
+    testAvaticaQuery(StringUtils.maybeRemoveTrailingSlash(getBrokerAvacticaUrl()));
   }
 
   @Test
   public void test_avaticaQuery_router()
   {
     testAvaticaQuery(getRouterAvacticaUrl());
+    testAvaticaQuery(StringUtils.maybeRemoveTrailingSlash(getRouterAvacticaUrl()));
   }
 
   @Test
