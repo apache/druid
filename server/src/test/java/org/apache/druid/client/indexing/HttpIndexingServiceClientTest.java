@@ -39,6 +39,7 @@ import org.junit.rules.ExpectedException;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class HttpIndexingServiceClientTest
 {
@@ -159,6 +160,72 @@ public class HttpIndexingServiceClientTest
 
 
     httpIndexingServiceClient.sample(samplerSpec);
+    EasyMock.verify(druidLeaderClient, response);
+  }
+
+  @Test
+  public void testGetTaskReport() throws Exception
+  {
+    String taskId = "testTaskId";
+    HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
+
+    Map<String, Object> dummyResponse = ImmutableMap.of("test", "value");
+
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        HttpResponseStatus.OK,
+        response,
+        StandardCharsets.UTF_8
+    ).addChunk(jsonMapper.writeValueAsString(dummyResponse));
+
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(responseHolder)
+            .anyTimes();
+
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/task/testTaskId/reports")
+            ))
+            .anyTimes();
+    EasyMock.replay(druidLeaderClient);
+
+    final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
+    Assert.assertEquals(dummyResponse, actualResponse);
+
+    EasyMock.verify(druidLeaderClient, response);
+  }
+
+  @Test
+  public void testGetTaskReportEmpty() throws Exception
+  {
+    String taskId = "testTaskId";
+    HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
+
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        HttpResponseStatus.OK,
+        response,
+        StandardCharsets.UTF_8
+    ).addChunk("");
+
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(responseHolder)
+            .anyTimes();
+
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/task/testTaskId/reports")
+            ))
+            .anyTimes();
+    EasyMock.replay(druidLeaderClient);
+
+    final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
+    Assert.assertNull(actualResponse);
+
     EasyMock.verify(druidLeaderClient, response);
   }
 }

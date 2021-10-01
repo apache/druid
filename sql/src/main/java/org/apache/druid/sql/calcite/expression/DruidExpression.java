@@ -23,12 +23,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -49,33 +52,47 @@ public class DruidExpression
     Arrays.sort(SAFE_CHARS);
   }
 
+  @Nullable
   private final SimpleExtraction simpleExtraction;
   private final String expression;
+  private final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFn;
 
-  private DruidExpression(final SimpleExtraction simpleExtraction, final String expression)
+  private DruidExpression(@Nullable final SimpleExtraction simpleExtraction, final String expression, @Nullable final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFn)
   {
     this.simpleExtraction = simpleExtraction;
     this.expression = Preconditions.checkNotNull(expression);
+    this.virtualColumnFn = virtualColumnFn != null
+                           ? virtualColumnFn
+                           : (name, outputType, macroTable) ->
+                               new ExpressionVirtualColumn(name, expression, outputType, macroTable);
   }
 
   public static DruidExpression of(final SimpleExtraction simpleExtraction, final String expression)
   {
-    return new DruidExpression(simpleExtraction, expression);
+    return new DruidExpression(simpleExtraction, expression, null);
   }
 
   public static DruidExpression fromColumn(final String column)
   {
-    return new DruidExpression(SimpleExtraction.of(column, null), StringUtils.format("\"%s\"", escape(column)));
+    return new DruidExpression(SimpleExtraction.of(column, null), StringUtils.format("\"%s\"", escape(column)), null);
   }
 
   public static DruidExpression fromExpression(final String expression)
   {
-    return new DruidExpression(null, expression);
+    return new DruidExpression(null, expression, null);
   }
 
   public static DruidExpression fromFunctionCall(final String functionName, final List<DruidExpression> args)
   {
-    return new DruidExpression(null, functionCall(functionName, args));
+    return new DruidExpression(null, functionCall(functionName, args), null);
+  }
+
+  public static DruidExpression forVirtualColumn(
+      final String expression,
+      final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFunction
+  )
+  {
+    return new DruidExpression(null, expression, virtualColumnFunction);
   }
 
   public static String numberLiteral(final Number n)
@@ -163,13 +180,13 @@ public class DruidExpression
     return Preconditions.checkNotNull(simpleExtraction);
   }
 
-  public ExpressionVirtualColumn toVirtualColumn(
+  public VirtualColumn toVirtualColumn(
       final String name,
       final ValueType outputType,
       final ExprMacroTable macroTable
   )
   {
-    return new ExpressionVirtualColumn(name, expression, outputType, macroTable);
+    return virtualColumnFn.apply(name, outputType, macroTable);
   }
 
   public DruidExpression map(
@@ -179,7 +196,8 @@ public class DruidExpression
   {
     return new DruidExpression(
         simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
-        expressionMap.apply(expression)
+        expressionMap.apply(expression),
+        null
     );
   }
 

@@ -77,8 +77,13 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String path = OssUtils.constructSegmentPath(config.getPrefix(), getStorageDir(inSegment, useUniquePath));
+    return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
+  {
+    final String path = OssUtils.constructSegmentPath(config.getPrefix(), storageDirSuffix);
     log.debug("Copying segment[%s] to OSS at location[%s]", inSegment.getId(), path);
 
     final File zipOutFile = File.createTempFile("druid", "index.zip");

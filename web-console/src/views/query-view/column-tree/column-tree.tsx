@@ -42,6 +42,15 @@ import './column-tree.scss';
 const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
 
+function getCountExpression(columnNames: string[]): SqlExpression {
+  for (const columnName of columnNames) {
+    if (columnName === 'count' || columnName === '__count') {
+      return SqlFunction.simple('SUM', [SqlRef.column(columnName)]).as('Count');
+    }
+  }
+  return COUNT_STAR;
+}
+
 const STRING_QUERY = SqlQuery.parse(`SELECT
   ?
 FROM ?
@@ -169,30 +178,64 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         const parsedQuery = props.getParsedQuery();
                         const tableRef = SqlTableRef.create(tableName);
                         const prettyTableRef = prettyPrintSql(tableRef);
+                        const countExpression = getCountExpression(
+                          metadata.map(child => child.COLUMN_NAME),
+                        );
+
+                        const getQueryOnTable = () => {
+                          return SqlQuery.create(
+                            SqlTableRef.create(
+                              tableName,
+                              schemaName === 'druid' ? undefined : schemaName,
+                            ),
+                          );
+                        };
+
+                        const getWhere = (defaultToAllTime = false) => {
+                          if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
+                            return parsedQuery.getWhereExpression();
+                          } else if (schemaName === 'druid') {
+                            return defaultToAllTime ? undefined : LAST_DAY;
+                          } else {
+                            return;
+                          }
+                        };
+
                         return (
                           <Menu>
                             <MenuItem
                               icon={IconNames.FULLSCREEN}
-                              text={`SELECT ... FROM ${tableName}`}
+                              text={`SELECT ...columns... FROM ${tableName}`}
                               onClick={() => {
-                                const tableRef = SqlTableRef.create(
-                                  tableName,
-                                  schemaName === 'druid' ? undefined : schemaName,
-                                );
-
-                                let where: SqlExpression | undefined;
-                                if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
-                                  where = parsedQuery.getWhereExpression();
-                                } else if (schemaName === 'druid') {
-                                  where = LAST_DAY;
-                                }
-
                                 onQueryChange(
-                                  SqlQuery.create(tableRef)
+                                  getQueryOnTable()
                                     .changeSelectExpressions(
                                       metadata.map(child => SqlRef.column(child.COLUMN_NAME)),
                                     )
-                                    .changeWhereExpression(where),
+                                    .changeWhereExpression(getWhere()),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT * FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable().changeWhereExpression(getWhere()),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT ${countExpression} FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelect(0, countExpression)
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
                                   true,
                                 );
                               }}

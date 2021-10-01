@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -98,7 +99,8 @@ public class ShuffleResourceTest
         null,
         ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
     {
@@ -153,7 +155,7 @@ public class ShuffleResourceTest
     final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
-    Assert.assertEquals(134, snapshot.get(supervisorTaskId).getShuffleBytes());
+    Assert.assertEquals(254, snapshot.get(supervisorTaskId).getShuffleBytes());
   }
 
   @Test
@@ -213,6 +215,7 @@ public class ShuffleResourceTest
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
 }

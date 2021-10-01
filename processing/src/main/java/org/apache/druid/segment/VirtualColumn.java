@@ -299,6 +299,7 @@ public interface VirtualColumn extends Cacheable
    * @return BitmapIndex
    */
   @SuppressWarnings("unused")
+  @Nullable
   default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
   {
     throw new UnsupportedOperationException("not supported");

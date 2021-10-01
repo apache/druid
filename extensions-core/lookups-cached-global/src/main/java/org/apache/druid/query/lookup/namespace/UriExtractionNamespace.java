@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.apache.druid.java.util.common.parsers.DelimitedParser;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -64,6 +65,8 @@ import java.util.regex.PatternSyntaxException;
 @JsonTypeName("uri")
 public class UriExtractionNamespace implements ExtractionNamespace
 {
+  private static final Logger LOG = new Logger(UriExtractionNamespace.class);
+
   @JsonProperty
   private final URI uri;
   @JsonProperty
@@ -98,7 +101,15 @@ public class UriExtractionNamespace implements ExtractionNamespace
       throw new IAE("Either uri xor uriPrefix required");
     }
     this.namespaceParseSpec = Preconditions.checkNotNull(namespaceParseSpec, "namespaceParseSpec");
-    this.pollPeriod = pollPeriod == null ? Period.ZERO : pollPeriod;
+    if (pollPeriod == null) {
+      // Warning because if UriExtractionNamespace is being used for lookups, any updates to the database will not
+      // be picked up after the node starts. So for use casses where nodes start at different times (like streaming
+      // ingestion with peons) there can be data inconsistencies across the cluster.
+      LOG.warn("No pollPeriod configured for UriExtractionNamespace - entries will be loaded only once at startup");
+      this.pollPeriod = Period.ZERO;
+    } else {
+      this.pollPeriod = pollPeriod;
+    }
     this.fileRegex = fileRegex == null ? versionRegex : fileRegex;
     if (fileRegex != null && versionRegex != null) {
       throw new IAE("Cannot specify both versionRegex and fileRegex. versionRegex is deprecated");

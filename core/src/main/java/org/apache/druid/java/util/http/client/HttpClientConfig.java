@@ -89,63 +89,6 @@ public class HttpClientConfig
   private final CompressionCodec compressionCodec;
   private final Duration unusedConnectionTimeoutDuration;
 
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        Duration.ZERO,
-        null,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext,
-      Duration readTimeout
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        readTimeout,
-        null,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
-  @Deprecated // Use the builder instead
-  public HttpClientConfig(
-      int numConnections,
-      SSLContext sslContext,
-      Duration readTimeout,
-      Duration sslHandshakeTimeout
-  )
-  {
-    this(
-        numConnections,
-        sslContext,
-        readTimeout,
-        sslHandshakeTimeout,
-        DEFAULT_BOSS_COUNT,
-        DEFAULT_WORKER_COUNT,
-        DEFAULT_COMPRESSION_CODEC,
-        DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION
-    );
-  }
-
   private HttpClientConfig(
       int numConnections,
       SSLContext sslContext,
