@@ -949,7 +949,7 @@ You can additionally request a header by setting "header" to true in your reques
 }
 ```
 
-In this case, the first result of the response body returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
+In this case, the first result of the response body is the header row. For the `csv`, `array`, and `arrayLines` formats, the header
 will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
 keys are column names, and the values are null.
 
