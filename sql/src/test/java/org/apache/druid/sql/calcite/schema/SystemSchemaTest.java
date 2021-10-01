@@ -1389,7 +1389,8 @@ public class SystemSchemaTest extends CalciteTestBase
    * Creates a response holder that contains the given json.
    */
   private InputStreamFullResponseHolder createFullResponseHolder(
-      HttpResponse httpResponse, String json
+      HttpResponse httpResponse,
+      String json
   )
   {
     InputStreamFullResponseHolder responseHolder =
@@ -1447,17 +1448,18 @@ public class SystemSchemaTest extends CalciteTestBase
         return (authenticationResult, resource, action) -> {
           final String username = authenticationResult.getIdentity();
 
-          // Allow if it is the super user
-          // OR if it is a Datasource Write user trying to access a Datasource
-          // OR if it is a Datasource Read user trying to read a Datasource
-          boolean allowed = username.equals(Users.SUPER)
-                            || (username.equals(Users.DATASOURCE_WRITE)
-                                && resource.getType() == ResourceType.DATASOURCE)
-                            || (username.equals(Users.DATASOURCE_READ)
-                                && resource.getType() == ResourceType.DATASOURCE
-                                && action == Action.READ);
+          // Allow access to a Datasource if
+          // - any user requests Read access
+          // - Super User or Datasource Write User requests Write access
+          if (resource.getType().equals(ResourceType.DATASOURCE)) {
+            return new Access(
+                action == Action.READ
+                || username.equals(Users.SUPER)
+                || username.equals(Users.DATASOURCE_WRITE)
+            );
+          }
 
-          return new Access(allowed);
+          return new Access(true);
         };
       }
     };
@@ -1528,7 +1530,8 @@ public class SystemSchemaTest extends CalciteTestBase
   /**
    * Usernames to be used in tests.
    */
-  private static class Users {
+  private static class Users
+  {
     private static final String SUPER = CalciteTests.TEST_SUPERUSER_NAME;
     private static final String DATASOURCE_READ = "datasourceRead";
     private static final String DATASOURCE_WRITE = "datasourceWrite";

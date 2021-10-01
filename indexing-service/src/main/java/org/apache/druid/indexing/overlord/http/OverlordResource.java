@@ -987,7 +987,7 @@ public class OverlordResource
         );
       }
       return Collections.singletonList(
-          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)
+          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.WRITE)
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;
