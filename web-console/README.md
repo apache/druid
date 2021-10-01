@@ -117,9 +117,10 @@ development mode of the web console (started via `npm start`), which runs on por
 
 Like so: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
 
-#### Running a single e2e test using Jest and Playwright
+#### Running and debugging a single e2e test using Jest and Playwright
 
-For example, `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
+- Run - `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
+- Debug - `PWDEBUG=console jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
 
 ## Description of the directory structure
 
