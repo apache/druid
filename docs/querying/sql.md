@@ -877,7 +877,7 @@ Submit your query as the value of a "query" field in the JSON object within the 
 |--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header for the query response. See [Responses](#responses) for details.|`false`|
+|`header`|Whether or not to include a header for the query result. See [Responses](#responses) for details.|`false`|
 |`context`|JSON object containing [connection context parameters](#connection-context).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](#data-types) for a list of supported SQL types.|`[]` (empty)|
 
