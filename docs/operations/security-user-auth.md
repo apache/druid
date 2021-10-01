@@ -29,11 +29,12 @@ This document describes the Druid security model that extensions use to enable u
 
 At the center of the Druid user authentication and authorization model are _resources_ and _actions_. A resource is something that authenticated users are trying to access or modify. An action is something that users are trying to do. 
 
-There are three resource types:
+Druid uses the following resource types:
 
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * STATE &ndash; Cluster-wide state resources.
+* SYSTEM_TABLE &ndash; if `druid.sql.planner.authorizeSystemTablesDirectly` is enabled, then Druid authorizes system tables, the `sys` schema in SQL, using this resource type.
 
 For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](./api-reference.md).
 

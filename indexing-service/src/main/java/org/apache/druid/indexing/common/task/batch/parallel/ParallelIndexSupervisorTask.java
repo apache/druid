@@ -545,7 +545,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               .forEach(report -> {
                 segmentsToWaitFor.addAll(report.getNewSegments());
               });
-    segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+    waitForSegmentAvailability(
         toolbox,
         segmentsToWaitFor,
         awaitSegmentAvailabilityTimeoutMillis
@@ -1120,7 +1120,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.rhs,
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
-                segmentAvailabilityConfirmed
+                segmentAvailabilityConfirmed,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );

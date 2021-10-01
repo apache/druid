@@ -173,7 +173,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @MonotonicNonNull
   private String errorMsg;
 
-
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
       @JsonProperty("id") String id,
@@ -598,7 +597,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                0L
             )
         )
     );

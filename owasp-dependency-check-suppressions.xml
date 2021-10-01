@@ -330,13 +330,6 @@
      ]]></notes>
     <cve>CVE-2021-26291</cve>
   </suppress>
-  <suppress until="2021-05-30">
-    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
-    <notes><![CDATA[
-     This vulnerability should be fixed soon and the suppression should be removed.
-     ]]></notes>
-    <cve>CVE-2020-13949</cve>
-  </suppress>
 
   <suppress>
     <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
@@ -386,6 +379,14 @@
      file name: libthrift-0.13.0.jar
      ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <!-- hive-storage-api has the thrift vulnerability too -->
+    <notes><![CDATA[
+     file name: hive-storage-api-2.8.1.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
     <cve>CVE-2020-13949</cve>
   </suppress>
   <suppress>

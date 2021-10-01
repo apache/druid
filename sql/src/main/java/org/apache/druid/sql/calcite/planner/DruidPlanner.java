@@ -120,7 +120,7 @@ public class DruidPlanner implements Closeable
       throw new ValidationException(e);
     }
     SqlResourceCollectorShuttle resourceCollectorShuttle =
-        new SqlResourceCollectorShuttle(validator, frameworkConfig.getDefaultSchema().getName());
+        new SqlResourceCollectorShuttle(validator, plannerContext);
     validated.accept(resourceCollectorShuttle);
     plannerContext.setResources(resourceCollectorShuttle.getResources());
     return new ValidationResult(resourceCollectorShuttle.getResources());
