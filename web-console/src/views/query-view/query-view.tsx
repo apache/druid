@@ -137,7 +137,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private readonly queryManager: QueryManager<QueryWithContext, QueryResult>;
 
   private readonly queryInputRef: RefObject<QueryInput>;
-  // private id = 0;
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
