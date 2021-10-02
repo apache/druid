@@ -126,6 +126,15 @@ public class DruidRexExecutor implements RexExecutor
               // if exprResult evaluates to Nan or infinity, this will throw a NumberFormatException.
               // If you find yourself in such a position, consider casting the literal to a BIGINT so that
               // the query can execute.
+              double exprResultDouble = exprResult.asDouble();
+              if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
+                String expression = druidExpression.getExpression();
+                throw new IAE("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                    expression,
+                    Double.toString(exprResultDouble),
+                    expression,
+                    expression);
+              }
               bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
             }
             literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);

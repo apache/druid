@@ -26,12 +26,12 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.22.0-SNAPSHOT</version>
+        <version>0.23.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <properties>
-        <orc.version>1.5.10</orc.version>
+        <orc.version>1.7.0</orc.version>
     </properties>
     <dependencies>
         <dependency>

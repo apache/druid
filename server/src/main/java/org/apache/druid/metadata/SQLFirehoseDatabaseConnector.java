@@ -95,7 +95,7 @@ public abstract class SQLFirehoseDatabaseConnector
       // You don't want to do anything with properties.
       return;
     }
-    final Set<String> propertyKeyFromConnectURL = findPropertyKeysFromConnectURL(urlString);
+    final Set<String> propertyKeyFromConnectURL = findPropertyKeysFromConnectURL(urlString, securityConfig.isAllowUnknownJdbcUrlFormat());
     ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
         propertyKeyFromConnectURL,
         securityConfig.getSystemPropertyPrefixes(),
@@ -113,5 +113,5 @@ public abstract class SQLFirehoseDatabaseConnector
   /**
    * Extract property keys from the given JDBC URL.
    */
-  public abstract Set<String> findPropertyKeysFromConnectURL(String connectUri);
+  public abstract Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown);
 }

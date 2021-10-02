@@ -29,7 +29,6 @@ import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformance;
@@ -44,6 +43,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
 import java.util.Map;
@@ -60,7 +60,7 @@ public class PlannerFactory
       .setConformance(DruidConformance.instance())
       .build();
 
-  private final SchemaPlus rootSchema;
+  private final DruidSchemaCatalog rootSchema;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -71,7 +71,7 @@ public class PlannerFactory
 
   @Inject
   public PlannerFactory(
-      final SchemaPlus rootSchema,
+      final DruidSchemaCatalog rootSchema,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
@@ -100,6 +100,7 @@ public class PlannerFactory
         operatorTable,
         macroTable,
         plannerConfig,
+        rootSchema,
         queryContext
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);

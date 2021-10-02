@@ -142,7 +142,7 @@ public interface Expr extends Cacheable
    * the entire expression. Otherwise, all vectorizable expressions must produce an output type to correctly operate
    * with the vectorized engine.
    *
-   * Outside of the context of vectorized expressions, a return value of null can also indicate that the given type
+   * Outside the context of vectorized expressions, a return value of null can also indicate that the given type
    * information was not enough to resolve the output type, so the expression must be evaluated using default
    * {@link #eval} handling where types are only known after evaluation, through {@link ExprEval#type}, such as
    * transform expressions at ingestion time

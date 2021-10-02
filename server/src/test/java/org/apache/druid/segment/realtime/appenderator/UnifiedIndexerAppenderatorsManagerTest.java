@@ -44,6 +44,7 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -67,30 +68,42 @@ public class UnifiedIndexerAppenderatorsManagerTest
       () -> new DefaultQueryRunnerFactoryConglomerate(ImmutableMap.of())
   );
 
-  private final Appenderator appenderator = manager.createOfflineAppenderatorForTask(
-      "taskId",
-      new DataSchema(
-          "myDataSource",
-          new TimestampSpec("__time", "millis", null),
-          null,
-          null,
-          new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()),
-          null
-      ),
-      EasyMock.createMock(AppenderatorConfig.class),
-      new FireDepartmentMetrics(),
-      new NoopDataSegmentPusher(),
-      TestHelper.makeJsonMapper(),
-      TestHelper.getTestIndexIO(),
-      TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
-      new NoopRowIngestionMeters(),
-      new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
-      false
-  );
+  private AppenderatorConfig appenderatorConfig;
+  private Appenderator appenderator;
+
+  @Before
+  public void setup()
+  {
+    appenderatorConfig = EasyMock.createMock(AppenderatorConfig.class);
+    EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
+    EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
+    EasyMock.replay(appenderatorConfig);
+    appenderator = manager.createClosedSegmentsOfflineAppenderatorForTask(
+        "taskId",
+        new DataSchema(
+            "myDataSource",
+            new TimestampSpec("__time", "millis", null),
+            null,
+            null,
+            new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()),
+            null
+        ),
+        appenderatorConfig,
+        new FireDepartmentMetrics(),
+        new NoopDataSegmentPusher(),
+        TestHelper.makeJsonMapper(),
+        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
+        new NoopRowIngestionMeters(),
+        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0)
+    );
+  }
 
   @Test
   public void test_getBundle_knownDataSource()
   {
+
+
     final UnifiedIndexerAppenderatorsManager.DatasourceBundle bundle = manager.getBundle(
         Druids.newScanQueryBuilder()
               .dataSource(appenderator.getDataSource())

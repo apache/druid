@@ -55,6 +55,7 @@ import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -129,6 +130,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final JoinableFactoryWrapper joinableFactoryWrapper;
+  private final ServiceEmitter emitter;
 
   @Inject
   public CachingClusteredClient(
@@ -142,7 +144,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       DruidProcessingConfig processingConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      JoinableFactory joinableFactory
+      JoinableFactory joinableFactory,
+      ServiceEmitter emitter
   )
   {
     this.warehouse = warehouse;
@@ -156,6 +159,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
+    this.emitter = emitter;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -369,6 +373,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       query = scheduler.prioritizeAndLaneQuery(queryPlus, segmentServers);
       queryPlus = queryPlus.withQuery(query);
+      queryPlus = queryPlus.withQueryMetrics(toolChest);
+      queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {

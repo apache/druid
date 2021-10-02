@@ -227,6 +227,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public boolean hasBuiltInFilters()
+  {
+    return clauses.stream()
+                  .anyMatch(clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue());
+  }
+
+  @Override
   public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
   {
     // HashJoinEngine isn't vectorized yet.
@@ -343,7 +350,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
+              joinFilterSplit.getJoinTableFilter().orElse(null)
           );
         }
     ).withBaggage(joinablesCloser);

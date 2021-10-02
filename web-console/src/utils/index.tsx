@@ -28,3 +28,4 @@ export * from './object-change';
 export * from './query-cursor';
 export * from './query-manager';
 export * from './query-state';
+export * from './sanitizers';
