@@ -112,6 +112,14 @@ public class BrokerServerView implements TimelineServerView
     this.timelines = new HashMap<>();
 
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
+      log.info(
+          "Kashif: Filtering segment [%s] for Server [%s:%s:%s]",
+          metadataAndSegment.rhs.getId(),
+          metadataAndSegment.lhs.getType(),
+          metadataAndSegment.lhs.getTier(),
+          metadataAndSegment.lhs.getHostAndPort()
+      );
+
       // Include only watched tiers if specified
       if (segmentWatcherConfig.getWatchedTiers() != null
           && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
@@ -228,6 +236,7 @@ public class BrokerServerView implements TimelineServerView
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
       // loop...
       if (!server.getType().equals(ServerType.BROKER)) {
+        log.info("Adding segment[%s] for server[%s:%s:%s]", segmentId, server.getType(), server.getTier(), server.getHostAndPort());
         log.debug("Adding segment[%s] for server[%s]", segment, server);
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
@@ -261,6 +270,7 @@ public class BrokerServerView implements TimelineServerView
     final ServerSelector selector;
 
     synchronized (lock) {
+      log.info("Removing segment[%s] from server[%s:%s:%s]", segmentId, server.getType(), server.getTier(), server.getHostAndPort());
       log.debug("Removing segment[%s] from server[%s].", segmentId, server);
 
       // we don't store broker segments here, but still run the callbacks for the segment being removed from the server
