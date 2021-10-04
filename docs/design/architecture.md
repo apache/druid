@@ -23,9 +23,7 @@ title: "Design"
   -->
 
 
-Druid has a distributed architecture that is designed to be cloud-friendly and easy to operate. Each
-Druid service can be configured and scaled independently, giving you maximum flexibility over your cluster. This
-design also provides enhanced fault tolerance: an outage of one component does not immediately affect other components.
+Druid has a distributed architecture that is designed to be cloud-friendly and easy to operate. You can configure and scale services independently so you have maximum flexibility over cluster operations. This design includes enhanced fault tolerance: an outage of one component does not immediately affect other components.
 
 ## Druid architecture
 
