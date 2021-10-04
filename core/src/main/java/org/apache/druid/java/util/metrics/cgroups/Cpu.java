@@ -55,7 +55,7 @@ public class Cpu
   {
     return new CpuAllocationMetric(
         readLongValue(CPU_SHARES_FILE, -1),
-        readLongValue(CPU_QUOTA_FILE,0),
+        readLongValue(CPU_QUOTA_FILE, 0),
         readLongValue(CPU_PERIOD_FILE, 0)
     );
   }
