@@ -130,7 +130,6 @@ public class BrokerServerView implements TimelineServerView
         return false;
       }
 
-      // Include realtime nodes only if they are watched
       return true;
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
