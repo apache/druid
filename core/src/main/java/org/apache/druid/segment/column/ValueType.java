@@ -25,15 +25,19 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 
 /**
- * This enumeration defines the Druid type system used to indicate the type of data stored in columns and produced by
- * expressions and aggregations, used to allow query processing engine algorithms to compute results, used to compute query result
- * row signatures, and all other type needs.
+ * This enumeration defines the high level classification of the Druid type system, used by {@link ColumnType} to
+ * indicate the type of data stored in columns and produced by expressions and aggregations, used to allow query
+ * processing engine algorithms to compute results, used to compute query result row signatures, and all other type
+ * needs.
  *
- * Currently only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
+ * Currently, only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
  * and are also the only types handled directly by the query engines. Array types can currently be produced by
  * expressions and by some post-aggregators, but do not currently have special engine handling, and should be used by
  * implementors sparingly until full engine support is in place. Aggregators should never specify array types as their
  * output type until the engines fully support these types.
+ *
+ * @see ColumnType
+ * @see TypeSignature
  */
 public enum ValueType implements TypeDescriptor
 {

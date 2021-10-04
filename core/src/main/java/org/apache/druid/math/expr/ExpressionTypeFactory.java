@@ -28,12 +28,12 @@ import javax.annotation.Nullable;
 public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
 {
   private static final ExpressionTypeFactory INSTANCE = new ExpressionTypeFactory();
+  private static final Interner<ExpressionType> INTERNER = Interners.newStrongInterner();
 
   public static ExpressionTypeFactory getInstance()
   {
     return INSTANCE;
   }
-  protected static final Interner<ExpressionType> INTERNER = Interners.newStrongInterner();
 
   private ExpressionTypeFactory()
   {

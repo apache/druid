@@ -29,7 +29,7 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
 {
   private static final ColumnTypeFactory INSTANCE = new ColumnTypeFactory();
 
-  protected static final Interner<ColumnType> INTERNER = Interners.newStrongInterner();
+  private static final Interner<ColumnType> INTERNER = Interners.newWeakInterner();
 
   public static ColumnTypeFactory getInstance()
   {

@@ -32,27 +32,25 @@ import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
+/**
+ * The type system used to process Druid expressions. This is basically {@link ColumnType}, but without
+ * {@link ColumnType#FLOAT} because the expression processing system does not currently directly support them.
+ */
 @JsonSerialize(using = ToStringSerializer.class)
 public class ExpressionType extends BaseTypeSignature<ExprType>
 {
-  public static final ExpressionType STRING = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.STRING, null, null)
-  );
-  public static final ExpressionType LONG = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.LONG, null, null)
-  );
-  public static final ExpressionType DOUBLE = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.DOUBLE, null, null)
-  );
-  public static final ExpressionType STRING_ARRAY = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.ARRAY, null, STRING)
-  );
-  public static final ExpressionType LONG_ARRAY = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.ARRAY, null, LONG)
-  );
-  public static final ExpressionType DOUBLE_ARRAY = ExpressionTypeFactory.INTERNER.intern(
-      new ExpressionType(ExprType.ARRAY, null, DOUBLE)
-  );
+  public static final ExpressionType STRING =
+      new ExpressionType(ExprType.STRING, null, null);
+  public static final ExpressionType LONG =
+      new ExpressionType(ExprType.LONG, null, null);
+  public static final ExpressionType DOUBLE =
+      new ExpressionType(ExprType.DOUBLE, null, null);
+  public static final ExpressionType STRING_ARRAY =
+      new ExpressionType(ExprType.ARRAY, null, STRING);
+  public static final ExpressionType LONG_ARRAY =
+      new ExpressionType(ExprType.ARRAY, null, LONG);
+  public static final ExpressionType DOUBLE_ARRAY =
+      new ExpressionType(ExprType.ARRAY, null, DOUBLE);
 
   @JsonCreator
   public ExpressionType(

@@ -29,6 +29,9 @@ import javax.annotation.Nullable;
  * This interface is used to expose information about columns that is interesting to know for all matters dealing with
  * reading from columns, including query planning and optimization, creating readers to merge segments at ingestion
  * time, and probably nearly anything else you can imagine.
+ *
+ * @see ColumnType
+ * @see TypeSignature
  */
 public interface ColumnCapabilities extends TypeSignature<ValueType>
 {

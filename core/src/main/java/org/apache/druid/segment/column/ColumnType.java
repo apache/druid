@@ -29,16 +29,16 @@ import javax.annotation.Nullable;
 @JsonSerialize(using = ToStringSerializer.class)
 public class ColumnType extends BaseTypeSignature<ValueType>
 {
-  public static final ColumnType STRING = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.STRING, null, null));
-  public static final ColumnType LONG = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.LONG, null, null));
-  public static final ColumnType DOUBLE = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.DOUBLE, null, null));
-  public static final ColumnType FLOAT = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.FLOAT, null, null));
-  // currently arrays only come from expressions or aggregators
+  public static final ColumnType STRING = new ColumnType(ValueType.STRING, null, null);
+  public static final ColumnType LONG = new ColumnType(ValueType.LONG, null, null);
+  public static final ColumnType DOUBLE = new ColumnType(ValueType.DOUBLE, null, null);
+  public static final ColumnType FLOAT = new ColumnType(ValueType.FLOAT, null, null);
+  // currently, arrays only come from expressions or aggregators
   // and there are no native float expressions (or aggs which produce float arrays)
-  public static final ColumnType STRING_ARRAY = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.ARRAY, null, STRING));
-  public static final ColumnType LONG_ARRAY = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.ARRAY, null, LONG));
-  public static final ColumnType DOUBLE_ARRAY = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.ARRAY, null, DOUBLE));
-  public static final ColumnType UNKNOWN_COMPLEX = ColumnTypeFactory.INTERNER.intern(new ColumnType(ValueType.COMPLEX, null, null));
+  public static final ColumnType STRING_ARRAY = new ColumnType(ValueType.ARRAY, null, STRING);
+  public static final ColumnType LONG_ARRAY = new ColumnType(ValueType.ARRAY, null, LONG);
+  public static final ColumnType DOUBLE_ARRAY = new ColumnType(ValueType.ARRAY, null, DOUBLE);
+  public static final ColumnType UNKNOWN_COMPLEX = new ColumnType(ValueType.COMPLEX, null, null);
 
   @JsonCreator
   public ColumnType(
