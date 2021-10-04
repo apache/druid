@@ -60,8 +60,8 @@ public class CpuTest
     });
     final Cpu.CpuAllocationMetric metric = cpu.snapshot();
     Assert.assertEquals(-1L, metric.getShares());
-    Assert.assertEquals(-1L, metric.getQuotaUs());
-    Assert.assertEquals(-1L, metric.getPeriodUs());
+    Assert.assertEquals(-0, metric.getQuotaUs());
+    Assert.assertEquals(0, metric.getPeriodUs());
   }
 
   @Test

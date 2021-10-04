@@ -100,17 +100,17 @@ public class CpuSet
 
   public static class CpuSetMetric
   {
-    // The list of processor IDs associated with the process
-    private final int[] effectiveCpus;
+    // The list of effective/active processor IDs associated with the process
+    private final int[] effectiveCpuSetCpus;
 
-    CpuSetMetric(int[] effectiveCpus)
+    CpuSetMetric(int[] effectiveCpuSetCpus)
     {
-      this.effectiveCpus = effectiveCpus;
+      this.effectiveCpuSetCpus = effectiveCpuSetCpus;
     }
 
-    public int[] getEffectiveCpus()
+    public int[] getEffectiveCpuSetCpus()
     {
-      return effectiveCpus;
+      return effectiveCpuSetCpus;
     }
   }
 }

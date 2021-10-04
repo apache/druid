@@ -57,7 +57,7 @@ public class CpuSetTest
       throw new RuntimeException("Should still continue");
     });
     final CpuSet.CpuSetMetric metric = cpuSet.snapshot();
-    Assert.assertEquals(0, metric.getEffectiveCpus().length);
+    Assert.assertEquals(0, metric.getEffectiveCpuSetCpus().length);
   }
 
   @Test
@@ -66,7 +66,7 @@ public class CpuSetTest
     TestUtils.copyOrReplaceResource("/cpuset.effective_cpus.simple", new File(cpusetDir, "cpuset.effective_cpus"));
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getEffectiveCpus());
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getEffectiveCpuSetCpus());
   }
 
   @Test
@@ -78,6 +78,6 @@ public class CpuSetTest
     );
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 7, 12, 13, 14}, snapshot.getEffectiveCpus());
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 7, 12, 13, 14}, snapshot.getEffectiveCpuSetCpus());
   }
 }

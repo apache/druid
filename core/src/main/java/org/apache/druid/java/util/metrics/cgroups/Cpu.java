@@ -54,21 +54,21 @@ public class Cpu
   public CpuAllocationMetric snapshot()
   {
     return new CpuAllocationMetric(
-        readLongValue(CPU_SHARES_FILE),
-        readLongValue(CPU_QUOTA_FILE),
-        readLongValue(CPU_PERIOD_FILE)
+        readLongValue(CPU_SHARES_FILE, -1),
+        readLongValue(CPU_QUOTA_FILE,0),
+        readLongValue(CPU_PERIOD_FILE, 0)
     );
   }
 
-  private long readLongValue(String fileName)
+  private long readLongValue(String fileName, long defaultValeue)
   {
     try {
       List<String> lines = Files.readAllLines(Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), fileName));
-      return lines.stream().map(Longs::tryParse).filter(Objects::nonNull).findFirst().orElse(-1L);
+      return lines.stream().map(Longs::tryParse).filter(Objects::nonNull).findFirst().orElse(defaultValeue);
     }
     catch (RuntimeException | IOException ex) {
       LOG.error(ex, "Unable to fetch %s", fileName);
-      return -1L;
+      return defaultValeue;
     }
   }
 
