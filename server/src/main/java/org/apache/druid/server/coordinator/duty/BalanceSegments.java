@@ -144,16 +144,21 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-    int decommissioningMaxPercentOfMaxSegmentsToMove =
-        params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
-    int maxSegmentsToMoveFromDecommissioningNodes =
-        (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
-    log.info(
-        "Processing %d segments for moving from decommissioning servers",
-        maxSegmentsToMoveFromDecommissioningNodes
-    );
-    Pair<Integer, Integer> decommissioningResult =
-        balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
+
+    // Only do the work of calling balanceServers to move from decomissioning servers if there are > 0 decomissioning servers
+    Pair<Integer, Integer> decommissioningResult = new Pair<>(0, 0);
+    if (!decommissioningServers.isEmpty()) {
+      int decommissioningMaxPercentOfMaxSegmentsToMove =
+          params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
+      int maxSegmentsToMoveFromDecommissioningNodes =
+          (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
+      log.info(
+          "Processing %d segments for moving from decommissioning servers",
+          maxSegmentsToMoveFromDecommissioningNodes
+      );
+      decommissioningResult =
+          balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
+    }
 
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
     log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
