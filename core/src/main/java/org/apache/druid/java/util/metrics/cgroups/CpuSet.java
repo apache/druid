@@ -68,9 +68,9 @@ public class CpuSet
   /**
    * Parses the cpuset list format and outputs it as a list of CPUs. Examples:
    * 0-4,9        # bits 0, 1, 2, 3, 4, and 9 set
-   *              # outputs [0, 1, 2, 3, 4, 9]
+   * # outputs [0, 1, 2, 3, 4, 9]
    * 0-2,7,12-14  # bits 0, 1, 2, 7, 12, 13, and 14 set
-   *              # outputs [0, 1, 2, 7, 12, 13, 14]
+   * # outputs [0, 1, 2, 7, 12, 13, 14]
    *
    * @param line The list format cpu value
    * @return the list of CPU IDs
@@ -79,27 +79,29 @@ public class CpuSet
   {
     String[] cpuParts = line.split(",");
     return Arrays.stream(cpuParts)
-       .flatMapToInt(cpuPart -> {
-         String[] bits = cpuPart.split("-");
-         if (bits.length == 2) {
-           Integer low = Ints.tryParse(bits[0]);
-           Integer high = Ints.tryParse(bits[1]);
-           if (low != null && high != null) {
-             return IntStream.rangeClosed(low, high);
-           }
-         } else if (bits.length == 1) {
-           Integer bit = Ints.tryParse(bits[0]);
-           if (bit != null) {
-             return IntStream.of(bit);
-           }
-         }
+                 .flatMapToInt(cpuPart -> {
+                   String[] bits = cpuPart.split("-");
+                   if (bits.length == 2) {
+                     Integer low = Ints.tryParse(bits[0]);
+                     Integer high = Ints.tryParse(bits[1]);
+                     if (low != null && high != null) {
+                       return IntStream.rangeClosed(low, high);
+                     }
+                   } else if (bits.length == 1) {
+                     Integer bit = Ints.tryParse(bits[0]);
+                     if (bit != null) {
+                       return IntStream.of(bit);
+                     }
+                   }
 
-         return IntStream.empty();
-       }).toArray();
+                   return IntStream.empty();
+                 }).toArray();
   }
 
   public static class CpuSetMetric
   {
+    public static CpuSetMetric DEFAULT = new CpuSetMetric(new int[0]);
+
     // The list of effective/active processor IDs associated with the process
     private final int[] effectiveCpuSetCpus;
 

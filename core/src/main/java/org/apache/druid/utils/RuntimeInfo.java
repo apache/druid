@@ -19,55 +19,37 @@
 
 package org.apache.druid.utils;
 
-import org.apache.druid.java.util.common.UOE;
-
-import java.lang.reflect.InvocationTargetException;
-
-public class RuntimeInfo
+public class RuntimeInfo extends AbstractRuntimeInfo
 {
-  public int getAvailableProcessors()
+  private static final String PROVIDER = "Default";
+
+  @Override
+  public String getProvider()
   {
-    return Runtime.getRuntime().availableProcessors();
+    return PROVIDER;
   }
 
-  public long getMaxHeapSizeBytes()
+  @Override
+  public long getCpuPeriod()
   {
-    return Runtime.getRuntime().maxMemory();
+    return 0L;
   }
 
-  public long getTotalHeapSizeBytes()
+  @Override
+  public long getCpuQuota()
   {
-    return Runtime.getRuntime().totalMemory();
+    return 0L;
   }
 
-  public long getFreeHeapSizeBytes()
+  @Override
+  public long getCpuShares()
   {
-    return Runtime.getRuntime().freeMemory();
+    return -1L;
   }
 
-  public long getDirectMemorySizeBytes()
+  @Override
+  public int[] getEffectiveCpuSetCpus()
   {
-    try {
-      Class<?> vmClass = Class.forName("sun.misc.VM");
-      Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
-
-      if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {
-        throw new UOE("Cannot determine maxDirectMemory from [%s]", maxDirectMemoryObj);
-      } else {
-        return ((Number) maxDirectMemoryObj).longValue();
-      }
-    }
-    catch (ClassNotFoundException e) {
-      throw new UnsupportedOperationException("No VM class, cannot do memory check.", e);
-    }
-    catch (NoSuchMethodException e) {
-      throw new UnsupportedOperationException("VM.maxDirectMemory doesn't exist, cannot do memory check.", e);
-    }
-    catch (InvocationTargetException e) {
-      throw new UnsupportedOperationException("static method shouldn't throw this", e);
-    }
-    catch (IllegalAccessException e) {
-      throw new UnsupportedOperationException("public method, shouldn't throw this", e);
-    }
+    return new int[0];
   }
 }

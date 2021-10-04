@@ -55,7 +55,7 @@ public class Cpu
   {
     return new CpuAllocationMetric(
         readLongValue(CPU_SHARES_FILE, -1),
-        readLongValue(CPU_QUOTA_FILE,0),
+        readLongValue(CPU_QUOTA_FILE, 0),
         readLongValue(CPU_PERIOD_FILE, 0)
     );
   }
@@ -74,6 +74,8 @@ public class Cpu
 
   public static class CpuAllocationMetric
   {
+    public static CpuAllocationMetric DEFAULT = new CpuAllocationMetric(-1, 0, 0);
+
     // Maps to cpu.shares - the share of CPU given to the process
     private final long shares;
 
