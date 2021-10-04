@@ -31,7 +31,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerView.CallbackAction;
 import org.apache.druid.client.ServerView.SegmentCallback;
 import org.apache.druid.client.ServerView.ServerRemovedCallback;
-import org.apache.druid.client.SingleServerInventoryView.FilteringSegmentCallback;
+import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.TimelineServerView.TimelineCallback;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;

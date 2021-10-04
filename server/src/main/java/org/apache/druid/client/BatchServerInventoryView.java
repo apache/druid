@@ -176,7 +176,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
       final Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
-    SegmentCallback filteringCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    SegmentCallback filteringCallback = new FilteringSegmentCallback(callback, filter);
     segmentPredicates.put(filteringCallback, filter);
     registerSegmentCallback(
         exec,

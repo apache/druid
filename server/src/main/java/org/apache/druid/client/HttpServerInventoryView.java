@@ -227,7 +227,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       throw new ISE("Lifecycle has already started.");
     }
 
-    SegmentCallback filteringSegmentCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    SegmentCallback filteringSegmentCallback = new FilteringSegmentCallback(callback, filter);
     segmentCallbacks.put(filteringSegmentCallback, exec);
     segmentPredicates.put(filteringSegmentCallback, filter);
 
