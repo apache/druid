@@ -142,7 +142,9 @@ public class BalancerStrategyBenchmark
         serverHolders,
         Collections.emptySet(),
         reservoirSize,
-        percentOfSegmentsToConsider
+        percentOfSegmentsToConsider,
+        false,
+        null
     );
     for (int i = 0; i < maxSegmentsToMove && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());

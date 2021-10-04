@@ -243,38 +243,23 @@ public class BalanceSegments implements CoordinatorDuty
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     int moved = 0, unmoved = 0;
 
-    Iterator<BalancerSegmentHolder> segmentsToMove;
-    if (!balanceGuildViolatorsOnly) {
-      segmentsToMove = strategy.pickSegmentsToMove(
-          toMoveFrom,
-          params.getBroadcastDatasources(),
-          params.getCoordinatorDynamicConfig().useBatchedSegmentSampler() ? maxSegmentsToMove : DEFAULT_RESERVOIR_SIZE,
-          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
-      );
-    } else {
-      segmentsToMove = null;
-    }
+    // If guildReplication is enabled, operator must useBatchedSegmentSampler with maxSegmentsToMove > 1
+    Iterator<BalancerSegmentHolder> segmentsToMove = strategy.pickSegmentsToMove(
+        toMoveFrom,
+        params.getBroadcastDatasources(),
+        params.getCoordinatorDynamicConfig().useBatchedSegmentSampler() ? maxSegmentsToMove : DEFAULT_RESERVOIR_SIZE,
+        params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove(),
+        balanceGuildViolatorsOnly,
+        params
+    );
 
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      final BalancerSegmentHolder segmentToMoveHolder;
-      if (!balanceGuildViolatorsOnly) {
-        if (segmentsToMove != null && !segmentsToMove.hasNext()) {
-          log.info("All servers to move segments from are empty, ending run.");
-          break;
-        }
-        segmentToMoveHolder = segmentsToMove.next();
-      } else {
-        segmentToMoveHolder = strategy.pickGuildReplicationViolatingSegmentToMove(
-            toMoveFrom,
-            params.getBroadcastDatasources(),
-            params
-        );
-        if (segmentToMoveHolder == null) {
-          log.info("All servers to move segments from are empty, ending run.");
-          break;
-        }
+      if (!segmentsToMove.hasNext()) {
+        log.info("All servers to move segments from are empty, ending run.");
+        break;
       }
+      final BalancerSegmentHolder segmentToMoveHolder = segmentsToMove.next();
 
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadataManager, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be

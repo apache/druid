@@ -195,7 +195,7 @@ public class ReservoirSegmentSamplerTest
     for (int i = 0; i < iterations; i++) {
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
       segmentCountMap.put(
-          ReservoirSegmentSampler.getRandomBalancerSegmentHolders(holderList, Collections.emptySet(), 1).get(0).getSegment(),
+          ReservoirSegmentSampler.getRandomBalancerSegmentHolders(holderList, Collections.emptySet(), 1, false, null).get(0).getSegment(), //TODO test for true with params?
           1
       );
     }

@@ -36,7 +36,9 @@ final class ReservoirSegmentSampler
   static List<BalancerSegmentHolder> getRandomBalancerSegmentHolders(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int k
+      int k,
+      boolean onlyGuildReplicationViolators,
+      DruidCoordinatorRuntimeParams params
   )
   {
     List<BalancerSegmentHolder> holders = new ArrayList<>(k);
@@ -51,6 +53,12 @@ final class ReservoirSegmentSampler
       for (DataSegment segment : server.getServer().iterateAllSegments()) {
         if (broadcastDatasources.contains(segment.getDataSource())) {
           // we don't need to rebalance segments that were assigned via broadcast rules
+          continue;
+        }
+
+        // only if guild replication is enabled and runtime params are available. If yes to both, check if segment is available on > 1 guild. Skip segment if yes to all.
+        if (onlyGuildReplicationViolators && params != null && params.getSegmentReplicantLookup().getGuildSetForSegment(segment.getId()).size() > 1) {
+          // continue without incrementing numSoFar because we didn't select this segment
           continue;
         }
 
