@@ -43,7 +43,7 @@ Each Historical process copies or "pulls" segment files from Deep Storage to loc
 
 For more information on tuning this value, see the [Tuning Guide](../operations/basic-cluster-tuning.html#segment-cache-size).
 
-The [Coordinator](../design/coordinator.html) leads the assignment of segments to - and balance between - Historical processes.  [Zookeeper](../dependencies/zookeeper.md) is central to this collaboration; Historical processes do not communicate directly with each other, nor do they communicate directly with the Coordinator.  Instead, the Coordinator creates ephemeral Zookeeper entries under a [load queue path](../configuration/index.html#path-configuration) and each Historical process maintains a connection to Zookeeper, watching those paths for segment information.
+The [Coordinator](../design/coordinator.html) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical processes do not communicate directly with each other, nor do they communicate directly with the Coordinator.  Instead, the Coordinator creates ephemeral entries in Zookeeper in a [load queue path](../configuration/index.html#path-configuration). Each Historical process maintains a connection to Zookeeper, watching those paths for segment information.
 
 For more information about how the Coordinator assigns segments to Historical processes, please see [Coordinator](../design/coordinator.html).
 
