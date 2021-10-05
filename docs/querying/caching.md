@@ -71,11 +71,9 @@ With *whole-query caching*, Druid caches the entire results of individual querie
 
 Whole-query result caching is controlled by the parameters `useResultLevelCache` and `populateResultLevelCache` and runtime properties `druid.broker.cache.*`.
 
-> **Use whole-query caching when segments are stable and you are not using real-time ingestion**
->
-> If real-time ingestion invalidating the cache is not an issue for your queries, you can use *whole-query caching* on the Broker to increase query efficiency. The Broker performs whole-query caching operations before sending fan out queries to Historicals.
->
-> For instance, whole-query caching is a good option when you have queries that include data from a batch ingestion task that runs every few hours or once a day. [Per-segment caching](#per-segment-caching) would be less efficient in this case because it requires Druid to merge the per-segment results for each query, even when the results are cached.
+Use whole-query caching when segments are stable and you are not using real-time ingestion. If real-time ingestion invalidating the cache is not an issue for your queries, you can use *whole-query caching* on the Broker to increase query efficiency.
+
+For instance, whole-query caching is a good option when you have queries that include data from a batch ingestion task that runs every few hours or once a day. [Per-segment caching](#per-segment-caching) would be less efficient in this case because it requires Druid to merge the per-segment results for each query, even when the results are cached.
 
 ## Where to enable caching
 
