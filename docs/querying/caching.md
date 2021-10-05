@@ -67,7 +67,7 @@ Per-segment caching is controlled by the parameters `useCache` and `populateCach
 
 ### Whole-query caching
 
-Here, entire results of individual queries are cached, meaning Druid no longer needs to merge the per-segment results on the Broker.
+With *whole-query caching*, Druid caches the entire results of individual queries. In this case the Broker no longer needs to merge the per-segment results.
 
 Whole-query result caching is controlled by the parameters `useResultLevelCache` and `populateResultLevelCache` and runtime properties `druid.broker.cache.*`.
 
