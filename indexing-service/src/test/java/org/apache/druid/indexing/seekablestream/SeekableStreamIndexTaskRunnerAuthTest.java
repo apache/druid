@@ -262,7 +262,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     @Nullable
     @Override
     protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
-        TaskToolbox toolbox, String checkpointsString
+        TaskToolbox toolbox,
+        String checkpointsString
     )
     {
       return null;
@@ -276,7 +277,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
 
     @Override
     protected SeekableStreamEndSequenceNumbers<String, String> deserializePartitionsFromMetadata(
-        ObjectMapper mapper, Object object
+        ObjectMapper mapper,
+        Object object
     )
     {
       return null;
@@ -285,14 +287,17 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     @Nonnull
     @Override
     protected List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(
-        RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox
-    ) throws Exception
+        RecordSupplier<String, String, ByteEntity> recordSupplier,
+        TaskToolbox toolbox
+    )
     {
       return null;
     }
 
     @Override
-    protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadata(SeekableStreamSequenceNumbers<String, String> partitions)
+    protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadata(
+        SeekableStreamSequenceNumbers<String, String> partitions
+    )
     {
       return null;
     }
