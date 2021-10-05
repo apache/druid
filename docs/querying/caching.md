@@ -55,7 +55,7 @@ The primary form of caching in Druid is a *per-segment results cache*.  This cac
 
 It allows Druid to maintain a low-eviction-rate cache for segments that do not change, especially important for those segments that [historical](../design/historical.html) processes pull into their local _segment cache_ from [deep storage](../dependencies/deep-storage.html) as instructed by the lead [coordinator](../design/coordinator.html).  Meanwhile, real-time segments, on the other hand, continue to have results computed at query time.
 
-Per-segment cached results also have the potential to be merged into the results of later queries where there is a similar basic shape (filters, aggregations, etc.) yet cover a different period of time, for example.
+Druid may potentially merge per-segment cached results with the results of later queries that use a similar basic shape with similar filters, aggregations, etc. For example, if the query is identical except that it covers a different time period.
 
 Per-segment caching is controlled by the parameters `useCache` and `populateCache`.
 
