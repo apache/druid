@@ -85,9 +85,7 @@ For instance, whole-query caching is a good option when you have queries that in
 
 - On Brokers for small production clusters with less than five servers. 
 
-> **Avoid using per-segment cache at the Broker for large production clusters**
->
-> When the Broker cache is enabled (`druid.broker.cache.populateCache` is `true`) and `populateCache` _is not_ `false` in the [query context](../querying/query-context.html), individual Historicals will _not_ merge individual segment-level results, and instead pass these back to the lead Broker.  The Broker must then carry out a large merge from _all_ segments on its own.
+Avoid using per-segment cache at the Broker for large production clusters. When the Broker cache is enabled (`druid.broker.cache.populateCache` is `true`) and `populateCache` _is not_ `false` in the [query context](../querying/query-context.html), individual Historicals will _not_ merge individual segment-level results, and instead pass these back to the lead Broker.  The Broker must then carry out a large merge from _all_ segments on its own.
 
 **Whole-query cache** is available exclusively on Brokers.
 
