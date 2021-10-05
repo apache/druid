@@ -39,7 +39,7 @@ org.apache.druid.cli.Main server historical
 
 ### Loading and serving segments
 
-Each Historical process copies ("pulls") segment files from [Deep Storage](../dependencies/deep-storage.md) to local disk in an area called the *segment cache*.  The size and location of the segment cache on each Historical process is set using `druid.segmentCache.locations` in [configuration](../configuration/index.html#historical-general-configuration).
+Each Historical process copies or "pulls" segment files from Deep Storage to local disk in an area called the *segment cache*.  Set the `druid.segmentCache.locations` to configure the size and location of the segment cache on each Historical process. See [Historical general configuration](../configuration/index.html#historical-general-configuration).
 
 For more information on tuning this value, see the [Tuning Guide](../operations/basic-cluster-tuning.html#segment-cache-size).
 
