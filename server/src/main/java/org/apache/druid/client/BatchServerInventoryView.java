@@ -27,7 +27,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.inventory.CuratorInventoryManager;
 import org.apache.druid.curator.inventory.CuratorInventoryManagerStrategy;

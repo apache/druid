@@ -28,14 +28,11 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
-import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -112,8 +109,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final HttpServerInventoryViewConfig config;
 
   public HttpServerInventoryView(
-      final @Smile ObjectMapper smileMapper,
-      final @EscalatedGlobal HttpClient httpClient,
+      final ObjectMapper smileMapper,
+      final HttpClient httpClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
       final HttpServerInventoryViewConfig config,
