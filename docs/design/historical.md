@@ -47,7 +47,7 @@ The [Coordinator](../design/coordinator.html) controls the assignment of segment
 
 For more information about how the Coordinator assigns segments to Historical processes, please see [Coordinator](../design/coordinator.html).
 
-When a Historical process sees a new Zookeeper load queue entry, it checks its own segment cache. If no information about the segment exists there, the Historical process first retrieves metadata from Zookeeper about the segment, including where the segment is located in Deep Storage and how it needs to decompress and process it.
+When a Historical process detects a new entry in the Zookeeper load queue, it checks its own segment cache. If no information about the segment exists there, the Historical process first retrieves metadata from Zookeeper about the segment, including where the segment is located in Deep Storage and how it needs to decompress and process it.
 
 For more information about segment metadata and Druid segments in general, see [Segments](../design/segments.html). 
 
