@@ -74,12 +74,12 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
       new ConcurrentHashMap<>();
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
 
-  @Inject
   public BatchServerInventoryView(
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
       final ObjectMapper jsonMapper,
-      final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter
+      final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
+      final String pathChildrenCacheExecPrefix
   )
   {
     this.inventoryManager = new CuratorInventoryManager<>(
@@ -98,7 +98,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
             return zkPaths.getLiveSegmentsPath();
           }
         },
-        Execs.singleThreaded("ServerInventoryView-%s"),
+        Execs.singleThreaded(pathChildrenCacheExecPrefix + "-%s"),
         new CuratorInventoryManagerStrategy<DruidServer, Set<DataSegment>>()
         {
           @Override

@@ -104,19 +104,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   // For each queryable server, a name -> DruidServerHolder entry is kept
   private final ConcurrentHashMap<String, DruidServerHolder> servers = new ConcurrentHashMap<>();
 
+  private final String execNamePrefix;
   private volatile ScheduledExecutorService executor;
 
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
 
-  @Inject
   public HttpServerInventoryView(
       final @Smile ObjectMapper smileMapper,
       final @EscalatedGlobal HttpClient httpClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
-      final HttpServerInventoryViewConfig config
+      final HttpServerInventoryViewConfig config,
+      final String execNamePrefix
   )
   {
     this.httpClient = httpClient;
@@ -125,6 +126,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     this.defaultFilter = defaultFilter;
     this.finalPredicate = defaultFilter;
     this.config = config;
+    this.execNamePrefix = execNamePrefix;
   }
 
 
@@ -136,12 +138,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("can't start.");
       }
 
-      log.info("Starting HttpServerInventoryView.");
+      log.info("Starting %s.", execNamePrefix);
 
       try {
         executor = ScheduledExecutors.fixed(
             config.getNumThreads(),
-            "HttpServerInventoryView-%s"
+            execNamePrefix + "-%s"
         );
 
         DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
