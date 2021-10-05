@@ -49,7 +49,7 @@ For more information about how the Coordinator assigns segments to Historical pr
 
 When a Historical process sees a new Zookeeper load queue entry, it checks its own segment cache. If no information about the segment exists there, the Historical process first retrieves metadata from Zookeeper about the segment, including where the segment is located in Deep Storage and how it needs to decompress and process it.
 
-For more information about segment metadata and Druid segments in general, please see [Segments](../design/segments.html). 
+For more information about segment metadata and Druid segments in general, see [Segments](../design/segments.html). 
 
 Once a Historical process has completed pulling down and processing a segment from Deep Storage, the segment is advertised as being available for queries.  This announcement by the Historical is made via Zookeeper, this time under a [served segments path](../configuration/index.html#path-configuration). At this point, the segment is considered available for querying by the Broker.
 
