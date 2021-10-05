@@ -61,9 +61,7 @@ Per-segment cached results also have the potential to be merged into the results
 
 Per-segment caching is controlled by the parameters `useCache` and `populateCache`.
 
-> **Use per-segment caching with real-time data**
->
-> For example, you could have queries that address fresh data arriving from Kafka, and which additionally covers intervals in segments that are loaded on historicals.  Per-segment caching allows Druid to cache results from the historical segments confidently, and to merge them with real-time results from the stream.  [Whole-query caching](#whole-query-caching), on the other hand, would not be helpful in this scenario because new data from real-time ingestion will continually invalidate the _entire_ result.
+Use per-segment caching with real-time data. For example, your queries request data actively arriving from Kafka alongside intervals in segments that are loaded on Historicals.  Druid can merge cached results from Historical segments with real-time results from the stream.  [Whole-query caching](#whole-query-caching), on the other hand, is not helpful in this scenario because new data from real-time ingestion will continually invalidate the entire cached result.
 
 ### Whole-query caching
 
