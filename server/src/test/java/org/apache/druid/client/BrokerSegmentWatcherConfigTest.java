@@ -58,6 +58,7 @@ public class BrokerSegmentWatcherConfigTest
     );
 
     Assert.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
+    Assert.assertNull(config.getIgnoredTiers());
     Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
 
     // json with ignoredTiers
@@ -70,6 +71,7 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
+    Assert.assertNull(config.getWatchedTiers());
     Assert.assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
     Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
   }
