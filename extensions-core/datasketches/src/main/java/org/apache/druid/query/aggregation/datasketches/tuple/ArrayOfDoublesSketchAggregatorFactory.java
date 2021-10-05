@@ -165,10 +165,10 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(numberOfValues).buildUnion();
     if (lhs != null) {
-      union.update((ArrayOfDoublesSketch) lhs);
+      union.union((ArrayOfDoublesSketch) lhs);
     }
     if (rhs != null) {
-      union.update((ArrayOfDoublesSketch) rhs);
+      union.union((ArrayOfDoublesSketch) rhs);
     }
     return union.getResult();
   }
@@ -192,7 +192,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       public void fold(final ColumnValueSelector selector)
       {
         final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) selector.getObject();
-        union.update(sketch);
+        union.union(sketch);
       }
 
       @Override
