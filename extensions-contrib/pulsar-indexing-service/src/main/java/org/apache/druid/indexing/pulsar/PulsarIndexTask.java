@@ -80,7 +80,7 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, String, Pu
   }
 
   @Override
-  protected PulsarRecordSupplierTask newTaskRecordSupplier()
+  protected PulsarRecordSupplier newTaskRecordSupplier()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -92,7 +92,7 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, String, Pu
         maxRowsInMemory = tuningConfig.getMaxRowsInMemory();
       }
 
-      return new PulsarRecordSupplierTask(
+      return new PulsarRecordSupplier(
           // TODO(jpg): Determine if we want to give readers better names
           getId(),
           ioConfig.getServiceUrl(),

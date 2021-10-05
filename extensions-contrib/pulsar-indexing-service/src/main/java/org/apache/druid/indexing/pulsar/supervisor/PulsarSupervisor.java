@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.pulsar.PulsarRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -37,7 +38,7 @@ import org.apache.druid.indexing.pulsar.PulsarIndexTask;
 import org.apache.druid.indexing.pulsar.PulsarIndexTaskClientFactory;
 import org.apache.druid.indexing.pulsar.PulsarIndexTaskIOConfig;
 import org.apache.druid.indexing.pulsar.PulsarIndexTaskTuningConfig;
-import org.apache.druid.indexing.pulsar.PulsarRecordSupplierSupervisor;
+import org.apache.druid.indexing.pulsar.PulsarRecordSupplier;
 import org.apache.druid.indexing.pulsar.PulsarSequenceNumber;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -55,6 +56,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
@@ -125,7 +127,8 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, String, 
   @Override
   protected RecordSupplier<Integer, String, PulsarRecordEntity> setupRecordSupplier()
   {
-    return new PulsarRecordSupplierSupervisor(
+    return new PulsarRecordSupplier(
+        StringUtils.format("PulsarSupervisor-%s", spec.getDataSchema().getDataSource()),
         getIoConfig().getServiceUrl(),
         getIoConfig().getAuthPluginClassName(),
         getIoConfig().getAuthParams(),
@@ -144,7 +147,8 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, String, 
         getIoConfig().getKeepAliveIntervalSeconds(),
         getIoConfig().getConnectionTimeoutMs(),
         getIoConfig().getRequestTimeoutMs(),
-        getIoConfig().getMaxBackoffIntervalNanos()
+        getIoConfig().getMaxBackoffIntervalNanos(),
+        TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY
     );
   }
 
@@ -307,14 +311,14 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, String, 
   protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, String> currentOffsets)
   {
     // TODO(jpg): Can we calculate lag for Pulsar?
-    return null;
+    return ImmutableMap.of();
   }
 
-  // TODO(jpg): Can we calculate lag for Pulsar?
   @Override
   protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, String> currentOffsets)
   {
-    return null;
+    // TODO(jpg): Can we calculate lag for Pulsar?
+    return ImmutableMap.of();
   }
 
   @Override

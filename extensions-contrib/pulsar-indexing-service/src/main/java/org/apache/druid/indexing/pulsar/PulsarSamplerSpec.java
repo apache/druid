@@ -47,7 +47,7 @@ public class PulsarSamplerSpec extends SeekableStreamSamplerSpec
   }
 
   @Override
-  protected PulsarRecordSupplierTask createRecordSupplier()
+  protected PulsarRecordSupplier createRecordSupplier()
   {
     final PulsarSupervisorIOConfig pulsarIOConfig = (PulsarSupervisorIOConfig) ioConfig;
 
@@ -57,7 +57,7 @@ public class PulsarSamplerSpec extends SeekableStreamSamplerSpec
       maxRowsInMemory = tuningConfig.convertToTaskTuningConfig().getMaxRowsInMemory();
     }
 
-    return new PulsarRecordSupplierTask(
+    return new PulsarRecordSupplier(
         "druid-pulsar-indexing-sampler",
         pulsarIOConfig.getServiceUrl(),
         pulsarIOConfig.getAuthPluginClassName(),
