@@ -61,7 +61,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -680,10 +679,7 @@ public class DruidSchema extends AbstractSchema
 
     final Set<SegmentId> retVal = new HashSet<>();
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
-        queryLifecycleFactory,
-        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
-        escalator.createEscalatedAuthenticationResult(),
-        brokerInternalQueryConfig.getContext()
+        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
@@ -842,11 +838,15 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
-  private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
-      final QueryLifecycleFactory queryLifecycleFactory,
-      final Iterable<SegmentId> segments,
-      final AuthenticationResult authenticationResult,
-      final Map<String, Object> context
+  /**
+   * Execute a SegmentMetadata query and return a {@link Sequence} of {@link SegmentAnalysis}.
+   *
+   * @param segments Iterable of {@link SegmentId} objects that are subject of the SegmentMetadata query.
+   * @return {@link Sequence} of {@link SegmentAnalysis} objects
+   */
+  @VisibleForTesting
+  Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+      final Iterable<SegmentId> segments
   )
   {
     // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
@@ -865,13 +865,15 @@ public class DruidSchema extends AbstractSchema
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
-        context,
+        brokerInternalQueryConfig.getContext(),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         false
     );
 
-    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, Access.OK);
+    return queryLifecycleFactory
+        .factorize()
+        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
