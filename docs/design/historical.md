@@ -41,7 +41,7 @@ org.apache.druid.cli.Main server historical
 
 Each Historical process copies or "pulls" segment files from Deep Storage to local disk in an area called the *segment cache*.  Set the `druid.segmentCache.locations` to configure the size and location of the segment cache on each Historical process. See [Historical general configuration](../configuration/index.html#historical-general-configuration).
 
-For more information on tuning this value, see the [Tuning Guide](../operations/basic-cluster-tuning.html#segment-cache-size).
+See the [Tuning Guide](../operations/basic-cluster-tuning.html#segment-cache-size) for more information.
 
 The [Coordinator](../design/coordinator.html) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical processes do not communicate directly with each other, nor do they communicate directly with the Coordinator.  Instead, the Coordinator creates ephemeral entries in Zookeeper in a [load queue path](../configuration/index.html#path-configuration). Each Historical process maintains a connection to Zookeeper, watching those paths for segment information.
 
