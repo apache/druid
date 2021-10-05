@@ -51,7 +51,7 @@ When a Historical process detects a new entry in the Zookeeper load queue, it ch
 
 For more information about segment metadata and Druid segments in general, see [Segments](../design/segments.html). 
 
-Once a Historical process has completed pulling down and processing a segment from Deep Storage, the segment is advertised as being available for queries.  This announcement by the Historical is made via Zookeeper, this time under a [served segments path](../configuration/index.html#path-configuration). At this point, the segment is considered available for querying by the Broker.
+After a Historical process pulls down and processes a segment from Deep Storage, Druid advertises the segment as being available for queries from the Broker.  This announcement by the Historical is made via Zookeeper, in a [served segments path](../configuration/index.html#path-configuration).
 
 For more information about how the Broker determines what data is available for queries, please see [Broker](broker.html).
 
