@@ -59,7 +59,7 @@ To make data from the segment cache available for querying as soon as possible, 
 
 ### Loading and serving segments from cache
 
-A technique called [memory mapping](https://en.wikipedia.org/wiki/Mmap) is used for the segment cache, consuming memory from the underlying operating system so that parts of segment files can be held in memory, increasing query performance at the data level.  The in-memory segment cache is therefore affected by, for example, the size of the Historical JVM, heap / direct memory buffers, and other processes on the operating system itself.
+The segment cache uses [memory mapping](https://en.wikipedia.org/wiki/Mmap). The cache consumes memory from the underlying operating system so Historicals can hold parts of segment files in memory to increase query performance at the data level.  The in-memory segment cache is affected by the size of the Historical JVM, heap / direct memory buffers, and other processes on the operating system itself.
 
 At query time, if the required part of a segment file is available in the memory mapped cache (also known as the "page cache"), it will be re-used and read directly from memory.  If it is not, that part of the segment will be read from disk.  When this happens, there is potential for this new data to evict other segment data from memory.  Consequently, the closer that free operating system memory is to `druid.server.maxSize`, the faster historical processes typically respond at query time since segment data is very likely to be available in memory.  Conversely, the lower the free operating system memory, the more likely a Historical is to read segments from disk.
 
