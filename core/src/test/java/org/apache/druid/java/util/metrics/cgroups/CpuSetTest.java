@@ -48,6 +48,10 @@ public class CpuSetTest
         "cpuset/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
     );
     Assert.assertTrue((cpusetDir.isDirectory() && cpusetDir.exists()) || cpusetDir.mkdirs());
+
+    TestUtils.copyOrReplaceResource("/cpuset.cpus", new File(cpusetDir, "cpuset.cpus"));
+    TestUtils.copyOrReplaceResource("/cpuset.mems", new File(cpusetDir, "cpuset.mems"));
+    TestUtils.copyOrReplaceResource("/cpuset.effective_mems", new File(cpusetDir, "cpuset.effective_mems"));
   }
 
   @Test
@@ -57,7 +61,10 @@ public class CpuSetTest
       throw new RuntimeException("Should still continue");
     });
     final CpuSet.CpuSetMetric metric = cpuSet.snapshot();
+    Assert.assertEquals(0, metric.getCpuSetCpus().length);
     Assert.assertEquals(0, metric.getEffectiveCpuSetCpus().length);
+    Assert.assertEquals(0, metric.getCpuSetMems().length);
+    Assert.assertEquals(0, metric.getEffectiveCpuSetMems().length);
   }
 
   @Test
@@ -66,7 +73,10 @@ public class CpuSetTest
     TestUtils.copyOrReplaceResource("/cpuset.effective_cpus.simple", new File(cpusetDir, "cpuset.effective_cpus"));
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
     Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getEffectiveCpuSetCpus());
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
+    Assert.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
   }
 
   @Test
@@ -78,6 +88,9 @@ public class CpuSetTest
     );
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
     Assert.assertArrayEquals(new int[]{0, 1, 2, 7, 12, 13, 14}, snapshot.getEffectiveCpuSetCpus());
+    Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
+    Assert.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
   }
 }

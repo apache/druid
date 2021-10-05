@@ -30,13 +30,16 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 /**
- * Collect CPU set data from cpuset cgroup files.
+ * Collect CPU and memory data from cpuset cgroup files.
  */
 public class CpuSet
 {
   private static final Logger LOG = new Logger(CpuSet.class);
   private static final String CGROUP = "cpuset";
+  private static final String CPUS_FILE = "cpuset.cpus";
   private static final String EFFECTIVE_CPUS_FILE = "cpuset.effective_cpus";
+  private static final String MEMS_FILE = "cpuset.mems";
+  private static final String EFFECTIVE_MEMS_FILE = "cpuset.effective_mems";
 
   private final CgroupDiscoverer cgroupDiscoverer;
 
@@ -52,17 +55,26 @@ public class CpuSet
    */
   public CpuSetMetric snapshot()
   {
-    int[] effectiveCpus = {};
+    return new CpuSetMetric(
+        readCpuSetFile(CPUS_FILE),
+        readCpuSetFile(EFFECTIVE_CPUS_FILE),
+        readCpuSetFile(MEMS_FILE),
+        readCpuSetFile(EFFECTIVE_MEMS_FILE)
+    );
+  }
+
+  private int[] readCpuSetFile(String file)
+  {
+    int[] output = {};
     try {
       List<String> lines = Files.readAllLines(
-          Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), EFFECTIVE_CPUS_FILE));
-      effectiveCpus = lines.stream().map(this::parse).findFirst().orElse(effectiveCpus);
+          Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), file));
+      output = lines.stream().map(this::parseStringRangeToIntArray).findFirst().orElse(output);
     }
     catch (RuntimeException | IOException ex) {
-      LOG.error(ex, "Unable to read %s", EFFECTIVE_CPUS_FILE);
+      LOG.error(ex, "Unable to read %s", file);
     }
-
-    return new CpuSetMetric(effectiveCpus);
+    return output;
   }
 
   /**
@@ -72,10 +84,12 @@ public class CpuSet
    * 0-2,7,12-14  # bits 0, 1, 2, 7, 12, 13, and 14 set
    *              # outputs [0, 1, 2, 7, 12, 13, 14]
    *
+   * This method also works fine for memory nodes.
+   *
    * @param line The list format cpu value
    * @return the list of CPU IDs
    */
-  private int[] parse(String line)
+  private int[] parseStringRangeToIntArray(String line)
   {
     String[] cpuParts = line.split(",");
     return Arrays.stream(cpuParts)
@@ -100,17 +114,48 @@ public class CpuSet
 
   public static class CpuSetMetric
   {
+    // The list of processor IDs associated with the process
+    private final int[] cpuSetCpus;
+
     // The list of effective/active processor IDs associated with the process
     private final int[] effectiveCpuSetCpus;
 
-    CpuSetMetric(int[] effectiveCpuSetCpus)
+    // The list memory nodes associated with the process
+    private final int[] cpuSetMems;
+
+    // The list of effective/active memory nodes associated with the process
+    private final int[] effectiveCpuSetMems;
+
+    CpuSetMetric(
+        int[] cpuSetCpus,
+        int[] effectiveCpuSetCpus,
+        int[] cpuSetMems,
+        int[] effectiveCpuSetMems)
     {
+      this.cpuSetCpus = cpuSetCpus;
       this.effectiveCpuSetCpus = effectiveCpuSetCpus;
+      this.cpuSetMems = cpuSetMems;
+      this.effectiveCpuSetMems = effectiveCpuSetMems;
+    }
+
+    public int[] getCpuSetCpus()
+    {
+      return cpuSetCpus;
     }
 
     public int[] getEffectiveCpuSetCpus()
     {
       return effectiveCpuSetCpus;
+    }
+
+    public int[] getCpuSetMems()
+    {
+      return cpuSetMems;
+    }
+
+    public int[] getEffectiveCpuSetMems()
+    {
+      return effectiveCpuSetMems;
     }
   }
 }
