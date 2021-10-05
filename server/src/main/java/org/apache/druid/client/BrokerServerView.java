@@ -111,14 +111,8 @@ public class BrokerServerView implements TimelineServerView
     this.timelines = new HashMap<>();
 
     // Validate and set the segment watcher config
+    validateSegmentWatcherConfig(segmentWatcherConfig);
     this.segmentWatcherConfig = segmentWatcherConfig;
-    if (segmentWatcherConfig.getWatchedTiers() != null
-        && segmentWatcherConfig.getIgnoredTiers() != null) {
-      throw new ISE(
-          "At most one of 'druid.broker.segment.watchedTiers' "
-          + "and 'druid.broker.segment.ignoredTiers' can be specified."
-      );
-    }
 
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
       // Include only watched tiers if specified
@@ -199,6 +193,35 @@ public class BrokerServerView implements TimelineServerView
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
+  }
+
+  /**
+   * Validates the given BrokerSegmentWatcherConfig.
+   * <ul>
+   *   <li>At most one of watchedTiers or ignoredTiers can be set</li>
+   *   <li>If set, watchedTiers must be non-empty</li>
+   *   <li>If set, ignoredTiers must be non-empty</li>
+   * </ul>
+   */
+  private void validateSegmentWatcherConfig(BrokerSegmentWatcherConfig watcherConfig)
+  {
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getIgnoredTiers() != null) {
+      throw new ISE(
+          "At most one of 'druid.broker.segment.watchedTiers' "
+          + "and 'druid.broker.segment.ignoredTiers' can be configured."
+      );
+    }
+
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getWatchedTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.watchedTiers' must be non-empty");
+    }
+
+    if (watcherConfig.getIgnoredTiers() != null
+        && watcherConfig.getIgnoredTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.ignoredTiers' must be non-empty");
+    }
   }
 
   private QueryableDruidServer addServer(DruidServer server)

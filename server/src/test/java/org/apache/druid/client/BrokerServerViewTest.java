@@ -455,6 +455,18 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews(Sets.newHashSet(tier2), Sets.newHashSet(tier1));
   }
 
+  @Test(expected = ISE.class)
+  public void testEmptyWatchedTiersConfig() throws Exception
+  {
+    setupViews(Collections.emptySet(), null);
+  }
+
+  @Test(expected = ISE.class)
+  public void testEmptyIgnoredTiersConfig() throws Exception
+  {
+    setupViews(null, Collections.emptySet());
+  }
+
   /**
    * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.
    */
