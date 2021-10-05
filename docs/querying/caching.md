@@ -40,7 +40,7 @@ Query-level caching is in addition to [data-level caching](../design/historical.
 
 Druid supports two types of query caching:
 
-- [Per-segment caching](#per-segment-caching) stores _partial_ query results for a specific segment (enabled by default).
+- [Per-segment caching](#per-segment-caching) stores partial query results for a specific segment. It is enabled by default.
 - [Whole-query caching](#whole-query-caching) stores _final_ query results.
 
 > **Druid invalidates _any_ cache the moment any underlying data changes**
