@@ -638,7 +638,7 @@ You can configure Druid API error responses to hide internal information like th
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes the following fields  in the JSON response: `servlet`, `message`, `url`, `status`, and `cause`, if it exists. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
-|`druid.server.http.errorResponseTransformStrategy.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
+|`druid.server.http.errorResponseTransform.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
 
 ##### Error response transform strategy
 
@@ -650,25 +650,25 @@ When you specify an error response transform strategy other than `none`, Druid t
 ###### No error response transform strategy
 
 In this mode, Druid leaves error responses from underlying services unchanged and returns the unchanged errors to the API client.
-This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to "none".
+This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to "none".
 
 ###### Allowed regular expression error response transform strategy
 
-In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to `allowedRegex`.
+In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `allowedRegex`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.errorResponseTransformStrategy.allowedRegex`|The list of regular expressions Druid uses to validate error messages. If the error message matches any of the regular expressions, then Druid includes it in the response unchanged. If the error message does not match any of the regular expressions, Druid replaces the error message with null or with a default message depending on the type of underlying Exception. |`[]`|
+|`druid.server.http.errorResponseTransform.allowedRegex`|The list of regular expressions Druid uses to validate error messages. If the error message matches any of the regular expressions, then Druid includes it in the response unchanged. If the error message does not match any of the regular expressions, Druid replaces the error message with null or with a default message depending on the type of underlying Exception. |`[]`|
 
 For example, consider the following error response:
 ```
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":"org.apache.calcite.tools.ValidationException","host":null}
 ```
-If `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[]`, Druid transforms the query error response to the following:
+If `druid.server.http.errorResponseTransform.allowedRegex` is set to `[]`, Druid transforms the query error response to the following:
 ```
 {"error":"Plan validation failed","errorMessage":null,"errorClass":null,"host":null}
 ``` 
-On the other hand, if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[".*CalciteContextException.*"]` then Druid transforms the query error response to the following:
+On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is set to `[".*CalciteContextException.*"]` then Druid transforms the query error response to the following:
 ```
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ``` 
