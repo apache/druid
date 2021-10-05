@@ -106,10 +106,19 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.segmentWatcherConfig = segmentWatcherConfig;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
+
+    // Validate and set the segment watcher config
+    this.segmentWatcherConfig = segmentWatcherConfig;
+    if (segmentWatcherConfig.getWatchedTiers() != null
+        && segmentWatcherConfig.getIgnoredTiers() != null) {
+      throw new ISE(
+          "At most one of 'druid.broker.segment.watchedTiers' "
+          + "and 'druid.broker.segment.ignoredTiers' can be specified."
+      );
+    }
 
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
       // Include only watched tiers if specified

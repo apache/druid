@@ -33,6 +33,7 @@ import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -443,6 +444,15 @@ public class BrokerServerViewTest extends CuratorTestBase
       Assert.assertEquals(server21, selector.pick(null).getServer());
     }
     Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
+  }
+
+  @Test(expected = ISE.class)
+  public void testInvalidWatchedTiersConfig() throws Exception
+  {
+    // Verify that specifying both ignoredTiers and watchedTiers fails startup
+    final String tier1 = "tier1";
+    final String tier2 = "tier2";
+    setupViews(Sets.newHashSet(tier2), Sets.newHashSet(tier1));
   }
 
   /**
