@@ -55,7 +55,7 @@ After a Historical process pulls down and processes a segment from Deep Storage,
 
 For more information about how the Broker determines what data is available for queries, please see [Broker](broker.html).
 
-On startup, a Historical process searches through its segment cache and, in order for Historicals to be queried as soon as possible, immediately advertises all segments it finds there.
+To make data from the segment cache available for querying as soon as possible, Historical services search the local segment cache upon startup and advertise the segments found there.
 
 ### Loading and serving segments from cache
 
