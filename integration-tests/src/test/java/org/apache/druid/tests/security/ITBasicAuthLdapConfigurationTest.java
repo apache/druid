@@ -142,7 +142,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceWriteWithSysGroup",
-        ImmutableMap.of("datasourceWriteWithSysRole", DATASOURCE_READ_SYS_PERMISSIONS)
+        ImmutableMap.of("datasourceWriteWithSysRole", DATASOURCE_WRITE_SYS_PERMISSIONS)
     );
   }
 

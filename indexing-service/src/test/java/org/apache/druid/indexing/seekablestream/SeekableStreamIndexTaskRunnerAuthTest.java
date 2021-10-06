@@ -96,7 +96,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           // - or, Datasource Write User requests Write access
           if (resource.getType().equals(ResourceType.DATASOURCE)) {
             return new Access(
-                action == Action.READ || username.equals(Users.DATASOURCE_WRITE)
+                action == Action.READ
+                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
             );
           }
 

@@ -124,12 +124,14 @@ public class OverlordResourceTest
               case Datasources.WIKIPEDIA:
                 // All users can read wikipedia but only writer can write
                 return new Access(
-                    action == Action.READ || Users.WIKI_WRITER.equals(username)
+                    action == Action.READ
+                    || (action == Action.WRITE && Users.WIKI_WRITER.equals(username))
                 );
               case Datasources.BUZZFEED:
                 // All users can read buzzfeed but only writer can write
                 return new Access(
-                    action == Action.READ || Users.BUZZ_WRITER.equals(username)
+                    action == Action.READ
+                    || (action == Action.WRITE && Users.BUZZ_WRITER.equals(username))
                 );
               default:
                 return new Access(false);

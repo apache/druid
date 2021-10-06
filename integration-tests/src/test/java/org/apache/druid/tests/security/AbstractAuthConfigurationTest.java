@@ -353,7 +353,7 @@ public abstract class AbstractAuthConfigurationTest
         "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
     );
 
-    // Verify that the result is empty, as tasks are filtered by Datasource WRITE access
+    // Verify that sys.tasks result is empty as it is filtered by Datasource WRITE access
     LOG.info("Checking sys.tasks query as datasourceReadAndSysUser...");
     verifySystemSchemaQuery(
         datasourceReadAndSysUserClient,
@@ -365,14 +365,12 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_systemSchemaAccess_datasourceWriteAndSysUser() throws Exception
   {
-    // as user that can only read auth_test
+    // Verify that sys.segments result is empty as it is filtered by Datasource READ access
     LOG.info("Checking sys.segments query as datasourceWriteAndSysUser...");
     verifySystemSchemaQuery(
         datasourceWriteAndSysUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        adminSegments.stream()
-                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
-                     .collect(Collectors.toList())
+        Collections.emptyList()
     );
 
     LOG.info("Checking sys.servers query as datasourceWriteAndSysUser...");
@@ -439,7 +437,7 @@ public abstract class AbstractAuthConfigurationTest
                            .collect(Collectors.toList())
     );
 
-    // Verify that the result is empty, as tasks are filtered by Datasource WRITE access
+    // Verify that sys.tasks result is empty as it is filtered by Datasource WRITE access
     LOG.info("Checking sys.tasks query as datasourceReadWithStateUser...");
     verifySystemSchemaQuery(
         datasourceReadWithStateUserClient,
