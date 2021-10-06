@@ -65,7 +65,10 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     emitter.emit(builder.build("cgroup/cpu/shares", cpuSnapshot.getShares()));
     emitter.emit(builder.build(
         "cgroup/cpu/cores_quota",
-        ((double) cpuSnapshot.getQuotaUs()) / cpuSnapshot.getPeriodUs()
+        cpuSnapshot.getPeriodUs() == 0
+        ? 0
+        : ((double) cpuSnapshot.getQuotaUs()
+          ) / cpuSnapshot.getPeriodUs()
     ));
 
     return true;
