@@ -147,9 +147,9 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 |`lateMessageRejectionStartDateTime`|ISO8601 DateTime|Configure tasks to reject messages with timestamps earlier than this date time; for example if this is set to `2016-01-01T11:00Z` and the supervisor creates a task at *2016-01-01T12:00Z*, Druid drops messages with timestamps earlier than *2016-01-01T11:00Z*. This can prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline). Please note that only one of `lateMessageRejectionPeriod` or `lateMessageRejectionStartDateTime` can be specified.|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
-|`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#Task Autoscaler Properties).|no (default == null)|
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 
-### Task Autoscaler Properties
+#### Task Autoscaler Properties
 
 > Note that Task AutoScaler is currently designated as experimental.
 
@@ -159,9 +159,9 @@ Where the file `supervisor-spec.json` contains a Kafka supervisor spec:
 | `taskCountMax` | Maximum number of ingestion tasks. Set `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, Druid only scales reading tasks up to the `{numKafkaPartitions}`. In this case `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of ingestion tasks. When you enable autoscaler, Druid ignores the value of taskCount in `IOConfig` and starts with the `taskCountMin` number of tasks.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions. | no (default == 600000) |
-| `autoScalerStrategy` | The algorithm of `autoScaler`. Only supports `lagBased`. See [Lag Based AutoScaler Strategy Related Properties](#Lag Based AutoScaler Strategy Related Properties) for details.| no (default == `lagBased`) |
+| `autoScalerStrategy` | The algorithm of `autoScaler`. Only supports `lagBased`. See [Lag Based AutoScaler Strategy Related Properties](#lag-based-autoscaler-strategy-related-properties) for details.| no (default == `lagBased`) |
 
-### Lag Based AutoScaler Strategy Related Properties
+##### Lag Based AutoScaler Strategy Related Properties
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `lagCollectionIntervalMillis` | Period of lag points collection.  | no (default == 30000) |
@@ -222,7 +222,7 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler en
 #### More on consumerProperties
 
 This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
-By default, `isolation.level` is set to `read_committed`. It should be set to `read_uncommitted` if you don't want Druid to consume only committed transactions or working with older versions of Kafka servers with no Transactions support.
+By default, `isolation.level` is set to `read_committed`. It should be set to `read_uncommitted` if you don't want Druid to consume only committed transactions or working with older versions of Kafka servers with no transactions support.
 
 There are few cases that require fetching few/all of consumer properties at runtime e.g. when `bootstrap.servers` is not known upfront or not static, to enable SSL connections users might have to provide passwords for `keystore`, `truststore` and `key` secretly.
 For such consumer properties, user can implement a [DynamicConfigProvider](../../operations/dynamic-config-provider.md) to supply them at runtime, by adding

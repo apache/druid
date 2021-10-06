@@ -404,3 +404,7 @@ export function stringifyValue(value: unknown): string {
       return String(value);
   }
 }
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
+}
