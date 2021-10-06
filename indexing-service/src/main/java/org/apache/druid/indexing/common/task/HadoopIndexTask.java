@@ -633,7 +633,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       @QueryParam("windows") List<Integer> windows
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
 

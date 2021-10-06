@@ -2614,7 +2614,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testAuthorizeRequest() throws Exception
+  public void testAuthorizeRequestForDatasourceWrite() throws Exception
   {
     // Need to run this only once
     if (lockGranularity == LockGranularity.SEGMENT) {
@@ -2662,14 +2662,14 @@ public class IndexTaskTest extends IngestionTestBase
     HttpServletRequest writeUserRequest = EasyMock.mock(HttpServletRequest.class);
     expectAuthorizationTokenCheck(datasourceWriteUser, writeUserRequest);
     EasyMock.replay(writeUserRequest);
-    indexTask.authorizeRequest(writeUserRequest, authorizerMapper);
+    indexTask.authorizeRequestForDatasourceWrite(writeUserRequest, authorizerMapper);
 
     // Verify that datasourceReadUser is not successfully authorized
     HttpServletRequest readUserRequest = EasyMock.mock(HttpServletRequest.class);
     expectAuthorizationTokenCheck(datasourceReadUser, readUserRequest);
     EasyMock.replay(readUserRequest);
     expectedException.expect(ForbiddenException.class);
-    indexTask.authorizeRequest(readUserRequest, authorizerMapper);
+    indexTask.authorizeRequestForDatasourceWrite(readUserRequest, authorizerMapper);
   }
 
   private void expectAuthorizationTokenCheck(String username, HttpServletRequest request)

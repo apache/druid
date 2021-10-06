@@ -1362,7 +1362,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    */
   private void authorizeRequest(final HttpServletRequest req)
   {
-    task.authorizeRequest(req, authorizerMapper);
+    task.authorizeRequestForDatasourceWrite(req, authorizerMapper);
   }
 
   public Appenderator getAppenderator()

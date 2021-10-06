@@ -529,7 +529,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
@@ -555,7 +555,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );

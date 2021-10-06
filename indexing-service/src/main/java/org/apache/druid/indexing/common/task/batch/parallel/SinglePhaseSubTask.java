@@ -487,7 +487,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     Map<String, List<String>> events = new HashMap<>();
 
     boolean needsBuildSegments = false;
@@ -562,7 +562,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     return Response.ok(doGetRowStats(full)).build();
   }
 
@@ -594,7 +594,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequest(req, authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     return Response.ok(doGetLiveReports(full)).build();
   }
 

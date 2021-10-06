@@ -60,7 +60,7 @@ public class IndexTaskUtils
    *
    * @throws ForbiddenException if not authorized
    */
-  public static void datasourceAuthorizationCheck(
+  public static void authorizeRequestForDatasourceWrite(
       final HttpServletRequest req,
       String datasource,
       AuthorizerMapper authorizerMapper
