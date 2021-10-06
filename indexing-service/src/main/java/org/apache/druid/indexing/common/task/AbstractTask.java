@@ -172,7 +172,10 @@ public abstract class AbstractTask implements Task
    *
    * @throws ForbiddenException if not authorized
    */
-  public void authorizeRequestForDatasourceWrite(HttpServletRequest request, AuthorizerMapper authorizerMapper)
+  public void authorizeRequestForDatasourceWrite(
+      HttpServletRequest request,
+      AuthorizerMapper authorizerMapper
+  ) throws ForbiddenException
   {
     IndexTaskUtils.authorizeRequestForDatasourceWrite(request, dataSource, authorizerMapper);
   }

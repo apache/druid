@@ -64,7 +64,7 @@ public class IndexTaskUtils
       final HttpServletRequest req,
       String datasource,
       AuthorizerMapper authorizerMapper
-  )
+  ) throws ForbiddenException
   {
     ResourceAction resourceAction = new ResourceAction(
         new Resource(datasource, ResourceType.DATASOURCE),
