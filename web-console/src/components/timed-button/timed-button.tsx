@@ -22,7 +22,7 @@ import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
-import { localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
+import { isInBackground, localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
 
 export interface DelayLabel {
   label: string;
@@ -35,6 +35,7 @@ export interface TimedButtonProps extends ButtonProps {
   localStorageKey?: LocalStorageKeys;
   label: string;
   defaultDelay: number;
+  foregroundOnly?: boolean;
 }
 
 export const TimedButton = React.memo(function TimedButton(props: TimedButtonProps) {
@@ -46,6 +47,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
     text,
     icon,
     defaultDelay,
+    foregroundOnly,
     localStorageKey,
     ...other
   } = props;
@@ -57,6 +59,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   );
 
   useInterval(() => {
+    if (foregroundOnly && isInBackground()) return;
     onRefresh(true);
   }, selectedDelay);
 

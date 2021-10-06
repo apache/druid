@@ -33,6 +33,7 @@ import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -383,22 +384,113 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
   }
 
+  @Test
+  public void testIgnoredTiers() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(4);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    // Setup a Broker that does not watch Tier 1
+    final String tier1 = "tier1";
+    final String tier2 = "tier2";
+    setupViews(null, Sets.newHashSet(tier1));
+
+    // Historical Tier 1 has segments 1 and 2, Tier 2 has segments 2 and 3
+    final DruidServer server11 = setupHistoricalServer(tier1, "localhost:1", 1);
+    final DruidServer server21 = setupHistoricalServer(tier2, "localhost:2", 1);
+
+    final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
+    announceSegmentForServer(server11, segment1, zkPathsConfig, jsonMapper);
+
+    final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
+    announceSegmentForServer(server11, segment2, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(server21, segment2, zkPathsConfig, jsonMapper);
+
+    final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
+    announceSegmentForServer(server21, segment3, zkPathsConfig, jsonMapper);
+
+    // Wait for the segments to be added
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    // Get the timeline for the datasource
+    TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
+        DataSourceAnalysis.forDataSource(new TableDataSource(segment1.getDataSource()))
+    ).get();
+
+    // Verify that the timeline has no entry for the interval of segment 1
+    Assert.assertTrue(timeline.lookup(segment1.getInterval()).isEmpty());
+
+    // Verify that there is one entry for the interval of segment 2
+    List<TimelineObjectHolder<String, ServerSelector>> timelineHolders =
+        timeline.lookup(segment2.getInterval());
+    Assert.assertEquals(1, timelineHolders.size());
+
+    TimelineObjectHolder<String, ServerSelector> timelineHolder = timelineHolders.get(0);
+    Assert.assertEquals(segment2.getInterval(), timelineHolder.getInterval());
+    Assert.assertEquals(segment2.getVersion(), timelineHolder.getVersion());
+
+    PartitionHolder<ServerSelector> partitionHolder = timelineHolder.getObject();
+    Assert.assertTrue(partitionHolder.isComplete());
+    Assert.assertEquals(1, Iterables.size(partitionHolder));
+
+    ServerSelector selector = (partitionHolder.iterator().next()).getObject();
+    Assert.assertFalse(selector.isEmpty());
+    Assert.assertEquals(segment2, selector.getSegment());
+
+    // Verify that the ServerSelector always picks Tier 1
+    for (int i = 0; i < 5; ++i) {
+      Assert.assertEquals(server21, selector.pick(null).getServer());
+    }
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
+  }
+
+  @Test(expected = ISE.class)
+  public void testInvalidWatchedTiersConfig() throws Exception
+  {
+    // Verify that specifying both ignoredTiers and watchedTiers fails startup
+    final String tier1 = "tier1";
+    final String tier2 = "tier2";
+    setupViews(Sets.newHashSet(tier2), Sets.newHashSet(tier1));
+  }
+
+  @Test(expected = ISE.class)
+  public void testEmptyWatchedTiersConfig() throws Exception
+  {
+    setupViews(Collections.emptySet(), null);
+  }
+
+  @Test(expected = ISE.class)
+  public void testEmptyIgnoredTiersConfig() throws Exception
+  {
+    setupViews(null, Collections.emptySet());
+  }
+
   /**
    * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.
    */
   private DruidServer setupHistoricalServer(String tier, String name, int priority)
   {
-    final DruidServer historical = new DruidServer(
+    return setupDruidServer(ServerType.HISTORICAL, tier, name, priority);
+  }
+
+  /**
+   * Creates a DruidServer of the specified type and sets up a ZNode for it.
+   */
+  private DruidServer setupDruidServer(ServerType serverType, String tier, String name, int priority)
+  {
+    final DruidServer druidServer = new DruidServer(
         name,
         name,
         null,
         1000000,
-        ServerType.HISTORICAL,
+        serverType,
         tier,
         priority
     );
-    setupZNodeForServer(historical, zkPathsConfig, jsonMapper);
-    return historical;
+    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
+    return druidServer;
   }
 
   private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
@@ -442,6 +534,11 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   private void setupViews(Set<String> watchedTiers) throws Exception
+  {
+    setupViews(watchedTiers, null);
+  }
+
+  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers) throws Exception
   {
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
@@ -499,6 +596,12 @@ public class BrokerServerViewTest extends CuratorTestBase
           public Set<String> getWatchedTiers()
           {
             return watchedTiers;
+          }
+
+          @Override
+          public Set<String> getIgnoredTiers()
+          {
+            return ignoredTiers;
           }
         }
     );
