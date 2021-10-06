@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Fetches data from top-level procfs files for metrics/metering.
+ * Fetches data from top-level procfs files for metrics.
  */
 public class ProcFsReader
 {
