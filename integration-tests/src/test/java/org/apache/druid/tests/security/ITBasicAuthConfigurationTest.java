@@ -70,26 +70,38 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceReadOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceOnlyUser",
+        "datasourceReadOnlyUser",
         "helloworld",
-        "datasourceOnlyRole",
-        DATASOURCE_ONLY_PERMISSIONS
+        "datasourceReadOnlyRole",
+        DATASOURCE_READ_ONLY_PERMISSIONS
     );
   }
 
   @Override
-  protected void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceReadAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceAndSysUser",
+        "datasourceReadAndSysUser",
         "helloworld",
-        "datasourceAndSysRole",
-        DATASOURCE_SYS_PERMISSIONS
+        "datasourceReadAndSysRole",
+        DATASOURCE_READ_SYS_PERMISSIONS
+    );
+  }
+
+  @Override
+  protected void setupDatasourceWriteAndSysTableUser() throws Exception
+  {
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "datasourceWriteAndSysUser",
+        "helloworld",
+        "datasourceWriteAndSysRole",
+        DATASOURCE_WRITE_SYS_PERMISSIONS
     );
   }
 
