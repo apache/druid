@@ -147,11 +147,11 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceWithStateGroup",
-        ImmutableMap.of("datasourceWithStateRole", DATASOURCE_SYS_STATE_PERMISSIONS)
+        "datasourceReadWithStateGroup",
+        ImmutableMap.of("datasourceReadWithStateRole", DATASOURCE_READ_SYS_STATE_PERMISSIONS)
     );
   }
 

@@ -106,14 +106,14 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceWithStateUser",
+        "datasourceReadWithStateUser",
         "helloworld",
-        "datasourceWithStateRole",
-        DATASOURCE_SYS_STATE_PERMISSIONS
+        "datasourceReadWithStateRole",
+        DATASOURCE_READ_SYS_STATE_PERMISSIONS
     );
   }
 
