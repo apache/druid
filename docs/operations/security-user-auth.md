@@ -121,9 +121,8 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid-internal/v1/segments/`|realtime|
 |`/status`|all process types|
 
-### `SYSTEM_TABLES`
-Resource names for this type are system schema table names in the `sys` schema in SQL.  For example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLES` resources when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
-
+### `SYSTEM_TABLE`
+Resource names for this type are system schema table names in the `sys` schema in SQL, for example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLE` resources when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
 ### HTTP methods
 
 For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](./api-reference.md).
