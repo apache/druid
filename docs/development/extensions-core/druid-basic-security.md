@@ -132,7 +132,7 @@ If Druid uses the default credentials validator (i.e., `credentialsValidator.typ
 
 ### Create an Escalator
 
-The Escalator controls what authentication scheme will be used by Druid's internal clients when communicating with other Druid processes
+The Escalator controls what authentication scheme will be used by Druid's internal clients when communicating with other Druid processes.
 
 Example configuration:
 ```
