@@ -151,6 +151,75 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 }
 ```
 
+### KAFKA
+
+The `inputFormat` to load complete kafka record including header, key and value. An example is:
+
+```json
+"ioConfig": {
+  "inputFormat": {
+      "type": "kafka",
+      "headerLabelPrefix": "kafka.header.",
+      "timestampColumnName": "kafka.timestamp",
+      "keyColumnName": "kafka.key",
+      "headerFormat":
+      {
+        "type": "string"
+      },
+      "keyFormat":
+      {
+        "type": "json"
+      },
+      "valueFormat":
+      {
+        "type": "json"
+      }
+  },
+  ...
+}
+```
+
+The KAFKA `inputFormat` has the following components:
+
+> Note that KAFKA inputFormat is currently designated as experimental.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `kafka`. | yes |
+| headerLabelPrefix | String | A custom label prefix for all the header columns. | no (default = "kafka.header.") |
+| timestampColumnName | String | Specifies the name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
+| keyColumnName | String | Specifies the name of the column for the kafka record's key.| no (default = "kafka.key") |
+| headerFormat | Object | headerFormat specifies how to parse the kafka headers. Current supported type is "string". Since header values are bytes, the current parser by defaults reads it as UTF-8 encoded strings. There is flexibility to change this behavior by implementing your very own parser based on the encoding style. The 'encoding' type in KafkaStringHeaderFormat class needs to change with the custom implementation. | no |
+| keyFormat | [InputFormat](#input-format) | keyFormat can be any existing inputFormat to parse the kafka key. The current behavior is to only process the first entry of the input format. See [the below section](../development/extensions-core/kafka-ingestion.md#specifying-data-format) for details about specifying the input format. | no |
+| valueFormat | [InputFormat](#input-format) | valueFormat can be any existing inputFormat to parse the kafka value payload. See [the below section](../development/extensions-core/kafka-ingestion.md#specifying-data-format) for details about specifying the input format. | yes |
+
+```
+> For any conflicts in dimension/metric names, this inputFormat will prefer kafka value's column names.
+> This will enable seemless porting of existing kafka ingestion inputFormat to this new format, with additional columns from kafka header and key.
+
+> Kafka input format fundamentally blends information from header, key and value portions of a kafka record to create a druid row. It does this by 
+> exploding individual records from the value and augmenting each of these values with the selected key/header columns.
+
+> Kafka input format also by default exposes kafka timestamp (timestampColumnName), which can be used as the primary timestamp column. 
+> One can also choose timestamp column from either key or value payload, if there is no timestamp available then the default kafka timestamp is our savior.
+> eg.,
+
+    // Below timestampSpec chooses kafka's default timestamp that is available in kafka record
+    "timestampSpec":
+    {
+        "column": "kafka.timestamp",
+        "format": "millis"
+    }
+    
+    // Assuming there is a timestamp field in the header and we have "kafka.header." as a desired prefix for header columns,
+    // below example chooses header's timestamp as a primary timestamp column
+    "timestampSpec":
+    {
+        "column": "kafka.header.timestamp",
+        "format": "millis"
+    }
+```
+
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)). 

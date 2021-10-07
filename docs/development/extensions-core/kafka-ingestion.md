@@ -240,6 +240,7 @@ Supported `inputFormat`s include:
 - `csv`
 - `delimited`
 - `json`
+- `kafka`
 - `avro_stream`
 - `protobuf`
 
