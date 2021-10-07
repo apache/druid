@@ -26,6 +26,7 @@ title: "Basic Security"
 The Basic Security extension for Apache Druid adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
+- an Escalator which defines how Druid processes authenticate with one another.
 - an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups.
 
 To load the extension, [include](../../development/extensions.md#loading-extensions) `druid-basic-security` in the `druid.extensions.loadList` in your `common.runtime.properties`. For example:
@@ -33,7 +34,8 @@ To load the extension, [include](../../development/extensions.md#loading-extensi
 druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage", "druid-basic-security"]
 ```
 
-See [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces.
+To enable basic auth, configure the basic Authenticator, Escalator, and Authorizer in `common.runtime.properties`.
+See [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces and for an example configuration.
 
 ## Configuration
 
@@ -41,7 +43,7 @@ The examples in the section use the following names for the Authenticators and A
 - `MyBasicMetadataAuthenticator`
 - `MyBasicLDAPAuthenticator`
 - `MyBasicMetadataAuthorizer`
-- `MyBasicLDAPAuthorizer`.
+- `MyBasicLDAPAuthorizer`
 
 These properties are not tied to specific Authenticator or Authorizer instances.
 
@@ -56,7 +58,19 @@ To set the value for the configuration properties, add them to the common runtim
 |`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer Druid metadata store caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.|null|No|
 
 
-### Creating an Authenticator that uses the Druid metadata store to lookup and validate credentials
+### Create an Authenticator
+
+To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
+The default credentials validator (`credentialsValidator`) is `metadata`. To use the LDAP validator, define a credentials validator with a type of 'ldap'.
+
+
+Configure the named authenticator through properties of the form:
+
+```
+druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
+```
+
+Example configuration of an authenticator that uses the Druid metadata store to look up and validate credentials:
 ```
 druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
 
@@ -67,17 +81,6 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=
 druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```
-
-To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
-The default credentials validator (`credentialsValidator`) is `metadata`. To use the LDAP validator, define a credentials validator with a type of 'ldap'.
-
-
-Configuration of the named authenticator is assigned through properties with the form:
-
-```
-druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
-```
-
 The remaining examples of authenticator configuration use either `MyBasicMetadataAuthenticator` or `MyBasicLDAPAuthenticator` as the authenticator name.
 
 
@@ -127,10 +130,12 @@ If Druid uses the default credentials validator (i.e., `credentialsValidator.typ
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`|If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.|false|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.authorizerName`|Authorizer that requests should be directed to.|N/A|Yes|
 
-### Creating an Escalator
+### Create an Escalator
 
+The Escalator controls what authentication scheme will be used by Druid's internal clients when communicating with other Druid processes
+
+Example configuration:
 ```
-# Escalator
 druid.escalator.type=basic
 druid.escalator.internalClientUsername=druid_system
 druid.escalator.internalClientPassword=password2
@@ -145,22 +150,24 @@ druid.escalator.authorizerName=MyBasicMetadataAuthorizer
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
 
 
-### Creating an Authorizer
+### Create an Authorizer
+
+To use the Basic authorizer, add an authorizer with type `basic` to the authorizers list.
+
+Configure the named authorizer through properties of the form:
+
+```
+druid.auth.authorizer.<authorizerName>.<authorizerProperty>
+```
+
+Example configuration:
 ```
 druid.auth.authorizers=["MyBasicMetadataAuthorizer"]
 
 druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
 ```
 
-To use the Basic authorizer, add an authorizer with type `basic` to the authorizers list.
-
-Configuration of the named authorizer is assigned through properties with the form:
-
-```
-druid.auth.authorizer.<authorizerName>.<authorizerProperty>
-```
-
-The authorizer configuration examples in the rest of this document will use "MyBasicMetadataAuthorizer" or "MyBasicLDAPAuthorizer" as the name of the authenticators being configured.
+The authorizer configuration examples in the rest of this document will use `MyBasicMetadataAuthorizer` or `MyBasicLDAPAuthorizer` as the name of the authenticators being configured.
 
 #### Properties for Druid metadata store user authorization
 |Property|Description|Default|required|
