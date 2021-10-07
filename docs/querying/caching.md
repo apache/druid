@@ -53,7 +53,7 @@ Druid invalidates any cache the moment any underlying data change to avoid retur
 
 The primary form of caching in Druid is a *per-segment results cache*.  This cache stores partial query results on a per-segment basis and is enabled on Historical services by default.
 
-It allows Druid to maintain a low-eviction-rate cache for segments that do not change, especially important for those segments that [historical](../design/historical.html) processes pull into their local _segment cache_ from [deep storage](../dependencies/deep-storage.html) as instructed by the lead [coordinator](../design/coordinator.html).  Meanwhile, real-time segments, on the other hand, continue to have results computed at query time.
+The per-segment results cache allows Druid to maintain a low-eviction-rate cache for segments that do not change, especially important for those segments that [historical](../design/historical.html) processes pull into their local _segment cache_ from [deep storage](../dependencies/deep-storage.html). Real-time segments, on the other hand, continue to have results computed at query time.
 
 Druid may potentially merge per-segment cached results with the results of later queries that use a similar basic shape with similar filters, aggregations, etc. For example, if the query is identical except that it covers a different time period.
 
