@@ -67,7 +67,7 @@ Each Authorizer will always have a default "admin" and "druid_system" user with 
 
 There are two action types in Druid: READ and WRITE
 
-There are three resource types in Druid: DATASOURCE, CONFIG, and STATE.
+Druid uses the following resource types: `DATASOURCE`, `CONFIG`, `STATE`, and `SYSTEM_TABLE`.
 
 ### `DATASOURCE`
 Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
