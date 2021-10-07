@@ -25,6 +25,7 @@ import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
 import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
+import { v4 as uuidv4 } from 'uuid';
 
 import { Loader } from '../../components';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
@@ -203,15 +204,32 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
-        const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
+        const isSql = !QueryView.isJsonLike(queryString);
+
+        const query = isSql ? queryString : Hjson.parse(queryString);
+
+        const queryId = uuidv4();
 
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
           context = { ...queryContext, ...(mandatoryQueryContext || {}) };
+
+          if (isSql) {
+            context.sqlQueryId = queryId;
+          } else {
+            context.queryId = queryId;
+          }
+
           if (typeof wrapQueryLimit !== 'undefined') {
             context.sqlOuterLimit = wrapQueryLimit + 1;
           }
         }
+
+        void cancelToken.promise
+          .then(() => {
+            return Api.instance.delete(`/druid/v2${isSql ? '/sql' : ''}/${queryId}`);
+          })
+          .catch(() => {});
 
         try {
           return await queryRunner.runQuery({

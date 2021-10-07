@@ -46,7 +46,11 @@ export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorage
 
 export function localStorageSet(key: LocalStorageKeys, value: string): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.error('Issue setting local storage key', e);
+  }
 }
 
 export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
@@ -55,7 +59,12 @@ export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {
   if (typeof localStorage === 'undefined') return;
-  return localStorage.getItem(key) || undefined;
+  try {
+    return localStorage.getItem(key) || undefined;
+  } catch (e) {
+    console.error('Issue getting local storage key', e);
+    return;
+  }
 }
 
 export function localStorageGetJson(key: LocalStorageKeys): any {
@@ -70,5 +79,9 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
 
 export function localStorageRemove(key: LocalStorageKeys): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(key);
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.error('Issue removing local storage key', e);
+  }
 }

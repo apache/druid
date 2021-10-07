@@ -362,12 +362,11 @@ The following monitors are available:
 |----|-----------|
 |`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker processes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
 |`org.apache.druid.java.util.metrics.SysMonitor`|Reports on various system activities and statuses using the [SIGAR library](https://github.com/hyperic/sigar). Requires execute privileges on files in `java.io.tmpdir`. Do not set `java.io.tmpdir` to `noexec` when using `SysMonitor`.|
-|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical processes.|
+|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical processes. Available only on Historical processes.|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
 |`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|
 |`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
-|`org.apache.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime processes.|
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
@@ -638,7 +637,7 @@ You can configure Druid API error responses to hide internal information like th
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes the following fields  in the JSON response: `servlet`, `message`, `url`, `status`, and `cause`, if it exists. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
-|`druid.server.http.errorResponseTransformStrategy.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
+|`druid.server.http.errorResponseTransform.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
 
 ##### Error response transform strategy
 
@@ -650,25 +649,25 @@ When you specify an error response transform strategy other than `none`, Druid t
 ###### No error response transform strategy
 
 In this mode, Druid leaves error responses from underlying services unchanged and returns the unchanged errors to the API client.
-This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to "none".
+This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to "none".
 
 ###### Allowed regular expression error response transform strategy
 
-In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransformStrategy.strategy` to `allowedRegex`.
+In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `allowedRegex`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.errorResponseTransformStrategy.allowedRegex`|The list of regular expressions Druid uses to validate error messages. If the error message matches any of the regular expressions, then Druid includes it in the response unchanged. If the error message does not match any of the regular expressions, Druid replaces the error message with null or with a default message depending on the type of underlying Exception. |`[]`|
+|`druid.server.http.errorResponseTransform.allowedRegex`|The list of regular expressions Druid uses to validate error messages. If the error message matches any of the regular expressions, then Druid includes it in the response unchanged. If the error message does not match any of the regular expressions, Druid replaces the error message with null or with a default message depending on the type of underlying Exception. |`[]`|
 
 For example, consider the following error response:
 ```
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":"org.apache.calcite.tools.ValidationException","host":null}
 ```
-If `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[]`, Druid transforms the query error response to the following:
+If `druid.server.http.errorResponseTransform.allowedRegex` is set to `[]`, Druid transforms the query error response to the following:
 ```
 {"error":"Plan validation failed","errorMessage":null,"errorClass":null,"host":null}
 ``` 
-On the other hand, if `druid.server.http.errorResponseTransformStrategy.allowedRegex` is set to `[".*CalciteContextException.*"]` then Druid transforms the query error response to the following:
+On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is set to `[".*CalciteContextException.*"]` then Druid transforms the query error response to the following:
 ```
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ``` 
@@ -787,7 +786,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.period`|How often to send kill tasks to the indexing service. Value must be greater than `druid.coordinator.period.indexingPeriod`. Only applies if kill is turned on.|P1D (1 Day)|
 |`druid.coordinator.kill.durationToRetain`| Do not kill unused segments in last `durationToRetain`, must be greater or equal to 0. Only applies and MUST be specified if kill is turned on. Note that default value is invalid.|PT-1S (-1 seconds)|
 |`druid.coordinator.kill.maxSegments`|Kill at most n unused segments per kill task submission, must be greater than 0. Only applies and MUST be specified if kill is turned on. Note that default value is invalid.|0|
-|`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy that the coordinator should use to distribute segments among the historicals. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters and will replace `cost` in the future versions, users are invited to try it. Use `diskNormalized` to distribute segments among processes so that the disks fill up uniformly and use `random` to randomly pick processes to distribute segments.|`cost`|
+|`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy for the coordinator to use to distribute segments among the historicals. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters. `diskNormalized` weights the costs according to the servers' disk usage ratios - there are known issues with this strategy distributing segments unevenly across the cluster. `random` distributes segments among services randomly.|`cost`|
 |`druid.coordinator.balancer.cachingCost.awaitInitialization`|Whether to wait for segment view initialization before creating the `cachingCost` balancing strategy. This property is enabled only when `druid.coordinator.balancer.strategy` is `cachingCost`. If set to 'true', the Coordinator will not start to assign segments, until the segment view is initialized. If set to 'false', the Coordinator will fallback to use the `cost` balancing strategy only if the segment view is not initialized yet. Notes, it may take much time to wait for the initialization since the `cachingCost` balancing strategy involves much computing to build itself.|false|
 |`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the loadqueuepeon, which manages the load and drop of segments.|PT0.050S (50 ms)|
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator process should act like an Overlord as well. This configuration allows users to simplify a druid cluster by not having to deploy any standalone Overlord processes. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also. See next.|false|
@@ -1782,6 +1781,20 @@ line.
 
 See [general query configuration](#general-query-configuration).
 
+###### Broker Generated Query Configuration Supplementation
+
+The Broker generates queries internally. This configuration section describes how an operator can augment the configuration
+of these queries.
+
+As of now the only supported augmentation is overriding the default query context. This allows an operator the flexibility
+to adjust it as they see fit. A common use of this configuration is to override the query priority of the cluster generated
+queries in order to avoid running as a default priority of 0.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
+
+
 #### SQL
 
 The Druid SQL server is configured through the following properties on the Broker.
@@ -1835,7 +1848,8 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
-|`druid.broker.segment.watchedTiers`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of tiers. By default, Broker would consider all tiers. This can be used to partition your dataSources in specific Historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources.|none|
+|`druid.broker.segment.watchedTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to only consider segments being served from a list of tiers. By default, Broker considers all tiers. This can be used to partition your dataSources in specific Historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources. This config is mutually exclusive from `druid.broker.segment.ignoredTiers` and at most one of these can be configured on a Broker.|none|
+|`druid.broker.segment.ignoredTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to ignore the segments being served from a list of tiers. By default, Broker considers all tiers. This config is mutually exclusive from `druid.broker.segment.watchedTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 

@@ -21,41 +21,21 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
+ * This class contains configuration that internally generated Druid queries
+ * should add to their query payload. The runtime properties for this class
+ * have the prefix "druid.broker.internal.query.config."
  */
-public class BrokerSegmentWatcherConfig
+public class BrokerInternalQueryConfig
 {
   @JsonProperty
-  private Set<String> watchedTiers = null;
+  private Map<String, Object> context = new HashMap<>();
 
-  @JsonProperty
-  private Set<String> ignoredTiers = null;
-
-  @JsonProperty
-  private Set<String> watchedDataSources = null;
-
-  @JsonProperty
-  private boolean awaitInitializationOnStart = true;
-
-  public Set<String> getWatchedTiers()
+  public Map<String, Object> getContext()
   {
-    return watchedTiers;
-  }
-
-  public Set<String> getIgnoredTiers()
-  {
-    return ignoredTiers;
-  }
-
-  public Set<String> getWatchedDataSources()
-  {
-    return watchedDataSources;
-  }
-
-  public boolean isAwaitInitializationOnStart()
-  {
-    return awaitInitializationOnStart;
+    return context;
   }
 }

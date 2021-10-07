@@ -159,9 +159,10 @@ These metrics are applicable for the Kinesis Indexing Service.
 |`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 |`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
-## Ingestion metrics (Realtime process)
+## Ingestion metrics 
 
-These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime process. These metrics are deltas for each emission period.
+Streaming ingestion tasks and certain types of
+batch ingestion emit the following metrics. These metrics are deltas for each emission period.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
