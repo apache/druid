@@ -24,8 +24,16 @@ package org.apache.druid.segment.column;
  * This is a bridge between {@link ValueType} and {@link org.apache.druid.math.expr.ExprType}, so that they can both
  * be used with {@link TypeSignature}.
  *
- * This can be removed once the expression system solves its {@link ValueType#FLOAT} problem at which point
- * {@link org.apache.druid.math.expr.ExprType} can be removed, along with this and likely other interfaces.
+ * This interface assists in classifying the specific enum values that implement this interface into the current type
+ * families: 'primitives', 'arrays', and 'complex' types through {@link #isPrimitive()} and {@link #isArray()}
+ *
+ * At some point we should probably consider reworking this into a 'TypeFamily' enum that maps these high level families
+ * to specific types.
+ *
+ * This interface can potentially be removed if the expression processing system is updated to use {@link ColumnType}
+ * instead of {@link org.apache.druid.math.expr.ExpressionType}, which would allow
+ * {@link org.apache.druid.math.expr.ExprType} to be removed and this interface merged into {@link ValueType} (along
+ * with consolidation of several other interfaces, see {@link TypeSignature} javadoc for additional details).
  */
 public interface TypeDescriptor
 {
@@ -38,7 +46,7 @@ public interface TypeDescriptor
   boolean isNumeric();
 
   /**
-   * Scalar numeric and string values.
+   * Scalar numeric and string values. This does not currently include complex types.
    *
    * @see ValueType#isPrimitive
    * @see org.apache.druid.math.expr.ExprType#isPrimitive

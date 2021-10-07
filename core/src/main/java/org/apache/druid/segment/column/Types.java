@@ -29,6 +29,9 @@ public class Types
   private static final String ARRAY_PREFIX = "ARRAY<";
   private static final String COMPLEX_PREFIX = "COMPLEX<";
 
+  /**
+   * Create a {@link TypeSignature} given the value of {@link TypeSignature#asTypeString()} and a {@link TypeFactory}
+   */
   @Nullable
   public static <T extends TypeSignature<?>> T fromString(TypeFactory<T> typeFactory, @Nullable String typeString)
   {
@@ -67,28 +70,46 @@ public class Types
     return null;
   }
 
+  /**
+   * Returns true if {@link TypeSignature#getType()} is of the specified {@link TypeDescriptor}
+   */
   public static <T extends TypeDescriptor> boolean is(@Nullable TypeSignature<T> typeSignature, T typeDescriptor)
   {
     return typeSignature != null && typeSignature.is(typeDescriptor);
   }
 
+  /**
+   * Returns true if {@link TypeSignature#getType()} is null, or of the specified {@link TypeDescriptor}
+   */
   public static <T extends TypeDescriptor> boolean isNullOr(@Nullable TypeSignature<T> typeSignature, T typeDescriptor)
   {
     return typeSignature == null || typeSignature.is(typeDescriptor);
   }
 
-  public static <T extends TypeDescriptor> boolean anyOf(@Nullable TypeSignature<T> typeSignature, T... typeDescriptors)
-  {
-    return typeSignature != null && typeSignature.anyOf(typeDescriptors);
-  }
-
-  public static <T extends TypeDescriptor> boolean isNullOrAnyOf(@Nullable TypeSignature<T> typeSignature, T... typeDescriptors)
+  /**
+   * Returns true if the {@link TypeSignature} is null, or is any one of the specified {@link TypeDescriptor}
+   */
+  public static <T extends TypeDescriptor> boolean isNullOrAnyOf(
+      @Nullable TypeSignature<T> typeSignature,
+      T... typeDescriptors
+  )
   {
     return typeSignature == null || typeSignature.anyOf(typeDescriptors);
   }
 
-  public static <T extends TypeDescriptor> boolean either(@Nullable TypeSignature<T> typeSignature1, @Nullable TypeSignature<T> typeSignature2, T typeDescriptor)
+  /**
+   * Returns true if either supplied {@link TypeSignature#getType()} is the given {@link TypeDescriptor}
+   *
+   * Useful for choosing a common {@link TypeDescriptor} between two {@link TypeSignature} when one of the signatures
+   * might be null.
+   */
+  public static <T extends TypeDescriptor> boolean either(
+      @Nullable TypeSignature<T> typeSignature1,
+      @Nullable TypeSignature<T> typeSignature2,
+      T typeDescriptor
+  )
   {
-    return (typeSignature1 != null && typeSignature1.is(typeDescriptor)) || (typeSignature2 != null && typeSignature2.is(typeDescriptor));
+    return (typeSignature1 != null && typeSignature1.is(typeDescriptor)) ||
+           (typeSignature2 != null && typeSignature2.is(typeDescriptor));
   }
 }

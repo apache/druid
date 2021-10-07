@@ -77,7 +77,6 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
           return ExpressionType.LONG_ARRAY;
       }
     }
-    // i guess this is potentially unbounded if we ever support arbitrarily deep nested arrays
     return INTERNER.intern(new ExpressionType(ExprType.ARRAY, null, elementType));
   }
 

@@ -69,6 +69,10 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
     return Types.fromString(ExpressionTypeFactory.getInstance(), typeName);
   }
 
+  /**
+   * If an {@link ExpressionType} is an array, return {@link ExpressionType#getElementType()}, otherwise the type is
+   * returned unchanged.
+   */
   @Nullable
   public static ExpressionType elementType(@Nullable ExpressionType type)
   {
@@ -78,6 +82,10 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
     return type;
   }
 
+  /**
+   * Convert a primitive {@link ExpressionType} into an array of that type. Non-primitive types are passed through,
+   * even if they are not arrays.
+   */
   @Nullable
   public static ExpressionType asArrayType(@Nullable ExpressionType elementType)
   {
@@ -97,7 +105,8 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
 
   /**
    * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, so,
-   * this method will convert {@link ValueType#FLOAT} to {@link #DOUBLE}.
+   * this method will convert {@link ValueType#FLOAT} to {@link #DOUBLE}. Null values are not allowed in this method,
+   * and will result in an {@link IllegalStateException}
    *
    * @throws IllegalStateException
    */
@@ -133,10 +142,8 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
 
 
   /**
-   * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, and
-   * cannot currently handle {@link ValueType#COMPLEX} inputs. This method will convert {@link ValueType#FLOAT} to
-   * {@link #DOUBLE}, or null if a null {@link ValueType#COMPLEX} is encountered.
-   * @param valueType
+   * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, so this
+   * method will convert {@link ValueType#FLOAT} to {@link #DOUBLE}.
    */
   @Nullable
   public static ExpressionType fromColumnType(@Nullable TypeSignature<ValueType> valueType)
@@ -169,6 +176,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
     }
   }
 
+  /**
+   * Convert {@link ExpressionType} to the corresponding {@link ColumnType}
+   */
   public static ColumnType toColumnType(ExpressionType exprType)
   {
     switch (exprType.getType()) {

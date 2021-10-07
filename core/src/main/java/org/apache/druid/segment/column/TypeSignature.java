@@ -145,6 +145,10 @@ public interface TypeSignature<Type extends TypeDescriptor>
     return getType().isArray();
   }
 
+  /**
+   * Convert a {@link TypeSignature} into a simple string. This value can be converted back into a {@link TypeSignature}
+   * with {@link Types#fromString(TypeFactory, String)}.
+   */
   @JsonIgnore
   default String asTypeString()
   {

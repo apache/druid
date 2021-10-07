@@ -21,6 +21,11 @@ package org.apache.druid.segment.column;
 
 import javax.annotation.Nullable;
 
+/**
+ * Create {@link TypeSignature} of a {@link TypeDescriptor}. Useful for creating types from
+ * {@link TypeSignature#asTypeString()}} or converting between {@link TypeSignature} of different {@link TypeDescriptor}
+ * implementations. Implementations also offer object interning for arbitrary array and complex types.
+ */
 public interface TypeFactory<T extends TypeSignature<? extends TypeDescriptor>>
 {
   T ofString();
