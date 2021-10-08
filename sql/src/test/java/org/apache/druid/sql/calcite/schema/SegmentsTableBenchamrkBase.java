@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -44,11 +45,9 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.SegmentLoader;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -225,14 +224,13 @@ public abstract class SegmentsTableBenchamrkBase
         new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
         CalciteTests.createDefaultJoinableFactory(),
         plannerConfig,
-        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR
+        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
+        new BrokerInternalQueryConfig()
     )
     {
       @Override
       protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
-          QueryLifecycleFactory queryLifecycleFactory,
-          Iterable<SegmentId> segments,
-          AuthenticationResult authenticationResult
+          Iterable<SegmentId> segments
       )
       {
         try {

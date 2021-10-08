@@ -115,6 +115,13 @@ The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to ta
 non-default port (i.e., not port `8888`). For example, this environment variable can be used to target the
 development mode of the web console (started via `npm start`), which runs on port `18081`.
 
+Like so: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
+
+#### Running and debugging a single e2e test using Jest and Playwright
+
+- Run - `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
+- Debug - `PWDEBUG=console jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
+
 ## Description of the directory structure
 
 As part of this directory:
