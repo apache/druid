@@ -54,8 +54,6 @@ export class QueryOverview {
 
     await setInput(input!, query);
 
-    this.page.on('request', request => console.log('>>', request.method(), request.url()));
-    this.page.on('response', response => console.log('<<', response.status(), response.url()));
     await Promise.all([
       this.page.waitForRequest(
         request => request.url().includes('druid/v2') && request.method() === 'POST',
