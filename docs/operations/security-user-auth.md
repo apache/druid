@@ -139,7 +139,8 @@ Queries on the [system schema tables](../querying/sql.md#system-schema) require 
 - `segments`: Segments will be filtered based on DATASOURCE READ permissions.
 - `servers`: The user requires STATE READ permissions.
 - `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
-- `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
+- `tasks`: Druid filters tasks according to DATASOURCE WRITE permissions.
+- `supervisors`: Druid filters supervisors according to DATASOURCE WRITE permissions.
 
 ## Configuration Propagation
 
