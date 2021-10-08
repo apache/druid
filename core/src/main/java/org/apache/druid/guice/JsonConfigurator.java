@@ -100,6 +100,8 @@ public class JsonConfigurator
           value = jsonMapper.readValue(modifiedPropValue, Object.class);
         }
         catch (IOException e) {
+          // Do not log exception message or the property value as it might
+          // expose sensitive information
           log.info("Unable to parse [%s] as a json object, using as is.", prop);
           value = propValue;
         }
