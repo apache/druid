@@ -41,21 +41,6 @@
           "type": "doubleSum",
           "name": "delta",
           "fieldName": "delta"
-        },
-        {
-          "name": "thetaSketch",
-          "type": "thetaSketch",
-          "fieldName": "user"
-        },
-        {
-          "name": "quantilesDoublesSketch",
-          "type": "quantilesDoublesSketch",
-          "fieldName": "delta"
-        },
-        {
-          "name": "HLLSketchBuild",
-          "type": "HLLSketchBuild",
-          "fieldName": "user"
         }
       ],
       "granularitySpec": {
