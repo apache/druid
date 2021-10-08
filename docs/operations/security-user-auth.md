@@ -50,6 +50,10 @@ In practice, most deployments will only need to define two classes of users:
 
 It is important to note that WRITE access to DATASOURCE grants a user broad access. For instance, such users will have access to the Druid file system, S3 buckets, and credentials, among other things. As such, the ability to add and manage datasources should be allocated selectively to administrators.   
 
+> Note: `WRITE` permission on a resource does not include `READ` permission as well.
+> For instance, a `DATASOURCE READ` user might be able to access an API or a system schema record 
+> that a `DATASOURCE WRITE` user would not have access to. If a user needs to have
+> both `READ` and `WRITE` permissions on a resource, grant them both explicitly.
 
 ## Default user accounts
 
