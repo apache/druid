@@ -78,9 +78,8 @@
       "type": "index_parallel",
       "maxNumConcurrentSubTasks": 10,
       "partitionsSpec": {
-        "type": "hashed"
+        "type": "dynamic"
       },
-      "forceGuaranteedRollup": true,
       "splitHintSpec": {
         "type": "maxSize",
         "maxNumFiles": 1

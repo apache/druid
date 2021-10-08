@@ -57,7 +57,7 @@
                 "result" : {
                     "quantilesSketch":48866,
                     "approxCountTheta":7862.0,
-                    "approxCountHLL":7961
+                    "approxCountHLL":7912
                 }
             }
         ]
