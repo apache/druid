@@ -39,6 +39,7 @@ The following recommendations apply to the Druid cluster setup:
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
 * Enable authorization and do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the Druid Console process.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
+* Do not provide plain-text passwords for production systems in configuration specs. For example, sensitive properties should not be in the `consumerProperties` field of `KafkaSupervisorIngestionSpec`. See [Environment variable dynamic config provider](./dynamic-config-provider.md#environment-variable-dynamic-config-provider) for more information.
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 
 The following recommendations apply to the network where Druid runs:
@@ -49,8 +50,8 @@ The following recommendations apply to the network where Druid runs:
   - Implement account lockout and throttling features.
 * When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
 
-The following recommendation applies to Druids authorization and authentication model:
-* Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid Console process. 
+The following recommendation applies to Druid's authorization and authentication model:
+* Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid Console process. Additionally, users with `WRITE` permissions can make changes to datasources and they have access to both task and supervisor APIs which may return sensitive information.
 * Only grant `STATE READ`, `STATE WRITE`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
 
