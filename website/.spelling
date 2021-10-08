@@ -973,10 +973,21 @@ column_1
 column_n
 com.opencsv
 ctrl
+headerFormat
+headerLabelPrefix
 jsonLowercase
+kafka
+KafkaStringHeaderFormat
+kafka.header.
+kafka.key
+kafka.timestamp
+keyColumnName
+keyFormat
 listDelimiter
+timestampColumnName
 timestampSpec
 urls
+valueFormat
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
