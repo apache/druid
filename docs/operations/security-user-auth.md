@@ -34,7 +34,7 @@ Druid uses the following resource types:
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * STATE &ndash; Cluster-wide state resources.
-* SYSTEM_TABLE &ndash; if `druid.sql.planner.authorizeSystemTablesDirectly` is enabled, then Druid authorizes system tables, the `sys` schema in SQL, using this resource type.
+* SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
 
 For specific resources associated with the types, see the endpoint list below and corresponding descriptions in [API Reference](./api-reference.md).
 
@@ -50,6 +50,8 @@ In practice, most deployments will only need to define two classes of users:
 
 It is important to note that WRITE access to DATASOURCE grants a user broad access. For instance, such users will have access to the Druid file system, S3 buckets, and credentials, among other things. As such, the ability to add and manage datasources should be allocated selectively to administrators.   
 
+`WRITE` permission on a resource does not include `READ` permission. If a user requires both `READ` and `WRITE` permissions on a resource, you must grant them both explicitly. For instance, a user with only `DATASOURCE READ` permission
+might have access to an API or a system schema record that a user with `DATASOURCE WRITE` permission would not have access to.
 
 ## Default user accounts
 
@@ -67,12 +69,12 @@ Each Authorizer will always have a default "admin" and "druid_system" user with 
 
 There are two action types in Druid: READ and WRITE
 
-There are three resource types in Druid: DATASOURCE, CONFIG, and STATE.
+Druid uses the following resource types: `DATASOURCE`, `CONFIG`, `STATE`, and `SYSTEM_TABLE`.
 
-### DATASOURCE
+### `DATASOURCE`
 Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
 
-### CONFIG
+### `CONFIG`
 There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.
 
 "CONFIG" resource name covers the following endpoints:
@@ -92,7 +94,7 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 |`/druid-ext/basic-security/authentication`|coordinator|
 |`/druid-ext/basic-security/authorization`|coordinator|
 
-### STATE
+### `STATE`
 There is only one possible resource name for the "STATE" config resource type, "STATE". Granting a user access to STATE resources allows them to access the following endpoints.
 
 "STATE" resource name covers the following endpoints:
@@ -121,6 +123,8 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid-internal/v1/segments/`|realtime|
 |`/status`|all process types|
 
+### `SYSTEM_TABLE`
+Resource names for this type are system schema table names in the `sys` schema in SQL, for example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLE` resources when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
 ### HTTP methods
 
 For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](./api-reference.md).
@@ -131,16 +135,17 @@ GET requires READ permission, while POST and DELETE require WRITE permission.
 
 Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
 
-Queries on the [INFORMATION_SCHEMA tables](../querying/sql.md#information-schema) will
-return information about datasources that the caller has DATASOURCE READ access to. Other
-datasources will be omitted.
+Queries on [INFORMATION_SCHEMA tables](../querying/sql.md#information-schema) return information about datasources that the caller has DATASOURCE READ access to. Other
+datasources are omitted.
 
 Queries on the [system schema tables](../querying/sql.md#system-schema) require the following permissions:
-- `segments`: Segments will be filtered based on DATASOURCE READ permissions.
+- `segments`: Druid filters segments according to DATASOURCE READ permissions.
 - `servers`: The user requires STATE READ permissions.
-- `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
+- `server_segments`: The user requires STATE READ permissions. Druid filters segments according to DATASOURCE READ permissions.
 - `tasks`: Druid filters tasks according to DATASOURCE WRITE permissions.
 - `supervisors`: Druid filters supervisors according to DATASOURCE WRITE permissions.
+
+When the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
 
 ## Configuration Propagation
 
