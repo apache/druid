@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -36,7 +35,6 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
@@ -337,34 +335,39 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     return Optional.absent();
   }
 
+  /* This method should be never called in peons */
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 1L);
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, runningItem == null ? 1L : 0L);
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, runningItem == null ? 0L : 1L);
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
   public Map<String, Long> getLazyTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
+    throw new UnsupportedOperationException();
   }
 
   @Override

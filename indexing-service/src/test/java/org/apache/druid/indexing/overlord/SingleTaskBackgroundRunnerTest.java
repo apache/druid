@@ -35,7 +35,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -162,22 +161,6 @@ public class SingleTaskBackgroundRunnerTest
         TaskState.SUCCESS,
         runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
     );
-  }
-
-  @Test
-  public void testRunWithTaskSlotMetrics() throws ExecutionException, InterruptedException
-  {
-    Assert.assertEquals(1, runner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, runner.getBlacklistedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, runner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, runner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, runner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(
-        TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
-    );
-    Assert.assertEquals(0, runner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, runner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
   }
 
   @Test
