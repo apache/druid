@@ -72,7 +72,8 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   }
 
   /**
-   * Calculates the total cores allocated through quotas.
+   * Calculates the total cores allocated through quotas. A negative value indicates that no quota has been specified.
+   * We use -1 because that's the default value used in the cgroup.
    *
    * @param quotaUs  the cgroup quota value.
    * @param periodUs the cgroup period value.
