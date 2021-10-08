@@ -102,7 +102,7 @@ public class JsonConfigurator
         catch (IOException e) {
           // Do not log exception message or the property value as it might
           // expose sensitive information
-          log.info("Unable to parse [%s] as a json object, using as is.", prop);
+          log.info("Unable to parse value of property [%s] as a json object, using as is.", prop);
           value = propValue;
         }
         hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);
