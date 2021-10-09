@@ -30,10 +30,12 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -92,7 +94,14 @@ public class SupervisorResourceTest extends EasyMockSupport
           @Override
           public Authorizer getAuthorizer(String name)
           {
+            // Create an Authorizer that only allows Datasource WRITE requests
+            // because all SupervisorResource APIs must only check Datasource WRITE access
             return (authenticationResult, resource, action) -> {
+              if (!resource.getType().equals(ResourceType.DATASOURCE)
+                  || action != Action.WRITE) {
+                return new Access(false);
+              }
+
               if (authenticationResult.getIdentity().equals("druid")) {
                 return Access.OK;
               } else {

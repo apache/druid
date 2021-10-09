@@ -120,29 +120,38 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
 
 
   @Override
-  protected void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceReadOnlyUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceOnlyGroup",
-        ImmutableMap.of("datasourceOnlyRole", DATASOURCE_ONLY_PERMISSIONS)
+        "datasourceReadOnlyGroup",
+        ImmutableMap.of("datasourceReadOnlyRole", DATASOURCE_READ_ONLY_PERMISSIONS)
     );
   }
 
   @Override
-  protected void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceReadAndSysTableUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceWithSysGroup",
-        ImmutableMap.of("datasourceWithSysRole", DATASOURCE_SYS_PERMISSIONS)
+        "datasourceReadWithSysGroup",
+        ImmutableMap.of("datasourceReadWithSysRole", DATASOURCE_READ_SYS_PERMISSIONS)
     );
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceWriteAndSysTableUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceWithStateGroup",
-        ImmutableMap.of("datasourceWithStateRole", DATASOURCE_SYS_STATE_PERMISSIONS)
+        "datasourceWriteWithSysGroup",
+        ImmutableMap.of("datasourceWriteWithSysRole", DATASOURCE_WRITE_SYS_PERMISSIONS)
+    );
+  }
+
+  @Override
+  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
+  {
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceReadWithStateGroup",
+        ImmutableMap.of("datasourceReadWithStateRole", DATASOURCE_READ_SYS_STATE_PERMISSIONS)
     );
   }
 
