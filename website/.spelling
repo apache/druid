@@ -1713,6 +1713,7 @@ LoggingEmitter
 Los_Angeles
 MDC
 NoopServiceEmitter
+NUMA
 ONLY_EVENTS
 P1D
 P1W

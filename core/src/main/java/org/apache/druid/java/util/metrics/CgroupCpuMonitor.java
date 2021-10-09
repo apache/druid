@@ -65,12 +65,24 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     emitter.emit(builder.build("cgroup/cpu/shares", cpuSnapshot.getShares()));
     emitter.emit(builder.build(
         "cgroup/cpu/cores_quota",
-        cpuSnapshot.getPeriodUs() == 0
-        ? 0
-        : ((double) cpuSnapshot.getQuotaUs()
-          ) / cpuSnapshot.getPeriodUs()
+        computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
     ));
 
     return true;
+  }
+
+  /**
+   * Calculates the total cores allocated through quotas. A negative value indicates that no quota has been specified.
+   * We use -1 because that's the default value used in the cgroup.
+   *
+   * @param quotaUs  the cgroup quota value.
+   * @param periodUs the cgroup period value.
+   * @return the calculated processor quota, -1 if no quota or period set.
+   */
+  public static double computeProcessorQuota(long quotaUs, long periodUs)
+  {
+    return quotaUs < 0 || periodUs == 0
+           ? -1
+           : (double) quotaUs / periodUs;
   }
 }

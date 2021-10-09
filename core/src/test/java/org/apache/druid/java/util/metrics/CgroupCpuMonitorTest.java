@@ -79,4 +79,14 @@ public class CgroupCpuMonitorTest
     Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
     Assert.assertEquals(3.0D, coresEvent.get("value"));
   }
+
+  @Test
+  public void testQuotaCompute()
+  {
+    Assert.assertEquals(-1, CgroupCpuMonitor.computeProcessorQuota(-1, 100000), 0);
+    Assert.assertEquals(0, CgroupCpuMonitor.computeProcessorQuota(0, 100000), 0);
+    Assert.assertEquals(-1, CgroupCpuMonitor.computeProcessorQuota(100000, 0), 0);
+    Assert.assertEquals(2.0D, CgroupCpuMonitor.computeProcessorQuota(200000, 100000), 0);
+    Assert.assertEquals(0.5D, CgroupCpuMonitor.computeProcessorQuota(50000, 100000), 0);
+  }
 }
