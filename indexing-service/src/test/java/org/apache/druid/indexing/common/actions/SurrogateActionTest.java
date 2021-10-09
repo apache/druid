@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.junit.Assert;
@@ -35,7 +35,7 @@ public class SurrogateActionTest
   public void testSerde() throws IOException
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final SurrogateAction<TaskLock, TimeChunkLockTryAcquireAction> surrogateAction = new SurrogateAction<>(
+    final SurrogateAction<LockResult, TimeChunkLockTryAcquireAction> surrogateAction = new SurrogateAction<>(
         "testId",
         new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, Intervals.of("2018-01-01/2019-01-01"))
     );

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
@@ -36,9 +35,11 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -343,14 +344,16 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       version = ParallelIndexSupervisorTask.findVersion(versions, interval);
       if (version == null) {
         // We don't have a lock for this interval, so we should lock it now.
-        final TaskLock lock = Preconditions.checkNotNull(
-            getToolbox().getTaskActionClient().submit(
-                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
-            ),
-            "Cannot acquire a lock for interval[%s]",
-            interval
+        final LockResult lockResult = getToolbox().getTaskActionClient().submit(
+            new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
         );
-        version = lock.getVersion();
+        if (lockResult.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+        }
+        if (!lockResult.isOk() || lockResult.getTaskLock() == null) {
+          throw new ISE(StringUtils.format("Cannot acquire a lock for interval[%s]", interval));
+        }
+        version = lockResult.getTaskLock().getVersion();
       }
     }
     return new NonnullPair<>(interval, version);

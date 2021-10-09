@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.junit.Assert;
@@ -77,8 +77,8 @@ public class TimeChunkLockTryAcquireActionTest
     );
 
     actionTestKit.getTaskLockbox().add(task);
-    final TaskLock lock = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertNotNull(lock);
+    final LockResult lockResult = action.perform(task, actionTestKit.getTaskActionToolbox());
+    Assert.assertNotNull(lockResult.getTaskLock());
   }
 
   @Test(timeout = 60_000L)
@@ -91,7 +91,7 @@ public class TimeChunkLockTryAcquireActionTest
     );
 
     actionTestKit.getTaskLockbox().add(task);
-    final TaskLock lock = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertNotNull(lock);
+    final LockResult lockResult = action.perform(task, actionTestKit.getTaskActionToolbox());
+    Assert.assertNotNull(lockResult.getTaskLock());
   }
 }

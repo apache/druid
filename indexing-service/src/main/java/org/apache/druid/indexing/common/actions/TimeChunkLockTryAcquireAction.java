@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
@@ -36,7 +35,7 @@ import javax.annotation.Nullable;
  * TaskAction to try to acquire a {@link org.apache.druid.indexing.common.TimeChunkLock}.
  * This action returns null immediately if it fails to get a lock for the given interval.
  */
-public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
+public class TimeChunkLockTryAcquireAction implements TaskAction<LockResult>
 {
   @JsonIgnore
   private final TaskLockType type;
@@ -67,21 +66,21 @@ public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
   }
 
   @Override
-  public TypeReference<TaskLock> getReturnTypeReference()
+  public TypeReference<LockResult> getReturnTypeReference()
   {
-    return new TypeReference<TaskLock>()
+    return new TypeReference<LockResult>()
     {
     };
   }
 
   @Override
-  public TaskLock perform(Task task, TaskActionToolbox toolbox)
+  public LockResult perform(Task task, TaskActionToolbox toolbox)
   {
     final LockResult result = toolbox.getTaskLockbox().tryLock(
         task,
         new TimeChunkLockRequest(type, task, interval, null)
     );
-    return result.isOk() ? result.getTaskLock() : null;
+    return result;
   }
 
   @Override

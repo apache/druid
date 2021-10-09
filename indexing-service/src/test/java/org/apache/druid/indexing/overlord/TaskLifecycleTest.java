@@ -1029,8 +1029,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             interval
         );
 
-        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
-        if (lock == null) {
+        final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
+        if (!lockResult.isOk() || lockResult.getTaskLock() == null) {
           throw new ISE("Failed to get a lock");
         }
 
@@ -1038,7 +1038,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .builder()
             .dataSource("ds")
             .interval(interval)
-            .version(lock.getVersion())
+            .version(lockResult.getTaskLock().getVersion())
             .size(0)
             .build();
 
@@ -1424,6 +1424,61 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(bundleMap.isEmpty());
 
+  }
+
+  @Test
+  public void testLockRevoked() throws Exception
+  {
+    final Task task = new AbstractFixedIntervalTask(
+        "id1",
+        "id1",
+        new TaskResource("id1", 1),
+        "ds",
+        Intervals.of("2012-01-01/P1D"),
+        null
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return "test";
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      {
+        final Interval interval = Intervals.of("2012-01-01/P1D");
+        final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
+            TaskLockType.EXCLUSIVE,
+            interval
+        );
+
+        final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
+        if (!lockResult.isOk() || lockResult.getTaskLock() == null) {
+          throw new ISE("Failed to get a lock");
+        }
+
+        final LockResult lockResultBeforeRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertFalse(lockResultBeforeRevoke.isRevoked());
+
+        taskLockbox.revokeLock(getId(), lockResult.getTaskLock());
+
+        final LockResult lockResultRevoked = toolbox.getTaskActionClient().submit(action);
+        Assert.assertTrue(lockResultRevoked.isRevoked());
+        return TaskStatus.failure(getId(), "lock revoked test");
+      }
+    };
+
+    final TaskStatus status = runTask(task);
+    Assert.assertEquals(taskLocation, status.getLocation());
+    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
   private TaskStatus runTask(final Task task) throws Exception

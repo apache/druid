@@ -608,7 +608,8 @@ public class TaskLockbox
    * @param taskId an id of the task holding the lock
    * @param lock   lock to be revoked
    */
-  private void revokeLock(String taskId, TaskLock lock)
+  @VisibleForTesting
+  protected void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 

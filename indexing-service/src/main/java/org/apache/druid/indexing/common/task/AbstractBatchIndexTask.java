@@ -30,7 +30,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -42,9 +41,11 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -400,8 +401,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         continue;
       }
       prev = cur;
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
-      if (lock == null) {
+      final LockResult lockResult = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
+      if (lockResult.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
+      }
+      if (!lockResult.isOk()) {
         return false;
       }
     }
