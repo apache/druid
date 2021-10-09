@@ -70,7 +70,7 @@
     "@blueprintjs/datetime": "^3.23.4",
     "@blueprintjs/icons": "^3.26.1",
     "@blueprintjs/popover2": "^0.10.1",
-    "axios": "^0.21.1",
+    "axios": "^0.21.4",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.2.0",
