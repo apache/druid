@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 public class SegmentsTableConfig
 {
@@ -27,26 +28,25 @@ public class SegmentsTableConfig
   private boolean forceHashBasedMerge = false;
 
   /**
-   * This controls the max size of {@link org.apache.druid.sql.calcite.schema.ObjectStringCache},
+   * This controls the max size of {@link org.apache.druid.sql.calcite.schema.CaffeineObjectStringCache},
    * which is used to cache the string representation of Java objects
    * such as {@link org.joda.time.DateTime#toString()} or
    * serialized JSON of {@link org.apache.druid.timeline.CompactionState}.
    * Since these objects are usually expected to have a lot of duplicates when processing the segments table,
-   * the default size should be enough in most cases. For example, the cache will contain only 26,280 entries
-   * to store the timestamp of segment intervals when you have hourly partitioned segments stored for 3 years.
+   * the default size should be enough in most cases.
    *
    * @see org.apache.druid.sql.calcite.schema.SegmentsTableRow
    */
   @JsonProperty
-  private long stringCacheSizeRows = 100_000;
+  private HumanReadableBytes stringCacheSize = new HumanReadableBytes("1MiB");
 
   public boolean isForceHashBasedMerge()
   {
     return forceHashBasedMerge;
   }
 
-  public long getStringCacheSizeRows()
+  public long getStringCacheSizeBytes()
   {
-    return stringCacheSizeRows;
+    return stringCacheSize.getBytes();
   }
 }

@@ -25,7 +25,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.SegmentsTableConfig;
-import org.apache.druid.sql.calcite.schema.SegmentsTableBenchamrkBase;
+import org.apache.druid.sql.calcite.schema.SegmentsTableQueryTestSuite;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1, jvmArgsAppend = {"-XX:+UseG1GC"})
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
-public class SegmentsTableBenchmark extends SegmentsTableBenchamrkBase
+public class SegmentsTableBenchmark extends SegmentsTableQueryTestSuite
 {
   @Param({"2021-01-01/P3Y"})
   private String availableSegmentsInterval;

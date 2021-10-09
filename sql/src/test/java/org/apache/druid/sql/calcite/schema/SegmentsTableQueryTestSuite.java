@@ -77,7 +77,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-public abstract class SegmentsTableBenchamrkBase
+public abstract class SegmentsTableQueryTestSuite
 {
   static {
     NullHandling.initializeForTests();

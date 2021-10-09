@@ -19,65 +19,45 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.druid.common.guava.SettableSupplier;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 /**
- * A simple cache to hold string representation of the given keys.
+ * A simple cache based on Caffeine to hold string representation of the given keys.
  * This cache can be used to avoid repetitive calls of expensive {@link Object#toString()}
  * or JSON serializations.
- *
- * This cache uses a simple caching policy that keeps only the first N entries.
- * The cache size is limited by the {@link #cacheSize} constructor parameter.
  *
  * @param <K> cache key type
  *
  * @see SegmentsTableRow#toObjectArray
  */
-class ObjectStringCache<K>
+public class CaffeineObjectStringCache<K>
 {
   private final Function<K, String> serializer;
-  private final long cacheSize;
-  private final Map<K, String> cache;
+  private final Cache<K, String> cache;
 
-  ObjectStringCache(Function<K, String> serializer, long cacheSize)
+  public CaffeineObjectStringCache(Function<K, String> serializer, long cacheSizeBytes)
   {
     this.serializer = serializer;
-    this.cacheSize = cacheSize;
-    this.cache = new HashMap<>();
+    this.cache = Caffeine
+        .newBuilder()
+        .maximumWeight(cacheSizeBytes)
+        // We consider only value size here since they are the only extra memory pressure.
+        // Keys are just references to existing in-memory objects.
+        .weigher((K key, String value) -> value.length())
+        .build();
   }
 
   @Nullable
-  String add(@Nullable K item)
+  public String add(@Nullable K item)
   {
     if (item == null) {
       return null;
     }
 
-    SettableSupplier<String> resultSupplier = new SettableSupplier<>();
-    cache.compute(
-        item,
-        (k, v) -> {
-          if (v != null) {
-            resultSupplier.set(v);
-            return v;
-          }
-
-          String serialized = serializer.apply(k);
-          resultSupplier.set(serialized);
-
-          if (cache.size() >= cacheSize) {
-            // Cache is full
-            return null;
-          } else {
-            return serialized;
-          }
-        }
-    );
-    return resultSupplier.get();
+    return cache.get(item, serializer);
   }
 }

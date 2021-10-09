@@ -148,10 +148,10 @@ public class SegmentsTableRow
    */
   public Object[] toObjectArray(
       ObjectMapper jsonMapper,
-      ObjectStringCache<DateTime> timestampStringCache,
-      ObjectStringCache<List<String>> dimensionsStringCache,
-      ObjectStringCache<List<String>> metricsStringCache,
-      ObjectStringCache<CompactionState> compactionStateStringCache
+      CaffeineObjectStringCache<DateTime> timestampStringCache,
+      CaffeineObjectStringCache<List<String>> dimensionsStringCache,
+      CaffeineObjectStringCache<List<String>> metricsStringCache,
+      CaffeineObjectStringCache<CompactionState> compactionStateStringCache
   )
   {
     return new Object[]{

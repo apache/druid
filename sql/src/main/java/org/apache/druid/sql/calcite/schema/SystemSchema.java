@@ -385,21 +385,15 @@ public class SystemSchema extends AbstractSchema
     {
       // Serializing objects to string is expensive, so we use caches to avoid serializing the same object
       // over and over again.
-      ObjectStringCache<DateTime> timestampStringCache = new ObjectStringCache<>(
-          AbstractDateTime::toString,
-          config.getStringCacheSizeRows()
+      CaffeineObjectStringCache<DateTime> timestampStringCache = createCache(AbstractDateTime::toString);
+      CaffeineObjectStringCache<List<String>> dimensionsStringCache = createCache(
+          dimensions -> SegmentsTableRow.toJsonString(jsonMapper, dimensions)
       );
-      ObjectStringCache<List<String>> dimensionsStringCache = new ObjectStringCache<>(
-          dimensions -> SegmentsTableRow.toJsonString(jsonMapper, dimensions),
-          config.getStringCacheSizeRows()
+      CaffeineObjectStringCache<List<String>> metricsStringCache = createCache(
+          metrics -> SegmentsTableRow.toJsonString(jsonMapper, metrics)
       );
-      ObjectStringCache<List<String>> metricsStringCache = new ObjectStringCache<>(
-          metrics -> SegmentsTableRow.toJsonString(jsonMapper, metrics),
-          config.getStringCacheSizeRows()
-      );
-      ObjectStringCache<CompactionState> compactionStateStringCache = new ObjectStringCache<>(
-          state -> SegmentsTableRow.toJsonString(jsonMapper, state),
-          config.getStringCacheSizeRows()
+      CaffeineObjectStringCache<CompactionState> compactionStateStringCache = createCache(
+          state -> SegmentsTableRow.toJsonString(jsonMapper, state)
       );
 
       return FluentIterable
@@ -411,6 +405,14 @@ public class SystemSchema extends AbstractSchema
               metricsStringCache,
               compactionStateStringCache
           ));
+    }
+
+    private <K> CaffeineObjectStringCache<K> createCache(java.util.function.Function<K, String> serializer)
+    {
+      return new CaffeineObjectStringCache<>(
+          serializer,
+          config.getStringCacheSizeBytes()
+      );
     }
 
     private Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(

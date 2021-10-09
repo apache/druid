@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
+public class SegmentsTableBenchmarkQueriesTest extends SegmentsTableQueryTestSuite
 {
   private static final SettableSupplier<Boolean> FORCE_HASH_BASED_MERGE_SUPPLIER = new SettableSupplier<>(false);
 
@@ -73,6 +73,12 @@ public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
       {
         return FORCE_HASH_BASED_MERGE_SUPPLIER.get();
       }
+
+      @Override
+      public long getStringCacheSizeBytes()
+      {
+        return 1024;
+      }
     };
     setupBenchmark(
         plannerConfig,
@@ -101,7 +107,7 @@ public class SegmentsTableBenchmarkQueryTest extends SegmentsTableBenchamrkBase
 
   private final int query;
 
-  public SegmentsTableBenchmarkQueryTest(int query)
+  public SegmentsTableBenchmarkQueriesTest(int query)
   {
     this.query = query;
   }
