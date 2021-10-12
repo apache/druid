@@ -22,18 +22,19 @@ title: "Dynamic Config Providers"
   ~ under the License.
   -->
 
-Druid's core mechanism of supplying multiple related set of credentials/secrets/configurations via Druid extension mechanism. Currently, it is only supported for providing Kafka Consumer configuration in [Kafka Ingestion](../development/extensions-core/kafka-ingestion.md).
+Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations with a Druid extension mechanism. It is intened as the eventual replacement of  [PasswordProvider](./password-provider.md).
 
-Eventually this will replace [PasswordProvider](./password-provider.md) 
+Druid comes with an environment variable dynamic config provider that supports:
+- Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md)
+- Kinesis consumer configuration in [Kafka ngestion](../development/extensions-core/kafka-ingestion.md)
 
 
-Users can create custom extension of the `DynamicConfigProvider` interface that is registered at Druid process startup.
-
-For more information, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
+To develop a custom extension of the `DynamicConfigProvider` interface that is registered at Druid process startup, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
 ## Environment variable dynamic config provider
 
-`EnvironmentVariableDynamicConfigProvider` can be used to avoid exposing credentials or other secret information in the configuration files using environment variables. An example to use this `configProvider` is:
+You can use the environment variable dynamic config provider (`EnvironmentVariableDynamicConfigProvider`) to  store passwords or other sensitive information using system environment variables instead of plain text configuration. For example:
+
 ```json
 druid.some.config.dynamicConfigProvider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
 ```
