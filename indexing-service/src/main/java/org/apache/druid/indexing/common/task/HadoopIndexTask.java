@@ -54,7 +54,6 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
-import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -200,16 +199,19 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(intervals)
       );
-      final LockResult lockResult = taskActionClient.submit(
+      final TaskLock lock = taskActionClient.submit(
           new TimeChunkLockTryAcquireAction(
               TaskLockType.EXCLUSIVE,
               interval
           )
       );
-      if (lockResult.isRevoked()) {
+      if (lock == null) {
+        return false;
+      }
+      if (lock.isRevoked()) {
         throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
       }
-      return lockResult.isOk();
+      return true;
     } else {
       return true;
     }

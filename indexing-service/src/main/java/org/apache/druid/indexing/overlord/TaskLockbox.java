@@ -351,7 +351,7 @@ public class TaskLockbox
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
           newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
           if (newSegmentId == null) {
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
           convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
         } else {
@@ -400,7 +400,7 @@ public class TaskLockbox
                 ? ((SegmentLock) posseToUse.taskLock).getPartitionId()
                 : null
             );
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
         } else {
           log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
@@ -408,7 +408,10 @@ public class TaskLockbox
         }
       } else {
         final boolean lockRevoked = posseToUse != null && posseToUse.getTaskLock().isRevoked();
-        return LockResult.fail(lockRevoked);
+        if (lockRevoked) {
+          return LockResult.revoked(posseToUse.getTaskLock());
+        }
+        return LockResult.fail();
       }
     }
     finally {

@@ -29,7 +29,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Interval;
@@ -80,16 +79,19 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final LockResult lockResult = taskActionClient.submit(
+    final TaskLock lock = taskActionClient.submit(
         new TimeChunkLockTryAcquireAction(
             TaskLockType.EXCLUSIVE,
             interval
         )
     );
-    if (lockResult.isRevoked()) {
+    if (lock == null) {
+      return false;
+    }
+    if (lock.isRevoked()) {
       throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
     }
-    return lockResult.isOk();
+    return true;
   }
 
   @JsonProperty

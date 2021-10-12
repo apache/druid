@@ -1029,8 +1029,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             interval
         );
 
-        final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
-        if (!lockResult.isOk() || lockResult.getTaskLock() == null) {
+        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
+        if (lock == null) {
           throw new ISE("Failed to get a lock");
         }
 
@@ -1038,7 +1038,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .builder()
             .dataSource("ds")
             .interval(interval)
-            .version(lockResult.getTaskLock().getVersion())
+            .version(lock.getVersion())
             .size(0)
             .build();
 
@@ -1458,18 +1458,18 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             interval
         );
 
-        final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
-        if (!lockResult.isOk() || lockResult.getTaskLock() == null) {
+        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
+        if (lock == null) {
           throw new ISE("Failed to get a lock");
         }
 
-        final LockResult lockResultBeforeRevoke = toolbox.getTaskActionClient().submit(action);
-        Assert.assertFalse(lockResultBeforeRevoke.isRevoked());
+        final TaskLock lockBeforeRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertFalse(lockBeforeRevoke.isRevoked());
 
-        taskLockbox.revokeLock(getId(), lockResult.getTaskLock());
+        taskLockbox.revokeLock(getId(), lock);
 
-        final LockResult lockResultRevoked = toolbox.getTaskActionClient().submit(action);
-        Assert.assertTrue(lockResultRevoked.isRevoked());
+        final TaskLock lockAfterRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertTrue(lockAfterRevoke.isRevoked());
         return TaskStatus.failure(getId(), "lock revoked test");
       }
     };
