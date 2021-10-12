@@ -60,6 +60,18 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       job = createPartitionJob(config);
       config.setHadoopJobIdFileName(hadoopJobIdFile);
       boolean jobSucceeded = JobHelper.runSingleJob(job);
+
+      if (jobSucceeded) {
+        if (config.getSchema().getTuningConfig().getMaxIntervalsIngested() < Integer.MAX_VALUE) {
+          // Check if this ingestion job breached the maxIntervalsIngested value, requiring early exit
+          jobSucceeded = JobHelper.evaluateMaxIntervalsIngestedCircuitBreaker(config.getSchema());
+        }
+        if (config.getSchema().getTuningConfig().getMaxSegmentsIngested() < Integer.MAX_VALUE) {
+          // Check if this ingestion job breached the maxSegmentsIngested value, requiring early exit
+          jobSucceeded = JobHelper.evaluateMaxSegmentsIngestedCircuitBreaker(config.getSchema());
+        }
+      }
+
       JobHelper.maybeDeleteIntermediatePath(
           jobSucceeded,
           config.getSchema()

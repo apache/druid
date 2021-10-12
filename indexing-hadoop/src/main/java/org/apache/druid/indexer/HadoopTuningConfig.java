@@ -74,6 +74,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
+        null,
+        null,
         null
     );
   }
@@ -102,6 +104,8 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  private final int maxIntervalsIngested;
+  private final int maxSegmentsIngested;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -130,7 +134,9 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      final @JsonProperty("maxIntervalsIngested") @Nullable Integer maxIntervalsIngested,
+      final @JsonProperty("maxSegmentsIngested") @Nullable Integer maxSegmentsIngested
   )
   {
     this.workingPath = workingPath;
@@ -182,6 +188,19 @@ public class HadoopTuningConfig implements TuningConfig
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
     }
+
+    if (maxIntervalsIngested == null) {
+      this.maxIntervalsIngested = DEFAULT_MAX_INTERVALS_INGESTED;
+    } else {
+      this.maxIntervalsIngested = maxIntervalsIngested;
+    }
+
+    if (maxSegmentsIngested == null) {
+      this.maxSegmentsIngested = DEFAULT_MAX_SEGMENTS_INGESTED;
+    } else {
+      this.maxSegmentsIngested = maxSegmentsIngested;
+    }
+
   }
 
   @Nullable
@@ -336,6 +355,18 @@ public class HadoopTuningConfig implements TuningConfig
     return awaitSegmentAvailabilityTimeoutMillis;
   }
 
+  @JsonProperty
+  public int getMaxIntervalsIngested()
+  {
+    return maxIntervalsIngested;
+  }
+
+  @JsonProperty
+  public int getMaxSegmentsIngested()
+  {
+    return maxSegmentsIngested;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -363,7 +394,9 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        maxIntervalsIngested,
+        maxSegmentsIngested
     );
   }
 
@@ -394,7 +427,9 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        maxIntervalsIngested,
+        maxSegmentsIngested
     );
   }
 
@@ -425,7 +460,9 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        maxIntervalsIngested,
+        maxSegmentsIngested
     );
   }
 }

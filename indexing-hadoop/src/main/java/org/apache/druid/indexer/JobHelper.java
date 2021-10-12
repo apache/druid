@@ -65,6 +65,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -426,6 +427,55 @@ public class JobHelper
         }
       }
     }
+  }
+
+  /**
+   * Determine if an ingestion task breaks the threshold (maxIntervalsIngested) defined in the
+   * task's tuningConfig for the max number of intervals ingested by a single task.
+   *
+   * @param ingestionSpec The {@link HadoopIngestionSpec} for the ingestion task in question.
+   * @return true if the threshold is broken, otherwise false
+   */
+  public static boolean evaluateMaxIntervalsIngestedCircuitBreaker(HadoopIngestionSpec ingestionSpec)
+  {
+    int intervalThreshold = ingestionSpec.getTuningConfig().getMaxIntervalsIngested();
+    int actualIntervals = ingestionSpec.getTuningConfig().getShardSpecs().keySet().size();
+    if (intervalThreshold < actualIntervals) {
+      log.error(
+          "This ingestion task was determined to have breached the limit of [%d] intervals ingested. Total "
+          + "intervals that would be ingested by this task: [%d]",
+          intervalThreshold,
+          actualIntervals
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Determine if an ingestion task breaks the threshold (maxSegmentsIngested) defined in the tasks's tuningConfig
+   * for the max number of segments ingested by a single task.
+   * @param ingestionSpec The {@link HadoopIngestionSpec} for the ingestion task in question.
+   * @return true if the threshold is broken, otherwise false
+   */
+  public static boolean evaluateMaxSegmentsIngestedCircuitBreaker(HadoopIngestionSpec ingestionSpec)
+  {
+    int segmentThreshold = ingestionSpec.getTuningConfig().getMaxSegmentsIngested();
+    AtomicInteger actualSegmentsIngested = new AtomicInteger(0);
+    ingestionSpec.getTuningConfig().getShardSpecs().forEach(
+        (bucket, specList) -> actualSegmentsIngested.getAndAdd(specList.size())
+    );
+
+    if (segmentThreshold < actualSegmentsIngested.get()) {
+      log.error(
+          "This ingestion task was determined to have breached the limit of [%d] segments ingested. Total "
+          + "segments that would be ingested by this task: [%d]",
+          segmentThreshold,
+          actualSegmentsIngested.get()
+      );
+      return false;
+    }
+    return true;
   }
 
   public static DataSegmentAndIndexZipFilePath serializeOutIndex(

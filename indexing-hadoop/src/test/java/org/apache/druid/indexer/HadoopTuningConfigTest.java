@@ -63,6 +63,8 @@ public class HadoopTuningConfigTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
 

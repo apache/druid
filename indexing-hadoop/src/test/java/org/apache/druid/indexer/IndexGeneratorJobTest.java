@@ -547,6 +547,8 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
+                null,
                 null
             )
         )

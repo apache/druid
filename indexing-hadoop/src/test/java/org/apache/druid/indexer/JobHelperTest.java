@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Progressable;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,6 +62,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -187,6 +189,8 @@ public class JobHelperTest
                 null,
                 null,
                 null,
+                null,
+                null,
                 null
             )
         )
@@ -297,6 +301,144 @@ public class JobHelperTest
       return;
     }
     Assert.fail("Exception was not thrown for malicious zip file");
+  }
+
+  @Test
+  public void testEvaluateMaxIntervalsIngestedCircuitBreakerOverThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 400; i++) {
+      shardSpecs.put(i, ImmutableList.of());
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxIntervalsIngested()).andReturn(365).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertFalse(JobHelper.evaluateMaxIntervalsIngestedCircuitBreaker(hadoopIngestionSpecMock));
+  }
+
+  @Test
+  public void testEvaluateMaxIntervalsIngestedCircuitBreakerAtThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 365; i++) {
+      shardSpecs.put(i, ImmutableList.of());
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxIntervalsIngested()).andReturn(365).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertTrue(JobHelper.evaluateMaxIntervalsIngestedCircuitBreaker(hadoopIngestionSpecMock));
+  }
+
+  @Test
+  public void testEvaluateMaxIntervalsIngestedCircuitBreakerUnderThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 50; i++) {
+      shardSpecs.put(i, ImmutableList.of());
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxIntervalsIngested()).andReturn(365).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertTrue(JobHelper.evaluateMaxIntervalsIngestedCircuitBreaker(hadoopIngestionSpecMock));
+  }
+
+  @Test
+  public void testEvaluateMaxSegmentsIngestedCircuitBreakerOverThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 300; i++) {
+      shardSpecs.put(
+          i,
+          ImmutableList.of(
+              new HadoopyShardSpec(null, 1),
+              new HadoopyShardSpec(null, 1)
+          )
+      );
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxSegmentsIngested()).andReturn(500).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertFalse(JobHelper.evaluateMaxSegmentsIngestedCircuitBreaker(hadoopIngestionSpecMock));
+  }
+
+  @Test
+  public void testEvaluateMaxSegmentsIngestedCircuitBreakerAtThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 250; i++) {
+      shardSpecs.put(
+          i,
+          ImmutableList.of(
+              new HadoopyShardSpec(null, 1),
+              new HadoopyShardSpec(null, 1)
+          )
+      );
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxSegmentsIngested()).andReturn(500).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertTrue(JobHelper.evaluateMaxSegmentsIngestedCircuitBreaker(hadoopIngestionSpecMock));
+  }
+
+  @Test
+  public void testEvaluateMaxSegmentsIngestedCircuitBreakerUnderThreshold()
+  {
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new HashMap<>();
+    for (long i = 0; i < 10; i++) {
+      shardSpecs.put(
+          i,
+          ImmutableList.of(
+              new HadoopyShardSpec(null, 1),
+              new HadoopyShardSpec(null, 1)
+          )
+      );
+    }
+
+    HadoopIngestionSpec hadoopIngestionSpecMock = EasyMock.createMock(HadoopIngestionSpec.class);
+    HadoopTuningConfig hadoopTuningConfigMock = EasyMock.createMock(HadoopTuningConfig.class);
+
+    EasyMock.expect(hadoopIngestionSpecMock.getTuningConfig()).andReturn(hadoopTuningConfigMock).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getMaxSegmentsIngested()).andReturn(500).atLeastOnce();
+    EasyMock.expect(hadoopTuningConfigMock.getShardSpecs()).andReturn(shardSpecs).atLeastOnce();
+
+    EasyMock.replay(hadoopIngestionSpecMock, hadoopTuningConfigMock);
+
+    Assert.assertTrue(JobHelper.evaluateMaxSegmentsIngestedCircuitBreaker(hadoopIngestionSpecMock));
   }
 
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
