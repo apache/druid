@@ -22,9 +22,9 @@ title: "Dynamic Config Providers"
   ~ under the License.
   -->
 
-Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations with a Druid extension mechanism. It is intened as the eventual replacement of  [PasswordProvider](./password-provider.md).
+Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. It is intened as the eventual replacement of  [PasswordProvider](./password-provider.md).
 
-Druid comes with an environment variable dynamic config provider that supports:
+By default Druid includes an environment variable dynamic config provider that supports:
 - Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md)
 - Kinesis consumer configuration in [Kafka ngestion](../development/extensions-core/kafka-ingestion.md)
 
@@ -33,7 +33,7 @@ To develop a custom extension of the `DynamicConfigProvider` interface that is r
 
 ## Environment variable dynamic config provider
 
-You can use the environment variable dynamic config provider (`EnvironmentVariableDynamicConfigProvider`) to  store passwords or other sensitive information using system environment variables instead of plain text configuration. For example:
+You can use the environment variable dynamic config provider (`EnvironmentVariableDynamicConfigProvider`) to store passwords or other sensitive information using system environment variables instead of plain text configuration. For example:
 
 ```json
 druid.some.config.dynamicConfigProvider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
