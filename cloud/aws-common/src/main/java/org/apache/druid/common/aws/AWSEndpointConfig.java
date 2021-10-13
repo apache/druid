@@ -22,6 +22,7 @@ package org.apache.druid.common.aws;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class AWSEndpointConfig
 {
@@ -43,5 +44,33 @@ public class AWSEndpointConfig
   public String getSigningRegion()
   {
     return signingRegion;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AWSEndpointConfig{" +
+           "url='" + url + '\'' +
+           ", signingRegion='" + signingRegion + '\'' +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AWSEndpointConfig that = (AWSEndpointConfig) o;
+    return Objects.equals(url, that.url) && Objects.equals(signingRegion, that.signingRegion);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(url, signingRegion);
   }
 }

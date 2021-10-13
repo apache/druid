@@ -22,6 +22,8 @@ package org.apache.druid.common.aws;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class AWSClientConfig
 {
   @JsonProperty
@@ -54,5 +56,38 @@ public class AWSClientConfig
   public boolean isForceGlobalBucketAccessEnabled()
   {
     return forceGlobalBucketAccessEnabled;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AWSClientConfig{" +
+           "protocol='" + protocol + '\'' +
+           ", disableChunkedEncoding=" + disableChunkedEncoding +
+           ", enablePathStyleAccess=" + enablePathStyleAccess +
+           ", forceGlobalBucketAccessEnabled=" + forceGlobalBucketAccessEnabled +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AWSClientConfig that = (AWSClientConfig) o;
+    return disableChunkedEncoding == that.disableChunkedEncoding
+           && enablePathStyleAccess == that.enablePathStyleAccess
+           && forceGlobalBucketAccessEnabled == that.forceGlobalBucketAccessEnabled
+           && Objects.equals(protocol, that.protocol);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(protocol, disableChunkedEncoding, enablePathStyleAccess, forceGlobalBucketAccessEnabled);
   }
 }

@@ -21,6 +21,8 @@ package org.apache.druid.common.aws;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class AWSProxyConfig
 {
   @JsonProperty
@@ -53,5 +55,38 @@ public class AWSProxyConfig
   public String getPassword()
   {
     return password;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AWSProxyConfig{" +
+           "host='" + host + '\'' +
+           ", port=" + port +
+           ", username='" + username + '\'' +
+           ", password='" + password + '\'' +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AWSProxyConfig that = (AWSProxyConfig) o;
+    return port == that.port && Objects.equals(host, that.host) && Objects.equals(
+        username,
+        that.username
+    ) && Objects.equals(password, that.password);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(host, port, username, password);
   }
 }
