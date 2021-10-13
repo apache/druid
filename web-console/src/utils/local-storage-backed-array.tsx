@@ -21,8 +21,8 @@ import * as JSONBig from 'json-bigint-native';
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
 export class LocalStorageBackedArray<T> {
-  key: LocalStorageKeys;
-  storedArray: T[];
+  private readonly key: LocalStorageKeys;
+  readonly storedArray: T[];
 
   constructor(key: LocalStorageKeys, array?: T[]) {
     this.key = key;

@@ -78,6 +78,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Availability',
     'Availability detail',
     'Total data size',
+    'Segment rows',
     'Segment size',
     'Segment granularity',
     'Total rows',
@@ -105,6 +106,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Availability',
     'Availability detail',
     'Total data size',
+    'Segment rows',
     'Segment size',
     'Segment granularity',
     'Total rows',
@@ -129,6 +131,7 @@ function formatLoadDrop(segmentsToLoad: NumberLike, segmentsToDrop: NumberLike):
 
 const formatTotalDataSize = formatBytes;
 const formatSegmentRows = formatMillions;
+const formatSegmentSize = formatBytes;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
@@ -168,6 +171,9 @@ interface DatasourceQueryResultRow {
   readonly min_segment_rows: NumberLike;
   readonly avg_segment_rows: NumberLike;
   readonly max_segment_rows: NumberLike;
+  readonly min_segment_size: NumberLike;
+  readonly avg_segment_size: NumberLike;
+  readonly max_segment_size: NumberLike;
   readonly total_rows: NumberLike;
   readonly avg_row_size: NumberLike;
 }
@@ -189,6 +195,9 @@ function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryR
     min_segment_rows: 0,
     avg_segment_rows: 0,
     max_segment_rows: 0,
+    min_segment_size: 0,
+    avg_segment_size: 0,
+    max_segment_size: 0,
     total_rows: 0,
     avg_row_size: 0,
   };
@@ -288,10 +297,15 @@ export class DatasourcesView extends React.PureComponent<
         ],
         hiddenColumns.exists('Total data size') &&
           `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
-        hiddenColumns.exists('Segment size') && [
+        hiddenColumns.exists('Segment rows') && [
           `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
           `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
           `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
+        ],
+        hiddenColumns.exists('Segment size') && [
+          `MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size`,
+          `AVG("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size`,
+          `MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size`,
         ],
         hiddenColumns.exists('Segment granularity') && [
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
@@ -403,6 +417,9 @@ ORDER BY 1`;
                 min_segment_rows: -1,
                 avg_segment_rows: -1,
                 max_segment_rows: -1,
+                min_segment_size: -1,
+                avg_segment_size: -1,
+                max_segment_size: -1,
                 total_rows: -1,
                 avg_row_size: -1,
               };
@@ -978,10 +995,12 @@ ORDER BY 1`;
     const totalDataSizeValues = datasources.map(d => formatTotalDataSize(d.total_data_size));
 
     const minSegmentRowsValues = datasources.map(d => formatSegmentRows(d.min_segment_rows));
-
     const avgSegmentRowsValues = datasources.map(d => formatSegmentRows(d.avg_segment_rows));
-
     const maxSegmentRowsValues = datasources.map(d => formatSegmentRows(d.max_segment_rows));
+
+    const minSegmentSizeValues = datasources.map(d => formatSegmentSize(d.min_segment_size));
+    const avgSegmentSizeValues = datasources.map(d => formatSegmentSize(d.avg_segment_size));
+    const maxSegmentSizeValues = datasources.map(d => formatSegmentSize(d.max_segment_size));
 
     const totalRowsValues = datasources.map(d => formatTotalRows(d.total_rows));
 
@@ -1107,8 +1126,8 @@ ORDER BY 1`;
               ),
             },
             {
-              Header: twoLines('Segment size (rows)', 'minimum / average / maximum'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              Header: twoLines('Segment rows', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment rows'),
               accessor: 'avg_segment_rows',
               filterable: false,
               width: 220,
@@ -1132,6 +1151,37 @@ ORDER BY 1`;
                     <BracedText
                       text={formatSegmentRows(max_segment_rows)}
                       braces={maxSegmentRowsValues}
+                    />
+                  </>
+                );
+              },
+            },
+            {
+              Header: twoLines('Segment size', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              accessor: 'avg_segment_size',
+              filterable: false,
+              width: 270,
+              Cell: ({ value, original }) => {
+                const { min_segment_size, max_segment_size } = original as Datasource;
+                if (
+                  isNumberLikeNaN(value) ||
+                  isNumberLikeNaN(min_segment_size) ||
+                  isNumberLikeNaN(max_segment_size)
+                )
+                  return '-';
+                return (
+                  <>
+                    <BracedText
+                      text={formatSegmentSize(min_segment_size)}
+                      braces={minSegmentSizeValues}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText text={formatSegmentSize(value)} braces={avgSegmentSizeValues} />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatSegmentSize(max_segment_size)}
+                      braces={maxSegmentSizeValues}
                     />
                   </>
                 );
