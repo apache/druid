@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -436,13 +437,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
