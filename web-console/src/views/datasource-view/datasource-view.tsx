@@ -58,6 +58,7 @@ import {
   formatPercent,
   getDruidErrorMessage,
   isNumberLikeNaN,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
   NumberLike,
@@ -68,7 +69,6 @@ import {
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './datasource-view.scss';
 
@@ -264,7 +264,7 @@ export interface DatasourcesViewState {
   useUnuseAction: 'use' | 'unuse';
   useUnuseInterval: string;
   showForceCompact: boolean;
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
   showSegmentTimeline: boolean;
 
   datasourceTableActionDialogId?: string;
@@ -273,7 +273,7 @@ export interface DatasourcesViewState {
 
 interface DatasourceQuery {
   capabilities: Capabilities;
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
   showUnused: boolean;
 }
 
@@ -285,29 +285,29 @@ export class DatasourcesView extends React.PureComponent<
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
 
-  static query(hiddenColumns: LocalStorageBackedArray<string>) {
+  static query(visibleColumns: LocalStorageBackedVisibility) {
     const columns = compact(
       [
-        hiddenColumns.exists('Datasource name') && `datasource`,
-        (hiddenColumns.exists('Availability') || hiddenColumns.exists('Segment granularity')) &&
+        visibleColumns.shown('Datasource name') && `datasource`,
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
           `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
-        (hiddenColumns.exists('Availability') || hiddenColumns.exists('Availability detail')) && [
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
           `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
         ],
-        hiddenColumns.exists('Total data size') &&
+        visibleColumns.shown('Total data size') &&
           `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
-        hiddenColumns.exists('Segment rows') && [
+        visibleColumns.shown('Segment rows') && [
           `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
           `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
           `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
         ],
-        hiddenColumns.exists('Segment size') && [
+        visibleColumns.shown('Segment size') && [
           `MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size`,
           `AVG("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size`,
           `MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size`,
         ],
-        hiddenColumns.exists('Segment granularity') && [
+        visibleColumns.shown('Segment granularity') && [
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
@@ -315,11 +315,11 @@ export class DatasourcesView extends React.PureComponent<
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
           `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
         ],
-        hiddenColumns.exists('Total rows') &&
+        visibleColumns.shown('Total rows') &&
           `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
-        hiddenColumns.exists('Avg. row size') &&
+        visibleColumns.shown('Avg. row size') &&
           `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
-        hiddenColumns.exists('Replicated size') &&
+        visibleColumns.shown('Replicated size') &&
           `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
       ].flat(),
     );
@@ -370,8 +370,9 @@ ORDER BY 1`;
       useUnuseAction: 'unuse',
       useUnuseInterval: '',
       showForceCompact: false,
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
+        ['Segment size', 'Segment granularity'],
       ),
       showSegmentTimeline: false,
 
@@ -380,13 +381,13 @@ ORDER BY 1`;
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (
-        { capabilities, hiddenColumns, showUnused },
+        { capabilities, visibleColumns, showUnused },
         _cancelToken,
         setIntermediateQuery,
       ) => {
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
-          const query = DatasourcesView.query(hiddenColumns);
+          const query = DatasourcesView.query(visibleColumns);
           setIntermediateQuery(query);
           datasources = await queryDruidSql({ query });
         } else if (capabilities.hasCoordinatorAccess()) {
@@ -508,8 +509,8 @@ ORDER BY 1`;
 
   private fetchDatasourceData() {
     const { capabilities } = this.props;
-    const { hiddenColumns, showUnused } = this.state;
-    this.datasourceQueryManager.runQuery({ capabilities, hiddenColumns, showUnused });
+    const { visibleColumns, showUnused } = this.state;
+    this.datasourceQueryManager.runQuery({ capabilities, visibleColumns, showUnused });
   }
 
   componentDidMount(): void {
@@ -979,7 +980,7 @@ ORDER BY 1`;
       datasourcesAndDefaultRulesState,
       datasourceFilter,
       showUnused,
-      hiddenColumns,
+      visibleColumns,
     } = this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data
@@ -1033,7 +1034,7 @@ ORDER BY 1`;
           columns={[
             {
               Header: twoLines('Datasource', 'name'),
-              show: hiddenColumns.exists('Datasource name'),
+              show: visibleColumns.shown('Datasource name'),
               accessor: 'datasource',
               width: 150,
               Cell: ({ value }) => {
@@ -1052,7 +1053,7 @@ ORDER BY 1`;
             },
             {
               Header: 'Availability',
-              show: hiddenColumns.exists('Availability'),
+              show: visibleColumns.shown('Availability'),
               filterable: false,
               minWidth: 200,
               accessor: 'num_segments',
@@ -1106,7 +1107,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Availability', 'detail'),
-              show: hiddenColumns.exists('Availability detail'),
+              show: visibleColumns.shown('Availability detail'),
               accessor: 'num_segments_to_load',
               filterable: false,
               minWidth: 100,
@@ -1117,7 +1118,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Total', 'data size'),
-              show: hiddenColumns.exists('Total data size'),
+              show: visibleColumns.shown('Total data size'),
               accessor: 'total_data_size',
               filterable: false,
               width: 100,
@@ -1127,7 +1128,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Segment rows', 'minimum / average / maximum'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment rows'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment rows'),
               accessor: 'avg_segment_rows',
               filterable: false,
               width: 220,
@@ -1158,7 +1159,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Segment size', 'minimum / average / maximum'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment size'),
               accessor: 'avg_segment_size',
               filterable: false,
               width: 270,
@@ -1189,7 +1190,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Segment', 'granularity'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment granularity'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment granularity'),
               id: 'segment_granularity',
               accessor: segmentGranularityCountsToRank,
               filterable: false,
@@ -1235,7 +1236,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Total', 'rows'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Total rows'),
+              show: capabilities.hasSql() && visibleColumns.shown('Total rows'),
               accessor: 'total_rows',
               filterable: false,
               width: 100,
@@ -1246,7 +1247,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Avg. row size', '(bytes)'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Avg. row size'),
+              show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,
@@ -1257,7 +1258,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('Replicated', 'size'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
+              show: capabilities.hasSql() && visibleColumns.shown('Replicated size'),
               accessor: 'replicated_size',
               filterable: false,
               width: 100,
@@ -1270,7 +1271,7 @@ ORDER BY 1`;
             },
             {
               Header: 'Compaction',
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('Compaction'),
               id: 'compactionStatus',
               accessor: row => Boolean(row.compactionStatus),
               filterable: false,
@@ -1297,7 +1298,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('% Compacted', 'bytes / segments / intervals'),
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('% Compacted'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('% Compacted'),
               id: 'percentCompacted',
               width: 200,
               accessor: ({ compactionStatus }) =>
@@ -1357,7 +1358,7 @@ ORDER BY 1`;
             {
               Header: twoLines('Left to be', 'compacted'),
               show:
-                capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Left to be compacted'),
+                capabilities.hasCoordinatorAccess() && visibleColumns.shown('Left to be compacted'),
               id: 'leftToBeCompacted',
               width: 100,
               accessor: ({ compactionStatus }) =>
@@ -1380,7 +1381,7 @@ ORDER BY 1`;
             },
             {
               Header: 'Retention',
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('Retention'),
               id: 'retention',
               accessor: row => row.rules.length,
               filterable: false,
@@ -1410,7 +1411,7 @@ ORDER BY 1`;
             },
             {
               Header: ACTION_COLUMN_LABEL,
-              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
+              show: visibleColumns.shown(ACTION_COLUMN_LABEL),
               accessor: 'datasource',
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
@@ -1454,7 +1455,7 @@ ORDER BY 1`;
     const { capabilities } = this.props;
     const {
       showUnused,
-      hiddenColumns,
+      visibleColumns,
       showSegmentTimeline,
       datasourceTableActionDialogId,
       actions,
@@ -1490,14 +1491,14 @@ ORDER BY 1`;
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
-                hiddenColumns: prevState.hiddenColumns.toggle(column),
+                visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
             onClose={added => {
               if (!added) return;
               this.fetchDatasourceData();
             }}
-            tableColumnsHidden={hiddenColumns.storedArray}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
         {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
