@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -110,5 +111,13 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
       intervalToLookup.put(interval, buckets);
     });
     return intervalToLookup;
+  }
+
+  @Override
+  public int getAggregateSegmentCount() throws UnsupportedOperationException
+  {
+    AtomicInteger segmentCount = new AtomicInteger(0);
+    intervalToNumBuckets.forEach((interval, numBuckets) -> segmentCount.getAndAdd(numBuckets));
+    return segmentCount.get();
   }
 }

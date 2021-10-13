@@ -47,4 +47,11 @@ public interface PartitionAnalysis<T, P extends PartitionsSpec>
   Set<Interval> getAllIntervalsToIndex();
 
   int getNumTimePartitions();
+
+  /**
+   * Returns the number of segments across all buckets.
+   *
+   * @return int corresponding to the aggregate segment count across all buckets
+   */
+  int getAggregateSegmentCount() throws UnsupportedOperationException;
 }

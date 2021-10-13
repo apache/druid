@@ -128,4 +128,10 @@ public class RangePartitionAnalysis
 
     return intervalToSegmentIds;
   }
+
+  @Override
+  public int getAggregateSegmentCount() throws UnsupportedOperationException
+  {
+    throw new UnsupportedOperationException("RangePartitionAnalysis does not support this function");
+  }
 }

@@ -75,4 +75,10 @@ public class LinearPartitionAnalysis implements PartitionAnalysis<Integer, Dynam
   {
     return intervals.size();
   }
+
+  @Override
+  public int getAggregateSegmentCount() throws UnsupportedOperationException
+  {
+    throw new UnsupportedOperationException("LinearParitionAnalysis does not support this function");
+  }
 }

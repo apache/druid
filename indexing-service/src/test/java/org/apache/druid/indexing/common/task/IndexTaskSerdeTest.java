@@ -85,7 +85,9 @@ public class IndexTaskSerdeTest
         10,
         100,
         1234,
-        0L
+        0L,
+        Integer.MAX_VALUE,
+        Integer.MAX_VALUE
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -122,7 +124,9 @@ public class IndexTaskSerdeTest
         10,
         100,
         null,
-        -1L
+        -1L,
+        500,
+        500
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -159,7 +163,9 @@ public class IndexTaskSerdeTest
         10,
         100,
         null,
-        1L
+        1L,
+        1000,
+        2000
     );
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -196,6 +202,8 @@ public class IndexTaskSerdeTest
         10,
         100,
         1234,
+        null,
+        null,
         null
     );
     assertSerdeTuningConfig(tuningConfig);
@@ -235,6 +243,8 @@ public class IndexTaskSerdeTest
         10,
         100,
         null,
+        null,
+        null,
         null
     );
   }
@@ -272,6 +282,8 @@ public class IndexTaskSerdeTest
         true,
         10,
         100,
+        null,
+        null,
         null,
         null
     );
