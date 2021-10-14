@@ -226,7 +226,7 @@ By default, `isolation.level` is set to `read_committed`. If you use older versi
 
 In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is not known upfront, or is not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore` and `key` secretly. You can use the environment variable dynamic config provider that comes with Druid to provide configurations at runtime. For more information, see [DynamicConfigProvider](../../operations/dynamic-config-provider.md).
 
-For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord service and running the Peon service:
+For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord and the Peon services:
 
 ```
 export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='admin_user' password='admin_password';"
