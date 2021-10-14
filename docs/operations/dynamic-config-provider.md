@@ -48,7 +48,9 @@ Consider the following when using the environment variable config provider:
 - If you manually specify a configuration key-value pair and use the dynamic config provider for the same key, Druid uses the value from the dynamic config provider.
 - For use in a supervisor spec, environment variables must be available to the system user that runs the Overlord service and that runs the Peon service.
 
-For example, if you want to use environment variables to store the SSL key and truststore passwords for Kafka. On the Overlord and Peon machines set the following environment variable for system user that runs the Druid services:
+The following example shows how to configure environment variables to store the SSL key and truststore passwords for Kafka.
+
+On the Overloard and Peon machines, set the following environment variables for the system user that runs the Druid services:
 
 ```
 export SSL_KEY_PASSWORD=mysecretkeypassword
