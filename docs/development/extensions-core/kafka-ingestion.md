@@ -224,7 +224,7 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler en
 Consumer properties must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
 By default, `isolation.level` is set to `read_committed`. If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
 
-There are few cases that require fetching a few or all consumer properties at runtime. For example when `bootstrap.servers` is not known upfront, or is not static. To enable SSL connections you must provide provide passwords for `keystore`, `truststore` and `key` secretly. In this case you can use the environment variable dynamic config provider that comes with Druid to provide configurations at runtime. See [DynamicConfigProvider](../../operations/dynamic-config-provider.md).
+In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is not known upfront, or is not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore` and `key` secretly. You can use the environment variable dynamic config provider that comes with Druid to provide configurations at runtime. For more information, see [DynamicConfigProvider](../../operations/dynamic-config-provider.md).
 
 For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord service and running the Peon service:
 
