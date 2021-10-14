@@ -44,7 +44,7 @@ druid.dynamic.config.provider={"type": "environment","variables":{"secret1": "SE
 |`type`|String|dynamic config provider type|Yes: `environment`|
 |`variables`|Map|environment variables that store the configuration information|Yes|
 
-Consider the following when using the environment variable config provider:
+When using the environment variable config provider, consider the following:
 - If you manually specify a configuration key-value pair and use the dynamic config provider for the same key, Druid uses the value from the dynamic config provider.
 - For use in a supervisor spec, environment variables must be available to the system user that runs the Overlord service and that runs the Peon service.
 
