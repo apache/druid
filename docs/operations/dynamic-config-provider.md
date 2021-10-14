@@ -22,26 +22,56 @@ title: "Dynamic Config Providers"
   ~ under the License.
   -->
 
-Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. It is intened as the eventual replacement of  [PasswordProvider](./password-provider.md).
+Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. It is intended to replace the deprecated [PasswordProvider](./password-provider.md).
 
 By default Druid includes an environment variable dynamic config provider that supports:
 - Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md)
-- Kinesis consumer configuration in [Kafka ngestion](../development/extensions-core/kafka-ingestion.md)
-
 
 To develop a custom extension of the `DynamicConfigProvider` interface that is registered at Druid process startup, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
 ## Environment variable dynamic config provider
 
-You can use the environment variable dynamic config provider (`EnvironmentVariableDynamicConfigProvider`) to store passwords or other sensitive information using system environment variables instead of plain text configuration. For example:
+You can use the environment variable dynamic config provider (`EnvironmentVariableDynamicConfigProvider`) to store passwords or other sensitive information using system environment variables instead of plain text configuration.
+
+The environment variable dynamic config provider uses the following syntax:
 
 ```json
-druid.some.config.dynamicConfigProvider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
+druid.dynamic.config.provider={"type": "environment","variables":{"secret1": "SECRET1_VAR","secret2": "SECRET2_VAR"}}
 ```
-The values are described below.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|dynamic config provider type|Yes: `environment`|
-|`variables`|Map|environment variables to get information from|Yes|
+|`variables`|Map|environment variables that store the configuration information|Yes|
 
+Consider the following when using the environment variable config provider:
+- If you manually specify a configuration key-value pair and use the dynamic config provider for the same key, Druid uses the value from the dynamic config provider.
+- For use in a supervisor spec, environment variables must be available to the system user that runs the Overlord service and that runs the Peon service.
+
+For example, if you want to use environment variables to store the SSL key and truststore passwords for Kafka. On the Overlord and Peon machines set the following environment variable for system user that runs the Druid services:
+
+```
+export SSL_KEY_PASSWORD=mysecretkeypassword
+export SSL_KEYSTORE_PASSWORD=mysecretkeystorepassword
+export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
+```
+
+When you define the consumer properties in the supervisor spec, use the dynamic config provider to refer to the environment variables:
+```
+...
+   "consumerProperties": {
+        "bootstrap.servers": "localhost:9092",
+        "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks"
+        "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks"
+        "druid.dynamic.config.provider": {
+          "type": "environment",
+          "variables": {
+            "ssl.key.password": "SSL_KEY_PASSWORD",
+            "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
+            "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+          }
+        }
+      },
+...
+```
+When connecting to Kafka, Druid replaces the environment variables with their corresponding values.

@@ -221,15 +221,35 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler en
 
 #### More on consumerProperties
 
-This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
-By default, `isolation.level` is set to `read_committed`. It should be set to `read_uncommitted` if you don't want Druid to consume only committed transactions or working with older versions of Kafka servers with no transactions support.
+Consumer properties must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
+By default, `isolation.level` is set to `read_committed`. Set `isolation.level` to `read_uncommitted` if you don't want Druid to consume only committed transactions, if you use older versions of Kafka servers without transactions support.
 
-There are few cases that require fetching few/all of consumer properties at runtime e.g. when `bootstrap.servers` is not known upfront or not static, to enable SSL connections users might have to provide passwords for `keystore`, `truststore` and `key` secretly.
-For such consumer properties, user can implement a [DynamicConfigProvider](../../operations/dynamic-config-provider.md) to supply them at runtime, by adding
-`druid.dynamic.config.provider`=`{"type": "<registered_dynamic_config_provider_name>", ...}`
-in consumerProperties map.
+There are few cases that require fetching a few or all consumer properties at runtime. For example when `bootstrap.servers` is not known upfront, or is not static. To enable SSL connections you must provide provide passwords for `keystore`, `truststore` and `key` secretly. In this case you can use the environment variable dynamic config provider that comes with Druid to provide configurations at runtime. See [DynamicConfigProvider](../../operations/dynamic-config-provider.md).
 
-Note: SSL connections may also be supplied using the deprecated [Password Provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`. This functionality might be removed in a future release.
+For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord service and running the Peon service:
+
+```
+export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='admin_user' password='admin_password';"
+export SSL_KEY_PASSWORD=mysecretkeypassword
+export SSL_KEYSTORE_PASSWORD=mysecretkeystorepassword
+export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
+```
+
+```
+        "druid.dynamic.config.provider": {
+          "type": "environment",
+          "variables": {
+            "sasl.jaas.config": "KAFKA_JAAS_CONFIG"
+            "ssl.key.password": "SSL_KEY_PASSWORD",
+            "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
+            "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+          }
+        }
+      }
+```
+Verify that you've changed the values for all configurations to match your own environment.  You can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab** in the **Load Data** UI in the Druid Console. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
+
+Note: You can provide SSL connections with  [Password Provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
 
 #### Specifying data format
 
