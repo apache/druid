@@ -247,7 +247,7 @@ export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
         }
       }
 ```
-Verify that you've changed the values for all configurations to match your own environment.  You can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab** in the **Load Data** UI in the Druid Console. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
+Verify that you've changed the values for all configurations to match your own environment.  You can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab** in the **Load Data** UI in the Druid console. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
 Note: You can provide SSL connections with  [Password Provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
 
