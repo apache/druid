@@ -50,7 +50,7 @@ When using the environment variable config provider, consider the following:
 
 The following example shows how to configure environment variables to store the SSL key and truststore passwords for Kafka.
 
-On the Overloard and Peon machines, set the following environment variables for the system user that runs the Druid services:
+On the Overlord and Peon machines, set the following environment variables for the system user that runs the Druid services:
 
 ```
 export SSL_KEY_PASSWORD=mysecretkeypassword
