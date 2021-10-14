@@ -192,8 +192,8 @@ For example:
 }
 ```
 
-Not the following behaviors:
-- Druid uses Kafka's column names to resolve conflicts with dimension or metric names. This behavior makes the Kafka `inputFormat` compatible with existing Kafka input formats but adds columns from kafka header and key.
+Note the following behaviors:
+- If there are conflicts between column names, Druid uses the column names from the payload and ignores the column name from the header or key. This behavior makes it easier to migrate to the the Kafka `inputFormat` from another `inputFormat` without losing data.
 - The Kafka input format fundamentally blends information from the header, key, and value objects from a Kafka record to create a row in Druid. It extracts individual records from the value. Then it augments each value with the corresponding key or header columns.
 - The Kafka input format by default exposes Kafka timestamp `timestampColumnName` to make it available for use as the primary timestamp column. Alternatively you can choose timestamp column from either the key or value payload.
 
