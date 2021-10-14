@@ -22,7 +22,7 @@ title: "Dynamic Config Providers"
   ~ under the License.
   -->
 
-Dynamic config providers are Apache Druid's core mechanism to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. It is intended to replace the deprecated [PasswordProvider](./password-provider.md).
+Druid relies on dynamic config providers to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. Dynamic config providers are intended to replace the deprecated [PasswordProvider](./password-provider.md).
 
 By default Druid includes an environment variable dynamic config provider that supports:
 - Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md)
