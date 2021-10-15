@@ -70,7 +70,7 @@ Besides text formats, Druid also supports binary formats such as [Orc](#orc) and
 ## Custom formats
 
 Druid supports custom data formats and can use the Regex parser or the JavaScript parsers to parse these formats. Using any of these parsers for
-parsing data will not be as efficient as writing a native Java parser or using an external stream processor. We welcome contributions of new Parsers.
+parsing data is less efficient than writing a native Java parser or using an external stream processor. We welcome contributions of new parsers.
 
 ## Input format
 
