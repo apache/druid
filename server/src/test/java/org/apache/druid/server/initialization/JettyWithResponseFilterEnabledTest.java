@@ -27,8 +27,9 @@ public class JettyWithResponseFilterEnabledTest extends JettyTest
   @Override
   public void setProperties()
   {
-    System.setProperty("druid.server.http.showDetailedJettyErrors", "false");
+    // call super.setProperties first in case it is setting the same property as this class
     super.setProperties();
+    System.setProperty("druid.server.http.showDetailedJettyErrors", "false");
   }
 
   @Test
