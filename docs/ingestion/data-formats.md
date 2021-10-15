@@ -1269,7 +1269,7 @@ This Protobuf bytes decoder first read a descriptor file, and then parse it to g
 |-------|------|-------------|----------|
 | type | String | `file` | yes |
 | descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
 
 Sample spec:
 
