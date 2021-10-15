@@ -547,7 +547,7 @@ Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| `protobuf` | yes |
+|type| String| Set value to `protobuf`. | yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 |`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
 
