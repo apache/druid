@@ -437,7 +437,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | `schema_registry` | no |
-| url | String | Specifies the url endpoint of the Schema Registry. | yes |
+| url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
