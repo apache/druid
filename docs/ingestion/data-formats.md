@@ -1176,7 +1176,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Avro data 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | Set value to`avro_stream`. | no |
+| type | String | Set value to `avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies [`avroBytesDecoder`](#Avro Bytes Decoder) to decode bytes to Avro record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
