@@ -512,13 +512,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           log.error(
               "This ingestion task was determined to have breached the limit of [%d] intervals ingested. Total "
               + "intervals that would be ingested by this task: [%d]",
-              ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
+              ingestionSchema.getTuningConfig().getMaxIntervalsIngested(),
               partitionAnalysis.getNumTimePartitions()
           );
           throw new RuntimeException(
               StringUtils.format("This ingestion task was determined to have breached the limit of [%d] intervals ingested. "
                             + "Total intervals that would be ingested by this task: [%d]",
-                            ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
+                            ingestionSchema.getTuningConfig().getMaxIntervalsIngested(),
                             partitionAnalysis.getNumTimePartitions()
               )
           );
