@@ -1218,7 +1218,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 |-------|------|-------------|----------|
 | type | String | `protobuf` | yes |
 | `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options. Note that `timeAndDims` `parseSpec` is no longer supported. | yes |
 
 Sample spec:
 
