@@ -427,7 +427,7 @@ This section describes the format of the `schemaRepository` object for the `sche
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | `avro_1124_rest_client`| no |
-| url | String | Specifies the endpoint url of your Avro-1124 schema repository. | yes |
+| url | String | Specifies the endpoint URL of your Avro-1124 schema repository. | yes |
 
 ###### Confluent Schema Registry-based Avro Bytes Decoder
 
