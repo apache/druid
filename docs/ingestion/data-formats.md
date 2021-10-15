@@ -87,7 +87,7 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `json`| yes |
+| type | String | Set value to `json`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
 | featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson library. Those features will be applied when parsing the input JSON data. | no |
 
@@ -107,7 +107,7 @@ Configure the CSV `inputFormat` to load CSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `csv` | yes |
+| type | String | Set value to `csv`. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
@@ -130,7 +130,7 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `tsv`| yes |
+| type | String | Set value to `tsv`. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default = `\t`) |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
@@ -159,7 +159,7 @@ Configure the Kafka `inputFormat` to load complete kafka records including heade
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `kafka`| yes |
+| type | String | Set value to `kafka`. | yes |
 | headerLabelPrefix | String | Custom label prefix for all the header columns. | no (default = "kafka.header.") |
 | timestampColumnName | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
 | keyColumnName | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
@@ -223,7 +223,7 @@ Configure the ORC `inputFormat` to load ORC data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `orc` | yes |
+| type | String | Set value to `orc`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
 | binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
@@ -406,7 +406,7 @@ This Avro bytes decoder first extracts `subject` and `id` from the input message
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `schema_repo` | no |
+| type | String | Set value to `schema_repo`. | no |
 | subjectAndIdConverter | JSON Object | Specifies how to extract the subject and id from message bytes. | yes |
 | schemaRepository | JSON Object | Specifies how to look up the Avro schema from subject and id. | yes |
 
@@ -416,7 +416,7 @@ This section describes the format of the `subjectAndIdConverter` object for the 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `avro_1124`| no |
+| type | String | Set value to `avro_1124`. | no |
 | topic | String | Specifies the topic of your Kafka stream. | yes |
 
 
@@ -426,7 +426,7 @@ This section describes the format of the `schemaRepository` object for the `sche
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `avro_1124_rest_client`| no |
+| type | String | Set value to `avro_1124_rest_client`. | no |
 | url | String | Specifies the endpoint URL of your Avro-1124 schema repository. | yes |
 
 ###### Confluent Schema Registry-based Avro Bytes Decoder
@@ -436,7 +436,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `schema_registry` | no |
+| type | String | Set value to `schema_registry`. | no |
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
@@ -639,7 +639,7 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `string` for most cases. `hadoopyString` for Hadoop indexing. | yes |
+| type | String | Set value to `string` for most cases. Otherwise use `hadoopyString` for Hadoop indexing. | yes |
 | parseSpec | JSON Object | Specifies the format, timestamp, and dimensions of the data. | yes |
 
 ### Avro Hadoop Parser
@@ -658,7 +658,7 @@ See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Reso
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String |`avro_hadoop` | yes |
+| type | String | Set value to `avro_hadoop`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
@@ -1176,7 +1176,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Avro data 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String |`avro_stream`| no |
+| type | String | Set value to`avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies [`avroBytesDecoder`](#Avro Bytes Decoder) to decode bytes to Avro record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
@@ -1216,7 +1216,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `protobuf` | yes |
+| type | String | Set value to `protobuf`. | yes |
 | `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options. Note that `timeAndDims` `parseSpec` is no longer supported. | yes |
 
@@ -1267,7 +1267,7 @@ This Protobuf bytes decoder first read a descriptor file, and then parse it to g
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `file` | yes |
+| type | String | Set value to `file`. | yes |
 | descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
 | protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
 
@@ -1288,7 +1288,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `schema_registry`| yes |
+| type | String | Set value to `schema_registry`. | yes |
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
