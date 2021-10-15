@@ -206,7 +206,7 @@ For example, the following `timestampSpec` uses the default Kafka timestamp from
     }
 ```
     
-If you are using "kafka.header." as the prefix for Kafka header columns and there is a timestamp field in the header, the following example uses the header timestamp as the primary timestamp column:
+If you are using "kafka.header." as the prefix for Kafka header columns and there is a timestamp field in the header, the header timestamp serves as the primary timestamp column. For example:
 ```
     "timestampSpec":
     {
