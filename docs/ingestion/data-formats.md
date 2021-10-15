@@ -712,7 +712,7 @@ The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.m
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
-|type      | String|`orc`| yes|
+| type | String | Set value to `orc`. | yes |
 |parseSpec | JSON Object | Specifies the timestamp and dimensions of the data (`timeAndDims` and `orc` format) and a `flattenSpec` (`orc` format). | yes|
 
 The parser supports two `parseSpec` formats: `orc` and `timeAndDims`.
