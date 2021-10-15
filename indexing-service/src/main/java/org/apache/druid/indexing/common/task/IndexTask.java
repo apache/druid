@@ -1695,6 +1695,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxIntervalsIngested;
     }
 
+    @JsonProperty
     public int getMaxSegmentsIngested()
     {
       return maxSegmentsIngested;
