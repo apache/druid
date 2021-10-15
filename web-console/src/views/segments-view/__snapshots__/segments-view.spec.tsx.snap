@@ -69,7 +69,12 @@ exports[`segments-view matches snapshot 1`] = `
         }
         onChange={[Function]}
         onClose={[Function]}
-        tableColumnsHidden={Array []}
+        tableColumnsHidden={
+          Array [
+            "Time span",
+            "Partitioning",
+          ]
+        }
       />
     </Memo(ViewControlBar)>
     <ReactTable
@@ -187,7 +192,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Time span",
             "accessor": "time_span",
             "filterable": true,
-            "show": true,
+            "show": false,
             "sortable": true,
             "width": 100,
           },
@@ -196,7 +201,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Partitioning",
             "accessor": "partitioning",
             "filterable": true,
-            "show": true,
+            "show": false,
             "sortable": true,
             "width": 100,
           },
