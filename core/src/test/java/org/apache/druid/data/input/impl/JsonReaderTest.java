@@ -45,6 +45,64 @@ public class JsonReaderTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  public void testParseRowArray() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null,
+        false, //make sure JsonReader is used
+        true //make sure Arrays are used
+    );
+    final ByteEntity source = new ByteEntity(
+        StringUtils.toUtf8("[{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
+                           + ",{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":2}}\n"
+                           + ",{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":3}}\n]")
+    );
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            ColumnsFilter.all()
+        ),
+        source,
+        null
+    );
+    final int numExpectedIterations = 3;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+
+        final InputRow row = iterator.next();
+
+        final String msgId = String.valueOf(++numActualIterations);
+        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+
+        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+
+  }
+
   @Test
   public void testParseMultipleRows() throws IOException
   {

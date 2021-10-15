@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +66,23 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   private final ObjectMapper mapper;
   private final InputEntity source;
   private final InputRowSchema inputRowSchema;
+  private final boolean rowArray;
+
+  JsonReader(
+      InputRowSchema inputRowSchema,
+      InputEntity source,
+      JSONPathSpec flattenSpec,
+      ObjectMapper mapper,
+      boolean keepNullColumns,
+      boolean rowArray
+  )
+  {
+    this.inputRowSchema = inputRowSchema;
+    this.source = source;
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
+    this.mapper = mapper;
+    this.rowArray = rowArray;
+  }
 
   JsonReader(
       InputRowSchema inputRowSchema,
@@ -74,10 +92,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       boolean keepNullColumns
   )
   {
-    this.inputRowSchema = inputRowSchema;
-    this.source = source;
-    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
-    this.mapper = mapper;
+    this(inputRowSchema, source, flattenSpec, mapper, keepNullColumns, false);
   }
 
   @Override
@@ -93,7 +108,13 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   {
     final List<InputRow> inputRows;
     try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
-      final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
+      final Iterator<JsonNode> delegate;
+      if (rowArray) {
+        final JsonNode inputNode = mapper.readTree(parser);
+        delegate = inputNode.elements();
+      } else { 
+        delegate = mapper.readValues(parser, JsonNode.class);
+      }
       inputRows = FluentIterable.from(() -> delegate)
                                 .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
                                 .toList();

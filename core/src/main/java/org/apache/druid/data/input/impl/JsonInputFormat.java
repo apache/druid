@@ -53,21 +53,44 @@ public class JsonInputFormat extends NestedInputFormat
    *
    */
   private final boolean lineSplittable;
+  private final boolean rowArray;
 
   @JsonCreator
   public JsonInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
-      @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns
+      @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns,
+      @JsonProperty("rowArray") @Nullable Boolean rowArray
   )
   {
-    this(flattenSpec, featureSpec, keepNullColumns, true);
+    this(flattenSpec, featureSpec, keepNullColumns, rowArray, true);
+  }
+
+  public JsonInputFormat(
+      JSONPathSpec flattenSpec,
+      Map<String, Boolean> featureSpec,
+      Boolean keepNullColumns
+  )
+  {
+    this(flattenSpec, featureSpec, keepNullColumns, false, true);
   }
 
   public JsonInputFormat(
       JSONPathSpec flattenSpec,
       Map<String, Boolean> featureSpec,
       Boolean keepNullColumns,
+      boolean lineSplittable
+  )
+  {
+    this(flattenSpec, featureSpec, keepNullColumns, false, lineSplittable);
+  }
+
+
+  public JsonInputFormat(
+      JSONPathSpec flattenSpec,
+      Map<String, Boolean> featureSpec,
+      Boolean keepNullColumns,
+      Boolean rowArray,
       boolean lineSplittable
   )
   {
@@ -80,12 +103,19 @@ public class JsonInputFormat extends NestedInputFormat
       objectMapper.configure(feature, entry.getValue());
     }
     this.lineSplittable = lineSplittable;
+    this.rowArray = rowArray == null ? false : rowArray;
   }
 
   @JsonProperty
   public Map<String, Boolean> getFeatureSpec()
   {
     return featureSpec;
+  }
+
+  @JsonProperty
+  public boolean isRowArray()
+  {
+    return rowArray;
   }
 
   @Override
@@ -99,7 +129,7 @@ public class JsonInputFormat extends NestedInputFormat
   {
     return this.lineSplittable ?
            new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns) :
-           new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+           new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns, rowArray);
   }
 
   /**
@@ -112,7 +142,17 @@ public class JsonInputFormat extends NestedInputFormat
     return new JsonInputFormat(this.getFlattenSpec(),
                                this.getFeatureSpec(),
                                this.keepNullColumns,
-                               lineSplittable);
+                               lineSplittable,
+                               this.rowArray);
+  }
+
+  public JsonInputFormat withRowArray(boolean rowArray)
+  {
+    return new JsonInputFormat(this.getFlattenSpec(),
+                               this.getFeatureSpec(),
+                               this.keepNullColumns,
+                               this.lineSplittable,
+                               rowArray);
   }
 
   @Override
@@ -128,12 +168,12 @@ public class JsonInputFormat extends NestedInputFormat
       return false;
     }
     JsonInputFormat that = (JsonInputFormat) o;
-    return this.lineSplittable == that.lineSplittable && Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
+    return this.lineSplittable == that.lineSplittable && this.rowArray == that.rowArray && Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns, lineSplittable);
+    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns, lineSplittable, rowArray);
   }
 }
