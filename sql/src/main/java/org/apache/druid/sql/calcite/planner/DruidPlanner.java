@@ -70,6 +70,7 @@ import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -192,7 +193,12 @@ public class DruidPlanner implements Closeable
       }
       catch (Exception e2) {
         e.addSuppressed(e2);
-        throw e;
+        log.noStackTrace().warn(e, "Failed to plan the query '%s'", sql);
+        String errorMessage = plannerContext.getPlanningError();
+        if (null == errorMessage) {
+          errorMessage = "Please check broker logs for more details";
+        }
+        throw new RelOptPlanner.CannotPlanException("Unsupported query: " + errorMessage);
       }
     }
   }

@@ -84,6 +84,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -92,6 +93,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A fully formed Druid query, built from a {@link PartialDruidQuery}. The work to develop this query is done
@@ -508,6 +510,7 @@ public class DruidQuery
       );
 
       if (aggregation == null) {
+        plannerContext.setPlanningError("Aggregation [%s] is not supported", aggCall);
         throw new CannotBuildQueryException(aggregate, aggCall);
       }
 
@@ -1131,6 +1134,9 @@ public class DruidQuery
         assert sortKind == Sorting.SortKind.NON_TIME;
 
         // Scan cannot ORDER BY non-time columns.
+        List<String> orderByColumns
+            = sorting.getOrderBys().stream().map(OrderByColumnSpec::getDimension).collect(Collectors.toList());
+        plannerContext.setPlanningError("Scan query cannot order by non-time column %s", orderByColumns);
         return null;
       }
     } else {

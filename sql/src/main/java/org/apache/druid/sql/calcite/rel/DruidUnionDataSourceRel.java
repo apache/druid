@@ -36,6 +36,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   private final Union unionRel;
   private final List<String> unionColumnNames;
   private final PartialDruidQuery partialQuery;
+  private final PlannerContext plannerContext;
 
   private DruidUnionDataSourceRel(
       final RelOptCluster cluster,
@@ -66,19 +68,22 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
       final Union unionRel,
       final List<String> unionColumnNames,
       final PartialDruidQuery partialQuery,
-      final QueryMaker queryMaker
+      final QueryMaker queryMaker,
+      final PlannerContext plannerContext
   )
   {
     super(cluster, traitSet, queryMaker);
     this.unionRel = unionRel;
     this.unionColumnNames = unionColumnNames;
     this.partialQuery = partialQuery;
+    this.plannerContext = plannerContext;
   }
 
   public static DruidUnionDataSourceRel create(
       final Union unionRel,
       final List<String> unionColumnNames,
-      final QueryMaker queryMaker
+      final QueryMaker queryMaker,
+      final PlannerContext plannerContext
   )
   {
     return new DruidUnionDataSourceRel(
@@ -87,7 +92,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         unionRel,
         unionColumnNames,
         PartialDruidQuery.create(unionRel),
-        queryMaker
+        queryMaker,
+        plannerContext
     );
   }
 
@@ -111,7 +117,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         unionRel,
         unionColumnNames,
         newQueryBuilder,
-        getQueryMaker()
+        getQueryMaker(),
+        plannerContext
     );
   }
 
@@ -134,12 +141,14 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     for (final RelNode relNode : unionRel.getInputs()) {
       final DruidRel<?> druidRel = (DruidRel<?>) relNode;
       if (!DruidRels.isScanOrMapping(druidRel, false)) {
+        plannerContext.setPlanningError("Union operation is only supported between simple table scans without any filter or aliasing");
         throw new CannotBuildQueryException(druidRel);
       }
 
       final DruidQuery query = druidRel.toDruidQuery(false);
       final DataSource dataSource = query.getDataSource();
       if (!(dataSource instanceof TableDataSource)) {
+        plannerContext.setPlanningError("Union operation is only supported between regular tables. Lookup, join, inline or query datasources are not supported.");
         throw new CannotBuildQueryException(druidRel);
       }
 
@@ -150,6 +159,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
       if (signature.getColumnNames().equals(query.getOutputRowSignature().getColumnNames())) {
         dataSources.add((TableDataSource) dataSource);
       } else {
+        plannerContext.setPlanningError("There is a mismatch between the column names and types of input tables and the expected query output");
         throw new CannotBuildQueryException(druidRel);
       }
     }
@@ -204,7 +214,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         ),
         unionColumnNames,
         partialQuery,
-        getQueryMaker()
+        getQueryMaker(),
+        plannerContext
     );
   }
 
@@ -229,7 +240,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         (Union) unionRel.copy(unionRel.getTraitSet(), inputs),
         unionColumnNames,
         partialQuery,
-        getQueryMaker()
+        getQueryMaker(),
+        plannerContext
     );
   }
 

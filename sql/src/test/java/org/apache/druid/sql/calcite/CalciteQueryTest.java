@@ -4163,7 +4163,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "dim3, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
-        + "GROUP BY 1, 2"
+        + "GROUP BY 1, 2",
+        "There is a mismatch between the column names and types of input tables and the expected query output"
     );
   }
 
@@ -4172,12 +4173,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
 
+    //TODO: Fix the error
     assertQueryIsUnplannable(
         "SELECT\n"
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1"
+        + "GROUP BY 1",
+        "Please check broker logs for more details"
     );
   }
 
@@ -4191,7 +4194,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1"
+        + "GROUP BY 1",
+        "Union operation is only supported between simple table scans without any filter or aliasing"
     );
   }
 
@@ -4289,7 +4293,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "dim1, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2"
+        + "GROUP BY 1, 2",
+        "Union operation is only supported between simple table scans without any filter or aliasing"
     );
   }
 
@@ -5316,21 +5321,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
-    final List<String> queries = ImmutableList.of(
+    final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
+        "Scan query cannot order by non-time column [dim1]",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
+        "Only equal conditions are supported in joins",
 
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
-        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
+        "Only equal conditions are supported in joins"
+
     );
 
-    for (final String query : queries) {
-      assertQueryIsUnplannable(query);
+    for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
+      assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
     }
   }
 
@@ -5451,7 +5460,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
-        "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2"
+        "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2",
+        "Only equal conditions are supported in joins"
     );
   }
 
@@ -5462,7 +5472,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
-        "SELECT COUNT(distinct unique_dim1) FROM druid.foo"
+        "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
+        "Please check broker logs for more details"
     );
   }
 
@@ -17134,7 +17145,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // This query is expected to fail as we do not support join with constant in the on condition
   // (see issue https://github.com/apache/druid/issues/9942 for more information)
   // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9942 is fixed
-  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinOnConstantShouldFail(Map<String, Object> queryContext) throws Exception
   {
@@ -17142,12 +17153,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     final String query = "SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'";
 
-    testQuery(
-        query,
-        queryContext,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          query,
+          queryContext,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (RelOptPlanner.CannotPlanException cpe) {
+      Assert.assertEquals(cpe.getMessage(), "Unsupported query: Operands type are unsupported for the join condition. Druid does not support constants in join condition.");
+      return;
+    }
+    Assert.fail("Expected an exception of type: " + RelOptPlanner.CannotPlanException.class);
   }
 
   @Test

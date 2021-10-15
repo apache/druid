@@ -503,12 +503,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return CalciteTests.createExprMacroTable();
   }
 
-  public void assertQueryIsUnplannable(final String sql)
+  public void assertQueryIsUnplannable(final String sql, String expectedError)
   {
-    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql);
+    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql, expectedError);
   }
 
-  public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql)
+  public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql, String expectedError)
   {
     Exception e = null;
     try {
@@ -522,6 +522,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       log.error(e, "Expected CannotPlanException for query: %s", sql);
       Assert.fail(sql);
     }
+    Assert.assertEquals(sql, "Unsupported query: " + expectedError, e.getMessage());
   }
 
   /**

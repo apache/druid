@@ -29,6 +29,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -39,6 +40,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +85,10 @@ public class PlannerContext
   private Set<Resource> resources = Collections.emptySet();
   // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
+  // error messages encountered while planning the query
+  @Nullable
+  private String planningError;
+
 
   private PlannerContext(
       final DruidOperatorTable operatorTable,
@@ -225,6 +231,16 @@ public class PlannerContext
   public void addNativeQueryId(String queryId)
   {
     this.nativeQueryIds.add(queryId);
+  }
+
+  public String getPlanningError()
+  {
+    return planningError;
+  }
+
+  public void setPlanningError(String formatText, Object... arguments)
+  {
+    planningError = StringUtils.nonStrictFormat(formatText, arguments);
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)
