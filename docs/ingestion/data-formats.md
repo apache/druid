@@ -639,7 +639,7 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | `string` for most cases. `hadoopyString` for Hadoop indexing | yes |
+| type | String | `string` for most cases. `hadoopyString` for Hadoop indexing. | yes |
 | parseSpec | JSON Object | Specifies the format, timestamp, and dimensions of the data. | yes |
 
 ### Avro Hadoop Parser
