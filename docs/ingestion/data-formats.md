@@ -164,7 +164,7 @@ Configure the Kafka `inputFormat` to load complete kafka records including heade
 | timestampColumnName | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
 | keyColumnName | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
 | headerFormat | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| keyFormat | [InputFormat](#input-format) | Any existing `inputFormat` used to parse the kafka key. It only process the first entry of the input format. See [Specifying data format](../development/extensions-core/kafka-ingestion.md#specifying-data-format) for details. | no |
+| keyFormat | [InputFormat](#input-format) | Any existing `inputFormat` used to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-ingestion.md#specifying-data-format). | no |
 | valueFormat | [InputFormat](#input-format) | `valueFormat` can be any existing `inputFormat` to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-ingestion.md#specifying-data-format). | yes |
 
 For example:
