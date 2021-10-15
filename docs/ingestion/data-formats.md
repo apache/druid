@@ -500,7 +500,7 @@ Configure the Avro OCF `inputFormat` to load Avro OCF data as follows:
 |-------|------|-------------|----------|
 |type| String|  `avro_ocf`| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|schema| JSON Object |Define a reader schema to be used when parsing Avro records, this is useful when parsing multiple versions of Avro OCF file data | no (default will decode using the writer schema contained in the OCF file) |
+|schema| JSON Object |Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data. | no (default will decode using the writer schema contained in the OCF file) |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 For example:
