@@ -22,8 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * In constract to {@link JsonLineReader} which processes input text line by line independently,
@@ -139,15 +140,30 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   protected List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
     try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
-      final MappingIterator<Map> delegate = mapper.readValues(parser, Map.class);
+      final Iterator<Map> delegate;
+      if (rowArray) {
+        final JsonNode inputNode = mapper.readTree(parser);
+        delegate = Stream
+          .generate(inputNode.elements()::next)
+          .map(elem -> {
+            try {
+              return mapper.treeToValue(elem, Map.class);
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
+          }).iterator();
+      } else {
+        delegate = mapper.readValues(parser, Map.class);
+      }
       return FluentIterable.from(() -> delegate)
                            .transform(map -> (Map<String, Object>) map)
                            .toList();
     }
     catch (RuntimeException e) {
-      //convert Jackson's JsonParseException into druid's exception for further processing
+      //convert Jackson's JsonParseException/JsonProcessingException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
-      if (e.getCause() instanceof JsonParseException) {
+      if (e.getCause() instanceof JsonProcessingException) {
         throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
       }
 
