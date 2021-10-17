@@ -126,9 +126,13 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
+  const rowArray = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.rowArray');
   let inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
   if (flattenSpec) {
     inputFormat = deepSet(inputFormat, 'flattenSpec', flattenSpec);
+  }
+  if (rowArray) {
+    inputFormat = deepSet(inputFormat, 'rowArray', true);
   }
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat', inputFormat);
 

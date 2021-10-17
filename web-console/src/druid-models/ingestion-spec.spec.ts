@@ -148,6 +148,14 @@ describe('ingestion-spec', () => {
       expect(guessInputFormat(['{"a":1}']).type).toEqual('json');
     });
 
+    it('works for JSON Arrays', () => {
+      expect(guessInputFormat(['[{"a":1}]']).type).toEqual('json');
+    });
+
+    it('works for JSON Arrays w/ newlines', () => {
+      expect(guessInputFormat(['[\n{"a":1}\n]']).type).toEqual('json');
+    });
+
     it('works for TSV', () => {
       expect(guessInputFormat(['A\tB\tX\tY']).type).toEqual('tsv');
     });

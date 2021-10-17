@@ -2049,16 +2049,6 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
         </>
       );
     }
-
-    if (oneOf(firstData, '[', '[]')) {
-      return (
-        <>
-          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-          one row per event. Maybe look at{' '}
-          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
-        </>
-      );
-    }
   }
 
   return;
@@ -2095,7 +2085,10 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
     // After checking for magic byte sequences perform heuristics to deduce string formats
 
     // If the string starts and ends with curly braces assume JSON
-    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+    if (
+      (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) ||
+      (sampleDatum.startsWith('[') && sampleDatum.endsWith(']'))
+    ) {
       return inputFormatFromType('json');
     }
     // Contains more than 3 tabs assume TSV

@@ -36,6 +36,7 @@ export interface InputFormat {
   readonly function?: string;
   readonly flattenSpec?: FlattenSpec;
   readonly keepNullColumns?: boolean;
+  readonly rowArray?: boolean;
 }
 
 export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
@@ -137,6 +138,13 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         as a UTF-8 encoded string.
       </>
     ),
+  },
+  {
+    name: 'rowArray',
+    type: 'boolean',
+    defaultValue: false,
+    defined: typeIs('json'),
+    info: <>Specifies if the data is arrays of rows or individual row objects.</>,
   },
 ];
 
