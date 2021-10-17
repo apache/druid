@@ -52,6 +52,7 @@ public class JsonInputFormatTest
             )
         ),
         ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false),
+        false,
         false
     );
     final byte[] bytes = mapper.writeValueAsBytes(format);

@@ -45,6 +45,7 @@ public class JsonReaderTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  @Test
   public void testParseRowArray() throws IOException
   {
     final JsonInputFormat format = new JsonInputFormat(
@@ -61,8 +62,8 @@ public class JsonReaderTest
         ),
         null,
         null,
-        false, //make sure JsonReader is used
-        true //make sure Arrays are used
+        true, //make sure Arrays are used
+        false
     );
     final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("[{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}"
@@ -120,6 +121,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -180,6 +182,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -247,6 +250,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -301,6 +305,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -367,6 +372,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -423,6 +429,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 
@@ -479,6 +486,7 @@ public class JsonReaderTest
         ),
         null,
         null,
+        false,
         false //make sure JsonReader is used
     );
 

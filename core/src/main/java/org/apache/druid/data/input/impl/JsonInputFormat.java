@@ -63,28 +63,8 @@ public class JsonInputFormat extends NestedInputFormat
       @JsonProperty("rowArray") @Nullable Boolean rowArray
   )
   {
-    this(flattenSpec, featureSpec, keepNullColumns, rowArray, true);
+    this(flattenSpec, featureSpec, keepNullColumns, rowArray, !rowArray);
   }
-
-  public JsonInputFormat(
-      JSONPathSpec flattenSpec,
-      Map<String, Boolean> featureSpec,
-      Boolean keepNullColumns
-  )
-  {
-    this(flattenSpec, featureSpec, keepNullColumns, false, true);
-  }
-
-  public JsonInputFormat(
-      JSONPathSpec flattenSpec,
-      Map<String, Boolean> featureSpec,
-      Boolean keepNullColumns,
-      boolean lineSplittable
-  )
-  {
-    this(flattenSpec, featureSpec, keepNullColumns, false, lineSplittable);
-  }
-
 
   public JsonInputFormat(
       JSONPathSpec flattenSpec,
@@ -113,7 +93,7 @@ public class JsonInputFormat extends NestedInputFormat
   }
 
   @JsonProperty
-  public boolean isRowArray()
+  public Boolean getRowArray()
   {
     return rowArray;
   }
@@ -142,8 +122,8 @@ public class JsonInputFormat extends NestedInputFormat
     return new JsonInputFormat(this.getFlattenSpec(),
                                this.getFeatureSpec(),
                                this.keepNullColumns,
-                               lineSplittable,
-                               this.rowArray);
+                               this.rowArray,
+                               lineSplittable);
   }
 
   public JsonInputFormat withRowArray(boolean rowArray)
@@ -151,8 +131,8 @@ public class JsonInputFormat extends NestedInputFormat
     return new JsonInputFormat(this.getFlattenSpec(),
                                this.getFeatureSpec(),
                                this.keepNullColumns,
-                               this.lineSplittable,
-                               rowArray);
+                               rowArray,
+                               this.lineSplittable);
   }
 
   @Override

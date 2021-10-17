@@ -46,7 +46,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 /**
  * In constract to {@link JsonLineReader} which processes input text line by line independently,
@@ -85,17 +86,6 @@ public class JsonReader extends IntermediateRowParsingReader<String>
     this.rowArray = rowArray;
   }
 
-  JsonReader(
-      InputRowSchema inputRowSchema,
-      InputEntity source,
-      JSONPathSpec flattenSpec,
-      ObjectMapper mapper,
-      boolean keepNullColumns
-  )
-  {
-    this(inputRowSchema, source, flattenSpec, mapper, keepNullColumns, false);
-  }
-
   @Override
   protected CloseableIterator<String> intermediateRowIterator() throws IOException
   {
@@ -124,7 +114,11 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        if (rowArray) {
+          throw new ParseException(e, "Unable to parse rows %s", intermediateRow);
+        } else {
+          throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        }
       }
 
       //throw unknown exception
@@ -143,8 +137,8 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       final Iterator<Map> delegate;
       if (rowArray) {
         final JsonNode inputNode = mapper.readTree(parser);
-        delegate = Stream
-          .generate(inputNode.elements()::next)
+        delegate = StreamSupport
+          .stream(Spliterators.spliteratorUnknownSize(inputNode.elements(), 0), false)
           .map(elem -> {
             try {
               return mapper.treeToValue(elem, Map.class);
@@ -164,7 +158,11 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //convert Jackson's JsonParseException/JsonProcessingException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonProcessingException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        if (rowArray) {
+          throw new ParseException(e, "Unable to parse rows %s", intermediateRow);
+        } else {
+          throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        }
       }
 
       //throw unknown exception
