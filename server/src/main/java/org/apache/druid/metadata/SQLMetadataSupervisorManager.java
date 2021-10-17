@@ -24,7 +24,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -137,7 +138,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       {
                         return Pair.of(
                             r.getString("spec_id"),
-                            createVersionSupervisorSpecFromResponse(r));
+                            createVersionSupervisorSpecFromResponse(r)
+                        );
                       }
                     }
                 ).fold(
@@ -172,7 +174,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   @Override
   public List<VersionedSupervisorSpec> getAllForId(String id)
   {
-      return ImmutableList.copyOf(
+    return ImmutableList.copyOf(
         dbi.withHandle(
             new HandleCallback<List<VersionedSupervisorSpec>>()
             {
@@ -206,10 +208,10 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
     SupervisorSpec payload;
     try {
       payload = jsonMapper.readValue(
-              r.getBytes("payload"),
-              new TypeReference<SupervisorSpec>()
-              {
-              }
+          r.getBytes("payload"),
+          new TypeReference<SupervisorSpec>()
+          {
+          }
       );
     }
     catch (JsonParseException | JsonMappingException e) {
