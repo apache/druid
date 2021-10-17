@@ -37,8 +37,8 @@ public class SamplerExceptionMapper implements ExceptionMapper<SamplerException>
     String message = exception.getMessage() == null ? "The sampler encountered an issue" : exception.getMessage();
 
     // stack trace is not returned to the client,
-    // so the cause of the exception should be logged so that we know where the exception is thrown
-    LOG.error(exception.getCause(), message);
+    // so the exception should be logged so that we know where the exception is thrown
+    LOG.error(exception, message);
 
     return Response.status(Response.Status.BAD_REQUEST)
                    .entity(ImmutableMap.of(

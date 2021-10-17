@@ -100,9 +100,9 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
       }
       catch (Exception e) {
         if (e.getCause() != null) {
-          throw new SamplerException(e, "Unable to sample data: %s. Cause: %s", e.getMessage(), e.getCause().getMessage());
+          throw new SamplerException(e, "Unable to create RecordSupplier: %s. Cause: %s", e.getMessage(), e.getCause().getMessage());
         } else {
-          throw new SamplerException(e, "Unable to sample data: %s", e.getMessage());
+          throw new SamplerException(e, "Unable to create RecordSupplier: %s", e.getMessage());
         }
       }
 
