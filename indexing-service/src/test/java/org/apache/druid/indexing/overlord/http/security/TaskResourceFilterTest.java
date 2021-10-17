@@ -39,7 +39,7 @@ import java.util.List;
 
 import static org.easymock.EasyMock.expect;
 
-public class OverlordResourceFilterTest
+public class TaskResourceFilterTest
 {
   private AuthorizerMapper authorizerMapper;
   private TaskStorageQueryAdapter taskStorageQueryAdapter;

@@ -40,88 +40,88 @@ public class ITOverlordResourceTest
   @Test
   public void testGetSupervisorStatusNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::getSupervisorStatus);
+    callAndCheckNotFound(indexer::getSupervisorStatus);
   }
 
   @Test
   public void testGetSupervisorHistoryNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::getSupervisorHistory);
+    callAndCheckNotFound(indexer::getSupervisorHistory);
   }
 
   @Test
   public void testResumeSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::resumeSupervisor);
+    callAndCheckNotFound(indexer::resumeSupervisor);
   }
 
   @Test
   public void testSuspendSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::suspendSupervisor);
+    callAndCheckNotFound(indexer::suspendSupervisor);
   }
 
   @Test
   public void testShutdownSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::shutdownSupervisor);
+    callAndCheckNotFound(indexer::shutdownSupervisor);
   }
 
   @Test
   public void testTerminateSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::terminateSupervisor);
+    callAndCheckNotFound(indexer::terminateSupervisor);
   }
 
   @Test
   public void testGetSupervisorHealthNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::getSupervisorHealth);
+    callAndCheckNotFound(indexer::getSupervisorHealth);
   }
 
   @Test
   public void testStatsSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::statsSupervisor);
+    callAndCheckNotFound(indexer::statsSupervisor);
   }
 
   @Test
   public void testResetSupervisorNotFound()
   {
-    callAndCheckNotFound("supervisor", indexer::resetSupervisor);
+    callAndCheckNotFound(indexer::resetSupervisor);
   }
 
   @Test
   public void testGetTaskStatusNotFound()
   {
-    callAndCheckNotFound("task", indexer::getTaskStatus);
+    callAndCheckNotFound(indexer::getTaskStatus);
   }
 
   @Test
   public void testShutdownTaskNotFound()
   {
-    callAndCheckNotFound("task", indexer::shutdownTask);
+    callAndCheckNotFound(indexer::shutdownTask);
   }
 
   @Test
   public void testGetTaskLogNotFound()
   {
-    callAndCheckNotFound("task", indexer::getTaskLog);
+    callAndCheckNotFound(indexer::getTaskLog);
   }
 
   @Test
   public void testGetTaskReportNotFound()
   {
-    callAndCheckNotFound("task", indexer::getTaskReport);
+    callAndCheckNotFound(indexer::getTaskReport);
   }
 
   @Test
   public void testGetTaskPayLoadNotFound()
   {
-    callAndCheckNotFound("task", indexer::getTaskPayload);
+    callAndCheckNotFound(indexer::getTaskPayload);
   }
 
-  private void callAndCheckNotFound(String type, Consumer<String> runnable)
+  private void callAndCheckNotFound(Consumer<String> runnable)
   {
     String supervisorId = "not_exist_id";
     try {
@@ -131,7 +131,7 @@ public class ITOverlordResourceTest
       // OverlordResourceTestClient turns all non-200 response into ISE exception
       // So we catch ISE and check if the message in this exception matches expected message
       Assert.assertTrue(
-          e.getMessage().endsWith("[404 Not Found Cannot find any " + type + " with id: [not_exist_id]]"),
+          e.getMessage().contains("[404 Not Found") && e.getMessage().contains(supervisorId),
           "Unexpected exception. Message does not match expected. " + e.getMessage()
       );
       return;
