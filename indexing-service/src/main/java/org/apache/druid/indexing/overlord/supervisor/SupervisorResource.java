@@ -386,7 +386,6 @@ public class SupervisorResource
   @GET
   @Path("/{id}/history")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(SupervisorResourceFilter.class)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
       @PathParam("id") final String id
