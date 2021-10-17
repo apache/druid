@@ -24,7 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -50,9 +50,11 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 @ManageLifecycle
@@ -133,27 +135,9 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       public Pair<String, VersionedSupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
                           throws SQLException
                       {
-                        SupervisorSpec payload;
-                        try {
-                          payload = jsonMapper.readValue(
-                              r.getBytes("payload"),
-                              new TypeReference<SupervisorSpec>()
-                              {
-                              }
-                          );
-                        }
-                        catch (JsonParseException | JsonMappingException e) {
-                          log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
-                          payload = null;
-                        }
-                        catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-
                         return Pair.of(
                             r.getString("spec_id"),
-                            new VersionedSupervisorSpec(payload, r.getString("created_date"))
-                        );
+                            createVersionSupervisorSpecFromResponse(r));
                       }
                     }
                 ).fold(
@@ -183,6 +167,59 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             }
         )
     );
+  }
+
+  @Override
+  public List<VersionedSupervisorSpec> getAllForId(String id)
+  {
+      return ImmutableList.copyOf(
+        dbi.withHandle(
+            new HandleCallback<List<VersionedSupervisorSpec>>()
+            {
+              @Override
+              public List<VersionedSupervisorSpec> withHandle(Handle handle)
+              {
+                return handle.createQuery(
+                    StringUtils.format(
+                        "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
+                        getSupervisorsTable()
+                    )
+                ).map(
+                    new ResultSetMapper<VersionedSupervisorSpec>()
+                    {
+                      @Override
+                      public VersionedSupervisorSpec map(int index, ResultSet r, StatementContext ctx)
+                          throws SQLException
+                      {
+                        return createVersionSupervisorSpecFromResponse(r);
+                      }
+                    }
+                ).list();
+              }
+            }
+        )
+    );
+  }
+
+  private VersionedSupervisorSpec createVersionSupervisorSpecFromResponse(ResultSet r) throws SQLException
+  {
+    SupervisorSpec payload;
+    try {
+      payload = jsonMapper.readValue(
+              r.getBytes("payload"),
+              new TypeReference<SupervisorSpec>()
+              {
+              }
+      );
+    }
+    catch (JsonParseException | JsonMappingException e) {
+      log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
+      payload = null;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return new VersionedSupervisorSpec(payload, r.getString("created_date"));
   }
 
   @Override
