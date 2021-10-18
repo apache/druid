@@ -344,8 +344,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
         // This subquery id needs to be generated on the bases of outer query's id
-//        final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber));
-        final Query subQueryWithId = subQuery.withSubQueryId(parentQuery.getSubQueryId());
+        // final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber));
+        Query subQueryWithId = subQuery.withDefaultSubQueryId();
+        if(StringUtils.isNotEmpty(parentQuery.getSqlQueryId())) {
+          subQueryWithId = subQuery.withSubQueryId(parentQuery.getSubQueryId());
+        }
 
         if(StringUtils.isNotEmpty(parentQuery.getId())) {
           subQuery.withId(parentQuery.getId());
@@ -401,12 +404,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     } else {
       // Not a query datasource. Walk children and see if there's anything to inline.
       // This is an example of sibling invocation of the subquery
-//      return dataSource.withChildren(
-//          dataSource.getChildren()
-//                    .stream()
-//                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun))
-//                    .collect(Collectors.toList())
-//      );
       return dataSource.withChildren(
           IntStream.range(0, dataSource.getChildren().size())
                    .mapToObj(i -> new Pair<>(i + 1, dataSource.getChildren().get(i)))
@@ -474,15 +471,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Creates a child subquery Id from the parent subquery as follows
+   * Creates a child subquery Id from the parent (sub)query as follows
+   *  If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
+   *  Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
    *
-   * @param parentSubqueryId
-   * @param orderNumber
-   * @return
+   * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
+   * @param orderNumber Position of the generated subquery at the same level
+   * @return Subquery Id which needs to be populated
    */
   private String generateSubqueryId(String parentSubqueryId, int orderNumber)
   {
-    int x = 5;
     if (StringUtils.isEmpty(parentSubqueryId)) {
       return Integer.toString(orderNumber);
     }

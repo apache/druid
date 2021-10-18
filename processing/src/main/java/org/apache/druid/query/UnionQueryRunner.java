@@ -76,21 +76,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
         return new MergeSequence<>(
             query.getResultOrdering(),
             Sequences.simple(
-//                Lists.transform(
-//                    unionDataSource.getDataSources(),
-//                    (Function<DataSource, Sequence<T>>) singleSource ->
-//                        baseRunner.run(
-//                            queryPlus.withQuery(
-//                                Queries.withBaseDataSource(query, singleSource)
-//                                       // assign the subqueryId. this will be used to validate that every query servers
-//                                       // have responded per subquery in RetryQueryRunner
-//                                       .withSubQueryId()
-//                            ),
-//                            responseContext
-//                        )
-//                )
-
-                IntStream.range(0, unionDataSource.getDataSources().size())
+               IntStream.range(0, unionDataSource.getDataSources().size())
                          .mapToObj(i -> new Pair<Integer, DataSource>(i + 1, unionDataSource.getDataSources().get(i)))
                          .map(indexBaseDataSourcePair -> baseRunner.run(queryPlus.withQuery(Queries.withBaseDataSource(
                              query,
@@ -108,10 +94,17 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
       return baseRunner.run(queryPlus, responseContext);
     }
   }
-
+  /**
+   * Creates a child subquery Id from the parent (sub)query as follows
+   *  If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
+   *  Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
+   *
+   * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
+   * @param orderNumber Position of the generated subquery at the same level
+   * @return Subquery Id which needs to be populated
+   */
   private String generateSubqueryId(String parentSubqueryId, int orderNumber)
   {
-    int x = 5;
     if (StringUtils.isEmpty(parentSubqueryId)) {
       return Integer.toString(orderNumber);
     }
