@@ -105,6 +105,14 @@ public class JettyTest extends BaseJettyTest
   private LatchedRequestStateHolder latchedRequestState;
 
   @Override
+  public void setProperties()
+  {
+    // call super.setProperties first in case it is setting the same property as this class
+    super.setProperties();
+    System.setProperty("druid.server.http.showDetailedJettyErrors", "true");
+  }
+
+  @Override
   protected Injector setupInjector()
   {
     TLSServerConfig tlsConfig;
