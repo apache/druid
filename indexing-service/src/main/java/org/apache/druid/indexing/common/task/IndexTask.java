@@ -490,14 +490,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         // Determine if the discovered partition count breaches the maxSegmentsIngested threshold in the tuningConfig
         if (partitionAnalysis.getAggregateSegmentCount() > ingestionSchema.getTuningConfig().getMaxSegmentsIngested()) {
           log.error(
-              "This ingestion task was determined to have breached the limit of [%d] intervals ingested. Total "
-              + "intervals that would be ingested by this task: [%d]",
+              "This ingestion task was determined to have breached the limit of [%d] segments ingested. Total "
+              + "segments that would be ingested by this task: [%d]",
               ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
               partitionAnalysis.getAggregateSegmentCount()
           );
           throw new RuntimeException(
-              StringUtils.format("This ingestion task was determined to have breached the limit of [%d] intervals ingested. "
-                            + "Total intervals that would be ingested by this task: [%d]",
+              StringUtils.format("This ingestion task was determined to have breached the limit of [%d] segments ingested. "
+                            + "Total segments that would be ingested by this task: [%d]",
                             ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
                             partitionAnalysis.getAggregateSegmentCount()
               )
