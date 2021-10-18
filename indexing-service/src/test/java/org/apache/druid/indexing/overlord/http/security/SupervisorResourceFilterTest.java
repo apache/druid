@@ -130,7 +130,7 @@ public class SupervisorResourceFilterTest
   )
   {
     expect(containerRequest.getPathSegments())
-        .andReturn(getPathSegments("/druid/indexer/v1/supervisor/datasource1"))
+        .andReturn(getPathSegments(path))
         .anyTimes();
     expect(containerRequest.getMethod()).andReturn(requestMethod).anyTimes();
 
