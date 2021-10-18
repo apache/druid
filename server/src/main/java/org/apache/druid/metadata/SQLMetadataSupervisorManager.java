@@ -183,9 +183,10 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               {
                 return handle.createQuery(
                     StringUtils.format(
-                        "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
+                        "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
                         getSupervisorsTable()
                     )
+                ).bind("spec_id", id
                 ).map(
                     new ResultSetMapper<VersionedSupervisorSpec>()
                     {
