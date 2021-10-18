@@ -344,11 +344,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
         // This subquery id needs to be generated on the bases of outer query's id
-        // final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber));
-        Query subQueryWithId = subQuery.withDefaultSubQueryId();
-        if(StringUtils.isNotEmpty(parentQuery.getSqlQueryId())) {
-          subQueryWithId = subQuery.withSubQueryId(parentQuery.getSubQueryId());
-        }
+        final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber));
 
         if(StringUtils.isNotEmpty(parentQuery.getId())) {
           subQuery.withId(parentQuery.getId());
