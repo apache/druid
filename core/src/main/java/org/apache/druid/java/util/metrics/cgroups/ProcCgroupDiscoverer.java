@@ -62,6 +62,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     final File pidCgroups = new File(procDir, "cgroup");
     final PidCgroupEntry pidCgroupsEntry = getCgroupEntry(pidCgroups, cgroup);
     final ProcMountsEntry procMountsEntry = getMountEntry(procMounts, cgroup);
+
     final File cgroupDir = new File(
         procMountsEntry.path.toString(),
         pidCgroupsEntry.path.toString()
@@ -69,7 +70,15 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     if (cgroupDir.exists() && cgroupDir.isDirectory()) {
       return cgroupDir.toPath();
     }
-    throw new RE("Invalid cgroup directory [%s]", cgroupDir);
+
+    // Check the root /sys/fs directory if there isn't a cgroup path specific one
+    // This happens with certain OSes
+    final File fallbackCgroupDir = procMountsEntry.path.toFile();
+    if (fallbackCgroupDir.exists() && fallbackCgroupDir.isDirectory()) {
+      return fallbackCgroupDir.toPath();
+    }
+
+    throw new RE("No cgroup directory located at [%s] or [%s]", cgroupDir, fallbackCgroupDir);
   }
 
   private PidCgroupEntry getCgroupEntry(final File procCgroup, final String cgroup)
