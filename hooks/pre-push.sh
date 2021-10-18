@@ -14,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mvn checkstyle:checkstyle --fail-at-end
+mvn checkstyle:checkstyle -T 2C --fail-at-end
