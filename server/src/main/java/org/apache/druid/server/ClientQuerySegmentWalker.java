@@ -23,11 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import io.vavr.Tuple2;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -64,12 +67,13 @@ import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Query handler for Broker processes (see CliBroker).
- *
+ * <p>
  * This class is responsible for:
- *
+ * <p>
  * 1) Running queries on the cluster using its 'clusterClient'
  * 2) Running queries locally (when all datasources are global) using its 'localClient'
  * 3) Inlining subqueries if necessary, in service of the above two goals
@@ -155,7 +159,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         toolChest,
         new AtomicInteger(),
         maxSubqueryRows,
-        true
+        true,
+        query,
+        1
     );
 
     if (!canRunQueryUsingClusterWalker(query.withDataSource(inlineDryRun))
@@ -171,7 +177,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             toolChest,
             new AtomicInteger(),
             maxSubqueryRows,
-            false
+            false,
+            query,
+            1
         )
     );
 
@@ -277,7 +285,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   /**
    * Replace QueryDataSources with InlineDataSources when necessary and possible. "Necessary" is defined as:
-   *
+   * <p>
    * 1) For outermost subqueries: inlining is necessary if the toolchest cannot handle it.
    * 2) For all other subqueries (e.g. those nested under a join): inlining is always necessary.
    *
@@ -295,7 +303,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
       final int maxSubqueryRows,
-      final boolean dryRun
+      final boolean dryRun,
+      final Query parentQuery,
+      final int orderNumber
   )
   {
     if (dataSource instanceof QueryDataSource) {
@@ -315,7 +325,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
 
         assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
-        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
+        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, parentQuery.withSubQueryId(generateSubqueryId(
+            parentQuery.getSubQueryId(), orderNumber)), 1);
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
@@ -328,11 +339,21 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         } else {
           // Something happened during inlining that means the toolchest is no longer able to handle this subquery.
           // We need to consider inlining it.
-          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
+          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, parentQuery, orderNumber);
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
-        final Query subQueryWithId = subQuery.withDefaultSubQueryId();
+        // This subquery id needs to be generated on the bases of outer query's id
+//        final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber));
+        final Query subQueryWithId = subQuery.withSubQueryId(parentQuery.getSubQueryId());
+
+        if(StringUtils.isNotEmpty(parentQuery.getId())) {
+          subQuery.withId(parentQuery.getId());
+        }
+
+        if (StringUtils.isNotEmpty(parentQuery.getSqlQueryId())) {
+          subQuery.withSqlQueryId(parentQuery.getSqlQueryId());
+        }
 
         final Sequence<?> queryResults;
 
@@ -363,24 +384,45 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         null,
                         subqueryRowLimitAccumulator,
                         maxSubqueryRows,
-                        dryRun
-                    )
+                        dryRun,
+                        parentQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber)),
+                        1
+                        )
                 )
             ),
             toolChestIfOutermost,
             subqueryRowLimitAccumulator,
             maxSubqueryRows,
-            dryRun
+            dryRun,
+            parentQuery,
+            orderNumber
         );
       }
     } else {
       // Not a query datasource. Walk children and see if there's anything to inline.
+      // This is an example of sibling invocation of the subquery
+//      return dataSource.withChildren(
+//          dataSource.getChildren()
+//                    .stream()
+//                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun))
+//                    .collect(Collectors.toList())
+//      );
       return dataSource.withChildren(
-          dataSource.getChildren()
-                    .stream()
-                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun))
-                    .collect(Collectors.toList())
+          IntStream.range(0, dataSource.getChildren().size())
+                   .mapToObj(i -> new Pair<>(i + 1, dataSource.getChildren().get(i)))
+                   .map(indexChildTuple -> inlineIfNecessary(
+                       indexChildTuple.rhs,
+                       null,
+                       subqueryRowLimitAccumulator,
+                       maxSubqueryRows,
+                       dryRun,
+                       parentQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), orderNumber)),
+                       indexChildTuple.lhs
+                   ))
+                   .collect(Collectors.toList())
+
       );
+
     }
   }
 
@@ -432,6 +474,22 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
+   * Creates a child subquery Id from the parent subquery as follows
+   *
+   * @param parentSubqueryId
+   * @param orderNumber
+   * @return
+   */
+  private String generateSubqueryId(String parentSubqueryId, int orderNumber)
+  {
+    int x = 5;
+    if (StringUtils.isEmpty(parentSubqueryId)) {
+      return Integer.toString(orderNumber);
+    }
+    return parentSubqueryId + "-" + orderNumber;
+  }
+
+  /**
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
@@ -441,7 +499,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         particular master query
    * @param limit            user-configured limit. If negative, will be treated as {@link Integer#MAX_VALUE}.
    *                         If zero, this method will throw an error immediately.
-   *
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
   private static <T, QueryType extends Query<T>> InlineDataSource toInlineDataSource(

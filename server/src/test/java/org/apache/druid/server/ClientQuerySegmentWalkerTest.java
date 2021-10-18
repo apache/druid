@@ -1363,7 +1363,7 @@ public class ClientQuerySegmentWalkerTest
       // Need to blast various parameters that will vary and aren't important to test for.
       this.query = query.withOverriddenContext(
           ImmutableMap.<String, Object>builder()
-              .put(BaseQuery.SUB_QUERY_ID, "dummy")
+              //.put(BaseQuery.SUB_QUERY_ID, "dummy")
               .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
               .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
               .put(QueryContexts.FINALIZE_KEY, true)

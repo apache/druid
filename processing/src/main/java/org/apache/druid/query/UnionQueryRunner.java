@@ -22,12 +22,17 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
@@ -71,19 +76,30 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
         return new MergeSequence<>(
             query.getResultOrdering(),
             Sequences.simple(
-                Lists.transform(
-                    unionDataSource.getDataSources(),
-                    (Function<DataSource, Sequence<T>>) singleSource ->
-                        baseRunner.run(
-                            queryPlus.withQuery(
-                                Queries.withBaseDataSource(query, singleSource)
-                                       // assign the subqueryId. this will be used to validate that every query servers
-                                       // have responded per subquery in RetryQueryRunner
-                                       .withDefaultSubQueryId()
-                            ),
-                            responseContext
-                        )
-                )
+//                Lists.transform(
+//                    unionDataSource.getDataSources(),
+//                    (Function<DataSource, Sequence<T>>) singleSource ->
+//                        baseRunner.run(
+//                            queryPlus.withQuery(
+//                                Queries.withBaseDataSource(query, singleSource)
+//                                       // assign the subqueryId. this will be used to validate that every query servers
+//                                       // have responded per subquery in RetryQueryRunner
+//                                       .withSubQueryId()
+//                            ),
+//                            responseContext
+//                        )
+//                )
+
+                IntStream.range(0, unionDataSource.getDataSources().size())
+                         .mapToObj(i -> new Pair<Integer, DataSource>(i + 1, unionDataSource.getDataSources().get(i)))
+                         .map(indexBaseDataSourcePair -> baseRunner.run(queryPlus.withQuery(Queries.withBaseDataSource(
+                             query,
+                             indexBaseDataSourcePair.rhs
+                         ).withSubQueryId(generateSubqueryId(
+                             queryPlus.getQuery().getSubQueryId(),
+                             indexBaseDataSourcePair.lhs
+                         ))))).collect(
+                             Collectors.toList())
             )
         );
       }
@@ -93,4 +109,12 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
     }
   }
 
+  private String generateSubqueryId(String parentSubqueryId, int orderNumber)
+  {
+    int x = 5;
+    if (StringUtils.isEmpty(parentSubqueryId)) {
+      return Integer.toString(orderNumber);
+    }
+    return parentSubqueryId + "-" + orderNumber;
+  }
 }
