@@ -38,7 +38,6 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -53,8 +52,8 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
@@ -756,7 +755,7 @@ public class DruidSchema extends AbstractSchema
   DruidTable buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
-    final Map<String, ValueType> columnTypes = new TreeMap<>();
+    final Map<String, ColumnType> columnTypes = new TreeMap<>();
 
     if (segmentsMap != null) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
@@ -764,7 +763,7 @@ public class DruidSchema extends AbstractSchema
         if (rowSignature != null) {
           for (String column : rowSignature.getColumnNames()) {
             // Newer column types should override older ones.
-            final ValueType columnType =
+            final ColumnType columnType =
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
 
@@ -885,14 +884,17 @@ public class DruidSchema extends AbstractSchema
         continue;
       }
 
-      ValueType valueType;
+      ColumnType valueType = null;
       try {
-        valueType = ValueType.valueOf(StringUtils.toUpperCase(entry.getValue().getType()));
+        valueType = ColumnType.fromString(entry.getValue().getType());
       }
-      catch (IllegalArgumentException e) {
-        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-        // what kind of complex column it is, which we may want to preserve some day.
-        valueType = ValueType.COMPLEX;
+      catch (IllegalArgumentException ignored) {
+      }
+
+      // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
+      // what kind of complex column it is, which we may want to preserve some day.
+      if (valueType == null) {
+        valueType = ColumnType.UNKNOWN_COMPLEX;
       }
 
       rowSignatureBuilder.add(entry.getKey(), valueType);

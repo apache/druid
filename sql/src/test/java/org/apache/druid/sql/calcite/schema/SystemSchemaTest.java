@@ -68,8 +68,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -1477,13 +1477,13 @@ public class SystemSchemaTest extends CalciteTestBase
       for (int i = 0; i < row.length; i++) {
         final Class<?> expectedClass;
 
-        final ValueType columnType =
+        final ColumnType columnType =
             signature.getColumnType(i)
                      .orElseThrow(() -> new ISE("Encountered null column type"));
 
         final boolean nullable = rowType.getFieldList().get(i).getType().isNullable();
 
-        switch (columnType) {
+        switch (columnType.getType()) {
           case LONG:
             expectedClass = Long.class;
             break;

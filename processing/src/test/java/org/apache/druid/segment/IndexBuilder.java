@@ -222,7 +222,7 @@ public class IndexBuilder
       final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
       for (final String columnName : index.getColumnNames()) {
         final ColumnCapabilities capabilities = index.getColumnHolder(columnName).getCapabilities();
-        rowSignatureBuilder.add(columnName, capabilities.getType());
+        rowSignatureBuilder.add(columnName, capabilities.toColumnType());
       }
 
       return new RowBasedSegment<>(

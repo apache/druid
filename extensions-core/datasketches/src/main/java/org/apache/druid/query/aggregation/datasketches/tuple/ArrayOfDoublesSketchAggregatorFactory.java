@@ -41,7 +41,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -293,28 +293,19 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return object == null ? null : ((ArrayOfDoublesSketch) object).getEstimate();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    if (metricColumns == null) {
-      return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG;
-    }
-    return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG;
-  }
-
   /**
    * actual type is {@link ArrayOfDoublesSketch}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return metricColumns == null ? ArrayOfDoublesSketchModule.MERGE_TYPE : ArrayOfDoublesSketchModule.BUILD_TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @Override

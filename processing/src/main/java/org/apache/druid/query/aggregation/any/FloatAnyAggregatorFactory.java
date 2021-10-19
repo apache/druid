@@ -35,7 +35,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -117,7 +117,7 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.getType().isNumeric()) {
+    if (capabilities == null || capabilities.isNumeric()) {
       return new FloatAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
       return NumericNilVectorAggregator.floatNilVectorAggregator();
@@ -207,15 +207,15 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.FLOAT;
+    return ColumnType.FLOAT;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.FLOAT;
+    return ColumnType.FLOAT;
   }
 
   @Override

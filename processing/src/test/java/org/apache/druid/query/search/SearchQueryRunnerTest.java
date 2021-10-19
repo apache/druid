@@ -56,7 +56,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -629,7 +629,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                                         new DefaultDimensionSpec(
                                             ColumnHolder.TIME_COLUMN_NAME,
                                             ColumnHolder.TIME_COLUMN_NAME,
-                                            ValueType.LONG
+                                            ColumnType.LONG
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -676,7 +676,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                                         new DefaultDimensionSpec(
                                             QueryRunnerTestHelper.INDEX_METRIC,
                                             QueryRunnerTestHelper.INDEX_METRIC,
-                                            ValueType.DOUBLE
+                                            ColumnType.DOUBLE
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)

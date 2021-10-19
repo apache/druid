@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -37,17 +38,18 @@ public class RowBasedColumnSelectorFactoryTest extends InitializedNullHandlingTe
   private static final String DOUBLE_ARRAY_COLUMN_NAME = "double_array";
   private static final String LONG_ARRAY_COLUMN_NAME = "long_array";
   private static final String STRING_ARRAY_COLUMN_NAME = "string_array";
+  private static final ColumnType SOME_COMPLEX = new ColumnType(ValueType.COMPLEX, "foo", null);
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
-                                                                .add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG)
-                                                                .add(STRING_COLUMN_NAME, ValueType.STRING)
-                                                                .add(LONG_COLUMN_NAME, ValueType.LONG)
-                                                                .add(FLOAT_COLUMN_NAME, ValueType.FLOAT)
-                                                                .add(DOUBLE_COLUMN_NAME, ValueType.DOUBLE)
-                                                                .add(COMPLEX_COLUMN_NAME, ValueType.COMPLEX)
-                                                                .add(DOUBLE_ARRAY_COLUMN_NAME, ValueType.DOUBLE_ARRAY)
-                                                                .add(LONG_ARRAY_COLUMN_NAME, ValueType.LONG_ARRAY)
-                                                                .add(STRING_ARRAY_COLUMN_NAME, ValueType.STRING_ARRAY)
+                                                                .add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG)
+                                                                .add(STRING_COLUMN_NAME, ColumnType.STRING)
+                                                                .add(LONG_COLUMN_NAME, ColumnType.LONG)
+                                                                .add(FLOAT_COLUMN_NAME, ColumnType.FLOAT)
+                                                                .add(DOUBLE_COLUMN_NAME, ColumnType.DOUBLE)
+                                                                .add(COMPLEX_COLUMN_NAME, SOME_COMPLEX)
+                                                                .add(DOUBLE_ARRAY_COLUMN_NAME, ColumnType.DOUBLE_ARRAY)
+                                                                .add(LONG_ARRAY_COLUMN_NAME, ColumnType.LONG_ARRAY)
+                                                                .add(STRING_ARRAY_COLUMN_NAME, ColumnType.STRING_ARRAY)
                                                                 .build();
 
   @Test
@@ -126,7 +128,7 @@ public class RowBasedColumnSelectorFactoryTest extends InitializedNullHandlingTe
   {
     ColumnCapabilities caps =
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, COMPLEX_COLUMN_NAME);
-    Assert.assertEquals(ValueType.COMPLEX, caps.getType());
+    Assert.assertEquals(SOME_COMPLEX, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -140,7 +142,7 @@ public class RowBasedColumnSelectorFactoryTest extends InitializedNullHandlingTe
   {
     ColumnCapabilities caps =
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, DOUBLE_ARRAY_COLUMN_NAME);
-    Assert.assertEquals(ValueType.DOUBLE_ARRAY, caps.getType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -154,7 +156,7 @@ public class RowBasedColumnSelectorFactoryTest extends InitializedNullHandlingTe
   {
     ColumnCapabilities caps =
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, LONG_ARRAY_COLUMN_NAME);
-    Assert.assertEquals(ValueType.LONG_ARRAY, caps.getType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
@@ -168,7 +170,7 @@ public class RowBasedColumnSelectorFactoryTest extends InitializedNullHandlingTe
   {
     ColumnCapabilities caps =
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, STRING_ARRAY_COLUMN_NAME);
-    Assert.assertEquals(ValueType.STRING_ARRAY, caps.getType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, caps.toColumnType());
     Assert.assertFalse(caps.hasBitmapIndexes());
     Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());

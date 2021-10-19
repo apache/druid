@@ -36,7 +36,7 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -68,7 +68,7 @@ public class ExpressionPostAggregator implements PostAggregator
   // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
   // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
   @Nullable
-  private final ValueType outputType;
+  private final ColumnType outputType;
 
   private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
@@ -123,7 +123,7 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
-      @Nullable final ValueType outputType,
+      @Nullable final ColumnType outputType,
       final ExprMacroTable macroTable,
       final Map<String, Function<Object, Object>> finalizers,
       final Supplier<Expr> parsed,
@@ -189,7 +189,7 @@ public class ExpressionPostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     // computed by decorate
     return outputType;
@@ -245,7 +245,7 @@ public class ExpressionPostAggregator implements PostAggregator
      * Ensures the following order: numeric > NaN > Infinite.
      *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
-     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ValueType, ExprMacroTable, Map, Supplier, Supplier)}.
+     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ColumnType, ExprMacroTable, Map, Supplier, Supplier)}.
      */
     @SuppressWarnings("unused")
     numericFirst {

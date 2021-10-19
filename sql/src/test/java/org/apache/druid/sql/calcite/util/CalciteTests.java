@@ -82,8 +82,8 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -704,17 +704,17 @@ public class CalciteTests
           x.get("l2")
       }).collect(Collectors.toList()),
       RowSignature.builder()
-                  .add("dim1", ValueType.STRING)
-                  .add("dim2", ValueType.STRING)
-                  .add("dim3", ValueType.STRING)
-                  .add("dim4", ValueType.STRING)
-                  .add("dim5", ValueType.STRING)
-                  .add("d1", ValueType.DOUBLE)
-                  .add("d2", ValueType.DOUBLE)
-                  .add("f1", ValueType.FLOAT)
-                  .add("f2", ValueType.FLOAT)
-                  .add("l1", ValueType.LONG)
-                  .add("l2", ValueType.LONG)
+                  .add("dim1", ColumnType.STRING)
+                  .add("dim2", ColumnType.STRING)
+                  .add("dim3", ColumnType.STRING)
+                  .add("dim4", ColumnType.STRING)
+                  .add("dim5", ColumnType.STRING)
+                  .add("d1", ColumnType.DOUBLE)
+                  .add("d2", ColumnType.DOUBLE)
+                  .add("f1", ColumnType.FLOAT)
+                  .add("f2", ColumnType.FLOAT)
+                  .add("l1", ColumnType.LONG)
+                  .add("l2", ColumnType.LONG)
                   .build()
   );
 

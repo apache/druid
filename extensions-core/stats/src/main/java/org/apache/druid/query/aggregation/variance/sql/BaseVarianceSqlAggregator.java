@@ -36,8 +36,8 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -82,7 +82,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 
     final AggregatorFactory aggregatorFactory;
     final RelDataType dataType = inputOperand.getType();
-    final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
+    final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
     final DimensionSpec dimensionSpec;
     final String aggName = StringUtils.format("%s:agg", name);
     final SqlAggFunction func = calciteFunction();
@@ -98,14 +98,14 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
       dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
     }
 
-    switch (inputType) {
-      case LONG:
-      case DOUBLE:
-      case FLOAT:
-        inputTypeName = StringUtils.toLowerCase(inputType.name());
-        break;
-      default:
-        throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+    if (inputType == null) {
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType", func);
+    }
+
+    if (inputType.isNumeric()) {
+      inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
+    } else {
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType.asTypeString());
     }
 
 
@@ -122,7 +122,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         inputTypeName
     );
 
-    if (func == SqlStdOperatorTable.STDDEV_POP 
+    if (func == SqlStdOperatorTable.STDDEV_POP
         || func == SqlStdOperatorTable.STDDEV_SAMP
         || func == SqlStdOperatorTable.STDDEV) {
       postAggregator = new StandardDeviationPostAggregator(

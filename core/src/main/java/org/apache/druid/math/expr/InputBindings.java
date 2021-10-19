@@ -29,13 +29,13 @@ public class InputBindings
   /**
    * Create an {@link Expr.InputBindingInspector} backed by a map of binding identifiers to their {@link ExprType}
    */
-  public static Expr.InputBindingInspector inspectorFromTypeMap(final Map<String, ExprType> types)
+  public static Expr.InputBindingInspector inspectorFromTypeMap(final Map<String, ExpressionType> types)
   {
     return new Expr.InputBindingInspector()
     {
       @Nullable
       @Override
-      public ExprType getType(String name)
+      public ExpressionType getType(String name)
       {
         return types.get(name);
       }

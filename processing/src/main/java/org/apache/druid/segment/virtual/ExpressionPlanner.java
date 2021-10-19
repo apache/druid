@@ -23,10 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.EnumSet;
@@ -60,8 +61,8 @@ public class ExpressionPlanner
     Set<String> noCapabilities = new HashSet<>();
     Set<String> maybeMultiValued = new HashSet<>();
     List<String> needsApplied = ImmutableList.of();
-    ValueType singleInputType = null;
-    ExprType outputType = null;
+    ColumnType singleInputType = null;
+    ExpressionType outputType = null;
 
     final Set<String> columns = analysis.getRequiredBindings();
 
@@ -83,7 +84,7 @@ public class ExpressionPlanner
       if (capabilities != null && !analysis.hasInputArrays() && !analysis.isOutputArray()) {
         boolean isSingleInputMappable = false;
         boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse();
-        if (capabilities.getType() == ValueType.STRING) {
+        if (capabilities.is(ValueType.STRING)) {
           isSingleInputScalar &= capabilities.isDictionaryEncoded().isTrue();
           isSingleInputMappable = capabilities.isDictionaryEncoded().isTrue() &&
                                   !capabilities.hasMultipleValues().isUnknown();
@@ -91,7 +92,7 @@ public class ExpressionPlanner
 
         // if satisfied, set single input output type and flags
         if (isSingleInputScalar || isSingleInputMappable) {
-          singleInputType = capabilities.getType();
+          singleInputType = capabilities.toColumnType();
           if (isSingleInputScalar) {
             traits.add(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR);
           }
@@ -111,7 +112,7 @@ public class ExpressionPlanner
         if (capabilities != null) {
           if (capabilities.hasMultipleValues().isTrue()) {
             definitelyMultiValued.add(column);
-          } else if (capabilities.getType().equals(ValueType.STRING) &&
+          } else if (capabilities.is(ValueType.STRING) &&
                      capabilities.hasMultipleValues().isMaybeTrue() &&
                      !analysis.getArrayBindings().contains(column)
           ) {
@@ -159,7 +160,7 @@ public class ExpressionPlanner
     }
 
     // if analysis predicts output, or inferred output type is array, output will be multi-valued
-    if (analysis.isOutputArray() || ExprType.isArray(outputType)) {
+    if (analysis.isOutputArray() || (outputType != null && outputType.isArray())) {
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
 
       // single input mappable may not produce array output explicitly, only through implicit mapping
