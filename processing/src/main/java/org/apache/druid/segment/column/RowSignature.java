@@ -277,7 +277,8 @@ public class RowSignature implements ColumnInspector
         );
 
         // unlike aggregators, the type we see here is what we get, no further finalization will occur
-        add(name, postAggregator.getType());
+        // feed it the existing RowSignature for PostAggregator implementations whose output is dependent on input types
+        add(name, postAggregator.getType(build()));
       }
 
       return this;

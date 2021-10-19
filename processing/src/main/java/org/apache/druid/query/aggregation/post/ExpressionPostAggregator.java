@@ -31,11 +31,14 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -189,20 +192,31 @@ public class ExpressionPostAggregator implements PostAggregator
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    // computed by decorate
-    return outputType;
+    if (outputType != null) {
+      // computed by decorate
+      return outputType;
+    }
+    final ExpressionType type = parsed.get().getOutputType(signature);
+    if (type == null) {
+      return null;
+    } else {
+      return ExpressionType.toColumnType(type);
+    }
   }
 
   @Override
   public ExpressionPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
+    final ColumnInspector aggInspector = AggregatorUtil.inspectorForAggregatorFactoryMap(aggregators);
+    final ExpressionType expressionType = parsed.get().getOutputType(aggInspector);
+    final ColumnType columnType = expressionType != null ? ExpressionType.toColumnType(expressionType) : null;
     return new ExpressionPostAggregator(
         name,
         expression,
         ordering,
-        null, // this should be computed from expression output type once it supports output type inference
+        columnType,
         macroTable,
         CollectionUtils.mapValues(aggregators, aggregatorFactory -> aggregatorFactory::finalizeComputation),
         parsed,

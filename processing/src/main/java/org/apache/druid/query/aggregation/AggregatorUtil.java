@@ -35,6 +35,7 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -383,5 +385,25 @@ public class AggregatorUtil
                        .put(expressionBytes)
                        .array();
     });
+  }
+
+  public static ColumnInspector inspectorForAggregatorFactoryMap(Map<String, AggregatorFactory> aggregators)
+  {
+    return new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        if (aggregators.containsKey(column)) {
+          final AggregatorFactory agg = aggregators.get(column);
+          if (agg.getType().isNumeric()) {
+            return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(agg.getType());
+          }
+          return new ColumnCapabilitiesImpl().setType(aggregators.get(column).getType());
+        }
+        return null;
+      }
+    };
   }
 }
