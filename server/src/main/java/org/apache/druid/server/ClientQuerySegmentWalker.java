@@ -159,8 +159,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         new AtomicInteger(),
         maxSubqueryRows,
         true,
-        query,
-        1
+        "1",
+        query.getId(),
+        query.getSqlQueryId()
     );
 
     if (!canRunQueryUsingClusterWalker(query.withDataSource(inlineDryRun))
@@ -177,8 +178,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             new AtomicInteger(),
             maxSubqueryRows,
             false,
-            query,
-            1
+            "1",
+            query.getId(),
+            query.getSqlQueryId()
         )
     );
 
@@ -303,8 +305,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicInteger subqueryRowLimitAccumulator,
       final int maxSubqueryRows,
       final boolean dryRun,
-      final Query parentQuery,
-      final int orderNumber
+      final String subQueryIdPrefix,
+      @Nullable final String parentQueryId,
+      @Nullable final String parentSqlQueryId
   )
   {
     if (dataSource instanceof QueryDataSource) {
@@ -326,8 +329,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
 
         assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
-        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, parentQuery.withSubQueryId(generateSubqueryId(
-            parentQuery.getSubQueryId(), nesting, orderNumber)), 1);
+        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, generateSubqueryId(
+            subQueryIdPrefix, nesting, 1), parentQueryId, parentSqlQueryId);
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
@@ -340,19 +343,19 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         } else {
           // Something happened during inlining that means the toolchest is no longer able to handle this subquery.
           // We need to consider inlining it.
-          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, parentQuery, orderNumber);
+          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, generateSubqueryId(subQueryIdPrefix, 0, 2), parentQueryId, parentSqlQueryId);
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
         // This subquery id needs to be generated on the bases of outer query's id
-         final Query subQueryWithId = subQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), 0, orderNumber));
+         final Query subQueryWithId = subQuery.withSubQueryId(subQueryIdPrefix);
 
-        if(StringUtils.isNotEmpty(parentQuery.getId())) {
-          subQuery.withId(parentQuery.getId());
+        if(StringUtils.isNotEmpty(parentQueryId)) {
+          subQuery.withId(parentQueryId);
         }
 
-        if (StringUtils.isNotEmpty(parentQuery.getSqlQueryId())) {
-          subQuery.withSqlQueryId(parentQuery.getSqlQueryId());
+        if (StringUtils.isNotEmpty(parentSqlQueryId)) {
+          subQuery.withSqlQueryId(parentSqlQueryId);
         }
 
         final Sequence<?> queryResults;
@@ -385,8 +388,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         subqueryRowLimitAccumulator,
                         maxSubqueryRows,
                         dryRun,
-                        parentQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), 0, orderNumber)),
-                        1
+                        generateSubqueryId(subQueryIdPrefix, 0, 1),
+                        parentQueryId,
+                        parentSqlQueryId
                         )
                 )
             ),
@@ -394,8 +398,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             subqueryRowLimitAccumulator,
             maxSubqueryRows,
             dryRun,
-            parentQuery,
-            orderNumber
+            subQueryIdPrefix,
+            parentQueryId,
+            parentSqlQueryId
         );
       }
     } else {
@@ -410,13 +415,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                        subqueryRowLimitAccumulator,
                        maxSubqueryRows,
                        dryRun,
-                       parentQuery.withSubQueryId(generateSubqueryId(parentQuery.getSubQueryId(), 0, orderNumber)),
-                       indexChildTuple.lhs
+                       generateSubqueryId(subQueryIdPrefix, 0, indexChildTuple.lhs),
+                       parentQueryId,
+                       parentSqlQueryId
                    ))
                    .collect(Collectors.toList())
-
       );
-
     }
   }
 
