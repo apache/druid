@@ -70,50 +70,38 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceReadOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceReadOnlyUser",
+        "datasourceOnlyUser",
         "helloworld",
-        "datasourceReadOnlyRole",
-        DATASOURCE_READ_ONLY_PERMISSIONS
+        "datasourceOnlyRole",
+        DATASOURCE_ONLY_PERMISSIONS
     );
   }
 
   @Override
-  protected void setupDatasourceReadAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceReadAndSysUser",
+        "datasourceAndSysUser",
         "helloworld",
-        "datasourceReadAndSysRole",
-        DATASOURCE_READ_SYS_PERMISSIONS
+        "datasourceAndSysRole",
+        DATASOURCE_SYS_PERMISSIONS
     );
   }
 
   @Override
-  protected void setupDatasourceWriteAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceWriteAndSysUser",
+        "datasourceWithStateUser",
         "helloworld",
-        "datasourceWriteAndSysRole",
-        DATASOURCE_WRITE_SYS_PERMISSIONS
-    );
-  }
-
-  @Override
-  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
-  {
-    createUserAndRoleWithPermissions(
-        adminClient,
-        "datasourceReadWithStateUser",
-        "helloworld",
-        "datasourceReadWithStateRole",
-        DATASOURCE_READ_SYS_STATE_PERMISSIONS
+        "datasourceWithStateRole",
+        DATASOURCE_SYS_STATE_PERMISSIONS
     );
   }
 
