@@ -44,6 +44,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   private final HadoopDruidIndexerConfig config;
   private Jobby job;
   private String hadoopJobIdFile;
+  private String failureCause = "";
 
   @Inject
   public HadoopDruidDetermineConfigurationJob(HadoopDruidIndexerConfig config)
@@ -65,10 +66,17 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
         if (config.getSchema().getTuningConfig().getMaxIntervalsIngested() < Integer.MAX_VALUE) {
           // Check if this ingestion job breached the maxIntervalsIngested value, requiring early exit
           jobSucceeded = JobHelper.evaluateMaxIntervalsIngestedCircuitBreaker(config.getSchema());
+          if (!jobSucceeded) {
+            this.failureCause = "ingestMaxIntervals threshold breached";
+          }
         }
-        if (config.getSchema().getTuningConfig().getMaxSegmentsIngested() < Integer.MAX_VALUE) {
-          // Check if this ingestion job breached the maxSegmentsIngested value, requiring early exit
+        if (jobSucceeded && config.getSchema().getTuningConfig().getMaxSegmentsIngested() < Integer.MAX_VALUE) {
+          // Check if this ingestion job breached the maxSegmentsIngested value, requiring early exit.
+          // We check jobSucceeded first because breaching intervals threshold trumps breaching segments threshold
           jobSucceeded = JobHelper.evaluateMaxSegmentsIngestedCircuitBreaker(config.getSchema());
+          if (!jobSucceeded) {
+            this.failureCause = "ingestMaxSegment threshold breached";
+          }
         }
       }
 
@@ -148,9 +156,11 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   {
     if (job == null) {
       return null;
+    } else if (!failureCause.isEmpty()) {
+      return failureCause;
+    } else {
+      return job.getErrorMessage();
     }
-
-    return job.getErrorMessage();
   }
 
   public void setHadoopJobIdFile(String hadoopJobIdFile)
