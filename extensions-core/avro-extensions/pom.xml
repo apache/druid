@@ -273,11 +273,16 @@
           <artifactId>hadoop-client</artifactId>
           <version>${hadoop.compile.version}</version>
           <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.avro</groupId>
+              <artifactId>avro</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.compile.version}</version>
           <scope>provided</scope>
           <exclusions>
             <exclusion>
@@ -289,7 +294,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.compile.version}</version>
           <scope>provided</scope>
           <exclusions>
             <exclusion>
@@ -311,8 +315,8 @@
         </dependency>
         <dependency>
         <groupId>com.sun.jersey</groupId>
-        <artifactId>jersey-core</artifactId>
-        <scope>test</scope>
+          <artifactId>jersey-core</artifactId>
+          <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -321,6 +325,34 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-help-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-install-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-install</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>install-file</goal>
+                </goals>
+                <configuration>
+                  <file>${project.build.directory}/${project.build.finalName}.jar</file>
+                  <pomFile>${project.build.directory}/effective-pom.xml</pomFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
   <build>

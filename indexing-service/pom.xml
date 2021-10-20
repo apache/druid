@@ -290,15 +290,19 @@
             </activation>
             <dependencies>
                 <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-mapreduce-client-core</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-mapreduce-client-core</artifactId>
+                    <scope>provided</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>javax.servlet</groupId>
+                            <artifactId>servlet-api</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
-                    <version>${hadoop.compile.version}</version>
                     <scope>provided</scope>
                 </dependency>
                 <dependency>
@@ -306,11 +310,16 @@
                     <artifactId>hadoop-client</artifactId>
                     <version>${hadoop.compile.version}</version>
                     <scope>provided</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.avro</groupId>
+                            <artifactId>avro</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-yarn-common</artifactId>
-                    <version>${hadoop.compile.version}</version>
                     <scope>provided</scope>
                 </dependency>
             </dependencies>
@@ -333,6 +342,34 @@
                     org.apache.hadoop:hadoop-client-api:${hadoop.compile.version},org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}
                 </hadoop-task-libs>
             </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-help-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-install-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-install</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>install-file</goal>
+                                </goals>
+                                <configuration>
+                                    <file>${project.build.directory}/${project.build.finalName}.jar</file>
+                                    <pomFile>${project.build.directory}/effective-pom.xml</pomFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

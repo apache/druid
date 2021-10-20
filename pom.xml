@@ -1131,16 +1131,46 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.stefanbirkner</groupId>
-                <artifactId>system-rules</artifactId>
-                <version>1.19.0</version>
-                <scope>test</scope>
+              <groupId>com.github.stefanbirkner</groupId>
+              <artifactId>system-rules</artifactId>
+              <version>1.19.0</version>
+              <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.timeandspace</groupId>
-                <artifactId>cron-scheduler</artifactId>
-                <version>0.1</version>
-            </dependency>
+          <dependency>
+            <groupId>io.timeandspace</groupId>
+            <artifactId>cron-scheduler</artifactId>
+            <version>0.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1587,15 +1617,30 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
-                <plugin>
-                    <groupId>com.github.eirslett</groupId>
-                    <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.11.3</version>
+              <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <configuration>
+                  <nodeVersion>${node.version}</nodeVersion>
+                  <npmVersion>${npm.version}</npmVersion>
+                </configuration>
+              </plugin>
+              <plugin>
+                <artifactId>maven-help-plugin</artifactId>
+                <version>2.1.1</version>
+                <executions>
+                  <execution>
+                    <phase>generate-resources</phase>
+                    <goals>
+                      <goal>effective-pom</goal>
+                    </goals>
                     <configuration>
-                        <nodeVersion>${node.version}</nodeVersion>
-                        <npmVersion>${npm.version}</npmVersion>
+                      <output>${project.build.directory}/effective-pom.xml</output>
                     </configuration>
-                </plugin>
+                  </execution>
+                </executions>
+              </plugin>
             </plugins>
         </pluginManagement>
     </build>

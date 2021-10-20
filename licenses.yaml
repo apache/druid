@@ -5001,16 +5001,6 @@ libraries:
 
 ---
 
-name: Google Re2j
-license_category: binary
-module: java-core
-license_name: The Go license
-version: 1.1
-libraries:
-  - com.google.re2j: re2j
-
----
-
 name: DNS Java
 license_category: binary
 module: java-core

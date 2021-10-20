@@ -222,7 +222,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
     <profiles>
         <profile>
             <id>hadoop2</id>
@@ -233,7 +232,6 @@
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-mapreduce-client-core</artifactId>
-                    <version>${hadoop.compile.version}</version>
                     <scope>compile</scope>
                     <exclusions>
                         <exclusion>
@@ -255,6 +253,10 @@
                         <exclusion>
                             <groupId>com.google.inject</groupId>
                             <artifactId>guice</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>javax.servlet</groupId>
+                            <artifactId>servlet-api</artifactId>
                         </exclusion>
                         <exclusion>
                             <groupId>com.google.inject.extensions</groupId>
@@ -297,7 +299,6 @@
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-hdfs-client</artifactId>
-                    <version>${hadoop.compile.version}</version>
                     <scope>runtime</scope>
                 </dependency>
                 <!--
@@ -498,6 +499,34 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-help-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-install-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-install</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>install-file</goal>
+                                </goals>
+                                <configuration>
+                                    <file>${project.build.directory}/${project.build.finalName}.jar</file>
+                                    <pomFile>${project.build.directory}/effective-pom.xml</pomFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
